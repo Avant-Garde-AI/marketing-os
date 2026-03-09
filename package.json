@@ -1,0 +1,43 @@
+{
+  "name": "marketing-os",
+  "version": "0.0.0",
+  "private": true,
+  "description": "AI marketing operations for Shopify, powered by your git repo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openconjecture/marketing-os"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "changeset": "changeset",
+    "release": "turbo run build && changeset publish",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.7.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  },
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "keywords": [
+    "shopify",
+    "marketing",
+    "ai",
+    "agents",
+    "mastra",
+    "claude",
+    "ecommerce",
+    "cli"
+  ]
+}

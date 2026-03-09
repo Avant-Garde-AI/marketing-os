@@ -1,0 +1,64 @@
+{
+  "name": "create-marketing-os",
+  "version": "0.1.0",
+  "description": "AI marketing operations for Shopify, powered by your git repo",
+  "type": "module",
+  "bin": {
+    "create-marketing-os": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "@inquirer/prompts": "^7.0.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "execa": "^9.0.0",
+    "fs-extra": "^11.2.0",
+    "glob": "^11.0.0",
+    "handlebars": "^4.7.8",
+    "validate-npm-package-name": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/fs-extra": "^11.0.4",
+    "tsup": "^8.0.2",
+    "vitest": "^2.0.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "shopify",
+    "marketing",
+    "ai",
+    "agents",
+    "mastra",
+    "claude",
+    "ecommerce",
+    "cli",
+    "scaffolding"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openconjecture/marketing-os",
+    "directory": "packages/create-marketing-os"
+  },
+  "homepage": "https://marketing-os.dev",
+  "bugs": {
+    "url": "https://github.com/openconjecture/marketing-os/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

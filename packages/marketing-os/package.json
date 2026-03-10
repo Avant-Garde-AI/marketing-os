@@ -56,12 +56,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openconjecture/marketing-os",
-    "directory": "packages/create-marketing-os"
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/marketing-os"
   },
   "homepage": "https://marketing-os.dev",
   "bugs": {
-    "url": "https://github.com/openconjecture/marketing-os/issues"
+    "url": "https://github.com/Avant-Garde-AI/marketing-os/issues"
   },
   "engines": {
     "node": ">=20.0.0"

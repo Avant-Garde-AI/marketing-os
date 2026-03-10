@@ -24,7 +24,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/create-marketing-os:
+  packages/marketing-os:
     dependencies:
       '@inquirer/prompts':
         specifier: ^7.0.0

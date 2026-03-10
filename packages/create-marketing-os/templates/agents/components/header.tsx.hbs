@@ -1,0 +1,79 @@
+"use client";
+
+import { Settings, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+interface HeaderProps {
+  userEmail?: string;
+  onSignOut?: () => void;
+}
+
+export function Header({ userEmail, onSignOut }: HeaderProps) {
+  const storeName = "{{storeName}}";
+  const initials = userEmail
+    ? userEmail
+        .split("@")[0]
+        .split(".")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : "U";
+
+  return (
+    <header className="fixed top-0 left-0 right-0 h-16 bg-card border-b z-50">
+      <div className="flex items-center justify-between h-full px-6">
+        {/* Left side - Logo and Store Name */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-sm">M</span>
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold">Marketing OS</h1>
+              <p className="text-xs text-muted-foreground">{storeName}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Right side - User menu */}
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="flex items-center gap-2">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                {userEmail && (
+                  <span className="text-sm hidden md:inline">{userEmail}</span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    </header>
+  );
+}

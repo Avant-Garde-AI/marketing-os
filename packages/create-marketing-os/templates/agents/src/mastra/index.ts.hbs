@@ -1,0 +1,34 @@
+import { Mastra } from "@mastra/core";
+import { SupabaseAuth } from "@mastra/supabase";
+import { PostgresMemory } from "@mastra/memory";
+import { PostgresEngine } from "@mastra/core/storage";
+import { marketingAgent } from "./agents/marketing-agent";
+import { creativeAgent } from "./agents/creative-agent";
+
+/**
+ * Mastra instance for Marketing OS
+ *
+ * Configured with:
+ * - Supabase authentication
+ * - Postgres storage for workflows
+ * - Postgres memory for agent conversations
+ * - Marketing and Creative agents
+ */
+export const mastra = new Mastra({
+  agents: [marketingAgent, creativeAgent],
+
+  engine: new PostgresEngine({
+    url: process.env.DATABASE_URL!,
+  }),
+
+  auth: new SupabaseAuth({
+    supabaseUrl: "{{supabaseUrl}}",
+    supabaseKey: process.env.SUPABASE_ANON_KEY!,
+  }),
+
+  memory: new PostgresMemory({
+    url: process.env.DATABASE_URL!,
+  }),
+});
+
+export { marketingAgent, creativeAgent };

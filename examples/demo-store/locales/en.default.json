@@ -1,0 +1,91 @@
+{
+  "general": {
+    "search": {
+      "title": "Search",
+      "placeholder": "Search our store"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    },
+    "accessibility": {
+      "skip_to_content": "Skip to content",
+      "close": "Close"
+    }
+  },
+  "customer": {
+    "account": {
+      "title": "Account"
+    },
+    "login": {
+      "title": "Login",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in"
+    }
+  },
+  "cart": {
+    "general": {
+      "title": "Cart",
+      "empty": "Your cart is empty",
+      "subtotal": "Subtotal",
+      "continue_shopping": "Continue shopping",
+      "checkout": "Checkout"
+    }
+  },
+  "products": {
+    "product": {
+      "add_to_cart": "Add to cart",
+      "sold_out": "Sold out",
+      "available": "Available",
+      "unavailable": "Unavailable",
+      "quantity": "Quantity",
+      "price": "Price",
+      "vendor": "Vendor"
+    }
+  },
+  "collections": {
+    "general": {
+      "title": "Collections",
+      "no_products": "No products found"
+    },
+    "sorting": {
+      "title": "Sort by",
+      "featured": "Featured",
+      "best_selling": "Best selling",
+      "alphabetically_az": "Alphabetically, A-Z",
+      "alphabetically_za": "Alphabetically, Z-A",
+      "price_low_to_high": "Price, low to high",
+      "price_high_to_low": "Price, high to low",
+      "date_old_to_new": "Date, old to new",
+      "date_new_to_old": "Date, new to old"
+    }
+  },
+  "sections": {
+    "featured_collection": {
+      "view_all": "View all",
+      "no_products": "No products in this collection"
+    }
+  },
+  "footer": {
+    "quick_links": "Quick Links",
+    "newsletter": "Newsletter",
+    "newsletter_placeholder": "Enter your email",
+    "newsletter_submit": "Subscribe",
+    "all_rights_reserved": "All rights reserved"
+  },
+  "contact": {
+    "form": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "message": "Message",
+      "send": "Send"
+    }
+  },
+  "404": {
+    "title": "Page not found",
+    "message": "The page you are looking for could not be found.",
+    "link": "Return to home"
+  }
+}

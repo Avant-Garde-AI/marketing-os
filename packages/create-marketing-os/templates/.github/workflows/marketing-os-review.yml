@@ -1,0 +1,40 @@
+name: Marketing OS PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.title, 'Marketing OS')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Review PR
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this Marketing OS pull request.
+
+            PR Title: ${{ github.event.pull_request.title }}
+            PR Description: ${{ github.event.pull_request.body }}
+
+            Checklist:
+            1. Verify brand voice consistency against /docs/brand-voice.md
+            2. Check Liquid syntax validity
+            3. Ensure no breaking changes to theme structure
+            4. Verify changes match the stated skill objective
+
+            Provide a detailed review comment with:
+            - Summary of changes
+            - Brand consistency check results
+            - Any issues or concerns
+            - Approval recommendation (approve/request changes)
+          claude_args: >-
+            --max-turns 10
+            --model claude-sonnet-4-20250514
+            --allowedTools Read,Grep,Bash

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://marketing-os.dev/schema/config.json",
+  "version": "1.0.0",
+  "store": {
+    "url": "{{storeUrl}}",
+    "name": "{{storeName}}"
+  },
+  "integrations": {
+    "shopify": { "enabled": true },
+    "ga4": { "enabled": false },
+    "meta_ads": { "enabled": false },
+    "google_ads": { "enabled": false },
+    "klaviyo": { "enabled": false }
+  },
+  "console": {
+    "theme": "default",
+    "features": {
+      "chat": true,
+      "skills": true,
+      "activity": true,
+      "dashboard": true
+    }
+  },
+  "async": {
+    "claude_code_model": "claude-sonnet-4-20250514",
+    "max_turns": 20,
+    "auto_review": false
+  }
+}

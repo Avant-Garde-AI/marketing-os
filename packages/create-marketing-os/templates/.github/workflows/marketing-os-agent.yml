@@ -1,0 +1,51 @@
+name: Marketing OS Agent
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  schedule:
+    - cron: '0 14 * * 1'  # Monday 9am ET (14:00 UTC)
+  repository_dispatch:
+    types: [marketing-os-trigger]
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issue_comment' &&
+       contains(github.event.comment.body, '@marketing-os')) ||
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.labels.*.name, 'marketing-os')) ||
+      github.event_name == 'schedule' ||
+      github.event_name == 'repository_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are the Marketing OS agent for this Shopify store.
+            Read CLAUDE.md for full instructions and context.
+            Read /docs/ for brand guidelines.
+
+            Event: ${{ github.event_name }}
+            ${{ github.event_name == 'issues' &&
+                format('Issue Title: {0}', github.event.issue.title) || '' }}
+            ${{ github.event_name == 'issues' &&
+                format('Issue Body: {0}', github.event.issue.body) || '' }}
+            ${{ github.event_name == 'issue_comment' &&
+                format('Comment: {0}', github.event.comment.body) || '' }}
+            ${{ github.event_name == 'schedule' &&
+                'Scheduled task: Run weekly performance digest skill.' || '' }}
+            ${{ github.event_name == 'repository_dispatch' &&
+                format('Dispatch payload: {0}',
+                  toJSON(github.event.client_payload)) || '' }}
+
+            Execute the appropriate skill and create a PR with your changes.
+          claude_args: >-
+            --max-turns 20
+            --model claude-sonnet-4-20250514
+            --allowedTools Edit,Read,Write,Bash

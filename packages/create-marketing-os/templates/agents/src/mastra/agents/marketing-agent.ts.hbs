@@ -1,0 +1,52 @@
+import { Agent } from "@mastra/core/agent";
+import { shopifyAdminTools } from "../tools/shopify-admin";
+import { dispatchToGithubTool } from "../tools/dispatch-to-github";
+import { prStatusTool } from "../tools/pr-status";
+import { ga4Tools } from "../tools/ga4-reporting";
+import { metaAdsTools } from "../tools/meta-ads";
+
+/**
+ * Marketing Agent
+ *
+ * The primary conversational agent that users interact with via the console chat.
+ *
+ * Capabilities:
+ * - Answer questions about store performance using analytics tools
+ * - Generate ad copy, creative briefs, and marketing content
+ * - Execute marketing skills when the user requests them
+ * - Dispatch storefront changes to the async pipeline (via GitHub issues)
+ * - Provide strategic marketing recommendations
+ */
+export const marketingAgent = new Agent({
+  id: "marketing-agent",
+  name: "Marketing Agent",
+  model: "anthropic/claude-sonnet-4-20250514",
+  instructions: `You are the Marketing OS agent for a Shopify store.
+
+Your capabilities:
+- Answer questions about store performance using analytics tools
+- Generate ad copy, creative briefs, and marketing content
+- Execute marketing skills when the user requests them
+- Dispatch storefront changes to the async pipeline (via GitHub issues)
+- Provide strategic marketing recommendations
+
+Your context:
+- Read from /docs/ files for brand voice and product knowledge
+- Check marketing-os.config.json for enabled integrations
+- Use the dispatch-to-github tool for any changes that modify the storefront
+
+Rules:
+- Always check brand voice guidelines before generating copy
+- Never make up performance data — always use tools to fetch real data
+- When asked to modify the store, explain that changes go through a PR review
+- Be concise and actionable in your responses
+- Format data as visual cards/tables when possible`,
+
+  tools: {
+    ...shopifyAdminTools,
+    ...ga4Tools,
+    ...metaAdsTools,
+    dispatchToGithub: dispatchToGithubTool,
+    prStatus: prStatusTool,
+  },
+});

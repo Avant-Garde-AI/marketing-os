@@ -1,0 +1,62 @@
+{% comment %}
+  Header section with logo and navigation
+{% endcomment %}
+
+<header class="site-header" role="banner">
+  <div class="container">
+    <div class="header-wrapper">
+      {% if section.settings.logo != blank %}
+        <a href="{{ routes.root_url }}" class="site-logo">
+          {{ section.settings.logo | image_url: width: 200 | image_tag: alt: shop.name }}
+        </a>
+      {% else %}
+        <a href="{{ routes.root_url }}" class="site-name">
+          <h1>{{ shop.name }}</h1>
+        </a>
+      {% endif %}
+
+      <nav class="site-nav" role="navigation">
+        <ul class="nav-list">
+          {% for link in linklists[section.settings.menu].links %}
+            <li class="nav-item">
+              <a href="{{ link.url }}" class="nav-link">
+                {{ link.title }}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <a href="{{ routes.search_url }}" class="header-icon" aria-label="{{ 'general.search.title' | t }}">
+          {{ 'general.search.title' | t }}
+        </a>
+        <a href="{{ routes.account_url }}" class="header-icon" aria-label="{{ 'customer.account.title' | t }}">
+          {{ 'customer.account.title' | t }}
+        </a>
+        <a href="{{ routes.cart_url }}" class="header-icon" aria-label="{{ 'cart.general.title' | t }}">
+          {{ 'cart.general.title' | t }} ({{ cart.item_count }})
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+{% schema %}
+{
+  "name": "Header",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo image"
+    },
+    {
+      "type": "link_list",
+      "id": "menu",
+      "label": "Menu",
+      "default": "main-menu"
+    }
+  ]
+}
+{% endschema %}

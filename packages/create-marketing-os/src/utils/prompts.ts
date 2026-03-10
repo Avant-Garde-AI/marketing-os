@@ -1,0 +1,278 @@
+/**
+ * Shared prompt utilities
+ */
+
+import { input, confirm, select, checkbox, password } from "@inquirer/prompts";
+import chalk from "chalk";
+import { validateStoreUrl } from "./shopify.js";
+
+export interface StoreConfig {
+  storeUrl: string;
+  storeName: string;
+}
+
+export interface RepoConfig {
+  hasExistingRepo: boolean;
+  repoFullName: string;
+  repoName?: string;
+  repoOrg?: string;
+}
+
+export interface ServiceConfig {
+  anthropicKey: string;
+  supabaseUrl?: string;
+  supabaseAnonKey?: string;
+  adminEmail: string;
+  useSupabase: boolean;
+}
+
+export interface IntegrationConfig {
+  enabledIntegrations: string[];
+  credentials: Record<string, Record<string, string>>;
+}
+
+/**
+ * Prompt for store configuration
+ */
+export async function promptStoreConfig(): Promise<StoreConfig> {
+  console.log(chalk.bold("\n📦 Store Configuration\n"));
+
+  const storeUrl = await input({
+    message: "Shopify store URL:",
+    validate: (value) => {
+      if (!value) return "Store URL is required";
+      if (!validateStoreUrl(value)) {
+        return "Please enter a valid Shopify store URL (e.g., mystore.myshopify.com)";
+      }
+      return true;
+    },
+  });
+
+  const storeName = storeUrl.replace(".myshopify.com", "").replace(/-/g, " ");
+
+  return { storeUrl, storeName };
+}
+
+/**
+ * Prompt for repository configuration
+ */
+export async function promptRepoConfig(): Promise<RepoConfig> {
+  const hasExistingRepo = await confirm({
+    message: "Do you have an existing theme repo on GitHub?",
+    default: false,
+  });
+
+  if (hasExistingRepo) {
+    const repoFullName = await input({
+      message: "GitHub repository (org/repo):",
+      validate: (value) => {
+        if (!value) return "Repository is required";
+        if (!value.includes("/"))
+          return "Please enter in format: org/repo or username/repo";
+        return true;
+      },
+    });
+
+    return { hasExistingRepo: true, repoFullName };
+  } else {
+    const repoName = await input({
+      message: "GitHub repository name:",
+      validate: (value) => {
+        if (!value) return "Repository name is required";
+        if (!/^[a-z0-9-_]+$/i.test(value))
+          return "Repository name can only contain letters, numbers, hyphens, and underscores";
+        return true;
+      },
+    });
+
+    const repoOrg = await input({
+      message: "GitHub org or username:",
+      validate: (value) => {
+        if (!value) return "Organization or username is required";
+        return true;
+      },
+    });
+
+    return {
+      hasExistingRepo: false,
+      repoFullName: `${repoOrg}/${repoName}`,
+      repoName,
+      repoOrg,
+    };
+  }
+}
+
+/**
+ * Prompt for service configuration
+ */
+export async function promptServiceConfig(): Promise<ServiceConfig> {
+  console.log(chalk.bold("\n🔑 Service Configuration\n"));
+
+  const anthropicKey = await password({
+    message: "Anthropic API key:",
+    mask: "*",
+    validate: (value) => {
+      if (!value) return "API key is required";
+      if (!value.startsWith("sk-ant-"))
+        return "API key should start with 'sk-ant-'";
+      return true;
+    },
+  });
+
+  const supabaseChoice = await select({
+    message: "Set up Supabase? (recommended)",
+    choices: [
+      { name: "Yes — use an existing project", value: "existing" },
+      { name: "Yes — I'll create a new project", value: "new" },
+      { name: "No — use local SQLite for development", value: "none" },
+    ],
+  });
+
+  let supabaseUrl: string | undefined;
+  let supabaseAnonKey: string | undefined;
+  const useSupabase = supabaseChoice !== "none";
+
+  if (supabaseChoice === "new") {
+    console.log(
+      chalk.dim(
+        "\n→ Opening https://supabase.com/dashboard/new in your browser..."
+      )
+    );
+    console.log(
+      chalk.dim(
+        "  After creating your project, copy the URL and anon key from Settings > API\n"
+      )
+    );
+  }
+
+  if (supabaseChoice !== "none") {
+    supabaseUrl = await input({
+      message: "Supabase project URL:",
+      validate: (value) => {
+        if (!value) return "Supabase URL is required";
+        if (!value.startsWith("https://") || !value.includes(".supabase.co"))
+          return "Please enter a valid Supabase URL (https://xxx.supabase.co)";
+        return true;
+      },
+    });
+
+    supabaseAnonKey = await password({
+      message: "Supabase anon key:",
+      mask: "*",
+      validate: (value) => {
+        if (!value) return "Supabase anon key is required";
+        return true;
+      },
+    });
+  }
+
+  const adminEmail = await input({
+    message: "Admin email for login:",
+    validate: (value) => {
+      if (!value) return "Admin email is required";
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+        return "Please enter a valid email address";
+      return true;
+    },
+  });
+
+  return {
+    anthropicKey,
+    supabaseUrl,
+    supabaseAnonKey,
+    adminEmail,
+    useSupabase,
+  };
+}
+
+/**
+ * Prompt for integration configuration
+ */
+export async function promptIntegrationConfig(): Promise<IntegrationConfig> {
+  console.log(chalk.bold("\n🔌 Integrations\n"));
+  console.log(chalk.dim("You can add more integrations later\n"));
+
+  const integrations = await checkbox({
+    message: "Which integrations do you want to enable?",
+    choices: [
+      { name: "Shopify Admin API (always enabled)", value: "shopify", checked: true, disabled: true },
+      { name: "Google Analytics (GA4)", value: "ga4" },
+      { name: "Meta Ads", value: "meta" },
+      { name: "Google Ads", value: "google-ads" },
+      { name: "Klaviyo", value: "klaviyo" },
+    ],
+  });
+
+  const credentials: Record<string, Record<string, string>> = {};
+
+  // Shopify is always enabled
+  if (!integrations.includes("shopify")) {
+    integrations.push("shopify");
+  }
+
+  // Prompt for credentials for selected integrations
+  for (const integration of integrations) {
+    if (integration === "shopify") {
+      credentials.shopify = {
+        accessToken: await password({
+          message: "Shopify Admin API access token:",
+          mask: "*",
+        }),
+      };
+    } else if (integration === "ga4") {
+      credentials.ga4 = {
+        propertyId: await input({
+          message: "GA4 Property ID:",
+        }),
+        credentialsJson: await password({
+          message: "GA4 Service Account JSON (paste full JSON):",
+          mask: "*",
+        }),
+      };
+    } else if (integration === "meta") {
+      credentials.meta = {
+        accessToken: await password({
+          message: "Meta Ads access token:",
+          mask: "*",
+        }),
+        adAccountId: await input({
+          message: "Meta Ad Account ID:",
+        }),
+      };
+    } else if (integration === "google-ads") {
+      credentials["google-ads"] = {
+        customerId: await input({
+          message: "Google Ads Customer ID:",
+        }),
+        credentialsJson: await password({
+          message: "Google Ads credentials JSON:",
+          mask: "*",
+        }),
+      };
+    } else if (integration === "klaviyo") {
+      credentials.klaviyo = {
+        apiKey: await password({
+          message: "Klaviyo API key:",
+          mask: "*",
+        }),
+      };
+    }
+  }
+
+  return {
+    enabledIntegrations: integrations,
+    credentials,
+  };
+}
+
+/**
+ * Prompt to deploy to Vercel
+ */
+export async function promptDeploy(): Promise<boolean> {
+  console.log(chalk.bold("\n🚀 Deployment\n"));
+
+  return await confirm({
+    message: "Deploy to Vercel now?",
+    default: true,
+  });
+}

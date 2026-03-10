@@ -1,0 +1,49 @@
+// agents/src/mastra/tools/dispatch-to-github.ts
+import { createTool } from "@mastra/core/tools";
+import { z } from "zod";
+
+export const dispatchToGithubTool = createTool({
+  id: "dispatch-to-github",
+  description:
+    "Create a GitHub issue that triggers the Claude Code async pipeline. " +
+    "Use this whenever the user requests a storefront change (theme edits, " +
+    "copy updates, new sections, etc.). The change will be implemented as a PR.",
+  inputSchema: z.object({
+    title: z.string().describe("Descriptive title for the change"),
+    skillId: z.string().describe("ID of the skill to execute"),
+    body: z.string().describe("Detailed instructions for Claude Code"),
+    priority: z.enum(["low", "medium", "high"]).default("medium"),
+  }),
+  outputSchema: z.object({
+    issueNumber: z.number(),
+    issueUrl: z.string(),
+    message: z.string(),
+  }),
+  execute: async ({ context }) => {
+    const repo = process.env.GITHUB_REPO!; // e.g., "{{githubRepo}}"
+    const token = process.env.GITHUB_TOKEN!;
+
+    const res = await fetch(
+      `https://api.github.com/repos/${repo}/issues`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `token ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: `[Marketing OS] ${context.title}`,
+          body: `## Skill: \`${context.skillId}\`\n\n${context.body}\n\n---\n_Created by Marketing OS agent_`,
+          labels: ["marketing-os", context.priority],
+        }),
+      }
+    );
+
+    const issue = await res.json();
+    return {
+      issueNumber: issue.number,
+      issueUrl: issue.html_url,
+      message: `Created issue #${issue.number}. Claude Code will pick this up and create a PR.`,
+    };
+  },
+});

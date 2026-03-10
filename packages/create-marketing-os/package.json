@@ -1,10 +1,13 @@
 {
-  "name": "create-marketing-os",
+  "name": "@avant-garde/create-marketing-os",
   "version": "0.1.0",
   "description": "AI marketing operations for Shopify, powered by your git repo",
   "type": "module",
   "bin": {
     "create-marketing-os": "./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "dist",
@@ -16,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:check": "tsx test/test-setup-check.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts"
   },
@@ -34,6 +38,7 @@
     "@types/node": "^22.0.0",
     "@types/fs-extra": "^11.0.4",
     "tsup": "^8.0.2",
+    "tsx": "^4.7.0",
     "vitest": "^2.0.0",
     "typescript": "^5.7.0"
   },

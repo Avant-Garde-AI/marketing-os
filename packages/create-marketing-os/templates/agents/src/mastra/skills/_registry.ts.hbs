@@ -1,0 +1,232 @@
+// agents/src/mastra/skills/_registry.ts
+// AUTO-GENERATED - Do not edit manually
+// Run `npm run generate:registry` to regenerate this file
+
+{{#each skills}}
+import * as {{this.importName}} from "./{{this.fileName}}";
+{{/each}}
+
+/**
+ * Skill Metadata Type
+ *
+ * Defines the structure of skill metadata used for:
+ * - UI card generation in the skills library
+ * - Skill discovery and filtering
+ * - Version tracking and authorship
+ */
+export type SkillMetadata = {
+  id: string;
+  name: string;
+  description: string;
+  category: "analytics" | "creative" | "optimization" | "integration";
+  icon: string; // lucide-react icon name
+  executionMode: "sync" | "async";
+  version: string;
+  author: string;
+};
+
+/**
+ * Registered Skill Type
+ *
+ * Complete skill definition including:
+ * - metadata: Descriptive information about the skill
+ * - inputSchema: Zod schema for input validation
+ * - outputSchema: Zod schema for output validation
+ * - tool: Mastra tool implementation
+ */
+export type RegisteredSkill = {
+  metadata: SkillMetadata;
+  inputSchema: any; // Zod schema
+  outputSchema: any; // Zod schema
+  tool: any; // Mastra tool
+};
+
+/**
+ * Skills Registry
+ *
+ * Central registry of all available skills in Marketing OS.
+ * Skills are auto-discovered from the skills directory and
+ * registered here for use by:
+ * - The Marketing Agent (for conversational execution)
+ * - The Skills Library UI (for browsing and manual execution)
+ * - The CLI (for skill management and installation)
+ */
+export const skills: RegisteredSkill[] = [
+  {{#each skills}}
+  {{this.importName}},
+  {{/each}}
+];
+
+/**
+ * Get a skill by its ID
+ *
+ * @param id - The unique skill identifier
+ * @returns The registered skill or undefined if not found
+ *
+ * @example
+ * const skill = getSkill("store-health-check");
+ * if (skill) {
+ *   const result = await skill.tool.execute({ context: { timeRange: "30d" } });
+ * }
+ */
+export const getSkill = (id: string): RegisteredSkill | undefined =>
+  skills.find((s) => s.metadata.id === id);
+
+/**
+ * Get skills by category
+ *
+ * @param category - The skill category to filter by
+ * @returns Array of registered skills in the specified category
+ *
+ * @example
+ * const analyticsSkills = getSkillsByCategory("analytics");
+ * console.log(`Found ${analyticsSkills.length} analytics skills`);
+ */
+export const getSkillsByCategory = (category: string): RegisteredSkill[] =>
+  skills.filter((s) => s.metadata.category === category);
+
+/**
+ * Get all skill IDs
+ *
+ * @returns Array of all registered skill IDs
+ *
+ * @example
+ * const skillIds = getSkillIds();
+ * // ["store-health-check", "ad-copy-generator", "weekly-digest"]
+ */
+export const getSkillIds = (): string[] =>
+  skills.map((s) => s.metadata.id);
+
+/**
+ * Get all skill categories
+ *
+ * @returns Array of unique category names
+ *
+ * @example
+ * const categories = getSkillCategories();
+ * // ["analytics", "creative", "optimization", "integration"]
+ */
+export const getSkillCategories = (): string[] =>
+  Array.from(new Set(skills.map((s) => s.metadata.category)));
+
+/**
+ * Get skills by execution mode
+ *
+ * @param mode - The execution mode ("sync" or "async")
+ * @returns Array of registered skills with the specified execution mode
+ *
+ * @example
+ * // Get all sync skills (return immediate results)
+ * const syncSkills = getSkillsByMode("sync");
+ *
+ * // Get all async skills (create PRs for review)
+ * const asyncSkills = getSkillsByMode("async");
+ */
+export const getSkillsByMode = (mode: "sync" | "async"): RegisteredSkill[] =>
+  skills.filter((s) => s.metadata.executionMode === mode);
+
+/**
+ * Search skills by name or description
+ *
+ * @param query - The search query (case-insensitive)
+ * @returns Array of matching skills
+ *
+ * @example
+ * const results = searchSkills("analytics");
+ * // Returns skills with "analytics" in name or description
+ */
+export const searchSkills = (query: string): RegisteredSkill[] => {
+  const lowerQuery = query.toLowerCase();
+  return skills.filter(
+    (s) =>
+      s.metadata.name.toLowerCase().includes(lowerQuery) ||
+      s.metadata.description.toLowerCase().includes(lowerQuery) ||
+      s.metadata.id.toLowerCase().includes(lowerQuery)
+  );
+};
+
+/**
+ * Validate skill registry
+ *
+ * Checks for:
+ * - Duplicate skill IDs
+ * - Missing required metadata fields
+ * - Invalid execution modes or categories
+ *
+ * @returns Validation result with any errors found
+ *
+ * @example
+ * const validation = validateRegistry();
+ * if (!validation.isValid) {
+ *   console.error("Registry validation failed:", validation.errors);
+ * }
+ */
+export const validateRegistry = (): {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+} => {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const seenIds = new Set<string>();
+
+  skills.forEach((skill, index) => {
+    // Check for duplicate IDs
+    if (seenIds.has(skill.metadata.id)) {
+      errors.push(`Duplicate skill ID found: ${skill.metadata.id}`);
+    }
+    seenIds.add(skill.metadata.id);
+
+    // Check required fields
+    if (!skill.metadata.name) {
+      errors.push(`Skill at index ${index} is missing a name`);
+    }
+    if (!skill.metadata.description) {
+      errors.push(`Skill "${skill.metadata.id}" is missing a description`);
+    }
+    if (!skill.metadata.category) {
+      errors.push(`Skill "${skill.metadata.id}" is missing a category`);
+    }
+    if (!skill.metadata.icon) {
+      warnings.push(`Skill "${skill.metadata.id}" is missing an icon`);
+    }
+    if (!skill.metadata.version) {
+      warnings.push(`Skill "${skill.metadata.id}" is missing a version`);
+    }
+
+    // Validate category
+    const validCategories = ["analytics", "creative", "optimization", "integration"];
+    if (skill.metadata.category && !validCategories.includes(skill.metadata.category)) {
+      errors.push(
+        `Skill "${skill.metadata.id}" has invalid category: ${skill.metadata.category}`
+      );
+    }
+
+    // Validate execution mode
+    const validModes = ["sync", "async"];
+    if (skill.metadata.executionMode && !validModes.includes(skill.metadata.executionMode)) {
+      errors.push(
+        `Skill "${skill.metadata.id}" has invalid execution mode: ${skill.metadata.executionMode}`
+      );
+    }
+
+    // Check for tool implementation
+    if (!skill.tool) {
+      errors.push(`Skill "${skill.metadata.id}" is missing a tool implementation`);
+    }
+
+    // Check for schemas
+    if (!skill.inputSchema) {
+      warnings.push(`Skill "${skill.metadata.id}" is missing an input schema`);
+    }
+    if (!skill.outputSchema) {
+      warnings.push(`Skill "${skill.metadata.id}" is missing an output schema`);
+    }
+  });
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
+};

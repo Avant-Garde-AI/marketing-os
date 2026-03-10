@@ -79,7 +79,7 @@ export async function detectShopifyTheme(
     if (await fs.pathExists(configPath)) {
       const configContent = await fs.readFile(configPath, "utf-8");
       const nameMatch = configContent.match(/^name:\s*(.+)$/m);
-      if (nameMatch && !result.themeName) {
+      if (nameMatch?.[1] && !result.themeName) {
         result.themeName = nameMatch[1].trim();
       }
     }

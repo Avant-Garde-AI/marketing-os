@@ -261,7 +261,8 @@ export async function addIntegrationCommand(
       console.log(chalk.yellow(`\n⚠ Tool file not found: ${integration.toolFile}`));
 
       // Check if we have a template
-      if (TOOL_TEMPLATES[integration.id]) {
+      const templateContent = TOOL_TEMPLATES[integration.id];
+      if (templateContent) {
         const shouldCreate = await confirm({
           message: "Create tool file from template?",
           default: true,
@@ -269,7 +270,7 @@ export async function addIntegrationCommand(
 
         if (shouldCreate) {
           await fs.ensureDir(toolsDir);
-          await fs.writeFile(toolPath, TOOL_TEMPLATES[integration.id], "utf-8");
+          await fs.writeFile(toolPath, templateContent, "utf-8");
           console.log(
             chalk.green(
               `✓ Created tool file: ${path.relative(process.cwd(), toolPath)}`

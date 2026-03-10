@@ -143,7 +143,7 @@ export async function scaffold(
  */
 async function prepareFiles(
   targetDir: string,
-  templateVars: Record<string, string>
+  templateVars: import("./render-template.js").TemplateVariables
 ): Promise<FileToWrite[]> {
   const templateDir = path.join(
     new URL(import.meta.url).pathname,

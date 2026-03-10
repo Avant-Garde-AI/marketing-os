@@ -340,33 +340,39 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
         }
 
         // Add integration credentials
-        if (integrationConfig.credentials.shopify) {
+        if (integrationConfig.credentials.shopify?.accessToken) {
           secrets.SHOPIFY_ACCESS_TOKEN =
             integrationConfig.credentials.shopify.accessToken;
         }
 
-        if (integrationConfig.credentials.ga4) {
+        if (integrationConfig.credentials.ga4?.propertyId) {
           secrets.GA4_PROPERTY_ID =
             integrationConfig.credentials.ga4.propertyId;
+        }
+        if (integrationConfig.credentials.ga4?.credentialsJson) {
           secrets.GA4_CREDENTIALS_JSON =
             integrationConfig.credentials.ga4.credentialsJson;
         }
 
-        if (integrationConfig.credentials.meta) {
+        if (integrationConfig.credentials.meta?.accessToken) {
           secrets.META_ACCESS_TOKEN =
             integrationConfig.credentials.meta.accessToken;
+        }
+        if (integrationConfig.credentials.meta?.adAccountId) {
           secrets.META_AD_ACCOUNT_ID =
             integrationConfig.credentials.meta.adAccountId;
         }
 
-        if (integrationConfig.credentials["google-ads"]) {
+        if (integrationConfig.credentials["google-ads"]?.customerId) {
           secrets.GOOGLE_ADS_CUSTOMER_ID =
             integrationConfig.credentials["google-ads"].customerId;
+        }
+        if (integrationConfig.credentials["google-ads"]?.credentialsJson) {
           secrets.GOOGLE_ADS_CREDENTIALS_JSON =
             integrationConfig.credentials["google-ads"].credentialsJson;
         }
 
-        if (integrationConfig.credentials.klaviyo) {
+        if (integrationConfig.credentials.klaviyo?.apiKey) {
           secrets.KLAVIYO_API_KEY =
             integrationConfig.credentials.klaviyo.apiKey;
         }

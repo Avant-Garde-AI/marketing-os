@@ -212,7 +212,9 @@ export function extractTemplateVariables(templatePath: string): string[] {
 
     let match;
     while ((match = variablePattern.exec(content)) !== null) {
-      variables.add(match[1]);
+      if (match[1]) {
+        variables.add(match[1]);
+      }
     }
 
     return Array.from(variables);

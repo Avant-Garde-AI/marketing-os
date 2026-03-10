@@ -14,8 +14,13 @@ export * from "./scaffold";
 
 // Re-export prompts with renamed IntegrationConfig to avoid conflict with config.ts
 export {
-  type SetupConfig,
+  type StoreConfig,
+  type RepoConfig,
+  type ServiceConfig,
   type IntegrationConfig as PromptIntegrationConfig,
-  promptSetupFlow,
+  promptStoreConfig,
+  promptRepoConfig,
+  promptServiceConfig,
   promptIntegrationConfig,
+  promptDeploy,
 } from "./prompts";

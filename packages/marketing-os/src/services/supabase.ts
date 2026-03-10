@@ -108,7 +108,7 @@ export async function testSupabaseConnection(
     }
 
     // Get OpenAPI spec to confirm it's a valid Supabase instance
-    const data = await response.json();
+    const data = (await response.json()) as { info?: { version?: string } };
 
     spinner.succeed(
       `Connected to Supabase${data.info?.version ? ` (${data.info.version})` : ""}`
@@ -315,11 +315,11 @@ export async function checkSupabaseTables(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const tables = await response.json();
+    const tables = (await response.json()) as Array<{ table_name: string }>;
 
     return {
       exists: tables.length > 0,
-      tables: tables.map((t: any) => t.table_name),
+      tables: tables.map((t) => t.table_name),
     };
   } catch (error) {
     return {

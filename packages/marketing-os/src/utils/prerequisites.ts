@@ -26,7 +26,7 @@ async function checkCommand(
 ): Promise<{ installed: boolean; version?: string }> {
   try {
     const { stdout } = await execa(command, [versionArg]);
-    const version = stdout.split("\n")[0].trim();
+    const version = stdout.split("\n")[0]?.trim();
     return { installed: true, version };
   } catch {
     return { installed: false };

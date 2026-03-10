@@ -102,7 +102,7 @@ export async function installDependencies(
     }
 
     // Run install
-    const result = await execa(command[0], command.slice(1), {
+    const result = await execa(command[0] as string, command.slice(1), {
       cwd: projectDir,
       stdio: verbose ? "inherit" : "pipe",
       timeout: 300000, // 5 minutes
@@ -155,7 +155,7 @@ export async function addDependencies(
   try {
     const command = getAddCommand(packageManager, dependencies, dev);
 
-    const result = await execa(command[0], command.slice(1), {
+    const result = await execa(command[0] as string, command.slice(1), {
       cwd: projectDir,
       timeout: 300000,
     });
@@ -210,7 +210,7 @@ export async function removeDependencies(
   try {
     const command = getRemoveCommand(packageManager, dependencies);
 
-    const result = await execa(command[0], command.slice(1), {
+    const result = await execa(command[0] as string, command.slice(1), {
       cwd: projectDir,
       timeout: 300000,
     });
@@ -340,8 +340,8 @@ export async function validateNodeVersion(
     const current = result.stdout.trim().replace(/^v/, "");
 
     // Simple version comparison (major version)
-    const currentMajor = parseInt(current.split(".")[0], 10);
-    const requiredMajor = parseInt(required.split(".")[0], 10);
+    const currentMajor = parseInt(current.split(".")[0] || "0", 10);
+    const requiredMajor = parseInt(required.split(".")[0] || "0", 10);
 
     return {
       valid: currentMajor >= requiredMajor,

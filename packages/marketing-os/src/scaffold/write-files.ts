@@ -248,7 +248,8 @@ function mergeEnv(existing: string, newContent: string): string {
   const existingVars = new Set(
     existingLines
       .filter((line) => line.trim() && !line.trim().startsWith("#"))
-      .map((line) => line.split("=")[0].trim())
+      .map((line) => line.split("=")[0]?.trim())
+      .filter((v): v is string => !!v)
   );
 
   // Add new variables that don't exist
@@ -261,7 +262,7 @@ function mergeEnv(existing: string, newContent: string): string {
       continue;
     }
 
-    const varName = trimmed.split("=")[0].trim();
+    const varName = trimmed.split("=")[0]?.trim() || "";
     if (!existingVars.has(varName)) {
       linesToAdd.push(line);
     }

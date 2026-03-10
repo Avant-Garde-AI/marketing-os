@@ -190,10 +190,10 @@ async function checkSupabase(agentsDir: string): Promise<CheckResult> {
 
   try {
     // Try to fetch from Supabase
-    const url = urlMatch[1].trim();
+    const url = urlMatch[1]?.trim() || "";
     const response = await fetch(`${url}/rest/v1/`, {
       headers: {
-        apikey: keyMatch[1].trim(),
+        apikey: keyMatch[1]?.trim() || "",
       },
     });
 

@@ -121,6 +121,29 @@ pnpm turbo test
 pnpm turbo test:integration
 ```
 
+## Repository CLI
+
+The repo includes a CLI (`os.sh`) for managing development and publishing workflows:
+
+```bash
+# View all available commands
+./os.sh --help
+
+# Publish to npm
+./os.sh npm:publish
+
+# Bump version
+./os.sh npm:version patch
+
+# Verify package before publishing
+./os.sh npm:verify
+
+# Preview package contents
+./os.sh npm:preview
+```
+
+See [scripts/README.md](./scripts/README.md) for full documentation on available commands and how to add new ones.
+
 ## Documentation
 
 Full specifications available in [`/spec`](./spec):

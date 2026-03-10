@@ -23,15 +23,17 @@ echo -e "${BOLD}${BLUE}Environment Variable Status${NC}"
 echo ""
 
 if [ ! -f "$ENV_FILE" ]; then
-  echo -e "${RED}No .env.local file found in agents/${NC}"
-
   if [ -f "$ENV_EXAMPLE" ]; then
-    echo -e "${DIM}Create one from example:${NC}"
-    echo -e "  cp agents/.env.example agents/.env.local"
+    echo -e "${YELLOW}⚠${NC} .env.local not found — creating from .env.example"
+    cp "$ENV_EXAMPLE" "$ENV_FILE"
+    echo -e "${GREEN}✓${NC} agents/.env.local created"
+    echo ""
+  else
+    echo -e "${RED}No .env.local or .env.example found in agents/${NC}"
+    echo -e "${DIM}Run './agents.sh setup' to configure environment.${NC}"
+    echo ""
+    exit 1
   fi
-
-  echo ""
-  exit 1
 fi
 
 REQUIRED=(

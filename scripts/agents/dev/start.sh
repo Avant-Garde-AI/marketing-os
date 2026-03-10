@@ -40,6 +40,22 @@ if [ ! -d "$AGENTS_DIR" ]; then
   exit 1
 fi
 
+# Ensure .env.local exists (Next.js requires it for env vars)
+ENV_FILE="$AGENTS_DIR/.env.local"
+ENV_EXAMPLE="$AGENTS_DIR/.env.example"
+
+if [ ! -f "$ENV_FILE" ]; then
+  if [ -f "$ENV_EXAMPLE" ]; then
+    log_warning ".env.local not found — creating from .env.example"
+    cp "$ENV_EXAMPLE" "$ENV_FILE"
+    log_success ".env.local created"
+  else
+    log_error "No .env.local or .env.example found in agents/"
+    echo -e "  ${DIM}Run './agents.sh setup' to configure environment.${NC}"
+    exit 1
+  fi
+fi
+
 # Detect package manager from lockfile
 if [ -f "$AGENTS_DIR/pnpm-lock.yaml" ]; then
   PM="pnpm"

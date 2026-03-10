@@ -116,7 +116,7 @@ if [ -f "$ENV_FILE" ]; then
 elif [ -f "$ENV_EXAMPLE" ]; then
   log_warning ".env.local not found — creating from .env.example"
   cp "$ENV_EXAMPLE" "$ENV_FILE"
-  log_info "Edit ${BOLD}agents/.env.local${NC} with your actual values"
+  log_success ".env.local created with values from init wizard"
 else
   log_warning "No .env.local or .env.example found"
 fi

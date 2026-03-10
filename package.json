@@ -5,7 +5,7 @@
   "description": "AI marketing operations for Shopify, powered by your git repo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openconjecture/marketing-os"
+    "url": "https://github.com/avant-garde/marketing-os"
   },
   "license": "MIT",
   "scripts": {

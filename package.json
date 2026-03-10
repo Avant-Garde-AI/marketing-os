@@ -1,11 +1,10 @@
 {
   "name": "marketing-os",
   "version": "0.0.0",
-  "private": true,
   "description": "AI marketing operations for Shopify, powered by your git repo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/avant-garde/marketing-os"
+    "url": "https://github.com/avant-garde-ai/marketing-os"
   },
   "license": "MIT",
   "scripts": {

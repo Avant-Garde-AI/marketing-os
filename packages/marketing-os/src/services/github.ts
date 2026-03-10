@@ -146,7 +146,7 @@ export async function setGitHubSecrets(
         secret.value,
       ]);
       spinner.text = `Setting GitHub Actions secrets... ${chalk.green("✓")} ${secret.name}`;
-    } catch (error) {
+    } catch {
       failed.push(secret.name);
       spinner.text = `Setting GitHub Actions secrets... ${chalk.red("✗")} ${secret.name}`;
     }

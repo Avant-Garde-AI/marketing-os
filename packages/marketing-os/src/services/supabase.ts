@@ -3,7 +3,6 @@
  * Handles connection testing and migration running
  */
 
-import chalk from "chalk";
 import ora from "ora";
 
 export interface SupabaseConfig {

@@ -5,7 +5,6 @@
 import { execa } from "execa";
 import chalk from "chalk";
 import ora from "ora";
-import path from "path";
 
 /**
  * Check if Vercel CLI is installed

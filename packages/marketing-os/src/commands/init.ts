@@ -3,7 +3,7 @@
  * Detects theme, scaffolds around it
  */
 
-import path from "path";
+import _path from "path";
 import chalk from "chalk";
 import { confirm } from "@inquirer/prompts";
 import {

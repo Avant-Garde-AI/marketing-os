@@ -133,7 +133,7 @@ export async function setVercelEnvVars(
         }
       );
       spinner.text = `Setting Vercel environment variables... ${chalk.green("✓")} ${envVar.name}`;
-    } catch (error) {
+    } catch {
       failed.push(envVar.name);
       spinner.text = `Setting Vercel environment variables... ${chalk.red("✗")} ${envVar.name}`;
     }

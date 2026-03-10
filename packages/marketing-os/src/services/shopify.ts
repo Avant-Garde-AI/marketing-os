@@ -105,7 +105,7 @@ export async function pullShopifyTheme(
       args.push("--live");
     }
 
-    const { stdout, stderr } = await execa("shopify", args);
+    const { stderr } = await execa("shopify", args);
 
     if (stderr && stderr.includes("error")) {
       throw new Error(stderr);

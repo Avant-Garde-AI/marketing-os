@@ -147,7 +147,7 @@ async function checkGitHubSecrets(
         });
       }
     }
-  } catch (error) {
+  } catch {
     results.push({
       name: "GitHub Secrets",
       status: "fail",
@@ -299,7 +299,7 @@ function printResult(result: CheckResult): void {
   );
 }
 
-export async function doctorCommand(options: DoctorOptions): Promise<void> {
+export async function doctorCommand(_options: DoctorOptions): Promise<void> {
   try {
     console.log(chalk.bold.cyan("\n┌─────────────────────────────────────────┐"));
     console.log(chalk.bold.cyan("│  Marketing OS Doctor                    │"));

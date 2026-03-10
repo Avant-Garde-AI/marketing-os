@@ -7,7 +7,7 @@ import path from "path";
 import chalk from "chalk";
 import ora from "ora";
 import { detectShopifyTheme } from "./detect-theme.js";
-import { renderTemplate, renderTemplateString } from "./render-template.js";
+import { renderTemplate } from "./render-template.js";
 import { writeFiles, type FileToWrite } from "./write-files.js";
 import { installDependencies } from "./install-deps.js";
 

@@ -367,7 +367,7 @@ export async function installDependencies(
     });
 
     spinner.succeed(chalk.green("✓ Dependencies installed"));
-  } catch (error) {
+  } catch {
     spinner.fail(chalk.red("✗ Dependency installation failed"));
     console.error(
       chalk.yellow(

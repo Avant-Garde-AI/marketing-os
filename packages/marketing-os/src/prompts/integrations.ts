@@ -171,7 +171,7 @@ export async function promptGA4Credentials(): Promise<
         JSON.parse(content);
 
         return true;
-      } catch (error) {
+      } catch {
         return "Invalid JSON file";
       }
     },

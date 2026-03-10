@@ -89,7 +89,7 @@ export function validateSupabaseUrl(url: string): ValidationResult {
     }
 
     return { valid: true };
-  } catch (error) {
+  } catch {
     return {
       valid: false,
       error: "Invalid URL format",
@@ -289,7 +289,7 @@ export function validateGitHubRepo(repo: string): ValidationResult {
         };
       }
       trimmedRepo = url.pathname.replace(/^\//, "").replace(/\.git$/, "");
-    } catch (error) {
+    } catch {
       return {
         valid: false,
         error: "Invalid URL format",
@@ -380,7 +380,7 @@ export function validateUrl(url: string, fieldName = "URL"): ValidationResult {
       };
     }
     return { valid: true };
-  } catch (error) {
+  } catch {
     return {
       valid: false,
       error: `Invalid ${fieldName} format`,

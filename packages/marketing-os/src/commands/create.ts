@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs-extra";
 import chalk from "chalk";
 import ora from "ora";
-import { input, confirm } from "@inquirer/prompts";
+import { confirm } from "@inquirer/prompts";
 import {
   validatePrerequisites,
   detectPackageManager,

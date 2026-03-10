@@ -216,7 +216,7 @@ export function extractTemplateVariables(templatePath: string): string[] {
     }
 
     return Array.from(variables);
-  } catch (error) {
+  } catch {
     return [];
   }
 }

@@ -68,7 +68,7 @@ export async function detectShopifyTheme(
         result.themeVersion = themeInfo.theme_version;
       }
     }
-  } catch (error) {
+  } catch {
     // If we can't parse settings_schema.json, that's okay
     // We still detected the theme based on file existence
   }
@@ -83,7 +83,7 @@ export async function detectShopifyTheme(
         result.themeName = nameMatch[1].trim();
       }
     }
-  } catch (error) {
+  } catch {
     // Ignore config.yml parsing errors
   }
 
@@ -188,7 +188,7 @@ export async function getThemeStats(
       const snippets = await fs.readdir(snippetsDir);
       stats.snippetCount = snippets.filter((f) => f.endsWith(".liquid")).length;
     }
-  } catch (error) {
+  } catch {
     // Ignore errors, return 0 counts
   }
 

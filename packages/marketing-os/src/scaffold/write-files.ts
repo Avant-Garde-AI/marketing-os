@@ -305,7 +305,7 @@ function mergePackageJson(existing: string, newContent: string): string {
     }
 
     return JSON.stringify(existingPkg, null, 2) + "\n";
-  } catch (error) {
+  } catch {
     // If parsing fails, return new content
     return newContent;
   }

@@ -5,7 +5,7 @@
 import path from "path";
 import fs from "fs-extra";
 import chalk from "chalk";
-import { input, select } from "@inquirer/prompts";
+import { input } from "@inquirer/prompts";
 import validatePackageName from "validate-npm-package-name";
 
 interface AddSkillOptions {
@@ -106,7 +106,7 @@ function validateSkillName(name: string): boolean | string {
 
 export async function addSkillCommand(
   skillName: string | undefined,
-  options: AddSkillOptions
+  _options: AddSkillOptions
 ): Promise<void> {
   try {
     console.log(chalk.bold.cyan("\n┌─────────────────────────────────────────┐"));

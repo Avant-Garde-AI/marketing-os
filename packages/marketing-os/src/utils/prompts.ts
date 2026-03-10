@@ -9,7 +9,6 @@ import {
   validateSupabaseUrl,
   validateSupabaseKey,
   testSupabaseConnection,
-  createSupabaseTables,
 } from "../services/supabase.js";
 
 export interface StoreConfig {

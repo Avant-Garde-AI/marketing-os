@@ -142,7 +142,7 @@ export const klaviyoTool = new Tool({
 
 export async function addIntegrationCommand(
   integrationName: string | undefined,
-  options: AddIntegrationOptions
+  _options: AddIntegrationOptions
 ): Promise<void> {
   try {
     console.log(chalk.bold.cyan("\n┌─────────────────────────────────────────┐"));
@@ -315,7 +315,7 @@ export async function addIntegrationCommand(
       } else {
         try {
           await setGitHubSecrets(repoFullName, credentials);
-        } catch (error) {
+        } catch {
           console.log(
             chalk.yellow(
               "\n⚠ Failed to set GitHub secrets. You may need to set them manually."

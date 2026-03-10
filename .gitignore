@@ -46,6 +46,9 @@ lerna-debug.log*
 !.changeset/README.md
 !.changeset/config.json
 
+# NPM
+.npmrc
+
 # Misc
 *.tgz
 *.gz

@@ -48,6 +48,8 @@ ${YELLOW}AVAILABLE COMMANDS${NC}
   ${GREEN}npm:verify${NC}          Verify package is ready for publish
   ${GREEN}npm:preview${NC}         Preview what will be published (dry-run)
 
+  ${DIM}For agent commands (dev, deploy, etc.), use${NC} ${GREEN}./agents.sh${NC}
+
 ${YELLOW}EXAMPLES${NC}
   ./os.sh npm:publish              # Publish to npm
   ./os.sh npm:version patch        # Bump patch version

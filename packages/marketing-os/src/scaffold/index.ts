@@ -545,6 +545,53 @@ async function prepareFiles(
       overwrite: "skip",
     },
 
+    // CLI scripts
+    {
+      templatePath: path.join(templateDir, "agents.sh"),
+      targetPath: path.join(targetDir, "agents.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/dev/setup.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/dev/setup.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/dev/start.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/dev/start.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/dev/clean.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/dev/clean.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/deploy/build.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/deploy/build.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/deploy/vercel.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/deploy/vercel.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/deploy/preview.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/deploy/preview.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/ops/doctor.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/ops/doctor.sh"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/ops/env.sh"),
+      targetPath: path.join(targetDir, "agents/scripts/ops/env.sh"),
+      overwrite: "skip",
+    },
+
     // Docs
     {
       templatePath: path.join(templateDir, "docs/brand-voice.md.hbs"),

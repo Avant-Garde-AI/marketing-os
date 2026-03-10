@@ -10,12 +10,18 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "dev:full": "./agents.sh dev --shopify",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "changeset": "changeset",
     "release": "turbo run build && changeset publish",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "agents:setup": "./agents.sh setup",
+    "agents:dev": "./agents.sh dev",
+    "agents:build": "./agents.sh build",
+    "agents:deploy": "./agents.sh deploy",
+    "agents:doctor": "./agents.sh doctor"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.0",

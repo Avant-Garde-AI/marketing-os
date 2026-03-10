@@ -21,14 +21,72 @@ import {
   detectShopifyTheme,
   getThemeName,
   checkForExistingInstall,
+  writeEnvLocal,
 } from "../utils/scaffold.js";
 import { isGitRepo, getGitRepoInfo, setGitHubSecrets } from "../utils/github.js";
+import { createSupabaseTables } from "../services/supabase.js";
+
+const SETUP_SQL = `
+-- Run this in Supabase SQL Editor to create required tables:
+
+CREATE TABLE IF NOT EXISTS public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  role TEXT DEFAULT 'member',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.skill_executions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  skill_id TEXT NOT NULL,
+  user_id UUID REFERENCES public.users(id),
+  status TEXT NOT NULL,
+  input JSONB,
+  output JSONB,
+  error TEXT,
+  started_at TIMESTAMPTZ DEFAULT NOW(),
+  completed_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS public.conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id),
+  title TEXT,
+  messages JSONB DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.integrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL,
+  credentials JSONB NOT NULL,
+  enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.skill_executions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.integrations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own data" ON public.users FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
+CREATE POLICY "Users can view own skills" ON public.skill_executions FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can view own conversations" ON public.conversations FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Admins can manage integrations" ON public.integrations FOR ALL USING (
+  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
+);
+`.trim();
 
 interface InitOptions {
   store?: string;
   anthropicKey?: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
+  supabaseServiceKey?: string;
   adminEmail?: string;
   skipSupabase?: boolean;
   yes?: boolean;
@@ -48,6 +106,7 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
         anthropicKey: argv[argv.indexOf('--anthropic-key') + 1] || undefined,
         supabaseUrl: argv[argv.indexOf('--supabase-url') + 1] || undefined,
         supabaseAnonKey: argv[argv.indexOf('--supabase-anon-key') + 1] || undefined,
+        supabaseServiceKey: argv[argv.indexOf('--supabase-service-key') + 1] || undefined,
         adminEmail: argv[argv.indexOf('--admin-email') + 1] || undefined,
         skipSupabase: argv.includes('--skip-supabase'),
         verbose: argv.includes('--verbose'),
@@ -155,6 +214,7 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     let anthropicKey: string;
     let supabaseUrl: string | undefined;
     let supabaseAnonKey: string | undefined;
+    let supabaseServiceKey: string | undefined;
     let adminEmail: string;
     let useSupabase: boolean;
 
@@ -163,27 +223,26 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
       options.adminEmail &&
       (options.skipSupabase || (options.supabaseUrl && options.supabaseAnonKey))
     ) {
-      // Use provided options
       anthropicKey = options.anthropicKey;
       supabaseUrl = options.supabaseUrl;
       supabaseAnonKey = options.supabaseAnonKey;
+      supabaseServiceKey = options.supabaseServiceKey;
       adminEmail = options.adminEmail;
       useSupabase = !options.skipSupabase;
     } else {
-      // Prompt for service config
       const serviceConfig = await promptServiceConfig();
       anthropicKey = serviceConfig.anthropicKey;
       supabaseUrl = serviceConfig.supabaseUrl;
       supabaseAnonKey = serviceConfig.supabaseAnonKey;
+      supabaseServiceKey = serviceConfig.supabaseServiceKey;
       adminEmail = serviceConfig.adminEmail;
       useSupabase = serviceConfig.useSupabase;
     }
 
     // Step 3: Integrations
-    let integrationConfig;
+    let integrationConfig: { enabledIntegrations: string[]; credentials: Record<string, Record<string, string>> };
     if (options.yes) {
-      // Skip integration prompts in non-interactive mode
-      integrationConfig = { enabledIntegrations: [] };
+      integrationConfig = { enabledIntegrations: [], credentials: {} };
     } else {
       console.log(chalk.bold("\n🔌 Integrations\n"));
       integrationConfig = await promptIntegrationConfig();
@@ -201,9 +260,65 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
       enabledIntegrations: integrationConfig.enabledIntegrations,
     });
 
+    // Write .env.local with actual credentials
+    await writeEnvLocal(workingDir, {
+      anthropicKey,
+      supabaseUrl,
+      supabaseAnonKey,
+      supabaseServiceKey,
+      storeUrl,
+      repoFullName: repoFullName || "unknown/repo",
+      integrationCredentials: integrationConfig.credentials,
+    });
+
     // Install dependencies
     const packageManager = await detectPackageManager();
     await installDependencies(workingDir, packageManager);
+
+    // Step 4b: Create Supabase tables
+    if (useSupabase && supabaseUrl && supabaseAnonKey) {
+      console.log(chalk.bold("\n🗄️  Database Setup\n"));
+
+      if (supabaseServiceKey) {
+        const result = await createSupabaseTables({
+          url: supabaseUrl,
+          anonKey: supabaseAnonKey,
+          serviceKey: supabaseServiceKey,
+        });
+
+        if (!result.success) {
+          console.log(
+            chalk.yellow(
+              `  ⚠ Auto-creation failed: ${result.error}\n`
+            )
+          );
+          console.log(
+            chalk.dim(
+              "  You can create tables manually in Supabase Studio (SQL Editor).\n" +
+                "  See: https://github.com/Avant-Garde-AI/marketing-os#database-setup\n"
+            )
+          );
+        }
+      } else {
+        console.log(
+          chalk.yellow(
+            "  ⚠ No service role key provided — skipping automatic table creation.\n"
+          )
+        );
+        console.log(
+          chalk.dim(
+            "  To create tables, run the following SQL in Supabase Studio (SQL Editor):\n"
+          )
+        );
+        console.log(
+          chalk.dim(
+            "  https://supabase.com/dashboard/project/_/sql/new\n"
+          )
+        );
+        console.log(chalk.cyan(SETUP_SQL));
+        console.log("");
+      }
+    }
 
     // Step 5: Secrets
     if (repoFullName) {
@@ -275,14 +390,17 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     console.log(chalk.bold.green("\n✓ Marketing OS initialized!\n"));
 
     console.log(chalk.bold("Next steps:\n"));
-    console.log(chalk.cyan("  1. cd agents && npm run dev"));
-    console.log(chalk.cyan("  2. Open http://localhost:3000"));
-    console.log(chalk.cyan(`  3. Log in with: ${adminEmail}`));
-    console.log(chalk.cyan("  4. Edit /docs/brand-voice.md with your brand voice"));
-    console.log(chalk.cyan('  5. Try: "How is my store performing?"\n'));
+    console.log(chalk.cyan("  1. ./agents.sh setup"));
+    console.log(chalk.cyan("  2. ./agents.sh dev"));
+    console.log(chalk.cyan("  3. Open http://localhost:3000"));
+    console.log(chalk.cyan(`  4. Log in with: ${adminEmail}`));
+    console.log(chalk.cyan("  5. Edit /docs/brand-voice.md with your brand voice"));
+    console.log(chalk.cyan('  6. Try: "How is my store performing?"\n'));
 
     console.log(chalk.dim("To deploy to Vercel:"));
-    console.log(chalk.dim("  cd agents && vercel\n"));
+    console.log(chalk.dim("  ./agents.sh deploy\n"));
+
+    console.log(chalk.dim("Run ./agents.sh --help for all commands.\n"));
   } catch (error) {
     console.error(chalk.red("\n✗ Initialization failed:"), error);
     process.exit(1);

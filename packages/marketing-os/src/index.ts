@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name("marketing-os")
   .description("AI marketing operations for Shopify, powered by your git repo")
-  .version("0.1.0");
+  .version("0.2.0");
 
 // Default command (create - interactive flow)
 program
@@ -26,6 +26,7 @@ program
   .option("--anthropic-key <key>", "Anthropic API key")
   .option("--supabase-url <url>", "Supabase project URL")
   .option("--supabase-anon-key <key>", "Supabase anon/public key")
+  .option("--supabase-service-key <key>", "Supabase service role key (enables auto table creation)")
   .option("--admin-email <email>", "Email for the admin user")
   .option("--deploy", "Auto-deploy to Vercel after scaffolding")
   .option("--skip-git", "Skip git init and GitHub setup")
@@ -44,6 +45,7 @@ program
   .option("--anthropic-key <key>", "Anthropic API key")
   .option("--supabase-url <url>", "Supabase project URL")
   .option("--supabase-anon-key <key>", "Supabase anon/public key")
+  .option("--supabase-service-key <key>", "Supabase service role key (enables auto table creation)")
   .option("--admin-email <email>", "Email for the admin user")
   .option("--skip-supabase", "Skip Supabase setup (use local SQLite)")
   .option("-y, --yes", "Accept all defaults, skip confirmations")

@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev & mastra dev & wait",
+    "dev:next": "next dev",
+    "dev:mastra": "mastra dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "mastra:dev": "mastra dev"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "^15.1.0",

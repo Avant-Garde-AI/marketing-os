@@ -5,6 +5,12 @@
 import { input, confirm, select, checkbox, password } from "@inquirer/prompts";
 import chalk from "chalk";
 import { validateStoreUrl } from "./shopify.js";
+import {
+  validateSupabaseUrl,
+  validateSupabaseKey,
+  testSupabaseConnection,
+  createSupabaseTables,
+} from "../services/supabase.js";
 
 export interface StoreConfig {
   storeUrl: string;
@@ -22,6 +28,7 @@ export interface ServiceConfig {
   anthropicKey: string;
   supabaseUrl?: string;
   supabaseAnonKey?: string;
+  supabaseServiceKey?: string;
   adminEmail: string;
   useSupabase: boolean;
 }
@@ -130,7 +137,8 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
 
   let supabaseUrl: string | undefined;
   let supabaseAnonKey: string | undefined;
-  const useSupabase = supabaseChoice !== "none";
+  let supabaseServiceKey: string | undefined;
+  let useSupabase = supabaseChoice !== "none";
 
   if (supabaseChoice === "new") {
     console.log(
@@ -150,8 +158,8 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
       message: "Supabase project URL:",
       validate: (value) => {
         if (!value) return "Supabase URL is required";
-        if (!value.startsWith("https://") || !value.includes(".supabase.co"))
-          return "Please enter a valid Supabase URL (https://xxx.supabase.co)";
+        const validation = validateSupabaseUrl(value);
+        if (!validation.valid) return validation.error || "Invalid URL";
         return true;
       },
     });
@@ -161,9 +169,59 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
       mask: "*",
       validate: (value) => {
         if (!value) return "Supabase anon key is required";
+        const validation = validateSupabaseKey(value);
+        if (!validation.valid) return validation.error || "Invalid key format";
         return true;
       },
     });
+
+    // Test connection before proceeding
+    const connection = await testSupabaseConnection({
+      url: supabaseUrl,
+      anonKey: supabaseAnonKey,
+    });
+
+    if (!connection.connected) {
+      console.log(
+        chalk.red(`\n  ✗ Connection failed: ${connection.error}\n`)
+      );
+
+      const retry = await confirm({
+        message: "Try again?",
+        default: true,
+      });
+
+      if (retry) {
+        return promptServiceConfig();
+      } else {
+        console.log(chalk.yellow("  Continuing without Supabase...\n"));
+        useSupabase = false;
+        supabaseUrl = undefined;
+        supabaseAnonKey = undefined;
+      }
+    }
+
+    if (useSupabase) {
+      const wantsServiceKey = await confirm({
+        message:
+          "Provide service role key? (enables automatic database table creation)",
+        default: true,
+      });
+
+      if (wantsServiceKey) {
+        supabaseServiceKey = await password({
+          message: "Supabase service role key:",
+          mask: "*",
+          validate: (value) => {
+            if (!value) return "Service role key is required";
+            const validation = validateSupabaseKey(value);
+            if (!validation.valid)
+              return validation.error || "Invalid key format";
+            return true;
+          },
+        });
+      }
+    }
   }
 
   const adminEmail = await input({
@@ -180,6 +238,7 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
     anthropicKey,
     supabaseUrl,
     supabaseAnonKey,
+    supabaseServiceKey,
     adminEmail,
     useSupabase,
   };

@@ -216,12 +216,12 @@ describe("CLI Integration Tests", () => {
 
       const content = await fs.readFile(filePath, "utf-8");
 
-      // Check for uninterpolated Handlebars variables
-      const hasUninterpolatedVars = /\{\{[^}]+\}\}/.test(content);
+      // Check for uninterpolated Handlebars variables (exclude GitHub Actions ${{ }} syntax)
+      const hasUninterpolatedVars = /(?<!\$)\{\{[^}]+\}\}/.test(content);
 
       expect(
         hasUninterpolatedVars,
-        `File ${file} contains uninterpolated Handlebars variables: ${content.match(/\{\{[^}]+\}\}/g)?.join(", ")}`
+        `File ${file} contains uninterpolated Handlebars variables: ${content.match(/(?<!\$)\{\{[^}]+\}\}/g)?.join(", ")}`
       ).toBe(false);
     }
   }, 10000);
@@ -250,7 +250,7 @@ describe("CLI Integration Tests", () => {
       "react",
       "react-dom",
       "@mastra/core",
-      "@anthropic-ai/sdk",
+      "@ai-sdk/anthropic",
       "@supabase/supabase-js",
       "@supabase/ssr",
     ];
@@ -270,7 +270,6 @@ describe("CLI Integration Tests", () => {
       "@types/react-dom",
       "tailwindcss",
       "postcss",
-      "autoprefixer",
     ];
 
     for (const dep of expectedDevDeps) {

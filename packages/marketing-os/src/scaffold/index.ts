@@ -613,7 +613,7 @@ async function prepareFiles(
     {
       templatePath: path.join(
         templateDir,
-        "github/workflows/marketing-os-agent.yml.hbs"
+        ".github/workflows/marketing-os-agent.yml"
       ),
       targetPath: path.join(
         targetDir,
@@ -624,7 +624,7 @@ async function prepareFiles(
     {
       templatePath: path.join(
         templateDir,
-        "github/workflows/marketing-os-review.yml"
+        ".github/workflows/marketing-os-review.yml"
       ),
       targetPath: path.join(
         targetDir,

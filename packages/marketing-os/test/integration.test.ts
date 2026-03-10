@@ -296,7 +296,7 @@ describe("CLI Integration Tests", () => {
       "SUPABASE_ANON_KEY",
       "NEXT_PUBLIC_SUPABASE_URL",
       "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-      "NEXT_PUBLIC_STORE_URL",
+      "SHOPIFY_STORE_URL",
     ];
 
     for (const envVar of requiredVars) {
@@ -322,11 +322,12 @@ describe("CLI Integration Tests", () => {
       expect(content).toContain("on:");
       expect(content).toContain("jobs:");
 
-      // Verify no template variables remain
-      const hasUninterpolatedVars = /\{\{[^}]+\}\}/.test(content);
+      // Verify no Handlebars template variables remain (exclude GitHub Actions ${{ }} syntax)
+      // This regex matches {{ without a preceding $ (negative lookbehind)
+      const hasUninterpolatedVars = /(?<!\$)\{\{[^}]+\}\}/.test(content);
       expect(
         hasUninterpolatedVars,
-        `Workflow ${file} contains uninterpolated variables`
+        `Workflow ${file} contains uninterpolated Handlebars variables`
       ).toBe(false);
     }
   }, 5000);

@@ -6,7 +6,7 @@ Marketing OS is an open-source CLI + framework that transforms any Shopify store
 
 ## Features
 
-- **CLI Scaffolding** - `create-marketing-os` scaffolds an opinionated Next.js admin console into your existing Shopify theme repo
+- **CLI Scaffolding** - `marketing-os` scaffolds an opinionated Next.js admin console into your existing Shopify theme repo
 - **AI Marketing Agent** - Chat with your store's AI marketing agent powered by Mastra and Claude
 - **Skills System** - Browse and execute reusable marketing automation skills
 - **Async PR Pipeline** - Claude Code safely modifies your storefront via GitHub Actions and pull requests
@@ -15,7 +15,7 @@ Marketing OS is an open-source CLI + framework that transforms any Shopify store
 ## Quick Start
 
 ```bash
-npx create-marketing-os
+npx @avant-garde/marketing-os init
 ```
 
 The CLI will guide you through:

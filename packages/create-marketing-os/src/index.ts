@@ -1,6 +1,6 @@
 /**
- * create-marketing-os
- * CLI tool to scaffold Marketing OS into Shopify theme repositories
+ * marketing-os
+ * CLI tool for AI marketing operations on Shopify
  */
 
 import { Command } from "commander";
@@ -13,7 +13,7 @@ import { doctorCommand } from "./commands/doctor.js";
 const program = new Command();
 
 program
-  .name("create-marketing-os")
+  .name("marketing-os")
   .description("AI marketing operations for Shopify, powered by your git repo")
   .version("0.1.0");
 

@@ -1,10 +1,10 @@
 {
-  "name": "@avant-garde/create-marketing-os",
+  "name": "@avant-garde/marketing-os",
   "version": "0.1.0",
   "description": "AI marketing operations for Shopify, powered by your git repo",
   "type": "module",
   "bin": {
-    "create-marketing-os": "./dist/index.js"
+    "marketing-os": "./dist/index.js"
   },
   "publishConfig": {
     "access": "public"

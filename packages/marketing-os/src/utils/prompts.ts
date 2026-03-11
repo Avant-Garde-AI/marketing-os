@@ -20,6 +20,7 @@ import {
   displayShopifyInstructions,
   validateShopifyToken,
 } from "../services/shopify-auth.js";
+import open from "open";
 
 export interface StoreConfig {
   storeUrl: string;
@@ -165,19 +166,29 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
   let useSupabase = supabaseChoice !== "none";
 
   if (supabaseChoice === "new") {
-    console.log(
-      chalk.dim(
-        "\n→ Opening https://supabase.com/dashboard/new in your browser..."
-      )
-    );
-    console.log(
-      chalk.dim(
-        "  After creating your project, copy the URL and anon key from Settings > API\n"
-      )
-    );
+    console.log(chalk.bold("\n  📋 To create a Supabase project:\n"));
+    console.log(chalk.dim("  1. Sign in to Supabase (opening in browser)"));
+    console.log(chalk.dim("  2. Click 'New Project'"));
+    console.log(chalk.dim("  3. Choose a name, password, and region"));
+    console.log(chalk.dim("  4. Wait for project to be ready (~2 minutes)"));
+    console.log(chalk.dim("  5. Go to Settings → API"));
+    console.log(chalk.dim("  6. Copy the Project URL and anon key\n"));
+
+    console.log(chalk.dim("  Opening Supabase Dashboard..."));
+    await open("https://supabase.com/dashboard/projects");
+
+    await confirm({
+      message: "Press Enter once you've created your project and copied the credentials...",
+      default: true,
+    });
   }
 
   if (supabaseChoice !== "none") {
+    // Show where to find credentials if using existing project
+    if (supabaseChoice === "existing") {
+      console.log(chalk.dim("\n  Find your credentials at: Settings → API in Supabase Dashboard\n"));
+    }
+
     supabaseUrl = await input({
       message: "Supabase project URL:",
       validate: (value) => {

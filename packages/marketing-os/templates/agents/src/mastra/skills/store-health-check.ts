@@ -107,8 +107,8 @@ export const tool = createTool({
 
     // Filter orders by time range
     const now = new Date();
-    const daysMap = { "7d": 7, "30d": 30, "90d": 90 };
-    const daysAgo = daysMap[context.timeRange];
+    const daysMap: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
+    const daysAgo = daysMap[context.timeRange as string];
     const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 
     const filteredOrders = orders.filter((o: any) =>

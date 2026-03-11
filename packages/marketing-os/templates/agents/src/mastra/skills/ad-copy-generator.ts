@@ -108,12 +108,12 @@ export const tool = createTool({
   outputSchema,
   execute: async ({ context, mastra }) => {
     // Platform character limits
-    const platformLimits = {
+    const platformLimits: Record<string, { headline: number; body: number }> = {
       meta: { headline: 40, body: 125 },
       google: { headline: 30, body: 90 },
       email: { headline: 50, body: 200 },
     };
-    const limits = platformLimits[context.platform];
+    const limits = platformLimits[context.platform as string];
 
     // Fetch product data if productId is provided
     let productContext: { name: string; price?: string; description?: string } | undefined;

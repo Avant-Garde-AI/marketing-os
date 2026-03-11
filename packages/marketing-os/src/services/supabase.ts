@@ -8,6 +8,8 @@ import { execa } from "execa";
 import fs from "fs-extra";
 import path from "path";
 import open from "open";
+import { password as promptPassword } from "@inquirer/prompts";
+import chalk from "chalk";
 
 export interface SupabaseConfig {
   url: string;
@@ -277,15 +279,28 @@ export async function createSupabaseTablesViaCLI(
     const migrationFile = path.join(migrationsDir, `${timestamp}_init_marketing_os.sql`);
     await fs.writeFile(migrationFile, SCHEMA_SQL);
 
-    // Link to the project
-    spinner.text = "Linking to Supabase project...";
+    // Link to the project - requires database password
+    spinner.stop();
+
+    console.log(chalk.dim("\n  The database password was set when you created your Supabase project."));
+    console.log(chalk.dim("  You can reset it at: Settings → Database → Database password\n"));
+
+    const dbPassword = await promptPassword({
+      message: "Supabase database password:",
+      mask: "*",
+      validate: (value) => {
+        if (!value) return "Database password is required";
+        return true;
+      },
+    });
+
+    spinner.start("Linking to Supabase project...");
     try {
-      await execa("supabase", ["link", "--project-ref", projectRef], {
+      await execa("supabase", ["link", "--project-ref", projectRef, "--password", dbPassword], {
         cwd: workingDir,
-        stdio: "inherit",
       });
     } catch (linkError) {
-      // Link might fail if already linked or need password - that's ok
+      // Link might fail if already linked - that's ok
       spinner.text = "Project link attempted...";
     }
 

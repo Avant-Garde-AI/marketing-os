@@ -10,6 +10,16 @@ import {
   validateSupabaseKey,
   testSupabaseConnection,
 } from "../services/supabase.js";
+import {
+  openAnthropicConsole,
+  displayAnthropicInstructions,
+  validateAnthropicKey,
+} from "../services/anthropic.js";
+import {
+  openShopifyAdmin,
+  displayShopifyInstructions,
+  validateShopifyToken,
+} from "../services/shopify-auth.js";
 
 export interface StoreConfig {
   storeUrl: string;
@@ -114,13 +124,28 @@ export async function promptRepoConfig(): Promise<RepoConfig> {
 export async function promptServiceConfig(): Promise<ServiceConfig> {
   console.log(chalk.bold("\n🔑 Service Configuration\n"));
 
+  // Anthropic API key with browser helper
+  const hasAnthropicKey = await confirm({
+    message: "Do you have an Anthropic API key?",
+    default: true,
+  });
+
+  if (!hasAnthropicKey) {
+    displayAnthropicInstructions();
+    await openAnthropicConsole();
+
+    await confirm({
+      message: "Press Enter once you've copied your API key...",
+      default: true,
+    });
+  }
+
   const anthropicKey = await password({
     message: "Anthropic API key:",
     mask: "*",
     validate: (value) => {
-      if (!value) return "API key is required";
-      if (!value.startsWith("sk-ant-"))
-        return "API key should start with 'sk-ant-'";
+      const result = validateAnthropicKey(value);
+      if (!result.valid) return result.error || "Invalid API key";
       return true;
     },
   });
@@ -271,10 +296,43 @@ export async function promptIntegrationConfig(): Promise<IntegrationConfig> {
   // Prompt for credentials for selected integrations
   for (const integration of integrations) {
     if (integration === "shopify") {
+      // Shopify with browser helper
+      const hasShopifyToken = await confirm({
+        message: "Do you have a Shopify Admin API access token?",
+        default: false,
+      });
+
+      if (!hasShopifyToken) {
+        // We need the store URL - this should be passed in or asked for here
+        const storeUrlForAuth = await input({
+          message: "Shopify store URL (for opening admin):",
+          validate: (value) => {
+            if (!value) return "Store URL is required";
+            if (!validateStoreUrl(value)) {
+              return "Please enter a valid Shopify store URL (e.g., mystore.myshopify.com)";
+            }
+            return true;
+          },
+        });
+
+        displayShopifyInstructions();
+        await openShopifyAdmin(storeUrlForAuth);
+
+        await confirm({
+          message: "Press Enter once you've copied your access token...",
+          default: true,
+        });
+      }
+
       credentials.shopify = {
         accessToken: await password({
           message: "Shopify Admin API access token:",
           mask: "*",
+          validate: (value) => {
+            const result = validateShopifyToken(value);
+            if (!result.valid) return result.error || "Invalid token";
+            return true;
+          },
         }),
       };
     } else if (integration === "ga4") {

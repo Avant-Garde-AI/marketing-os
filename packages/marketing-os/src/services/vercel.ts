@@ -40,6 +40,94 @@ export async function checkVercelCLI(): Promise<{
 }
 
 /**
+ * Check if user is logged into Vercel CLI
+ */
+export async function isVercelLoggedIn(): Promise<boolean> {
+  try {
+    const result = await execa("vercel", ["whoami"], { timeout: 10000 });
+    return result.stdout.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get the currently logged-in Vercel user
+ */
+export async function getVercelUser(): Promise<string | null> {
+  try {
+    const result = await execa("vercel", ["whoami"]);
+    return result.stdout.trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Login to Vercel via CLI (opens browser for OAuth)
+ */
+export async function vercelLogin(): Promise<{ success: boolean; user?: string; error?: string }> {
+  console.log(chalk.dim("\n  Opening browser for Vercel login..."));
+
+  try {
+    await execa("vercel", ["login"], { stdio: "inherit" });
+
+    const user = await getVercelUser();
+    if (user) {
+      console.log(chalk.green(`  ✓ Logged in to Vercel as ${user}`));
+      return { success: true, user };
+    }
+
+    console.log(chalk.yellow("  ⚠ Vercel login completed but couldn't verify user"));
+    return { success: false, error: "Could not verify login" };
+  } catch (error) {
+    console.log(chalk.red("  ✗ Vercel login failed"));
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Display instructions for installing Vercel CLI
+ */
+export function displayVercelCLIInstructions(): void {
+  console.log(chalk.bold("\n  📦 Install Vercel CLI:\n"));
+  console.log(chalk.cyan("  npm install -g vercel"));
+  console.log(chalk.dim("\n  Then run this command again.\n"));
+}
+
+/**
+ * Full Vercel setup flow with OAuth
+ */
+export async function setupVercelWithOAuth(
+  projectDir: string
+): Promise<{ success: boolean; user?: string; error?: string }> {
+  // Check if CLI is installed
+  const cliCheck = await checkVercelCLI();
+  if (!cliCheck.installed) {
+    console.log(chalk.yellow("\n  ⚠ Vercel CLI not installed"));
+    displayVercelCLIInstructions();
+    return { success: false, error: "CLI not installed" };
+  }
+
+  // Check if logged in
+  const loggedIn = await isVercelLoggedIn();
+  if (!loggedIn) {
+    const loginResult = await vercelLogin();
+    if (!loginResult.success) {
+      return { success: false, error: loginResult.error };
+    }
+    return { success: true, user: loginResult.user };
+  }
+
+  const user = await getVercelUser();
+  console.log(chalk.green(`  ✓ Already logged in to Vercel as ${user}`));
+  return { success: true, user: user || undefined };
+}
+
+/**
  * Link a project to Vercel
  */
 export async function linkVercelProject(

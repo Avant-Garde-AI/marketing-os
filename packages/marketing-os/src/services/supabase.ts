@@ -1,16 +1,18 @@
 /**
  * Supabase validation and setup
- * Handles connection testing and table creation via direct PostgreSQL connection
+ * Handles connection testing and table creation via Supabase CLI or browser
  */
 
 import ora from "ora";
-import pg from "pg";
+import { execa } from "execa";
+import fs from "fs-extra";
+import path from "path";
+import open from "open";
 
 export interface SupabaseConfig {
   url: string;
   anonKey: string;
   serviceKey?: string;
-  dbPassword?: string;
 }
 
 export interface SupabaseConnection {
@@ -28,18 +30,28 @@ export function extractProjectRef(url: string): string | null {
 }
 
 /**
- * Build PostgreSQL connection string from Supabase config
+ * Check if Supabase CLI is installed
  */
-export function buildConnectionString(config: SupabaseConfig): string | null {
-  if (!config.dbPassword) return null;
+export async function isSupabaseCLIInstalled(): Promise<boolean> {
+  try {
+    await execa("supabase", ["--version"]);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  const projectRef = extractProjectRef(config.url);
-  if (!projectRef) return null;
-
-  // Use the pooler connection string (works with IPv4)
-  // Format: postgres://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
-  // We use the session mode pooler on port 5432 for DDL operations
-  return `postgres://postgres.${projectRef}:${encodeURIComponent(config.dbPassword)}@aws-0-us-east-1.pooler.supabase.com:5432/postgres`;
+/**
+ * Check if user is logged into Supabase CLI
+ */
+export async function isSupabaseCLILoggedIn(): Promise<boolean> {
+  try {
+    // `supabase projects list` will fail if not logged in
+    await execa("supabase", ["projects", "list"], { timeout: 10000 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -152,74 +164,6 @@ export async function testSupabaseConnection(
   }
 }
 
-/**
- * Run Supabase migrations
- *
- * WARNING: This function requires a custom `exec_sql` PostgreSQL function
- * to be created in your Supabase project first. This is NOT a built-in
- * Supabase function. For most use cases, run migrations directly via
- * Supabase CLI or the SQL Editor instead.
- *
- * @deprecated Use Supabase CLI migrations or SQL Editor for table setup
- */
-export async function runSupabaseMigrations(
-  config: SupabaseConfig,
-  migrationsDir: string
-): Promise<{ success: boolean; error?: string }> {
-  const spinner = ora("Running Supabase migrations...").start();
-
-  try {
-    if (!config.serviceKey) {
-      throw new Error("Service key required for running migrations");
-    }
-
-    // Read migration files
-    const fs = await import("fs-extra");
-    const path = await import("path");
-
-    const migrationFiles = await fs.readdir(migrationsDir);
-    const sqlFiles = migrationFiles
-      .filter((f) => f.endsWith(".sql"))
-      .sort();
-
-    if (sqlFiles.length === 0) {
-      spinner.warn("No migration files found");
-      return { success: true };
-    }
-
-    // Execute each migration
-    for (const file of sqlFiles) {
-      const filePath = path.join(migrationsDir, file);
-      const sql = await fs.readFile(filePath, "utf-8");
-
-      spinner.text = `Running migration: ${file}`;
-
-      const response = await fetch(`${config.url}/rest/v1/rpc/exec_sql`, {
-        method: "POST",
-        headers: {
-          apikey: config.serviceKey,
-          Authorization: `Bearer ${config.serviceKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: sql }),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Migration ${file} failed: ${error}`);
-      }
-    }
-
-    spinner.succeed(`Ran ${sqlFiles.length} migration${sqlFiles.length !== 1 ? "s" : ""}`);
-    return { success: true };
-  } catch (error) {
-    spinner.fail("Failed to run migrations");
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
 
 /**
  * Core schema SQL for Marketing OS tables
@@ -297,88 +241,108 @@ END $$;
 `.trim();
 
 /**
- * Create Supabase tables using direct PostgreSQL connection
- * Connects via the Supabase pooler to execute DDL statements
+ * Create Supabase tables using the Supabase CLI
+ * Uses `supabase login`, `supabase link`, and `supabase db push`
  */
-export async function createSupabaseTables(
-  config: SupabaseConfig
-): Promise<{ success: boolean; error?: string }> {
-  const spinner = ora("Creating Supabase tables...").start();
+export async function createSupabaseTablesViaCLI(
+  projectRef: string,
+  workingDir: string
+): Promise<{ success: boolean; error?: string; usedCLI: boolean }> {
+  const spinner = ora("Setting up Supabase database...").start();
 
   try {
-    if (!config.dbPassword) {
-      throw new Error("Database password required for creating tables");
+    // Check if Supabase CLI is installed
+    const cliInstalled = await isSupabaseCLIInstalled();
+    if (!cliInstalled) {
+      spinner.info("Supabase CLI not installed - will open browser instead");
+      return { success: false, error: "CLI not installed", usedCLI: false };
     }
 
-    const connectionString = buildConnectionString(config);
-    if (!connectionString) {
-      throw new Error("Could not build connection string from Supabase URL");
+    // Check if logged in
+    spinner.text = "Checking Supabase CLI authentication...";
+    const loggedIn = await isSupabaseCLILoggedIn();
+    if (!loggedIn) {
+      spinner.text = "Opening browser for Supabase login...";
+      // This will open a browser for OAuth login
+      await execa("supabase", ["login"], { stdio: "inherit" });
     }
 
-    // Connect directly to PostgreSQL
-    const client = new pg.Client({
-      connectionString,
-      ssl: { rejectUnauthorized: false },
+    // Create supabase directory structure
+    const supabaseDir = path.join(workingDir, "supabase");
+    const migrationsDir = path.join(supabaseDir, "migrations");
+    await fs.ensureDir(migrationsDir);
+
+    // Create migration file with timestamp
+    const timestamp = new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14);
+    const migrationFile = path.join(migrationsDir, `${timestamp}_init_marketing_os.sql`);
+    await fs.writeFile(migrationFile, SCHEMA_SQL);
+
+    // Link to the project
+    spinner.text = "Linking to Supabase project...";
+    try {
+      await execa("supabase", ["link", "--project-ref", projectRef], {
+        cwd: workingDir,
+        stdio: "inherit",
+      });
+    } catch (linkError) {
+      // Link might fail if already linked or need password - that's ok
+      spinner.text = "Project link attempted...";
+    }
+
+    // Push the migration
+    spinner.text = "Pushing database migration...";
+    await execa("supabase", ["db", "push"], {
+      cwd: workingDir,
+      stdio: "inherit",
     });
 
-    await client.connect();
-
-    try {
-      // Execute the schema SQL
-      await client.query(SCHEMA_SQL);
-      spinner.succeed("Supabase tables created");
-      return { success: true };
-    } finally {
-      await client.end();
-    }
+    spinner.succeed("Supabase tables created via CLI");
+    return { success: true, usedCLI: true };
   } catch (error) {
-    spinner.fail("Failed to create Supabase tables");
+    spinner.fail("Failed to create tables via CLI");
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),
+      usedCLI: true,
     };
   }
 }
 
 /**
- * Check if Supabase tables exist
- *
- * WARNING: This function requires a custom `get_tables` PostgreSQL function
- * to be created in your Supabase project first. This is NOT a built-in
- * Supabase function.
- *
- * @deprecated Use Supabase Dashboard or CLI to check table existence
+ * Open Supabase SQL Editor in browser with schema ready to paste
  */
-export async function checkSupabaseTables(
-  config: SupabaseConfig
-): Promise<{ exists: boolean; tables?: string[]; error?: string }> {
+export async function openSupabaseSQLEditor(projectRef: string): Promise<void> {
+  const sqlEditorUrl = `https://supabase.com/dashboard/project/${projectRef}/sql/new`;
+
+  console.log("\n  Opening Supabase SQL Editor in your browser...");
+  console.log(`  URL: ${sqlEditorUrl}\n`);
+
+  await open(sqlEditorUrl);
+}
+
+/**
+ * Copy text to clipboard (cross-platform)
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
   try {
-    // Query for tables in the public schema
-    const response = await fetch(
-      `${config.url}/rest/v1/rpc/get_tables?schema=public`,
-      {
-        method: "GET",
-        headers: {
-          apikey: config.anonKey,
-          Authorization: `Bearer ${config.anonKey}`,
-        },
+    const platform = process.platform;
+    if (platform === "darwin") {
+      await execa("pbcopy", { input: text });
+    } else if (platform === "linux") {
+      // Try xclip first, then xsel
+      try {
+        await execa("xclip", ["-selection", "clipboard"], { input: text });
+      } catch {
+        await execa("xsel", ["--clipboard", "--input"], { input: text });
       }
-    );
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    } else if (platform === "win32") {
+      await execa("clip", { input: text });
+    } else {
+      return false;
     }
-
-    const tables = (await response.json()) as Array<{ table_name: string }>;
-
-    return {
-      exists: tables.length > 0,
-      tables: tables.map((t) => t.table_name),
-    };
-  } catch (error) {
-    return {
-      exists: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
+    return true;
+  } catch {
+    return false;
   }
 }
+

@@ -1,6 +1,6 @@
 {
   "name": "@avant-garde/marketing-os",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "AI marketing operations for Shopify, powered by your git repo",
   "type": "module",
   "bin": {
@@ -31,14 +31,13 @@
     "fs-extra": "^11.2.0",
     "glob": "^11.0.0",
     "handlebars": "^4.7.8",
+    "open": "^11.0.0",
     "ora": "^8.0.1",
-    "pg": "^8.20.0",
     "validate-npm-package-name": "^6.0.0"
   },
   "devDependencies": {
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",
-    "@types/pg": "^8.18.0",
     "@types/validate-npm-package-name": "^4.0.2",
     "tsup": "^8.0.2",
     "tsx": "^4.7.0",

@@ -24,7 +24,13 @@ import {
   writeEnvLocal,
 } from "../utils/scaffold.js";
 import { isGitRepo, getGitRepoInfo, setGitHubSecrets } from "../utils/github.js";
-import { createSupabaseTables, SCHEMA_SQL } from "../services/supabase.js";
+import {
+  extractProjectRef,
+  createSupabaseTablesViaCLI,
+  openSupabaseSQLEditor,
+  copyToClipboard,
+  SCHEMA_SQL,
+} from "../services/supabase.js";
 
 
 interface InitOptions {
@@ -33,7 +39,6 @@ interface InitOptions {
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   supabaseServiceKey?: string;
-  supabaseDbPassword?: string;
   adminEmail?: string;
   skipSupabase?: boolean;
   yes?: boolean;
@@ -162,7 +167,6 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     let supabaseUrl: string | undefined;
     let supabaseAnonKey: string | undefined;
     let supabaseServiceKey: string | undefined;
-    let supabaseDbPassword: string | undefined;
     let adminEmail: string;
     let useSupabase: boolean;
 
@@ -175,7 +179,6 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
       supabaseUrl = options.supabaseUrl;
       supabaseAnonKey = options.supabaseAnonKey;
       supabaseServiceKey = options.supabaseServiceKey;
-      supabaseDbPassword = options.supabaseDbPassword;
       adminEmail = options.adminEmail;
       useSupabase = !options.skipSupabase;
     } else {
@@ -184,7 +187,6 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
       supabaseUrl = serviceConfig.supabaseUrl;
       supabaseAnonKey = serviceConfig.supabaseAnonKey;
       supabaseServiceKey = serviceConfig.supabaseServiceKey;
-      supabaseDbPassword = serviceConfig.supabaseDbPassword;
       adminEmail = serviceConfig.adminEmail;
       useSupabase = serviceConfig.useSupabase;
     }
@@ -229,47 +231,64 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     if (useSupabase && supabaseUrl && supabaseAnonKey) {
       console.log(chalk.bold("\n🗄️  Database Setup\n"));
 
-      if (supabaseDbPassword) {
-        // Attempt automatic table creation via direct PostgreSQL connection
-        const result = await createSupabaseTables({
-          url: supabaseUrl,
-          anonKey: supabaseAnonKey,
-          dbPassword: supabaseDbPassword,
+      const projectRef = extractProjectRef(supabaseUrl);
+      if (!projectRef) {
+        console.log(chalk.yellow("  ⚠ Could not extract project reference from URL\n"));
+      } else if (options.yes) {
+        // Non-interactive mode - skip database setup, show instructions
+        console.log(
+          chalk.dim(
+            "  Database setup skipped in non-interactive mode.\n" +
+            "  Run the SQL in Supabase Studio to create tables:\n" +
+            `  https://supabase.com/dashboard/project/${projectRef}/sql/new\n`
+          )
+        );
+      } else {
+        // Interactive mode - offer CLI or browser setup
+        const shouldSetupDb = await confirm({
+          message: "Set up database tables now?",
+          default: true,
         });
 
-        if (!result.success) {
-          console.log(
-            chalk.yellow(
-              `  ⚠ Auto-creation failed: ${result.error}\n`
-            )
-          );
+        if (shouldSetupDb) {
+          // Try CLI first
+          const cliResult = await createSupabaseTablesViaCLI(projectRef, workingDir);
+
+          if (!cliResult.success) {
+            // Fallback to browser
+            console.log(chalk.dim("\n  Opening Supabase SQL Editor in your browser..."));
+
+            // Copy SQL to clipboard
+            const copied = await copyToClipboard(SCHEMA_SQL);
+            if (copied) {
+              console.log(chalk.green("  ✓ SQL schema copied to clipboard!\n"));
+            }
+
+            // Open browser to SQL Editor
+            await openSupabaseSQLEditor(projectRef);
+
+            console.log(chalk.dim("  Paste the SQL in the editor and click 'Run' to create tables.\n"));
+
+            if (!copied) {
+              console.log(chalk.dim("  SQL Schema to copy:\n"));
+              console.log(chalk.cyan(SCHEMA_SQL));
+              console.log("");
+            }
+
+            // Wait for user to confirm they've run the SQL
+            await confirm({
+              message: "Press Enter once you've run the SQL in the browser...",
+              default: true,
+            });
+          }
+        } else {
           console.log(
             chalk.dim(
-              "  You can create tables manually in Supabase Studio (SQL Editor):\n"
+              "\n  You can set up the database later by running the SQL in Supabase Studio:\n" +
+              `  https://supabase.com/dashboard/project/${projectRef}/sql/new\n`
             )
           );
-          console.log(
-            chalk.dim(
-              "  https://supabase.com/dashboard/project/_/sql/new\n"
-            )
-          );
-          console.log(chalk.cyan(SCHEMA_SQL));
-          console.log("");
         }
-      } else {
-        // No database password - show SQL for manual execution
-        console.log(
-          chalk.dim(
-            "  To create the required tables, run the following SQL in Supabase Studio:\n"
-          )
-        );
-        console.log(
-          chalk.dim(
-            "  https://supabase.com/dashboard/project/_/sql/new\n"
-          )
-        );
-        console.log(chalk.cyan(SCHEMA_SQL));
-        console.log("");
       }
     }
 

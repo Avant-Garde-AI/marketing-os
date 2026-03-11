@@ -264,9 +264,11 @@ export async function createSupabaseTablesViaCLI(
     spinner.text = "Checking Supabase CLI authentication...";
     const loggedIn = await isSupabaseCLILoggedIn();
     if (!loggedIn) {
-      spinner.text = "Opening browser for Supabase login...";
+      spinner.stop();
+      console.log(chalk.dim("\n  Opening browser for Supabase login...\n"));
       // This will open a browser for OAuth login
       await execa("supabase", ["login"], { stdio: "inherit" });
+      spinner.start("Setting up Supabase database...");
     }
 
     // Create supabase directory structure
@@ -305,16 +307,18 @@ export async function createSupabaseTablesViaCLI(
     }
 
     // Push the migration
-    spinner.text = "Pushing database migration...";
+    spinner.stop();
+    console.log(chalk.dim("\n  Pushing database migration...\n"));
     await execa("supabase", ["db", "push"], {
       cwd: workingDir,
       stdio: "inherit",
     });
 
-    spinner.succeed("Supabase tables created via CLI");
+    console.log(chalk.green("\n  ✔ Supabase tables created via CLI"));
     return { success: true, usedCLI: true };
   } catch (error) {
-    spinner.fail("Failed to create tables via CLI");
+    spinner.stop();
+    console.log(chalk.red("\n  ✖ Failed to create tables via CLI"));
     return {
       success: false,
       error: error instanceof Error ? error.message : String(error),

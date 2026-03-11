@@ -9,6 +9,7 @@ import { initCommand } from "./commands/init.js";
 import { addSkillCommand } from "./commands/add-skill.js";
 import { addIntegrationCommand } from "./commands/add-integration.js";
 import { doctorCommand } from "./commands/doctor.js";
+import { upgradeCommand } from "./commands/upgrade.js";
 
 const program = new Command();
 
@@ -79,6 +80,19 @@ program
   .option("--verbose", "Show detailed output")
   .action(async (options) => {
     await doctorCommand(options);
+  });
+
+// Upgrade command - upgrade existing installation
+program
+  .command("upgrade")
+  .description("Upgrade an existing Marketing OS installation to the latest version")
+  .option("--force", "Overwrite all files without prompting")
+  .option("--dry-run", "Show what would be changed without making changes")
+  .option("--skip-deps", "Skip dependency installation")
+  .option("--verbose", "Show detailed output")
+  .option("-y, --yes", "Accept all defaults, skip confirmations")
+  .action(async (options) => {
+    await upgradeCommand(options);
   });
 
 // Parse command line arguments

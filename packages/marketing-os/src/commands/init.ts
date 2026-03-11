@@ -24,62 +24,8 @@ import {
   writeEnvLocal,
 } from "../utils/scaffold.js";
 import { isGitRepo, getGitRepoInfo, setGitHubSecrets } from "../utils/github.js";
-import { createSupabaseTables } from "../services/supabase.js";
+import { createSupabaseTables, SCHEMA_SQL } from "../services/supabase.js";
 
-const SETUP_SQL = `
--- Run this in Supabase SQL Editor to create required tables:
-
-CREATE TABLE IF NOT EXISTS public.users (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
-  role TEXT DEFAULT 'member',
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.skill_executions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  skill_id TEXT NOT NULL,
-  user_id UUID REFERENCES public.users(id),
-  status TEXT NOT NULL,
-  input JSONB,
-  output JSONB,
-  error TEXT,
-  started_at TIMESTAMPTZ DEFAULT NOW(),
-  completed_at TIMESTAMPTZ
-);
-
-CREATE TABLE IF NOT EXISTS public.conversations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES public.users(id),
-  title TEXT,
-  messages JSONB DEFAULT '[]'::jsonb,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS public.integrations (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  type TEXT NOT NULL,
-  credentials JSONB NOT NULL,
-  enabled BOOLEAN DEFAULT true,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.skill_executions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.integrations ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can view own data" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can view own skills" ON public.skill_executions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can view own conversations" ON public.conversations FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can manage integrations" ON public.integrations FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
-);
-`.trim();
 
 interface InitOptions {
   store?: string;
@@ -87,6 +33,7 @@ interface InitOptions {
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   supabaseServiceKey?: string;
+  supabaseDbPassword?: string;
   adminEmail?: string;
   skipSupabase?: boolean;
   yes?: boolean;
@@ -215,6 +162,7 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     let supabaseUrl: string | undefined;
     let supabaseAnonKey: string | undefined;
     let supabaseServiceKey: string | undefined;
+    let supabaseDbPassword: string | undefined;
     let adminEmail: string;
     let useSupabase: boolean;
 
@@ -227,6 +175,7 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
       supabaseUrl = options.supabaseUrl;
       supabaseAnonKey = options.supabaseAnonKey;
       supabaseServiceKey = options.supabaseServiceKey;
+      supabaseDbPassword = options.supabaseDbPassword;
       adminEmail = options.adminEmail;
       useSupabase = !options.skipSupabase;
     } else {
@@ -235,6 +184,7 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
       supabaseUrl = serviceConfig.supabaseUrl;
       supabaseAnonKey = serviceConfig.supabaseAnonKey;
       supabaseServiceKey = serviceConfig.supabaseServiceKey;
+      supabaseDbPassword = serviceConfig.supabaseDbPassword;
       adminEmail = serviceConfig.adminEmail;
       useSupabase = serviceConfig.useSupabase;
     }
@@ -279,11 +229,12 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     if (useSupabase && supabaseUrl && supabaseAnonKey) {
       console.log(chalk.bold("\n🗄️  Database Setup\n"));
 
-      if (supabaseServiceKey) {
+      if (supabaseDbPassword) {
+        // Attempt automatic table creation via direct PostgreSQL connection
         const result = await createSupabaseTables({
           url: supabaseUrl,
           anonKey: supabaseAnonKey,
-          serviceKey: supabaseServiceKey,
+          dbPassword: supabaseDbPassword,
         });
 
         if (!result.success) {
@@ -294,20 +245,22 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
           );
           console.log(
             chalk.dim(
-              "  You can create tables manually in Supabase Studio (SQL Editor).\n" +
-                "  See: https://github.com/Avant-Garde-AI/marketing-os#database-setup\n"
+              "  You can create tables manually in Supabase Studio (SQL Editor):\n"
             )
           );
+          console.log(
+            chalk.dim(
+              "  https://supabase.com/dashboard/project/_/sql/new\n"
+            )
+          );
+          console.log(chalk.cyan(SCHEMA_SQL));
+          console.log("");
         }
       } else {
-        console.log(
-          chalk.yellow(
-            "  ⚠ No service role key provided — skipping automatic table creation.\n"
-          )
-        );
+        // No database password - show SQL for manual execution
         console.log(
           chalk.dim(
-            "  To create tables, run the following SQL in Supabase Studio (SQL Editor):\n"
+            "  To create the required tables, run the following SQL in Supabase Studio:\n"
           )
         );
         console.log(
@@ -315,7 +268,7 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
             "  https://supabase.com/dashboard/project/_/sql/new\n"
           )
         );
-        console.log(chalk.cyan(SETUP_SQL));
+        console.log(chalk.cyan(SCHEMA_SQL));
         console.log("");
       }
     }

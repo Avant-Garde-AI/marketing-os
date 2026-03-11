@@ -1,20 +1,45 @@
 /**
  * Supabase validation and setup
- * Handles connection testing and migration running
+ * Handles connection testing and table creation via direct PostgreSQL connection
  */
 
 import ora from "ora";
+import pg from "pg";
 
 export interface SupabaseConfig {
   url: string;
   anonKey: string;
   serviceKey?: string;
+  dbPassword?: string;
 }
 
 export interface SupabaseConnection {
   connected: boolean;
   error?: string;
   version?: string;
+}
+
+/**
+ * Extract project reference from Supabase URL
+ */
+export function extractProjectRef(url: string): string | null {
+  const match = url.match(/^https:\/\/([a-z0-9-]+)\.supabase\.co$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Build PostgreSQL connection string from Supabase config
+ */
+export function buildConnectionString(config: SupabaseConfig): string | null {
+  if (!config.dbPassword) return null;
+
+  const projectRef = extractProjectRef(config.url);
+  if (!projectRef) return null;
+
+  // Use the pooler connection string (works with IPv4)
+  // Format: postgres://postgres.[PROJECT-REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+  // We use the session mode pooler on port 5432 for DDL operations
+  return `postgres://postgres.${projectRef}:${encodeURIComponent(config.dbPassword)}@aws-0-us-east-1.pooler.supabase.com:5432/postgres`;
 }
 
 /**
@@ -129,7 +154,13 @@ export async function testSupabaseConnection(
 
 /**
  * Run Supabase migrations
- * Note: This requires the database connection string with service role privileges
+ *
+ * WARNING: This function requires a custom `exec_sql` PostgreSQL function
+ * to be created in your Supabase project first. This is NOT a built-in
+ * Supabase function. For most use cases, run migrations directly via
+ * Supabase CLI or the SQL Editor instead.
+ *
+ * @deprecated Use Supabase CLI migrations or SQL Editor for table setup
  */
 export async function runSupabaseMigrations(
   config: SupabaseConfig,
@@ -191,21 +222,9 @@ export async function runSupabaseMigrations(
 }
 
 /**
- * Create Supabase tables using the REST API
- * This is a simplified version that creates the core tables
+ * Core schema SQL for Marketing OS tables
  */
-export async function createSupabaseTables(
-  config: SupabaseConfig
-): Promise<{ success: boolean; error?: string }> {
-  const spinner = ora("Creating Supabase tables...").start();
-
-  try {
-    if (!config.serviceKey) {
-      throw new Error("Service key required for creating tables");
-    }
-
-    // Core schema SQL
-    const schema = `
+export const SCHEMA_SQL = `
 -- Users table (extends auth.users)
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -254,35 +273,64 @@ ALTER TABLE public.skill_executions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.integrations ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies
-CREATE POLICY "Users can view own data" ON public.users FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can view own skills" ON public.skill_executions FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can view own conversations" ON public.conversations FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Admins can manage integrations" ON public.integrations FOR ALL USING (
-  EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
-);
-    `.trim();
+-- RLS Policies (use IF NOT EXISTS pattern via DO block)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own data' AND tablename = 'users') THEN
+    CREATE POLICY "Users can view own data" ON public.users FOR SELECT USING (auth.uid() = id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own data' AND tablename = 'users') THEN
+    CREATE POLICY "Users can update own data" ON public.users FOR UPDATE USING (auth.uid() = id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own skills' AND tablename = 'skill_executions') THEN
+    CREATE POLICY "Users can view own skills" ON public.skill_executions FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own conversations' AND tablename = 'conversations') THEN
+    CREATE POLICY "Users can view own conversations" ON public.conversations FOR SELECT USING (auth.uid() = user_id);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Admins can manage integrations' AND tablename = 'integrations') THEN
+    CREATE POLICY "Admins can manage integrations" ON public.integrations FOR ALL USING (
+      EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin')
+    );
+  END IF;
+END $$;
+`.trim();
 
-    // Execute schema via Supabase SQL endpoint
-    const response = await fetch(`${config.url}/rest/v1/rpc/exec_sql`, {
-      method: "POST",
-      headers: {
-        apikey: config.serviceKey,
-        Authorization: `Bearer ${config.serviceKey}`,
-        "Content-Type": "application/json",
-        Prefer: "return=minimal",
-      },
-      body: JSON.stringify({ query: schema }),
-    });
+/**
+ * Create Supabase tables using direct PostgreSQL connection
+ * Connects via the Supabase pooler to execute DDL statements
+ */
+export async function createSupabaseTables(
+  config: SupabaseConfig
+): Promise<{ success: boolean; error?: string }> {
+  const spinner = ora("Creating Supabase tables...").start();
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Failed to create tables: ${error}`);
+  try {
+    if (!config.dbPassword) {
+      throw new Error("Database password required for creating tables");
     }
 
-    spinner.succeed("Supabase tables created");
-    return { success: true };
+    const connectionString = buildConnectionString(config);
+    if (!connectionString) {
+      throw new Error("Could not build connection string from Supabase URL");
+    }
+
+    // Connect directly to PostgreSQL
+    const client = new pg.Client({
+      connectionString,
+      ssl: { rejectUnauthorized: false },
+    });
+
+    await client.connect();
+
+    try {
+      // Execute the schema SQL
+      await client.query(SCHEMA_SQL);
+      spinner.succeed("Supabase tables created");
+      return { success: true };
+    } finally {
+      await client.end();
+    }
   } catch (error) {
     spinner.fail("Failed to create Supabase tables");
     return {
@@ -294,6 +342,12 @@ CREATE POLICY "Admins can manage integrations" ON public.integrations FOR ALL US
 
 /**
  * Check if Supabase tables exist
+ *
+ * WARNING: This function requires a custom `get_tables` PostgreSQL function
+ * to be created in your Supabase project first. This is NOT a built-in
+ * Supabase function.
+ *
+ * @deprecated Use Supabase Dashboard or CLI to check table existence
  */
 export async function checkSupabaseTables(
   config: SupabaseConfig

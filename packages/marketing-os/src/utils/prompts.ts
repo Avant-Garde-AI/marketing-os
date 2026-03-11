@@ -28,6 +28,7 @@ export interface ServiceConfig {
   supabaseUrl?: string;
   supabaseAnonKey?: string;
   supabaseServiceKey?: string;
+  supabaseDbPassword?: string;
   adminEmail: string;
   useSupabase: boolean;
 }
@@ -137,6 +138,7 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
   let supabaseUrl: string | undefined;
   let supabaseAnonKey: string | undefined;
   let supabaseServiceKey: string | undefined;
+  let supabaseDbPassword: string | undefined;
   let useSupabase = supabaseChoice !== "none";
 
   if (supabaseChoice === "new") {
@@ -201,9 +203,31 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
     }
 
     if (useSupabase) {
+      const wantsAutoSetup = await confirm({
+        message:
+          "Set up database tables automatically? (requires database password)",
+        default: true,
+      });
+
+      if (wantsAutoSetup) {
+        console.log(
+          chalk.dim(
+            "\n  Find your database password in Supabase Dashboard → Settings → Database\n"
+          )
+        );
+        supabaseDbPassword = await password({
+          message: "Database password:",
+          mask: "*",
+          validate: (value) => {
+            if (!value) return "Database password is required";
+            return true;
+          },
+        });
+      }
+
       const wantsServiceKey = await confirm({
         message:
-          "Provide service role key? (enables automatic database table creation)",
+          "Provide service role key? (recommended for server-side operations)",
         default: true,
       });
 
@@ -238,6 +262,7 @@ export async function promptServiceConfig(): Promise<ServiceConfig> {
     supabaseUrl,
     supabaseAnonKey,
     supabaseServiceKey,
+    supabaseDbPassword,
     adminEmail,
     useSupabase,
   };

@@ -39,7 +39,10 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    // Has a valid shop cookie — allow through
+    // Has a valid shop cookie — route to mini admin if hitting root
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/shopify", request.url));
+    }
     return response;
   }
 

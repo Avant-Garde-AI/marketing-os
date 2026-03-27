@@ -1,26 +1,58 @@
 // agents/src/mastra/tools/shopify-admin.ts
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { getAccessToken, normalizeShop } from "@/lib/shopify/session";
+
+const API_VERSION = "2024-10";
+
+/**
+ * Resolve the shop domain and access token.
+ *
+ * Priority:
+ *   1. Per-merchant token from Supabase (multi-tenant / OAuth)
+ *   2. Env-var fallback (single-tenant / self-hosted)
+ */
+async function resolveShopCredentials(shopOverride?: string) {
+  const shop = normalizeShop(
+    shopOverride ?? process.env.SHOPIFY_STORE_URL ?? ""
+  );
+  if (!shop) throw new Error("No shop domain available");
+
+  const token = await getAccessToken(shop);
+  if (!token) {
+    throw new Error(
+      `No access token found for ${shop}. Install the app via OAuth or set SHOPIFY_ACCESS_TOKEN.`
+    );
+  }
+
+  return { shop, token };
+}
+
+function shopifyFetch(shop: string, token: string, path: string) {
+  return fetch(`https://${shop}/admin/api/${API_VERSION}/${path}`, {
+    headers: { "X-Shopify-Access-Token": token },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Tools
+// ---------------------------------------------------------------------------
 
 const getStoreInfo = createTool({
   id: "shopify-get-store-info",
   description: "Get basic information about the Shopify store",
-  inputSchema: z.object({}),
+  inputSchema: z.object({
+    shop: z.string().optional().describe("Shop domain override (optional)"),
+  }),
   outputSchema: z.object({
     name: z.string(),
     domain: z.string(),
     plan: z.string(),
     currency: z.string(),
   }),
-  execute: async () => {
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/shop.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
-    );
+  execute: async ({ inputData }) => {
+    const { shop, token } = await resolveShopCredentials(inputData.shop);
+    const res = await shopifyFetch(shop, token, "shop.json");
     const data = await res.json();
     return {
       name: data.shop.name,
@@ -35,6 +67,7 @@ const getRecentOrders = createTool({
   id: "shopify-get-recent-orders",
   description: "Get recent orders from the Shopify store",
   inputSchema: z.object({
+    shop: z.string().optional().describe("Shop domain override (optional)"),
     limit: z.number().min(1).max(50).default(10),
     status: z.enum(["any", "open", "closed", "cancelled"]).default("any"),
   }),
@@ -50,13 +83,11 @@ const getRecentOrders = createTool({
     total_count: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?limit=${inputData.limit}&status=${inputData.status}`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const { shop, token } = await resolveShopCredentials(inputData.shop);
+    const res = await shopifyFetch(
+      shop,
+      token,
+      `orders.json?limit=${inputData.limit}&status=${inputData.status}`
     );
     const data = await res.json();
     return {
@@ -77,6 +108,7 @@ const getProducts = createTool({
   id: "shopify-get-products",
   description: "Get products from the Shopify store",
   inputSchema: z.object({
+    shop: z.string().optional().describe("Shop domain override (optional)"),
     limit: z.number().min(1).max(50).default(10),
   }),
   outputSchema: z.object({
@@ -89,13 +121,11 @@ const getProducts = createTool({
     })),
   }),
   execute: async ({ inputData }) => {
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/products.json?limit=${inputData.limit}`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const { shop, token } = await resolveShopCredentials(inputData.shop);
+    const res = await shopifyFetch(
+      shop,
+      token,
+      `products.json?limit=${inputData.limit}`
     );
     const data = await res.json();
     return {

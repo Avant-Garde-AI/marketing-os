@@ -1,6 +1,6 @@
 {
   "name": "@avant-garde/marketing-os",
-  "version": "0.5.2",
+  "version": "0.5.7",
   "description": "AI marketing operations for Shopify, powered by your git repo",
   "type": "module",
   "bin": {

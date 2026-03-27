@@ -1,5 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { getShopifyClient } from "../../../lib/shopify";
 
 /**
  * Skill Metadata — exported for the skills registry and UI card generation.
@@ -128,7 +129,7 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ context, mastra }) => {
+  execute: async ({ inputData, mastra }) => {
     // Calculate date range
     const now = new Date();
     const daysOffset = inputData.weekOffset * 7;
@@ -145,15 +146,10 @@ export const tool = createTool({
     };
 
     // Fetch orders for the period
-    const ordersRes = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${startDate.toISOString()}`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const shopify = getShopifyClient();
+    const ordersData = await shopify.rest<{ orders: any[] }>(
+      `orders.json?status=any&limit=250&created_at_min=${startDate.toISOString()}`
     );
-    const ordersData = await ordersRes.json();
     const orders = (ordersData.orders || []).filter(
       (o: any) => new Date(o.created_at) >= startDate && new Date(o.created_at) <= endDate
     );
@@ -171,15 +167,9 @@ export const tool = createTool({
       const prevStartDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       const prevEndDate = new Date(startDate);
 
-      const prevOrdersRes = await fetch(
-        `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${prevStartDate.toISOString()}`,
-        {
-          headers: {
-            "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-          },
-        }
+      const prevOrdersData = await shopify.rest<{ orders: any[] }>(
+        `orders.json?status=any&limit=250&created_at_min=${prevStartDate.toISOString()}`
       );
-      const prevOrdersData = await prevOrdersRes.json();
       const prevOrders = (prevOrdersData.orders || []).filter(
         (o: any) => new Date(o.created_at) >= prevStartDate && new Date(o.created_at) <= prevEndDate
       );

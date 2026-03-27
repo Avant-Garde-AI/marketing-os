@@ -1,5 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { getShopifyClient } from "../../../lib/shopify";
 
 /**
  * Skill Metadata — exported for the skills registry and UI card generation.
@@ -89,20 +90,15 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ context, mastra }) => {
+  execute: async ({ inputData, mastra }) => {
     const recommendations: string[] = [];
     const alerts: Array<{ severity: "info" | "warning" | "critical"; message: string }> = [];
 
     // Fetch store data via Shopify Admin API
-    const ordersRes = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?status=any&limit=250`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const shopify = getShopifyClient();
+    const ordersData = await shopify.rest<{ orders: any[] }>(
+      "orders.json?status=any&limit=250"
     );
-    const ordersData = await ordersRes.json();
     const orders = ordersData.orders || [];
 
     // Filter orders by time range

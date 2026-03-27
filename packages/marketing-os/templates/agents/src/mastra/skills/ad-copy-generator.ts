@@ -1,5 +1,6 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { getShopifyClient } from "../../../lib/shopify";
 
 /**
  * Skill Metadata — exported for the skills registry and UI card generation.
@@ -106,7 +107,7 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ context, mastra }) => {
+  execute: async ({ inputData, mastra }) => {
     // Platform character limits
     const platformLimits: Record<string, { headline: number; body: number }> = {
       meta: { headline: 40, body: 125 },
@@ -120,15 +121,10 @@ export const tool = createTool({
 
     if (inputData.productId) {
       try {
-        const productRes = await fetch(
-          `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/products/${inputData.productId}.json`,
-          {
-            headers: {
-              "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-            },
-          }
+        const shopify = getShopifyClient();
+        const productData = await shopify.rest<{ product: any }>(
+          `products/${inputData.productId}.json`
         );
-        const productData = await productRes.json();
         const product = productData.product;
 
         productContext = {

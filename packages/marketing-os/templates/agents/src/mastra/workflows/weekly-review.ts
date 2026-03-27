@@ -1,6 +1,7 @@
 // agents/src/mastra/workflows/weekly-review.ts
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
+import { getShopifyClient } from "../../../lib/shopify";
 
 /**
  * Weekly Review Workflow
@@ -33,15 +34,10 @@ const fetchShopifyData = createStep({
     const { startDate, endDate } = inputData;
 
     // Fetch orders from Shopify Admin API
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?status=any&limit=250&created_at_min=${startDate}&created_at_max=${endDate}`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const shopify = getShopifyClient();
+    const data = await shopify.rest<{ orders: any[] }>(
+      `orders.json?status=any&limit=250&created_at_min=${startDate}&created_at_max=${endDate}`
     );
-    const data = await res.json();
     const orders = data.orders || [];
 
     // Calculate metrics

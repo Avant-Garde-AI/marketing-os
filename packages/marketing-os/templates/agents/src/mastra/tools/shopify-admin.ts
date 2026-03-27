@@ -1,6 +1,7 @@
 // agents/src/mastra/tools/shopify-admin.ts
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { getShopifyClient } from "../../../lib/shopify";
 
 const getStoreInfo = createTool({
   id: "shopify-get-store-info",
@@ -13,15 +14,8 @@ const getStoreInfo = createTool({
     currency: z.string(),
   }),
   execute: async () => {
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/shop.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
-    );
-    const data = await res.json();
+    const shopify = getShopifyClient();
+    const data = await shopify.rest<{ shop: any }>("shop.json");
     return {
       name: data.shop.name,
       domain: data.shop.domain,
@@ -50,15 +44,10 @@ const getRecentOrders = createTool({
     total_count: z.number(),
   }),
   execute: async ({ context }) => {
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?limit=${context.limit}&status=${context.status}`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const shopify = getShopifyClient();
+    const data = await shopify.rest<{ orders: any[] }>(
+      `orders.json?limit=${context.limit}&status=${context.status}`
     );
-    const data = await res.json();
     return {
       orders: data.orders.map((o: any) => ({
         id: String(o.id),
@@ -89,15 +78,10 @@ const getProducts = createTool({
     })),
   }),
   execute: async ({ context }) => {
-    const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/products.json?limit=${context.limit}`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
-        },
-      }
+    const shopify = getShopifyClient();
+    const data = await shopify.rest<{ products: any[] }>(
+      `products.json?limit=${context.limit}`
     );
-    const data = await res.json();
     return {
       products: data.products.map((p: any) => ({
         id: String(p.id),

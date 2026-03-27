@@ -18,7 +18,7 @@ const getPageViews = createTool({
       endDate: z.string(),
     }),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const propertyId = process.env.GA4_PROPERTY_ID!;
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
 
@@ -39,8 +39,8 @@ const getPageViews = createTool({
       totalUsers: 0,
       totalSessions: 0,
       dateRange: {
-        startDate: context.startDate,
-        endDate: context.endDate,
+        startDate: inputData.startDate,
+        endDate: inputData.endDate,
       },
     };
   },
@@ -64,7 +64,7 @@ const getTopPages = createTool({
     })),
     totalCount: z.number(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const propertyId = process.env.GA4_PROPERTY_ID!;
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
 
@@ -95,7 +95,7 @@ const getConversionRate = createTool({
       conversions: z.number(),
     })),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const propertyId = process.env.GA4_PROPERTY_ID!;
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
 
@@ -130,7 +130,7 @@ const getTrafficSources = createTool({
     })),
     totalSources: z.number(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const propertyId = process.env.GA4_PROPERTY_ID!;
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
 

@@ -4,6 +4,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
 
+  // Skip auth in local development
+  if (process.env.NODE_ENV === "development") {
+    return response;
+  }
+
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_ANON_KEY!,
@@ -37,5 +42,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/webhooks).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|auth/callback).*)",
+  ],
 };

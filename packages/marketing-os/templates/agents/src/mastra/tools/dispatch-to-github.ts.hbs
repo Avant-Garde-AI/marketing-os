@@ -19,7 +19,7 @@ export const dispatchToGithubTool = createTool({
     issueUrl: z.string(),
     message: z.string(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const repo = process.env.GITHUB_REPO!; // e.g., "{{githubRepo}}"
     const token = process.env.GITHUB_TOKEN!;
 
@@ -32,9 +32,9 @@ export const dispatchToGithubTool = createTool({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: `[Marketing OS] ${context.title}`,
-          body: `## Skill: \`${context.skillId}\`\n\n${context.body}\n\n---\n_Created by Marketing OS agent_`,
-          labels: ["marketing-os", context.priority],
+          title: `[Marketing OS] ${inputData.title}`,
+          body: `## Skill: \`${inputData.skillId}\`\n\n${inputData.body}\n\n---\n_Created by Marketing OS agent_`,
+          labels: ["marketing-os", inputData.priority],
         }),
       }
     );

@@ -28,7 +28,7 @@ export interface SupabaseConnection {
  */
 export function extractProjectRef(url: string): string | null {
   const match = url.match(/^https:\/\/([a-z0-9-]+)\.supabase\.co$/);
-  return match ? match[1] : null;
+  return match?.[1] ?? null;
 }
 
 /**
@@ -249,7 +249,7 @@ END $$;
 export async function createSupabaseTablesViaCLI(
   projectRef: string,
   workingDir: string
-): Promise<{ success: boolean; error?: string; usedCLI: boolean }> {
+): Promise<{ success: boolean; error?: string; usedCLI: boolean; dbPassword?: string }> {
   const spinner = ora("Setting up Supabase database...").start();
 
   try {
@@ -315,7 +315,7 @@ export async function createSupabaseTablesViaCLI(
     });
 
     console.log(chalk.green("\n  ✔ Supabase tables created via CLI"));
-    return { success: true, usedCLI: true };
+    return { success: true, usedCLI: true, dbPassword };
   } catch (error) {
     spinner.stop();
     console.log(chalk.red("\n  ✖ Failed to create tables via CLI"));

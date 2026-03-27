@@ -107,23 +107,23 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ context, mastra }) => {
+  execute: async ({ inputData, mastra }) => {
     // Platform character limits
     const platformLimits: Record<string, { headline: number; body: number }> = {
       meta: { headline: 40, body: 125 },
       google: { headline: 30, body: 90 },
       email: { headline: 50, body: 200 },
     };
-    const limits = platformLimits[context.platform as string];
+    const limits = platformLimits[inputData.platform as string];
 
     // Fetch product data if productId is provided
     let productContext: { name: string; price?: string; description?: string } | undefined;
 
-    if (context.productId) {
+    if (inputData.productId) {
       try {
         const shopify = getShopifyClient();
         const productData = await shopify.rest<{ product: any }>(
-          `products/${context.productId}.json`
+          `products/${inputData.productId}.json`
         );
         const product = productData.product;
 
@@ -134,10 +134,10 @@ export const tool = createTool({
         };
       } catch (error) {
         // Fall back to productName if fetch fails
-        productContext = context.productName ? { name: context.productName } : undefined;
+        productContext = inputData.productName ? { name: inputData.productName } : undefined;
       }
-    } else if (context.productName) {
-      productContext = { name: context.productName };
+    } else if (inputData.productName) {
+      productContext = { name: inputData.productName };
     }
 
     // Generate variants using the agent (if available) or template-based generation
@@ -159,20 +159,20 @@ export const tool = createTool({
       "practical buyer",
     ];
 
-    for (let i = 0; i < context.variantCount; i++) {
+    for (let i = 0; i < inputData.variantCount; i++) {
       const angle = angles[i % angles.length];
       const persona = personas[i % personas.length];
 
       // Template-based copy generation (in production, this would use the creative agent)
       const productName = productContext?.name || "our product";
-      const emoji = context.includeEmoji ? ["✨", "🎉", "🔥", "💫", "⭐"][i % 5] + " " : "";
+      const emoji = inputData.includeEmoji ? ["✨", "🎉", "🔥", "💫", "⭐"][i % 5] + " " : "";
 
       let headline = "";
       let body = "";
       let cta = "";
 
       // Generate based on objective and angle
-      switch (context.objective) {
+      switch (inputData.objective) {
         case "awareness":
           headline = `${emoji}Discover ${productName}`;
           body = `Introducing ${productName} - the solution you've been waiting for. Join thousands of satisfied customers.`;
@@ -191,10 +191,10 @@ export const tool = createTool({
       }
 
       // Adjust tone
-      if (context.tone === "urgent") {
+      if (inputData.tone === "urgent") {
         body = `⚡ ${body} Act fast!`;
         cta = `Get It Now`;
-      } else if (context.tone === "luxury") {
+      } else if (inputData.tone === "luxury") {
         headline = `${emoji}Experience ${productName}`;
         body = `Indulge in the finest quality. ${productName} represents excellence.`;
       }
@@ -224,13 +224,13 @@ export const tool = createTool({
 
     const recommendations = [
       `Test variants 1-3 first as they target different personas`,
-      `Monitor ${context.platform} performance metrics after 48 hours`,
+      `Monitor ${inputData.platform} performance metrics after 48 hours`,
       `A/B test headlines to optimize click-through rate`,
     ];
 
     if (variants.some(v => !v.platformLimits.headlineWithinLimit)) {
       recommendations.push(
-        `Some headlines exceed ${context.platform} limits (${limits.headline} chars). Consider shortening.`
+        `Some headlines exceed ${inputData.platform} limits (${limits.headline} chars). Consider shortening.`
       );
     }
 

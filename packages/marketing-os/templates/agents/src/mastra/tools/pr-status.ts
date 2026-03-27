@@ -20,13 +20,13 @@ export const prStatusTool = createTool({
     checks_status: z.string().nullable(),
     review_status: z.string(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const repo = process.env.GITHUB_REPO!;
     const token = process.env.GITHUB_TOKEN!;
 
     // Get PR details
     const prRes = await fetch(
-      `https://api.github.com/repos/${repo}/pulls/${context.prNumber}`,
+      `https://api.github.com/repos/${repo}/pulls/${inputData.prNumber}`,
       {
         headers: {
           Authorization: `token ${token}`,
@@ -36,14 +36,14 @@ export const prStatusTool = createTool({
     );
 
     if (!prRes.ok) {
-      throw new Error(`Failed to fetch PR #${context.prNumber}: ${prRes.statusText}`);
+      throw new Error(`Failed to fetch PR #${inputData.prNumber}: ${prRes.statusText}`);
     }
 
     const pr = await prRes.json();
 
     // Get review status
     const reviewsRes = await fetch(
-      `https://api.github.com/repos/${repo}/pulls/${context.prNumber}/reviews`,
+      `https://api.github.com/repos/${repo}/pulls/${inputData.prNumber}/reviews`,
       {
         headers: {
           Authorization: `token ${token}`,

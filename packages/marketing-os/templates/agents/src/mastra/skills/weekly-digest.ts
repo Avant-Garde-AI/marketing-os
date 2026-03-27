@@ -129,10 +129,10 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ context, mastra }) => {
+  execute: async ({ inputData, mastra }) => {
     // Calculate date range
     const now = new Date();
-    const daysOffset = context.weekOffset * 7;
+    const daysOffset = inputData.weekOffset * 7;
     const endDate = new Date(now.getTime() - daysOffset * 24 * 60 * 60 * 1000);
     const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 
@@ -140,7 +140,7 @@ export const tool = createTool({
     const period = {
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
-      label: context.weekOffset === 0
+      label: inputData.weekOffset === 0
         ? "Last 7 days"
         : `Week of ${formatDate(startDate)}`,
     };
@@ -163,7 +163,7 @@ export const tool = createTool({
 
     // Fetch comparison period data if requested
     let comparison: { orders: number; revenue: number; aov: number } | undefined;
-    if (context.includeComparison) {
+    if (inputData.includeComparison) {
       const prevStartDate = new Date(startDate.getTime() - 7 * 24 * 60 * 60 * 1000);
       const prevEndDate = new Date(startDate);
 
@@ -220,7 +220,7 @@ export const tool = createTool({
 
     // Analyze top products
     let topProducts;
-    if (context.includeTopProducts) {
+    if (inputData.includeTopProducts) {
       const productMap = new Map<string, { sales: number; revenue: number }>();
 
       orders.forEach((order: any) => {
@@ -280,7 +280,7 @@ export const tool = createTool({
 
     // Generate recommendations
     let recommendations;
-    if (context.includeRecommendations) {
+    if (inputData.includeRecommendations) {
       recommendations = [];
 
       if (metrics.revenue.trend === "down") {
@@ -325,9 +325,9 @@ export const tool = createTool({
 
     // Optional: Send email (placeholder)
     let emailSent = false;
-    if (context.emailRecipients && context.emailRecipients.length > 0) {
+    if (inputData.emailRecipients && inputData.emailRecipients.length > 0) {
       // In production, integrate with email service (SendGrid, Postmark, etc.)
-      console.log(`Would send digest to: ${context.emailRecipients.join(", ")}`);
+      console.log(`Would send digest to: ${inputData.emailRecipients.join(", ")}`);
       emailSent = false; // Set to true when email integration is implemented
     }
 

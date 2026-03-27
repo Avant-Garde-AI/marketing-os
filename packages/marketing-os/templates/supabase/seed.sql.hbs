@@ -1,0 +1,46 @@
+-- Marketing OS Seed Data
+-- Creates a default admin user for local development.
+-- Password is the same as the Supabase database password.
+
+-- Create the admin user in auth.users
+-- The handle_new_user trigger will automatically create the public.users record
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  aud,
+  role,
+  created_at,
+  updated_at,
+  confirmation_token,
+  recovery_token
+) VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000000',
+  '{{adminEmail}}',
+  crypt('{{dbPassword}}', gen_salt('bf')),
+  NOW(),
+  '{"provider": "email", "providers": ["email"]}',
+  '{"role": "admin"}',
+  'authenticated',
+  'authenticated',
+  NOW(),
+  NOW(),
+  '',
+  ''
+) ON CONFLICT (id) DO NOTHING;
+
+-- Ensure the user exists in public.users with admin role
+-- (The trigger should handle this, but this is a fallback)
+INSERT INTO public.users (id, email, role, created_at, updated_at)
+VALUES (
+  '00000000-0000-0000-0000-000000000001',
+  '{{adminEmail}}',
+  'admin',
+  NOW(),
+  NOW()
+) ON CONFLICT (id) DO UPDATE SET role = 'admin';

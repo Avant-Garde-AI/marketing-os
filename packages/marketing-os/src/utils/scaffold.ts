@@ -20,6 +20,7 @@ export interface ScaffoldContext {
   adminEmail?: string;
   repoFullName: string;
   enabledIntegrations: string[];
+  dbPassword?: string;
 }
 
 /**
@@ -214,6 +215,35 @@ export async function scaffold(
       spinner.warn(chalk.dim("Skipping CLAUDE.md (already exists)"));
     }
 
+    // Copy supabase directory (migrations and seed)
+    spinner.text = "Creating /supabase";
+    const supabaseSourceDir = path.join(templatesDir, "supabase");
+    const supabaseTargetDir = path.join(targetDir, "supabase");
+
+    if (await fs.pathExists(supabaseSourceDir)) {
+      const supabaseFiles = await glob("**/*", {
+        cwd: supabaseSourceDir,
+        dot: true,
+        nodir: true,
+      });
+
+      for (const file of supabaseFiles) {
+        const sourcePath = path.join(supabaseSourceDir, file);
+        const targetPath = path.join(supabaseTargetDir, file);
+
+        await fs.ensureDir(path.dirname(targetPath));
+
+        if (file.endsWith(".hbs")) {
+          const content = await fs.readFile(sourcePath, "utf-8");
+          const rendered = renderTemplate(content, context);
+          const finalPath = targetPath.replace(/\.hbs$/, "");
+          await fs.writeFile(finalPath, rendered, "utf-8");
+        } else {
+          await fs.copy(sourcePath, targetPath);
+        }
+      }
+    }
+
     // Create marketing-os.config.json
     spinner.text = "Creating marketing-os.config.json";
     const configPath = path.join(targetDir, "marketing-os.config.json");
@@ -345,6 +375,30 @@ export async function writeEnvLocal(
   } catch (error) {
     spinner.fail(chalk.red("✗ Failed to write .env.local"));
     throw error;
+  }
+}
+
+/**
+ * Update seed.sql with admin credentials after database setup.
+ * Called after we have the database password from `supabase link`.
+ */
+export async function updateSeedWithCredentials(
+  targetDir: string,
+  adminEmail: string,
+  dbPassword: string
+): Promise<void> {
+  const seedPath = path.join(targetDir, "supabase", "seed.sql");
+
+  // Read template from source
+  const templatesDir = path.resolve(__dirname, "../templates");
+  const templatePath = path.join(templatesDir, "supabase", "seed.sql.hbs");
+
+  if (await fs.pathExists(templatePath)) {
+    const template = await fs.readFile(templatePath, "utf-8");
+    const compiled = Handlebars.compile(template);
+    const rendered = compiled({ adminEmail, dbPassword });
+    await fs.ensureDir(path.dirname(seedPath));
+    await fs.writeFile(seedPath, rendered, "utf-8");
   }
 }
 

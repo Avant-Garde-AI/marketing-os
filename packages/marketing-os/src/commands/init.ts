@@ -22,6 +22,7 @@ import {
   getThemeName,
   checkForExistingInstall,
   writeEnvLocal,
+  updateSeedWithCredentials,
 } from "../utils/scaffold.js";
 import { isGitRepo, getGitRepoInfo, setGitHubSecrets } from "../utils/github.js";
 import {
@@ -228,6 +229,8 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     await installDependencies(workingDir, packageManager);
 
     // Step 4b: Create Supabase tables
+    let dbPassword: string | undefined;
+
     if (useSupabase && supabaseUrl && supabaseAnonKey) {
       console.log(chalk.bold("\n🗄️  Database Setup\n"));
 
@@ -253,6 +256,13 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
         if (shouldSetupDb) {
           // Try CLI first
           const cliResult = await createSupabaseTablesViaCLI(projectRef, workingDir);
+
+          // Capture password for seed file and credentials display
+          if (cliResult.dbPassword) {
+            dbPassword = cliResult.dbPassword;
+            // Update seed.sql with admin credentials
+            await updateSeedWithCredentials(workingDir, adminEmail, dbPassword);
+          }
 
           if (!cliResult.success) {
             // Fallback to browser
@@ -367,11 +377,25 @@ export async function initCommand(rawOptions: InitOptions): Promise<void> {
     // Success!
     console.log(chalk.bold.green("\n✓ Marketing OS initialized!\n"));
 
+    // Display admin credentials if we have them
+    if (dbPassword) {
+      console.log(chalk.bold.cyan("┌─────────────────────────────────────────┐"));
+      console.log(chalk.bold.cyan("│  Admin Credentials                      │"));
+      console.log(chalk.bold.cyan("├─────────────────────────────────────────┤"));
+      console.log(chalk.cyan(`│  Email:    ${adminEmail.padEnd(27)}│`));
+      console.log(chalk.cyan(`│  Password: ${dbPassword.padEnd(27)}│`));
+      console.log(chalk.bold.cyan("└─────────────────────────────────────────┘\n"));
+    }
+
     console.log(chalk.bold("Next steps:\n"));
     console.log(chalk.cyan("  1. ./agents.sh setup"));
     console.log(chalk.cyan("  2. ./agents.sh dev"));
     console.log(chalk.cyan("  3. Open http://localhost:3000"));
-    console.log(chalk.cyan(`  4. Log in with: ${adminEmail}`));
+    if (dbPassword) {
+      console.log(chalk.cyan(`  4. Log in with credentials above`));
+    } else {
+      console.log(chalk.cyan(`  4. Log in with: ${adminEmail}`));
+    }
     console.log(chalk.cyan("  5. Edit /docs/brand-voice.md with your brand voice"));
     console.log(chalk.cyan('  6. Try: "How is my store performing?"\n'));
 

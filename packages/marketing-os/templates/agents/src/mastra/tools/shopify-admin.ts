@@ -49,9 +49,9 @@ const getRecentOrders = createTool({
     })),
     total_count: z.number(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?limit=${context.limit}&status=${context.status}`,
+      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/orders.json?limit=${inputData.limit}&status=${inputData.status}`,
       {
         headers: {
           "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,
@@ -88,9 +88,9 @@ const getProducts = createTool({
       images_count: z.number(),
     })),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const res = await fetch(
-      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/products.json?limit=${context.limit}`,
+      `https://${process.env.SHOPIFY_STORE_URL}/admin/api/2024-10/products.json?limit=${inputData.limit}`,
       {
         headers: {
           "X-Shopify-Access-Token": process.env.SHOPIFY_ACCESS_TOKEN!,

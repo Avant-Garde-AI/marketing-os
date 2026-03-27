@@ -31,14 +31,14 @@ const getCampaignPerformance = createTool({
       averageCpc: z.number(),
     }),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const accessToken = process.env.META_ACCESS_TOKEN!;
     const adAccountId = process.env.META_AD_ACCOUNT_ID!;
 
     // Template structure for Meta Marketing API call
     // Actual implementation would use Meta Marketing API v18.0+
     // const url = `https://graph.facebook.com/v18.0/act_${adAccountId}/campaigns`;
-    // const params = { fields: 'name,status,insights{...}', date_preset: context.datePreset };
+    // const params = { fields: 'name,status,insights{...}', date_preset: inputData.datePreset };
 
     return {
       campaigns: [],
@@ -78,7 +78,7 @@ const getAdSetMetrics = createTool({
     })),
     totalAdSets: z.number(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const accessToken = process.env.META_ACCESS_TOKEN!;
 
     // Template structure for Meta Marketing API call
@@ -117,7 +117,7 @@ const getAdCreativeMetrics = createTool({
     })),
     totalAds: z.number(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const accessToken = process.env.META_ACCESS_TOKEN!;
 
     // Template structure for Meta Marketing API call

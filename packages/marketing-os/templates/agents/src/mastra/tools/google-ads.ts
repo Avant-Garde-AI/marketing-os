@@ -34,7 +34,7 @@ const getCampaignPerformance = createTool({
       averageCpc: z.number(),
     }),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID!;
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
 
@@ -46,7 +46,7 @@ const getCampaignPerformance = createTool({
     // SELECT campaign.id, campaign.name, campaign.status,
     //        metrics.impressions, metrics.clicks, metrics.cost_micros, ...
     // FROM campaign
-    // WHERE segments.date BETWEEN '${context.startDate}' AND '${context.endDate}'
+    // WHERE segments.date BETWEEN '${inputData.startDate}' AND '${inputData.endDate}'
 
     return {
       campaigns: [],
@@ -91,7 +91,7 @@ const getKeywordPerformance = createTool({
     })),
     totalKeywords: z.number(),
   }),
-  execute: async ({ context }) => {
+  execute: async ({ inputData }) => {
     const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID!;
     const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
 
@@ -102,9 +102,9 @@ const getKeywordPerformance = createTool({
     // SELECT ad_group_criterion.keyword.text, ad_group_criterion.keyword.match_type,
     //        metrics.impressions, metrics.clicks, metrics.cost_micros, ...
     // FROM keyword_view
-    // WHERE segments.date BETWEEN '${context.startDate}' AND '${context.endDate}'
-    // ORDER BY metrics.${context.orderBy} DESC
-    // LIMIT ${context.limit}
+    // WHERE segments.date BETWEEN '${inputData.startDate}' AND '${inputData.endDate}'
+    // ORDER BY metrics.${inputData.orderBy} DESC
+    // LIMIT ${inputData.limit}
 
     return {
       keywords: [],

@@ -108,7 +108,7 @@ export const tool = createTool({
     // Filter orders by time range
     const now = new Date();
     const daysMap: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
-    const daysAgo = daysMap[context.timeRange as string];
+    const daysAgo = daysMap[inputData.timeRange as string];
     const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
 
     const filteredOrders = orders.filter((o: any) =>
@@ -126,7 +126,7 @@ export const tool = createTool({
 
     // Analyze product performance
     let topProducts: Array<{ name: string; sales: number; revenue: number }> = [];
-    if (context.includeProducts) {
+    if (inputData.includeProducts) {
       const productMap = new Map<string, { sales: number; revenue: number }>();
 
       filteredOrders.forEach((order: any) => {
@@ -150,7 +150,7 @@ export const tool = createTool({
     if (filteredOrders.length === 0) {
       alerts.push({
         severity: "critical",
-        message: `No orders found in the last ${context.timeRange}. Consider reviewing your marketing strategy.`,
+        message: `No orders found in the last ${inputData.timeRange}. Consider reviewing your marketing strategy.`,
       });
       recommendations.push("Run a promotional campaign to drive traffic");
       recommendations.push("Review your product pricing and positioning");
@@ -169,7 +169,7 @@ export const tool = createTool({
     }
 
     // Traffic metrics (placeholder - would integrate with GA4)
-    const trafficMetrics = context.includeTraffic
+    const trafficMetrics = inputData.includeTraffic
       ? {
           sessions: Math.floor(filteredOrders.length * 45), // Rough estimate
           conversionRate: filteredOrders.length > 0 ? 2.2 : 0,
@@ -177,7 +177,7 @@ export const tool = createTool({
       : undefined;
 
     return {
-      summary: `Analyzed ${filteredOrders.length} orders over the last ${context.timeRange}. Total revenue: $${totalRevenue.toFixed(2)}, AOV: $${averageOrderValue.toFixed(2)}.`,
+      summary: `Analyzed ${filteredOrders.length} orders over the last ${inputData.timeRange}. Total revenue: $${totalRevenue.toFixed(2)}, AOV: $${averageOrderValue.toFixed(2)}.`,
       metrics: {
         totalOrders: filteredOrders.length,
         totalRevenue,

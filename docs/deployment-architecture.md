@@ -30,14 +30,25 @@ Marketing OS supports two deployment models. Both use the same codebase.
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### How a merchant onboards
+### How a merchant onboards (zero terminal, fully automated)
 
 1. Merchant visits your install URL or finds your app in the Shopify App Store
 2. Redirected to Shopify consent screen → authorizes scopes
 3. OAuth callback stores their token in your Supabase `shopify_sessions` table
-4. Merchant is redirected back into Shopify Admin → sees the mini admin panel
-5. "Full Dashboard" button opens your branded fleet management UI in a new tab
-6. Slack integration connects agents to their workspace
+4. Merchant is redirected back into Shopify Admin → sees **onboarding wizard**
+5. Onboarding wizard:
+   - **Connect GitHub** → merchant provides a GitHub token (or uses GitHub OAuth)
+   - Cloud pulls their **live theme** via Shopify Admin API (asset endpoints)
+   - Creates a **private GitHub repo** (`{store-name}-theme`)
+   - Pushes theme files + Marketing OS scaffold (CLAUDE.md, docs/, GitHub Actions)
+   - Sets up GitHub Actions secrets for the agent fleet
+6. Onboarding complete → mini admin control center appears
+7. "Full Dashboard" button opens your branded fleet management UI in a new tab
+8. Slack integration connects agents to their workspace
+
+**The merchant never touches a terminal.** The `/api/shopify/onboard` endpoint
+handles theme pulling, repo creation, and scaffold pushing entirely server-side
+using the Shopify Admin API and GitHub API.
 
 ### Auth flow
 

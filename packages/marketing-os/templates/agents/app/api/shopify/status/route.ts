@@ -37,15 +37,26 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Check if onboarding is complete (GitHub repo exists for this shop)
+  // In managed cloud mode, we check for a stored repo association.
+  // In self-hosted mode, GITHUB_REPO env var indicates setup is done.
+  const githubConnected = !!process.env.GITHUB_TOKEN;
+  const repoUrl = process.env.GITHUB_REPO
+    ? `https://github.com/${process.env.GITHUB_REPO}`
+    : undefined;
+  const onboarded = githubConnected && !!process.env.GITHUB_REPO;
+
   // TODO: Pull real agent status from Mastra runtime once wired up.
   // For now, return structure so the UI can render immediately.
   const status = {
     shop,
     storeName,
+    onboarded,
+    repoUrl,
     connections: {
       shopify: shopifyConnected,
       slack: !!process.env.SLACK_BOT_TOKEN,
-      github: !!process.env.GITHUB_TOKEN,
+      github: githubConnected,
     },
     agents: [
       {

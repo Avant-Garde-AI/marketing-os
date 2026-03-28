@@ -18,8 +18,8 @@ export async function middleware(request: NextRequest) {
   if (isEmbedded) {
     const shopCookie = request.cookies.get("shopify_shop")?.value;
 
-    // Allow the OAuth routes through unconditionally
-    if (pathname.startsWith("/api/shopify/auth")) {
+    // Allow OAuth routes through unconditionally
+    if (pathname.startsWith("/api/shopify/auth") || pathname.startsWith("/api/github/auth")) {
       return response;
     }
 

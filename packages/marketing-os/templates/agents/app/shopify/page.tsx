@@ -12,7 +12,6 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Bot,
   Activity,
@@ -24,6 +23,7 @@ import {
   Loader2,
   ArrowRight,
   GitBranch,
+  Github,
   Rocket,
 } from "lucide-react";
 
@@ -59,6 +59,8 @@ interface ShopStatus {
   recentActivity: ActivityItem[];
   dashboardUrl: string;
   onboarded: boolean;
+  githubConnected: boolean;
+  githubUser?: string;
   repoUrl?: string;
 }
 
@@ -108,14 +110,18 @@ function ConnectionRow({
 
 function OnboardingView({
   storeName,
+  githubConnected,
+  githubUser,
   onComplete,
 }: {
   storeName: string;
+  githubConnected: boolean;
+  githubUser?: string;
   onComplete: () => void;
 }) {
-  const [step, setStep] = useState<"intro" | "github" | "working" | "done">("intro");
-  const [githubToken, setGithubToken] = useState("");
-  const [githubOrg, setGithubOrg] = useState("");
+  const [step, setStep] = useState<"intro" | "scaffold" | "working" | "done">(
+    githubConnected ? "scaffold" : "intro"
+  );
   const [result, setResult] = useState<{
     repo: string;
     repoUrl: string;
@@ -123,19 +129,12 @@ function OnboardingView({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleOnboard = async () => {
+  const handleScaffold = async () => {
     setStep("working");
     setError(null);
 
     try {
-      const res = await fetch("/api/shopify/onboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          githubToken,
-          githubOrg: githubOrg || undefined,
-        }),
-      });
+      const res = await fetch("/api/shopify/onboard", { method: "POST" });
 
       if (!res.ok) {
         const data = await res.json();
@@ -147,7 +146,7 @@ function OnboardingView({
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
-      setStep("github");
+      setStep("scaffold");
     }
   };
 
@@ -160,12 +159,14 @@ function OnboardingView({
           </div>
           <h1 className="text-lg font-bold mb-2">Welcome to Marketing OS</h1>
           <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-            Let&apos;s set up your AI agent fleet for {storeName}. We&apos;ll
-            pull your theme, create a GitHub repo, and scaffold your agents.
+            Let&apos;s set up your AI agent fleet for {storeName}. First,
+            connect your GitHub account.
           </p>
-          <Button onClick={() => setStep("github")} className="gap-2">
-            <GitBranch className="h-4 w-4" />
-            Get Started
+          <Button asChild className="gap-2">
+            <a href="/api/github/auth">
+              <Github className="h-4 w-4" />
+              Connect GitHub
+            </a>
           </Button>
         </div>
 
@@ -175,7 +176,7 @@ function OnboardingView({
             <ol className="space-y-2 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <span className="text-primary font-mono text-xs mt-0.5">1.</span>
-                Connect your GitHub account
+                Sign in with GitHub (SSO supported)
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-mono text-xs mt-0.5">2.</span>
@@ -183,7 +184,7 @@ function OnboardingView({
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-mono text-xs mt-0.5">3.</span>
-                A new repo is created with your theme + Marketing OS agents
+                A private repo is created with your theme + Marketing OS agents
               </li>
               <li className="flex gap-2">
                 <span className="text-primary font-mono text-xs mt-0.5">4.</span>
@@ -196,43 +197,39 @@ function OnboardingView({
     );
   }
 
-  if (step === "github") {
+  if (step === "scaffold") {
     return (
       <div className="p-4 max-w-xl mx-auto space-y-4">
-        <div>
-          <h1 className="text-lg font-bold">Connect GitHub</h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            We need a GitHub token to create the repo and push your theme.
+        <div className="text-center py-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-500/10 mb-4">
+            <CheckCircle2 className="h-6 w-6 text-green-500" />
+          </div>
+          <h2 className="text-lg font-bold mb-1">GitHub Connected</h2>
+          <p className="text-sm text-muted-foreground">
+            Signed in as <span className="font-medium text-foreground">{githubUser}</span>
           </p>
         </div>
 
         <Card>
-          <CardContent className="p-4 space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">
-                GitHub Personal Access Token
-              </label>
-              <Input
-                type="password"
-                placeholder="ghp_..."
-                value={githubToken}
-                onChange={(e) => setGithubToken(e.target.value)}
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Needs <code>repo</code> scope. Create one at github.com/settings/tokens
-              </p>
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">
-                GitHub Organization (optional)
-              </label>
-              <Input
-                placeholder="your-org (leave blank for personal)"
-                value={githubOrg}
-                onChange={(e) => setGithubOrg(e.target.value)}
-              />
-            </div>
+          <CardContent className="p-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Ready to pull your live Shopify theme and create your agent repo.
+              This will:
+            </p>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li className="flex gap-2">
+                <GitBranch className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                Create <span className="font-mono text-foreground">{storeName}-theme</span> private repo
+              </li>
+              <li className="flex gap-2">
+                <ArrowRight className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                Pull your live theme files from Shopify
+              </li>
+              <li className="flex gap-2">
+                <Bot className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                Scaffold Marketing OS agents + GitHub Actions
+              </li>
+            </ul>
 
             {error && (
               <div className="text-sm text-destructive bg-destructive/10 rounded-md p-3">
@@ -240,11 +237,7 @@ function OnboardingView({
               </div>
             )}
 
-            <Button
-              onClick={handleOnboard}
-              disabled={!githubToken}
-              className="w-full gap-2"
-            >
+            <Button onClick={handleScaffold} className="w-full gap-2">
               <Rocket className="h-4 w-4" />
               Set Up My Store
             </Button>
@@ -528,11 +521,13 @@ export default function ShopifyMiniAdmin() {
     );
   }
 
-  // Show onboarding if GitHub isn't connected yet
+  // Show onboarding if repo isn't set up yet
   if (!status.onboarded) {
     return (
       <OnboardingView
         storeName={status.storeName}
+        githubConnected={status.githubConnected}
+        githubUser={status.githubUser}
         onComplete={fetchStatus}
       />
     );

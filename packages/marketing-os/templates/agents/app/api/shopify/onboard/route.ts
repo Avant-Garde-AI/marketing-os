@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getShopifySession } from "@/lib/shopify/session";
+import { getGitHubConnection, updateRepoName } from "@/lib/github/connection";
 
 const API_VERSION = "2024-10";
 
@@ -330,21 +331,22 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { githubToken: string; githubOrg?: string };
-  try {
-    body = await request.json();
-  } catch {
+  // Get GitHub token from stored OAuth connection (not from request body)
+  const ghConn = await getGitHubConnection(shop);
+  if (!ghConn?.githubToken) {
     return NextResponse.json(
-      { error: "Invalid request body" },
+      { error: "GitHub not connected. Complete GitHub OAuth first." },
       { status: 400 }
     );
   }
 
-  if (!body.githubToken) {
-    return NextResponse.json(
-      { error: "GitHub token is required" },
-      { status: 400 }
-    );
+  // Optional: allow overriding the GitHub org from the request body
+  let githubOrg = "";
+  try {
+    const body = await request.json();
+    githubOrg = body.githubOrg ?? "";
+  } catch {
+    // No body is fine — we'll use the user's personal account
   }
 
   const storeName = shop.replace(".myshopify.com", "");
@@ -356,23 +358,15 @@ export async function POST(request: NextRequest) {
 
     // 2. Create repo, push theme + scaffold
     const fullRepoName = await createRepoAndPush(
-      body.githubToken,
+      ghConn.githubToken,
       repoName,
-      body.githubOrg ?? "",
+      githubOrg,
       assets,
       shop
     );
 
-    // 3. Set GitHub Actions secrets
-    const secrets: Record<string, string> = {
-      ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? "",
-    };
-
-    for (const [key, value] of Object.entries(secrets)) {
-      if (!value) continue;
-      // Use GitHub API to set secrets (simplified — in production use libsodium encryption)
-      // For now, return the repo name and let the admin UI handle secrets setup
-    }
+    // 3. Update the stored connection with the repo name
+    await updateRepoName(shop, fullRepoName);
 
     return NextResponse.json({
       success: true,

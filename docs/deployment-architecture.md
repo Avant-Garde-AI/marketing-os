@@ -81,7 +81,8 @@ Merchant (in full dashboard, new tab)
 SHOPIFY_CLIENT_ID=your-single-client-id
 SHOPIFY_CLIENT_SECRET=your-single-secret
 SHOPIFY_SCOPES=read_products,write_products,read_orders,...
-SHOPIFY_APP_URL=https://marketing-os.yourdomain.com
+SHOPIFY_APP_URL=https://marketing-os.avant-garde.ai
+NEXT_PUBLIC_APP_URL=https://marketing-os.avant-garde.ai
 SHOPIFY_EMBEDDED=true
 NEXT_PUBLIC_SHOPIFY_CLIENT_ID=your-single-client-id
 NEXT_PUBLIC_SHOPIFY_EMBEDDED=true

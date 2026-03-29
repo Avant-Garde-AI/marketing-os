@@ -7,6 +7,10 @@
     "app/api/skills/*/route.ts": {
       "maxDuration": 300,
       "memory": 1024
+    },
+    "app/api/shopify/onboard/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
     }
   }
 }

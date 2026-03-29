@@ -19,8 +19,8 @@ const getPageViews = createTool({
     }),
   }),
   execute: async ({ inputData }) => {
-    const propertyId = process.env.GA4_PROPERTY_ID!;
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
+    const _propertyId = process.env.GA4_PROPERTY_ID;
+    const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
     // In a real implementation, this would use the Google Analytics Data API
     // with proper OAuth2 authentication via the service account
@@ -65,8 +65,8 @@ const getTopPages = createTool({
     totalCount: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const propertyId = process.env.GA4_PROPERTY_ID!;
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
+    const _propertyId = process.env.GA4_PROPERTY_ID;
+    const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
     // Template structure for GA4 Data API call
     // Actual implementation would fetch from Google Analytics Data API
@@ -96,8 +96,8 @@ const getConversionRate = createTool({
     })),
   }),
   execute: async ({ inputData }) => {
-    const propertyId = process.env.GA4_PROPERTY_ID!;
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
+    const _propertyId = process.env.GA4_PROPERTY_ID;
+    const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
     // Template structure for GA4 Data API call
     // Actual implementation would fetch conversion metrics
@@ -131,8 +131,8 @@ const getTrafficSources = createTool({
     totalSources: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const propertyId = process.env.GA4_PROPERTY_ID!;
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
+    const _propertyId = process.env.GA4_PROPERTY_ID;
+    const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
     // Template structure for GA4 Data API call
     // Actual implementation would fetch traffic source data

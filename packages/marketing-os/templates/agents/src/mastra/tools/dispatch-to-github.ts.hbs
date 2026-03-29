@@ -19,7 +19,7 @@ export const dispatchToGithubTool = createTool({
     issueUrl: z.string(),
     message: z.string(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData }): Promise<{ issueNumber: number; issueUrl: string; message: string }> => {
     const repo = process.env.GITHUB_REPO!; // e.g., "{{githubRepo}}"
     const token = process.env.GITHUB_TOKEN!;
 

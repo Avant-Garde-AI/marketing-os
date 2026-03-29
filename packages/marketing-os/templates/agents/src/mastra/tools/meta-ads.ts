@@ -32,8 +32,8 @@ const getCampaignPerformance = createTool({
     }),
   }),
   execute: async ({ inputData }) => {
-    const accessToken = process.env.META_ACCESS_TOKEN!;
-    const adAccountId = process.env.META_AD_ACCOUNT_ID!;
+    const _accessToken = process.env.META_ACCESS_TOKEN!;
+    const _adAccountId = process.env.META_AD_ACCOUNT_ID!;
 
     // Template structure for Meta Marketing API call
     // Actual implementation would use Meta Marketing API v18.0+

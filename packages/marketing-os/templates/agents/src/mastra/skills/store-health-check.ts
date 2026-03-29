@@ -90,7 +90,7 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ inputData, mastra }) => {
+  execute: async ({ inputData }) => {
     const recommendations: string[] = [];
     const alerts: Array<{ severity: "info" | "warning" | "critical"; message: string }> = [];
 

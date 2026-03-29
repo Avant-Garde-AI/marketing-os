@@ -107,7 +107,7 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ inputData, mastra }) => {
+  execute: async ({ inputData }) => {
     // Platform character limits
     const platformLimits: Record<string, { headline: number; body: number }> = {
       meta: { headline: 40, body: 125 },

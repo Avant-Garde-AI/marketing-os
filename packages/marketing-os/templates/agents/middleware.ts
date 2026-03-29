@@ -18,8 +18,14 @@ export async function middleware(request: NextRequest) {
   if (isEmbedded) {
     const shopCookie = request.cookies.get("shopify_shop")?.value;
 
-    // Allow OAuth routes through unconditionally
-    if (pathname.startsWith("/api/shopify/auth") || pathname.startsWith("/api/github/auth")) {
+    // Allow OAuth and admin routes through unconditionally
+    // (admin routes are protected by x-admin-secret header, not cookies)
+    if (
+      pathname.startsWith("/api/shopify/auth") ||
+      pathname.startsWith("/api/github/auth") ||
+      pathname.startsWith("/api/admin") ||
+      pathname.startsWith("/admin")
+    ) {
       return response;
     }
 

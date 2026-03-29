@@ -14,6 +14,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopifySession } from "@/lib/shopify/session";
 import { getGitHubConnection, updateRepoName } from "@/lib/github/connection";
+import { provisionMerchant } from "@/lib/anthropic/admin";
+import { createMerchant, updateMerchant } from "@/lib/merchants/store";
 
 const API_VERSION = "2024-10";
 
@@ -353,6 +355,13 @@ export async function POST(request: NextRequest) {
   const repoName = `${storeName}-theme`;
 
   try {
+    // 0. Create merchant record
+    await createMerchant({
+      shop,
+      storeName,
+      shopifyScopes: session.scope ?? "",
+    });
+
     // 1. Pull theme from Shopify
     const assets = await pullThemeAssets(shop, session.accessToken);
 
@@ -368,11 +377,43 @@ export async function POST(request: NextRequest) {
     // 3. Update the stored connection with the repo name
     await updateRepoName(shop, fullRepoName);
 
+    // 4. Provision Anthropic workspace + API key (cloud mode only)
+    let anthropicKeyHint = "";
+    if (process.env.ANTHROPIC_ADMIN_KEY && process.env.ANTHROPIC_ORG_ID) {
+      const provision = await provisionMerchant(shop);
+
+      // Set the workspace-scoped API key as a GitHub Actions secret
+      await setGitHubSecret(
+        ghConn.githubToken,
+        fullRepoName,
+        "ANTHROPIC_API_KEY",
+        provision.apiKeyValue
+      );
+
+      anthropicKeyHint = provision.apiKey.hint ?? "";
+
+      // Update merchant record with Anthropic details
+      await updateMerchant(shop, {
+        anthropicWorkspaceId: provision.workspace.id,
+        anthropicKeyId: provision.apiKey.id,
+        anthropicKeyHint: anthropicKeyHint,
+      });
+    }
+
+    // 5. Mark merchant as active
+    await updateMerchant(shop, {
+      githubUser: ghConn.githubUser,
+      githubRepo: fullRepoName,
+      status: "active",
+      onboardedAt: new Date().toISOString(),
+    });
+
     return NextResponse.json({
       success: true,
       repo: fullRepoName,
       repoUrl: `https://github.com/${fullRepoName}`,
       themeAssetsCount: assets.length,
+      anthropicProvisioned: !!process.env.ANTHROPIC_ADMIN_KEY,
       message: `Created ${fullRepoName} with ${assets.length} theme files + Marketing OS scaffold`,
     });
   } catch (error) {
@@ -384,5 +425,62 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 4. Set a GitHub Actions secret via GitHub API
+// ---------------------------------------------------------------------------
+async function setGitHubSecret(
+  githubToken: string,
+  repo: string,
+  secretName: string,
+  secretValue: string
+): Promise<void> {
+  const headers = {
+    Authorization: `Bearer ${githubToken}`,
+    Accept: "application/vnd.github+json",
+  };
+
+  // Get the repo's public key for secret encryption
+  const keyRes = await fetch(
+    `https://api.github.com/repos/${repo}/actions/secrets/public-key`,
+    { headers }
+  );
+  if (!keyRes.ok) throw new Error("Failed to get repo public key");
+  const { key, key_id } = await keyRes.json();
+
+  // Encrypt the secret using libsodium (tweetnacl in browser/node)
+  // We use the Web Crypto API approach for Node.js compatibility
+  const encoder = new TextEncoder();
+  const messageBytes = encoder.encode(secretValue);
+  const keyBytes = Uint8Array.from(atob(key), (c) => c.charCodeAt(0));
+
+  // Use tweetnacl-style sealed box encryption
+  // In production, use the @octokit/plugin-create-or-update-text-file or
+  // tweetnacl-js. For now, we use a simpler base64 approach that works
+  // with GitHub's API when the repo has sodium available.
+  const { default: sodium } = await import("tweetnacl");
+  const { default: sealedbox } = await import("tweetnacl-sealedbox-js");
+
+  const encrypted = sealedbox.seal(messageBytes, keyBytes);
+  const encryptedBase64 = btoa(String.fromCharCode(...encrypted));
+
+  // Set the secret
+  const setRes = await fetch(
+    `https://api.github.com/repos/${repo}/actions/secrets/${secretName}`,
+    {
+      method: "PUT",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        encrypted_value: encryptedBase64,
+        key_id,
+      }),
+    }
+  );
+
+  if (!setRes.ok) {
+    const err = await setRes.text();
+    throw new Error(`Failed to set GitHub secret: ${err}`);
   }
 }

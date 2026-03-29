@@ -1,37 +1,36 @@
 // agents/src/mastra/tools/shopify-admin.ts
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
+import { createShopifyClient } from "../../../lib/shopify";
 import { getAccessToken, normalizeShop } from "@/lib/shopify/session";
 
-const API_VERSION = "2024-10";
-
 /**
- * Resolve the shop domain and access token.
+ * Resolve the shop domain and create an authenticated Shopify client.
  *
  * Priority:
  *   1. Per-merchant token from Supabase (multi-tenant / OAuth)
  *   2. Env-var fallback (single-tenant / self-hosted)
  */
-async function resolveShopCredentials(shopOverride?: string) {
+async function getClientForShop(shopOverride?: string) {
   const shop = normalizeShop(
     shopOverride ?? process.env.SHOPIFY_STORE_URL ?? ""
   );
   if (!shop) throw new Error("No shop domain available");
 
+  // Try per-merchant token from Supabase first
   const token = await getAccessToken(shop);
-  if (!token) {
-    throw new Error(
-      `No access token found for ${shop}. Install the app via OAuth or set SHOPIFY_ACCESS_TOKEN.`
-    );
+  if (token) {
+    return createShopifyClient({ storeUrl: shop, accessToken: token });
   }
 
-  return { shop, token };
-}
+  // Fall back to env vars (single-tenant)
+  if (process.env.SHOPIFY_ACCESS_TOKEN) {
+    return createShopifyClient({ storeUrl: shop, accessToken: process.env.SHOPIFY_ACCESS_TOKEN });
+  }
 
-function shopifyFetch(shop: string, token: string, path: string) {
-  return fetch(`https://${shop}/admin/api/${API_VERSION}/${path}`, {
-    headers: { "X-Shopify-Access-Token": token },
-  });
+  throw new Error(
+    `No access token found for ${shop}. Install the app via OAuth or set SHOPIFY_ACCESS_TOKEN.`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -51,9 +50,8 @@ const getStoreInfo = createTool({
     currency: z.string(),
   }),
   execute: async ({ inputData }) => {
-    const { shop, token } = await resolveShopCredentials(inputData.shop);
-    const res = await shopifyFetch(shop, token, "shop.json");
-    const data = await res.json();
+    const shopify = await getClientForShop(inputData.shop);
+    const data = await shopify.rest<{ shop: any }>("shop.json");
     return {
       name: data.shop.name,
       domain: data.shop.domain,
@@ -83,13 +81,10 @@ const getRecentOrders = createTool({
     total_count: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const { shop, token } = await resolveShopCredentials(inputData.shop);
-    const res = await shopifyFetch(
-      shop,
-      token,
+    const shopify = await getClientForShop(inputData.shop);
+    const data = await shopify.rest<{ orders: any[] }>(
       `orders.json?limit=${inputData.limit}&status=${inputData.status}`
     );
-    const data = await res.json();
     return {
       orders: data.orders.map((o: any) => ({
         id: String(o.id),
@@ -121,13 +116,10 @@ const getProducts = createTool({
     })),
   }),
   execute: async ({ inputData }) => {
-    const { shop, token } = await resolveShopCredentials(inputData.shop);
-    const res = await shopifyFetch(
-      shop,
-      token,
+    const shopify = await getClientForShop(inputData.shop);
+    const data = await shopify.rest<{ products: any[] }>(
       `products.json?limit=${inputData.limit}`
     );
-    const data = await res.json();
     return {
       products: data.products.map((p: any) => ({
         id: String(p.id),

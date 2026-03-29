@@ -3,8 +3,18 @@
  * Handles GA4, Meta, Google Ads, and other integrations
  */
 
-import { checkbox, input, password, confirm } from "@inquirer/prompts";
+import { checkbox, input, password, confirm, select } from "@inquirer/prompts";
 import chalk from "chalk";
+
+import type { ShopifyAuthMode } from "../services/shopify-auth.js";
+import {
+  displayShopifyInstructions,
+  openShopifyAdmin,
+  testShopifyToken,
+  validateShopifyToken,
+  formatScopes,
+} from "../services/shopify-auth.js";
+import { runOAuthFlow } from "../services/shopify-oauth.js";
 
 export type IntegrationType =
   | "shopify"
@@ -35,6 +45,7 @@ export interface IntegrationCredentials {
   shopify?: {
     accessToken: string;
     storeName: string;
+    authMode: ShopifyAuthMode;
   };
 }
 
@@ -88,20 +99,106 @@ export async function promptIntegrationSelection(): Promise<IntegrationType[]> {
 }
 
 /**
- * Prompt for Shopify credentials
+ * Prompt for Shopify auth method and credentials.
+ *
+ * Offers two paths:
+ *   1. Automatic (OAuth) — opens browser, one-click install, token returned
+ *   2. Manual (Custom App) — user creates custom app and pastes shpat_ token
  */
 export async function promptShopifyCredentials(
   storeUrl: string
 ): Promise<IntegrationCredentials["shopify"]> {
   console.log(chalk.cyan("\n→ Shopify Admin API"));
+
+  const authMode = await select<ShopifyAuthMode>({
+    message: "How would you like to connect your Shopify store?",
+    choices: [
+      {
+        name: "Automatic (recommended) — opens browser, authorize in one click",
+        value: "oauth" as ShopifyAuthMode,
+      },
+      {
+        name: "Manual — create a custom app and paste the access token",
+        value: "custom_app" as ShopifyAuthMode,
+      },
+    ],
+    default: "oauth" as ShopifyAuthMode,
+  });
+
+  if (authMode === "oauth") {
+    return promptShopifyOAuth(storeUrl);
+  }
+
+  return promptShopifyManualToken(storeUrl);
+}
+
+/**
+ * OAuth flow: open browser, authorize, receive token via local callback.
+ */
+async function promptShopifyOAuth(
+  storeUrl: string
+): Promise<IntegrationCredentials["shopify"]> {
   console.log(
     chalk.gray(
-      "  Create a custom app in your Shopify admin to get an access token."
+      "  This will open your browser to authorize Marketing OS on your Shopify store."
     )
   );
   console.log(
-    chalk.gray(`  Visit: https://${storeUrl}/admin/settings/apps/development\n`)
+    chalk.gray(`  Scopes requested: ${formatScopes()}\n`)
   );
+
+  try {
+    const result = await runOAuthFlow(storeUrl);
+
+    // Validate the token actually works
+    const test = await testShopifyToken(storeUrl, result.accessToken);
+    if (test.valid) {
+      console.log(
+        chalk.green(`  ✓ Connected to ${test.shopName ?? storeUrl}`)
+      );
+    }
+
+    return {
+      accessToken: result.accessToken,
+      storeName: storeUrl.replace(".myshopify.com", ""),
+      authMode: "oauth",
+    };
+  } catch (err) {
+    console.log(
+      chalk.yellow(
+        `\n  OAuth flow failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+    );
+
+    const fallback = await confirm({
+      message: "Would you like to try the manual token flow instead?",
+      default: true,
+    });
+
+    if (fallback) {
+      return promptShopifyManualToken(storeUrl);
+    }
+
+    throw err;
+  }
+}
+
+/**
+ * Manual flow: user creates a custom app in Shopify Admin and pastes the token.
+ */
+async function promptShopifyManualToken(
+  storeUrl: string
+): Promise<IntegrationCredentials["shopify"]> {
+  displayShopifyInstructions();
+
+  const shouldOpen = await confirm({
+    message: "Open Shopify Admin in your browser?",
+    default: true,
+  });
+
+  if (shouldOpen) {
+    await openShopifyAdmin(storeUrl);
+  }
 
   const accessToken = await password({
     message: "Shopify Admin API access token:",
@@ -110,13 +207,32 @@ export async function promptShopifyCredentials(
       if (!value || value.trim().length === 0) {
         return "Access token is required";
       }
+      const validation = validateShopifyToken(value.trim());
+      if (!validation.valid) {
+        return validation.error ?? "Invalid token format";
+      }
       return true;
     },
   });
 
+  // Test the token
+  const test = await testShopifyToken(storeUrl, accessToken.trim());
+  if (test.valid) {
+    console.log(
+      chalk.green(`  ✓ Connected to ${test.shopName ?? storeUrl}`)
+    );
+  } else {
+    console.log(
+      chalk.yellow(
+        `  ⚠ Token test failed: ${test.error}. You can update it later in .env.local`
+      )
+    );
+  }
+
   return {
-    accessToken,
+    accessToken: accessToken.trim(),
     storeName: storeUrl.replace(".myshopify.com", ""),
+    authMode: "custom_app",
   };
 }
 

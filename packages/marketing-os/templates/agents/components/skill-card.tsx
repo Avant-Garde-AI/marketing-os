@@ -36,22 +36,28 @@ export function SkillCard({ metadata, onExecute }: SkillCardProps) {
 
   return (
     <Card className="flex flex-col justify-between h-full">
+      {/* Gold accent bar */}
+      <div className="accent-bar" />
+
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Icon className="h-5 w-5 text-primary" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-muted flex items-center justify-center border border-border">
+            <Icon className="h-5 w-5 text-secondary" strokeWidth={1.5} />
           </div>
           <div className="flex-1">
-            <CardTitle className="text-base">{metadata.name}</CardTitle>
-            <Badge variant="outline" className="mt-1 text-xs">
+            <CardTitle className="group-hover:text-secondary transition-colors">
+              {metadata.name}
+            </CardTitle>
+            <Badge variant="gold" className="mt-2">
               {metadata.category}
             </Badge>
           </div>
         </div>
-        <CardDescription className="mt-3">
+        <CardDescription className="mt-4">
           {metadata.description}
         </CardDescription>
       </CardHeader>
+
       <CardFooter>
         <Dialog>
           <DialogTrigger asChild>
@@ -62,15 +68,15 @@ export function SkillCard({ metadata, onExecute }: SkillCardProps) {
               <DialogTitle>{metadata.name}</DialogTitle>
               <DialogDescription>{metadata.description}</DialogDescription>
             </DialogHeader>
-            <div className="py-4">
+            <div className="py-6">
               {/* AutoForm will be generated from skill's inputSchema */}
               {/* On submit, calls onExecute(formValues) */}
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground font-light leading-relaxed">
                 Skill execution form will be generated from inputSchema
               </p>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline">Cancel</Button>
+            <div className="flex justify-end gap-3">
+              <Button variant="brand-outline">Cancel</Button>
               <Button onClick={handleExecute}>Execute Skill</Button>
             </div>
           </DialogContent>

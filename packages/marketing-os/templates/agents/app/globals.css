@@ -1,49 +1,73 @@
 @import "tailwindcss";
 
+/**
+ * Avant-Garde Brand System
+ * ========================
+ * Quiet luxury meets editorial precision
+ * Dark navy, warm gold, cream paper, serif typefaces, no rounded corners
+ */
+
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    /* ─── Core Brand Colors ─────────────────────────────────────── */
+    --color-navy: #1B263B;
+    --color-navy-hsl: 218 37% 17%;
+    --color-gold: #C4A47C;
+    --color-gold-hsl: 34 33% 63%;
+    --color-cream: #FAFAF9;
+    --color-cream-hsl: 40 14% 98%;
+
+    /* ─── Semantic Tokens (Light Mode - Cream Background) ──────── */
+    --background: 40 14% 98%;          /* cream */
+    --foreground: 218 37% 17%;         /* navy */
+    --card: 0 0% 100%;                 /* white */
+    --card-foreground: 218 37% 17%;    /* navy */
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 262 83% 58%;
-    --accent-foreground: 240 5.9% 10%;
+    --popover-foreground: 218 37% 17%;
+    --primary: 218 37% 17%;            /* navy */
+    --primary-foreground: 40 14% 98%;  /* cream */
+    --secondary: 34 33% 63%;           /* gold */
+    --secondary-foreground: 218 37% 17%;
+    --muted: 40 14% 95%;               /* near-cream */
+    --muted-foreground: 218 37% 40%;   /* mid navy */
+    --accent: 34 33% 63%;              /* gold */
+    --accent-foreground: 218 37% 17%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142 71% 45%;
-    --radius: 0.5rem;
+    --border: 218 37% 17% / 0.1;       /* navy/10 */
+    --input: 218 37% 17% / 0.1;
+    --ring: 34 33% 63%;                /* gold focus ring */
+    --radius: 0px;                     /* NO rounded corners */
+
+    /* ─── Typography ────────────────────────────────────────────── */
+    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    --font-body: 'Lora', Georgia, 'Times New Roman', serif;
+    --font-script: 'Pinyon Script', cursive;
+
+    /* ─── Shadows ───────────────────────────────────────────────── */
+    --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
+    --shadow-card-hover: 0 20px 40px -8px rgba(0, 0, 0, 0.12);
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142 71% 45%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 262 83% 58%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 4% 16%;
-    --input: 240 4% 16%;
-    --ring: 142 71% 45%;
+    /* ─── Dark Mode (Navy Background) ───────────────────────────── */
+    --background: 218 37% 17%;         /* navy */
+    --foreground: 40 14% 98%;          /* cream */
+    --card: 218 37% 22%;               /* lighter navy */
+    --card-foreground: 40 14% 98%;
+    --popover: 218 37% 20%;
+    --popover-foreground: 40 14% 98%;
+    --primary: 34 33% 63%;             /* gold */
+    --primary-foreground: 218 37% 17%;
+    --secondary: 218 37% 25%;
+    --secondary-foreground: 40 14% 98%;
+    --muted: 218 37% 25%;
+    --muted-foreground: 40 14% 70%;
+    --accent: 34 33% 63%;              /* gold */
+    --accent-foreground: 218 37% 17%;
+    --border: 40 14% 98% / 0.1;
+    --input: 40 14% 98% / 0.1;
+    --ring: 34 33% 63%;
   }
 }
 
@@ -51,8 +75,151 @@
   * {
     border-color: hsl(var(--border));
   }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
+    font-family: var(--font-body);
+    font-feature-settings: "liga" 1, "kern" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.625;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.025em;
+    line-height: 1;
+  }
+
+  ::selection {
+    background-color: rgba(196, 164, 124, 0.2);
+    color: #1B263B;
+  }
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5f4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #C4A47C;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #1B263B;
+}
+
+/* ─── Brand Utility Classes ─────────────────────────────────────── */
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .font-script {
+    font-family: var(--font-script);
+  }
+
+  .tracking-label {
+    letter-spacing: 0.2em;
+  }
+
+  .leading-hero {
+    line-height: 0.9;
+  }
+
+  /* Gold rule line */
+  .rule-gold {
+    display: inline-block;
+    width: 3rem;
+    height: 1px;
+    background-color: #C4A47C;
+  }
+
+  /* Eyebrow label style */
+  .eyebrow {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #C4A47C;
+  }
+
+  /* Gold accent bar animation */
+  .accent-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background-color: #C4A47C;
+    transform: scaleY(0);
+    transform-origin: top;
+    transition: transform 0.5s ease-out;
+  }
+
+  .group:hover .accent-bar {
+    transform: scaleY(1);
+  }
+
+  /* Grayscale to color on hover */
+  .grayscale-hover {
+    filter: grayscale(100%) sepia(20%);
+    opacity: 0.9;
+    transition: all 1s ease-in-out;
+  }
+
+  .group:hover .grayscale-hover {
+    filter: grayscale(0%) sepia(0%);
+    transform: scale(1.05);
+  }
+
+  /* Reveal animation */
+  .reveal-on-hover {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.5s ease-out;
+  }
+
+  .group:hover .reveal-on-hover {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Animations ────────────────────────────────────────────────── */
+@keyframes fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
 }

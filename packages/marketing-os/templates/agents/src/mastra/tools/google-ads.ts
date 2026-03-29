@@ -35,8 +35,8 @@ const getCampaignPerformance = createTool({
     }),
   }),
   execute: async ({ inputData }) => {
-    const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID!;
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
+    const _customerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
+    const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
     // Template structure for Google Ads API call
     // Actual implementation would use Google Ads API v15+
@@ -92,8 +92,8 @@ const getKeywordPerformance = createTool({
     totalKeywords: z.number(),
   }),
   execute: async ({ inputData }) => {
-    const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID!;
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY!);
+    const _customerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
+    const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
     // Template structure for Google Ads API call
     // Actual implementation would use Google Ads Query Language (GAQL)

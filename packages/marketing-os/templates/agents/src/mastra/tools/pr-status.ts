@@ -20,7 +20,16 @@ export const prStatusTool = createTool({
     checks_status: z.string().nullable(),
     review_status: z.string(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async ({ inputData }): Promise<{
+    title: string;
+    state: string;
+    author: string;
+    created_at: string;
+    updated_at: string;
+    mergeable: boolean | null;
+    checks_status: string | null;
+    review_status: string;
+  }> => {
     const repo = process.env.GITHUB_REPO!;
     const token = process.env.GITHUB_TOKEN!;
 

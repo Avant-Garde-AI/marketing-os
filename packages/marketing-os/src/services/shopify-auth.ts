@@ -13,7 +13,21 @@
 
 import chalk from "chalk";
 import open from "open";
-import { execa } from "execa";
+
+/** Current stable Shopify Admin API version */
+export const SHOPIFY_API_VERSION = "2025-04";
+
+/**
+ * Marketing OS default Shopify App credentials (unlisted / custom distribution).
+ * Store owners install via OAuth — no manual custom app creation needed.
+ * These can be overridden via env vars SHOPIFY_APP_CLIENT_ID / SHOPIFY_APP_CLIENT_SECRET.
+ */
+export const DEFAULT_APP_CLIENT_ID =
+  process.env.SHOPIFY_APP_CLIENT_ID ?? "marketing-os-default";
+export const DEFAULT_APP_CLIENT_SECRET =
+  process.env.SHOPIFY_APP_CLIENT_SECRET ?? "";
+
+export type ShopifyAuthMode = "oauth" | "custom_app";
 
 // ---------------------------------------------------------------------------
 // OAuth / Partner Dashboard flow (primary)
@@ -77,31 +91,6 @@ export function getShopifyAppsUrl(storeUrl: string): string {
 }
 
 /**
- * Copy text to clipboard (cross-platform)
- */
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    const platform = process.platform;
-    if (platform === "darwin") {
-      await execa("pbcopy", { input: text });
-    } else if (platform === "linux") {
-      try {
-        await execa("xclip", ["-selection", "clipboard"], { input: text });
-      } catch {
-        await execa("xsel", ["--clipboard", "--input"], { input: text });
-      }
-    } else if (platform === "win32") {
-      await execa("clip", { input: text });
-    } else {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Open Shopify admin for custom app creation.
  * @deprecated Use openOAuthInstall instead.
  */
@@ -113,23 +102,51 @@ export async function openShopifyAdmin(storeUrl: string): Promise<void> {
 }
 
 /**
- * Display instructions for creating a Shopify custom app.
+ * Display instructions for creating a Shopify custom app (manual flow).
  * @deprecated Use displayOAuthInstructions instead.
  */
 export function displayShopifyInstructions(): void {
-  console.log(chalk.yellow("\n  ⚠ Custom app tokens are being deprecated by Shopify."));
+  console.log(chalk.yellow("\n  Warning: Custom app tokens are being deprecated by Shopify."));
   console.log(chalk.yellow("  Consider using OAuth via the Partner Dashboard instead.\n"));
-  console.log(chalk.bold("  Legacy: Create a custom app token:\n"));
-  console.log(chalk.dim("  1. Click 'Create an app' in the Shopify admin (opening in browser)"));
-  console.log(chalk.dim("  2. Name it 'Marketing OS' and click 'Create app'"));
-  console.log(chalk.dim("  3. Click 'Configure Admin API scopes'"));
+  console.log(
+    chalk.bold("  To get your Shopify Admin API access token:\n")
+  );
+  console.log(
+    chalk.dim(
+      "  0. In Shopify Admin, go to Settings > Apps and sales channels > Develop apps"
+    )
+  );
+  console.log(
+    chalk.dim(
+      '     If you see "Allow custom app development", click it to enable (requires store owner)'
+    )
+  );
+  console.log(
+    chalk.dim(
+      "  1. Click 'Create an app' (opening in browser)"
+    )
+  );
+  console.log(
+    chalk.dim("  2. Name it 'Marketing OS' and click 'Create app'")
+  );
+  console.log(
+    chalk.dim("  3. Click 'Configure Admin API scopes'")
+  );
   console.log(chalk.dim("  4. Enable these scopes:"));
-  console.log(chalk.cyan("     - read_products, write_products"));
-  console.log(chalk.cyan("     - read_orders"));
-  console.log(chalk.cyan("     - read_customers"));
-  console.log(chalk.cyan("     - read_analytics"));
+  console.log(
+    chalk.cyan("     - read_products, write_products")
+  );
+  console.log(chalk.cyan("     - read_orders, read_customers"));
+  console.log(chalk.cyan("     - read_analytics, read_inventory"));
+  console.log(
+    chalk.cyan("     - read_marketing_events, write_marketing_events")
+  );
   console.log(chalk.dim("  5. Click 'Save' then 'Install app'"));
-  console.log(chalk.dim("  6. Copy the 'Admin API access token'"));
+  console.log(
+    chalk.dim(
+      "  6. Copy the 'Admin API access token' (shown only once — save it securely)"
+    )
+  );
   console.log(chalk.dim("  7. Paste it back here\n"));
 }
 
@@ -150,6 +167,7 @@ export const REQUIRED_SCOPES = [
   "read_analytics",
   "read_inventory",
   "read_marketing_events",
+  "write_marketing_events",
 ];
 
 export function formatScopes(): string {
@@ -158,7 +176,8 @@ export function formatScopes(): string {
 
 /**
  * Validate Shopify access token format.
- * Accepts both OAuth tokens and legacy shpat_ tokens.
+ * Accepts both legacy Admin API tokens (shpat_), custom app tokens (shpca_),
+ * and OAuth offline tokens which may not have a known prefix.
  */
 export function validateShopifyToken(token: string): {
   valid: boolean;
@@ -168,12 +187,17 @@ export function validateShopifyToken(token: string): {
     return { valid: false, error: "Access token is required" };
   }
 
-  // OAuth tokens don't have a fixed prefix, but legacy tokens start with shpat_
-  // Accept both formats
-  if (token.length < 10) {
+  // Shopify Admin API tokens: shpat_ (legacy/custom app), shpca_ (newer custom app)
+  // OAuth offline tokens may use other prefixes — accept any non-empty token
+  // but warn if the prefix is unrecognized
+  const knownPrefixes = ["shpat_", "shpca_", "shpua_"];
+  const hasKnownPrefix = knownPrefixes.some((p) => token.startsWith(p));
+
+  if (!hasKnownPrefix && token.length < 20) {
     return {
       valid: false,
-      error: "Access token appears too short",
+      error:
+        "Access token looks too short. Expected a Shopify Admin API token (starts with shpat_ or shpca_)",
     };
   }
 
@@ -188,7 +212,7 @@ export async function testShopifyToken(
   accessToken: string
 ): Promise<{ valid: boolean; shopName?: string; error?: string }> {
   try {
-    const apiUrl = `https://${storeUrl}/admin/api/2024-10/shop.json`;
+    const apiUrl = `https://${storeUrl}/admin/api/${SHOPIFY_API_VERSION}/shop.json`;
 
     const response = await fetch(apiUrl, {
       method: "GET",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ShopifyProvider } from "@/components/shopify-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,7 +23,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        {children}
+        <ShopifyProvider>
+          {children}
+        </ShopifyProvider>
       </body>
     </html>
   );

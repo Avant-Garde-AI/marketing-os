@@ -1,6 +1,14 @@
 /**
- * Shopify Admin API authentication setup
- * Supports both OAuth (recommended) and manual custom app token flows
+ * Shopify authentication setup — supports two modes:
+ *
+ *   1. OAuth via Partner Dashboard app (recommended)
+ *      - Used when the app is deployed as a Shopify embedded app
+ *      - Merchant installs via OAuth → token stored in Supabase
+ *
+ *   2. Legacy custom app token (self-hosted fallback)
+ *      - Used when a developer creates a private custom app
+ *      - Static shpat_ token stored in .env
+ *      - Shopify is deprecating this path — OAuth is preferred
  */
 
 import chalk from "chalk";
@@ -21,8 +29,61 @@ export const DEFAULT_APP_CLIENT_SECRET =
 
 export type ShopifyAuthMode = "oauth" | "custom_app";
 
+// ---------------------------------------------------------------------------
+// OAuth / Partner Dashboard flow (primary)
+// ---------------------------------------------------------------------------
+
 /**
- * Build Shopify admin URL for custom app creation
+ * Build the install URL that kicks off OAuth for a given shop.
+ * This points at the deployed Next.js app's /api/shopify/auth route.
+ */
+export function getOAuthInstallUrl(
+  appUrl: string,
+  shop: string
+): string {
+  return `${appUrl}/api/shopify/auth?shop=${encodeURIComponent(shop)}`;
+}
+
+/**
+ * Open the OAuth install URL in the merchant's browser.
+ */
+export async function openOAuthInstall(
+  appUrl: string,
+  shop: string
+): Promise<void> {
+  const installUrl = getOAuthInstallUrl(appUrl, shop);
+  console.log(chalk.dim(`\n  Opening Shopify OAuth install in your browser...`));
+  console.log(chalk.dim(`  URL: ${installUrl}\n`));
+  await open(installUrl);
+}
+
+/**
+ * Display instructions for the OAuth install flow.
+ */
+export function displayOAuthInstructions(appUrl: string): void {
+  console.log(chalk.bold("\n  Shopify App Installation (OAuth)\n"));
+  console.log(chalk.dim("  Your Marketing OS app uses OAuth to connect to Shopify stores."));
+  console.log(chalk.dim("  When a merchant installs, they'll be redirected to Shopify to"));
+  console.log(chalk.dim("  authorize the app, and we'll securely store their access token.\n"));
+  console.log(chalk.dim("  App URL:"), chalk.cyan(appUrl));
+  console.log(chalk.dim("  Install endpoint:"), chalk.cyan(`${appUrl}/api/shopify/auth?shop=<store>.myshopify.com`));
+  console.log(chalk.dim("  Callback endpoint:"), chalk.cyan(`${appUrl}/api/shopify/auth/callback\n`));
+  console.log(chalk.dim("  Configure these URLs in your Shopify Partner Dashboard:\n"));
+  console.log(chalk.dim("  1. Go to your app in the Partner Dashboard"));
+  console.log(chalk.dim("  2. Under 'App setup', set:"));
+  console.log(chalk.cyan(`     App URL: ${appUrl}`));
+  console.log(chalk.cyan(`     Allowed redirection URL: ${appUrl}/api/shopify/auth/callback`));
+  console.log(chalk.dim("  3. Under 'API access', configure the scopes below"));
+  console.log(chalk.dim("  4. Save and test the install flow\n"));
+}
+
+// ---------------------------------------------------------------------------
+// Legacy custom app flow (deprecated fallback for self-hosted)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build Shopify admin URL for custom app creation.
+ * @deprecated Use OAuth via Partner Dashboard instead.
  */
 export function getShopifyAppsUrl(storeUrl: string): string {
   const storeName = storeUrl.replace(".myshopify.com", "");
@@ -30,22 +91,25 @@ export function getShopifyAppsUrl(storeUrl: string): string {
 }
 
 /**
- * Open Shopify admin for custom app creation
+ * Open Shopify admin for custom app creation.
+ * @deprecated Use openOAuthInstall instead.
  */
 export async function openShopifyAdmin(storeUrl: string): Promise<void> {
   const appsUrl = getShopifyAppsUrl(storeUrl);
   console.log(chalk.dim(`\n  Opening Shopify Admin in your browser...`));
   console.log(chalk.dim(`  URL: ${appsUrl}\n`));
-
   await open(appsUrl);
 }
 
 /**
- * Display instructions for creating a Shopify custom app (manual flow)
+ * Display instructions for creating a Shopify custom app (manual flow).
+ * @deprecated Use displayOAuthInstructions instead.
  */
 export function displayShopifyInstructions(): void {
+  console.log(chalk.yellow("\n  Warning: Custom app tokens are being deprecated by Shopify."));
+  console.log(chalk.yellow("  Consider using OAuth via the Partner Dashboard instead.\n"));
   console.log(
-    chalk.bold("\n  To get your Shopify Admin API access token:\n")
+    chalk.bold("  To get your Shopify Admin API access token:\n")
   );
   console.log(
     chalk.dim(
@@ -86,8 +150,14 @@ export function displayShopifyInstructions(): void {
   console.log(chalk.dim("  7. Paste it back here\n"));
 }
 
+// ---------------------------------------------------------------------------
+// Shared
+// ---------------------------------------------------------------------------
+
 /**
- * Required Shopify Admin API scopes for Marketing OS
+ * Required Shopify Admin API scopes for Marketing OS.
+ * These are configured in the Partner Dashboard for OAuth apps,
+ * or selected manually for legacy custom apps.
  */
 export const REQUIRED_SCOPES = [
   "read_products",
@@ -100,17 +170,14 @@ export const REQUIRED_SCOPES = [
   "write_marketing_events",
 ];
 
-/**
- * Format scopes for display
- */
 export function formatScopes(): string {
   return REQUIRED_SCOPES.join(", ");
 }
 
 /**
  * Validate Shopify access token format.
- * Accepts both legacy Admin API tokens (shpat_) and custom app tokens (shpca_).
- * OAuth offline tokens may not have a known prefix, so we also accept those.
+ * Accepts both legacy Admin API tokens (shpat_), custom app tokens (shpca_),
+ * and OAuth offline tokens which may not have a known prefix.
  */
 export function validateShopifyToken(token: string): {
   valid: boolean;
@@ -138,7 +205,7 @@ export function validateShopifyToken(token: string): {
 }
 
 /**
- * Test Shopify access token by making a simple API request
+ * Test Shopify access token by making a simple API request.
  */
 export async function testShopifyToken(
   storeUrl: string,

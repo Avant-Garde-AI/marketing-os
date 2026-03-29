@@ -34,9 +34,9 @@ export function MetricCard({
   const getTrendColor = () => {
     switch (trendDirection) {
       case "up":
-        return "text-green-500";
+        return "text-green-400";
       case "down":
-        return "text-red-500";
+        return "text-red-400";
       default:
         return "text-muted-foreground";
     }
@@ -44,24 +44,29 @@ export function MetricCard({
 
   return (
     <Card>
-      <CardContent className="p-6">
-        <div className="text-sm text-muted-foreground mb-1">{title}</div>
+      {/* Gold accent bar */}
+      <div className="accent-bar" />
+
+      <CardContent className="p-8">
+        <div className="text-xs font-semibold text-secondary uppercase tracking-label mb-3">
+          {title}
+        </div>
         {loading ? (
           <>
-            <div className="text-3xl font-bold">--</div>
-            <div className="text-xs text-muted-foreground mt-2">Loading...</div>
+            <div className="font-display text-4xl tracking-tight">--</div>
+            <div className="text-xs text-muted-foreground font-light mt-2">Loading...</div>
           </>
         ) : (
           <>
-            <div className="text-3xl font-bold">{value}</div>
+            <div className="font-display text-4xl tracking-tight">{value}</div>
             {trend && (
-              <div className={`flex items-center gap-1 text-xs mt-2 ${getTrendColor()}`}>
+              <div className={`flex items-center gap-1.5 text-xs mt-3 ${getTrendColor()}`}>
                 {getTrendIcon()}
-                <span>{trend}</span>
+                <span className="font-light">{trend}</span>
               </div>
             )}
             {description && !trend && (
-              <div className="text-xs text-muted-foreground mt-2">{description}</div>
+              <div className="text-xs text-muted-foreground font-light mt-2">{description}</div>
             )}
           </>
         )}

@@ -53,12 +53,20 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-card border rounded-lg p-8">
-      <h2 className="text-2xl font-semibold mb-6">Sign in</h2>
+    <div className="bg-card border border-border p-10">
+      {/* Eyebrow */}
+      <div className="flex items-center gap-4 mb-8">
+        <span className="w-8 h-[1px] bg-secondary" />
+        <span className="text-xs font-semibold text-secondary uppercase tracking-label">
+          Authentication
+        </span>
+      </div>
 
-      <form onSubmit={handleLogin} className="space-y-4">
+      <h2 className="font-display text-3xl tracking-tight mb-8">Sign in</h2>
+
+      <form onSubmit={handleLogin} className="space-y-6">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium mb-2">
+          <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-label mb-3">
             Email
           </label>
           <input
@@ -68,12 +76,12 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="admin@localhost"
             required
-            className="w-full px-3 py-2 border rounded-md bg-background"
+            className="w-full px-4 py-3 border border-border bg-background text-foreground font-body focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium mb-2">
+          <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-label mb-3">
             Password
           </label>
           <input
@@ -83,14 +91,14 @@ function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter password"
             required
-            className="w-full px-3 py-2 border rounded-md bg-background"
+            className="w-full px-4 py-3 border border-border bg-background text-foreground font-body focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
           />
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-primary text-primary-foreground py-2 rounded-md font-medium hover:opacity-90 disabled:opacity-50"
+          className="w-full bg-primary text-primary-foreground py-3 font-medium text-sm uppercase tracking-label hover:shadow-card-lg disabled:opacity-50 transition-all"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
@@ -98,8 +106,8 @@ function LoginForm() {
 
       {message && (
         <p
-          className={`mt-4 text-sm text-center ${
-            isError ? "text-red-500" : "text-muted-foreground"
+          className={`mt-6 text-sm text-center font-light ${
+            isError ? "text-red-400" : "text-muted-foreground"
           }`}
         >
           {message}
@@ -113,20 +121,37 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-md space-y-8 px-4">
+        {/* Header */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">Marketing OS</h1>
-          <p className="text-muted-foreground">
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <span className="w-12 h-[1px] bg-secondary" />
+            <span className="text-xs font-semibold text-secondary uppercase tracking-label">
+              Avant-Garde
+            </span>
+            <span className="w-12 h-[1px] bg-secondary" />
+          </div>
+          <h1 className="font-display text-5xl tracking-tight mb-4">
+            Marketing <span className="italic">OS</span>
+          </h1>
+          <p className="text-muted-foreground font-light leading-relaxed">
             AI marketing operations for your Shopify store
           </p>
         </div>
 
-        <Suspense fallback={<div className="bg-card border rounded-lg p-8 animate-pulse h-64" />}>
+        <Suspense fallback={<div className="bg-card border border-border p-10 animate-pulse h-80" />}>
           <LoginForm />
         </Suspense>
 
-        <p className="text-center text-sm text-muted-foreground">
-          Default credentials are shown in the console after init.
+        <p className="text-center text-xs text-muted-foreground font-light uppercase tracking-label">
+          Default credentials are shown in the console after init
         </p>
+
+        {/* Footer accent */}
+        <div className="flex items-center justify-center gap-4 pt-4">
+          <span className="w-8 h-[1px] bg-border" />
+          <span className="font-script text-xl text-muted-foreground">Agentic Commerce</span>
+          <span className="w-8 h-[1px] bg-border" />
+        </div>
       </div>
     </div>
   );

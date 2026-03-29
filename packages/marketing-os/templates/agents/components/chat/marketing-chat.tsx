@@ -71,19 +71,30 @@ export function MarketingChat({ apiEndpoint = "/api/chat" }: MarketingChatProps)
   return (
     <div className="flex flex-col h-full w-full max-w-3xl mx-auto">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {messages.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">
+          <div className="text-center py-12">
+            {/* Eyebrow */}
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <span className="w-12 h-[1px] bg-secondary" />
+              <span className="text-xs font-semibold text-secondary uppercase tracking-label">
+                AI Agent
+              </span>
+              <span className="w-12 h-[1px] bg-secondary" />
+            </div>
+
+            <p className="text-muted-foreground font-light mb-6 leading-relaxed">
               Hi! I'm your Marketing OS agent. Ask me about your store, generate ad copy, or request improvements.
             </p>
-            <div className="flex flex-wrap gap-2 justify-center">
+
+            <div className="flex flex-wrap gap-3 justify-center">
               {suggestions.map((suggestion, i) => (
                 <Button
                   key={i}
-                  variant="outline"
+                  variant="brand-outline"
                   size="sm"
                   onClick={() => setInput(suggestion)}
+                  className="text-xs"
                 >
                   {suggestion}
                 </Button>
@@ -97,21 +108,21 @@ export function MarketingChat({ apiEndpoint = "/api/chat" }: MarketingChatProps)
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                className={`max-w-[80%] px-6 py-4 ${
                   message.role === "user"
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
+                    : "bg-card border border-border"
                 }`}
               >
-                {message.content}
+                <p className="font-light leading-relaxed">{message.content}</p>
               </div>
             </div>
           ))
         )}
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-lg px-4 py-2">
-              <span className="animate-pulse">Thinking...</span>
+            <div className="bg-card border border-border px-6 py-4">
+              <span className="text-secondary italic">Thinking...</span>
             </div>
           </div>
         )}
@@ -119,19 +130,20 @@ export function MarketingChat({ apiEndpoint = "/api/chat" }: MarketingChatProps)
       </div>
 
       {/* Input */}
-      <div className="border-t p-4">
+      <div className="border-t border-border p-6">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             sendMessage();
           }}
-          className="flex gap-2"
+          className="flex gap-3"
         >
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask me anything about your store..."
             disabled={isLoading}
+            className="flex-1"
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>
             <Send className="h-4 w-4" />

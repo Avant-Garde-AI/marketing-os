@@ -42,13 +42,13 @@ export function Nav() {
   return (
     <nav
       className={cn(
-        "fixed left-0 top-16 h-[calc(100vh-4rem)] bg-card border-r transition-all duration-300 ease-in-out z-40",
+        "fixed left-0 top-20 h-[calc(100vh-5rem)] bg-card border-r border-border transition-all duration-300 ease-in-out z-40",
         isExpanded ? "w-64" : "w-16"
       )}
       onMouseEnter={() => setIsExpanded(true)}
       onMouseLeave={() => setIsExpanded(false)}
     >
-      <div className="flex flex-col gap-2 p-3">
+      <div className="flex flex-col gap-1 p-3">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -58,16 +58,24 @@ export function Nav() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent hover:text-accent-foreground",
+                "group relative flex items-center gap-3 px-3 py-3 transition-all duration-300",
                 isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground"
+                  ? "text-secondary"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
+              {/* Gold accent bar for active state */}
+              <div
+                className={cn(
+                  "absolute left-0 top-0 w-1 h-full bg-secondary transition-transform duration-300",
+                  isActive ? "scale-y-100" : "scale-y-0 group-hover:scale-y-100"
+                )}
+                style={{ transformOrigin: "top" }}
+              />
               <Icon className="h-5 w-5 flex-shrink-0" />
               <span
                 className={cn(
-                  "whitespace-nowrap transition-opacity duration-300",
+                  "whitespace-nowrap text-xs font-semibold uppercase tracking-label transition-opacity duration-300",
                   isExpanded ? "opacity-100" : "opacity-0 w-0 overflow-hidden"
                 )}
               >

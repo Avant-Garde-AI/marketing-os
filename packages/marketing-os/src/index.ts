@@ -10,13 +10,14 @@ import { addSkillCommand } from "./commands/add-skill.js";
 import { addIntegrationCommand } from "./commands/add-integration.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { upgradeCommand } from "./commands/upgrade.js";
+import { linkCommand } from "./commands/link.js";
 
 const program = new Command();
 
 program
   .name("marketing-os")
   .description("AI marketing operations for Shopify, powered by your git repo")
-  .version("0.2.0");
+  .version("0.6.0");
 
 // Default command (create - interactive flow)
 program
@@ -93,6 +94,18 @@ program
   .option("-y, --yes", "Accept all defaults, skip confirmations")
   .action(async (options) => {
     await upgradeCommand(options);
+  });
+
+// Link command - connect installation to the hosted Marketing OS platform
+program
+  .command("link")
+  .description("Link this store to the hosted Marketing OS platform (token broker)")
+  .option("--platform-url <url>", "Platform base URL")
+  .option("--email <email>", "Account email")
+  .option("--agents-url <url>", "Deployed agents console URL")
+  .option("--admin-secret <secret>", "Platform admin secret (or PLATFORM_ADMIN_SECRET)")
+  .action(async (options) => {
+    await linkCommand(options);
   });
 
 // Parse command line arguments

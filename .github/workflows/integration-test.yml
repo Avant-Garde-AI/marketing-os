@@ -26,10 +26,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build CLI
-        run: pnpm turbo build --filter=create-marketing-os
+        run: pnpm turbo build --filter=@avant-garde/marketing-os
 
       - name: Run integration tests
-        run: pnpm --filter create-marketing-os test:integration
+        run: pnpm --filter @avant-garde/marketing-os test:integration
         env:
           CI: true
 
@@ -38,4 +38,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: packages/create-marketing-os/test-results/
+          path: packages/marketing-os/test-results/

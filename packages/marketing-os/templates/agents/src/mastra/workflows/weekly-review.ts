@@ -379,7 +379,6 @@ export const weeklyReviewWorkflow = createWorkflow({
     }),
   }),
 })
-  // @ts-expect-error - Step type inference is complex; types are validated at runtime
   .then(fetchShopifyData)
   // @ts-expect-error - Step type inference is complex; types are validated at runtime
   .then(fetchGA4Data)

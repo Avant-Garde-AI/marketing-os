@@ -391,6 +391,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/src/mastra/storage.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/storage.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(
         templateDir,
         "agents/src/mastra/agents/marketing-agent.ts.hbs"

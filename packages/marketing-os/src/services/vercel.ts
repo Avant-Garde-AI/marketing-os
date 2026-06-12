@@ -102,7 +102,7 @@ export function displayVercelCLIInstructions(): void {
  * Full Vercel setup flow with OAuth
  */
 export async function setupVercelWithOAuth(
-  projectDir: string
+  _projectDir: string
 ): Promise<{ success: boolean; user?: string; error?: string }> {
   // Check if CLI is installed
   const cliCheck = await checkVercelCLI();

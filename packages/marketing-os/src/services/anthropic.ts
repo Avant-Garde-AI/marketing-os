@@ -5,34 +5,8 @@
 
 import chalk from "chalk";
 import open from "open";
-import { execa } from "execa";
 
 const ANTHROPIC_CONSOLE_URL = "https://console.anthropic.com/settings/keys";
-
-/**
- * Copy text to clipboard (cross-platform)
- */
-async function copyToClipboard(text: string): Promise<boolean> {
-  try {
-    const platform = process.platform;
-    if (platform === "darwin") {
-      await execa("pbcopy", { input: text });
-    } else if (platform === "linux") {
-      try {
-        await execa("xclip", ["-selection", "clipboard"], { input: text });
-      } catch {
-        await execa("xsel", ["--clipboard", "--input"], { input: text });
-      }
-    } else if (platform === "win32") {
-      await execa("clip", { input: text });
-    } else {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Open Anthropic Console for API key creation

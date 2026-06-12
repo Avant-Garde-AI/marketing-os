@@ -107,7 +107,7 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     // Platform character limits
     const platformLimits: Record<string, { headline: number; body: number }> = {
       meta: { headline: 40, body: 125 },
@@ -159,7 +159,7 @@ export const tool = createTool({
       "practical buyer",
     ];
 
-    for (let i = 0; i < inputData.variantCount; i++) {
+    for (let i = 0; i < (inputData.variantCount ?? 3); i++) {
       const angle = angles[i % angles.length];
       const persona = personas[i % personas.length];
 

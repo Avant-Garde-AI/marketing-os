@@ -34,7 +34,7 @@ const getCampaignPerformance = createTool({
       averageCpc: z.number(),
     }),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const _customerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
     const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 
@@ -91,7 +91,7 @@ const getKeywordPerformance = createTool({
     })),
     totalKeywords: z.number(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const _customerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
     const _credentials = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
 

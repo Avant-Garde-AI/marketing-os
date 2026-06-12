@@ -31,7 +31,7 @@ const getCampaignPerformance = createTool({
       averageCpc: z.number(),
     }),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const _accessToken = process.env.META_ACCESS_TOKEN!;
     const _adAccountId = process.env.META_AD_ACCOUNT_ID!;
 
@@ -78,7 +78,7 @@ const getAdSetMetrics = createTool({
     })),
     totalAdSets: z.number(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const accessToken = process.env.META_ACCESS_TOKEN!;
 
     // Template structure for Meta Marketing API call
@@ -117,7 +117,7 @@ const getAdCreativeMetrics = createTool({
     })),
     totalAds: z.number(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const accessToken = process.env.META_ACCESS_TOKEN!;
 
     // Template structure for Meta Marketing API call

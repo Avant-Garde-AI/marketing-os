@@ -129,10 +129,10 @@ export const tool = createTool({
   description: metadata.description,
   inputSchema,
   outputSchema,
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     // Calculate date range
     const now = new Date();
-    const daysOffset = inputData.weekOffset * 7;
+    const daysOffset = (inputData.weekOffset ?? 0) * 7;
     const endDate = new Date(now.getTime() - daysOffset * 24 * 60 * 60 * 1000);
     const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
 

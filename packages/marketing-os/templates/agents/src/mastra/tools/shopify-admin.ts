@@ -43,7 +43,7 @@ const getRecentOrders = createTool({
     })),
     total_count: z.number(),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const shopify = getShopifyClient();
     const data = await shopify.rest<{ orders: any[] }>(
       `orders.json?limit=${inputData.limit}&status=${inputData.status}`
@@ -77,7 +77,7 @@ const getProducts = createTool({
       images_count: z.number(),
     })),
   }),
-  execute: async ({ inputData }) => {
+  execute: async (inputData) => {
     const shopify = getShopifyClient();
     const data = await shopify.rest<{ products: any[] }>(
       `products.json?limit=${inputData.limit}`

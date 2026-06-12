@@ -14,7 +14,7 @@ import { Agent } from "@mastra/core/agent";
 export const creativeAgent = new Agent({
   id: "creative-agent",
   name: "Creative Agent",
-  model: "anthropic/claude-sonnet-4-20250514",
+  model: "anthropic/claude-sonnet-4-6",
   instructions: `You are a specialist marketing creative agent.
 
 You generate:

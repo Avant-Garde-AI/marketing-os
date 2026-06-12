@@ -20,9 +20,11 @@ export const prStatusTool = createTool({
     checks_status: z.string().nullable(),
     review_status: z.string(),
   }),
-  execute: async ({ inputData }): Promise<{
+  execute: async (inputData): Promise<{
+    number: number;
     title: string;
     state: string;
+    url: string;
     author: string;
     created_at: string;
     updated_at: string;

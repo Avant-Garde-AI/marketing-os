@@ -301,7 +301,7 @@ export async function createSupabaseTablesViaCLI(
       await execa("supabase", ["link", "--project-ref", projectRef, "--password", dbPassword], {
         cwd: workingDir,
       });
-    } catch (linkError) {
+    } catch {
       // Link might fail if already linked - that's ok
       spinner.text = "Project link attempted...";
     }

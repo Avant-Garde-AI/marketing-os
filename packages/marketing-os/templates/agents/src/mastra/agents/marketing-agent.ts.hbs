@@ -1,4 +1,6 @@
 import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
+import { storage } from "../storage";
 import { shopifyAdminTools } from "../tools/shopify-admin";
 import { dispatchToGithubTool } from "../tools/dispatch-to-github";
 import { prStatusTool } from "../tools/pr-status";
@@ -20,7 +22,8 @@ import { metaAdsTools } from "../tools/meta-ads";
 export const marketingAgent = new Agent({
   id: "marketing-agent",
   name: "Marketing Agent",
-  model: "anthropic/claude-sonnet-4-20250514",
+  model: "anthropic/claude-sonnet-4-6",
+  ...(storage ? { memory: new Memory({ storage }) } : {}),
   instructions: `You are the Marketing OS agent for a Shopify store.
 
 Your capabilities:

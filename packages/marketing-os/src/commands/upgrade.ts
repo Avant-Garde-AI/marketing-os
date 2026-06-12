@@ -16,8 +16,22 @@ import { CONFIG_FILE_NAME } from "../utils/config.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Current CLI version - should match package.json
-const CLI_VERSION = "0.2.0";
+// Resolved from the package's own package.json so it can never drift
+function getCliVersion(): string {
+  for (const rel of ["../package.json", "../../package.json"]) {
+    try {
+      const pkg = fs.readJsonSync(path.join(__dirname, rel));
+      if (typeof pkg?.version === "string" && pkg?.name?.includes("marketing-os")) {
+        return pkg.version;
+      }
+    } catch {
+      // keep looking
+    }
+  }
+  return "0.0.0";
+}
+
+const CLI_VERSION = getCliVersion();
 
 export interface UpgradeOptions {
   force?: boolean;

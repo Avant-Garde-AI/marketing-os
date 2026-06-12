@@ -525,7 +525,6 @@ export const campaignLaunchWorkflow = createWorkflow({
     }),
   }),
 })
-  // @ts-expect-error - Step type inference is complex; types are validated at runtime
   .then(validateCampaign)
   // @ts-expect-error - Step type inference is complex; types are validated at runtime
   .then(generateAssets)

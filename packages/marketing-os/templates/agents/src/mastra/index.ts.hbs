@@ -1,18 +1,21 @@
 import { Mastra } from "@mastra/core";
 import { marketingAgent } from "./agents/marketing-agent";
 import { creativeAgent } from "./agents/creative-agent";
+import { storage } from "./storage";
 
 /**
  * Mastra instance for Marketing OS
  *
  * Configured with Marketing and Creative agents.
- * Memory and storage are configured via environment variables.
+ * Storage is Supabase Postgres when SUPABASE_DATABASE_URL is set;
+ * otherwise the console runs without persistence.
  */
 export const mastra = new Mastra({
   agents: {
     marketingAgent,
     creativeAgent,
   },
+  ...(storage ? { storage } : {}),
 });
 
 export { marketingAgent, creativeAgent };

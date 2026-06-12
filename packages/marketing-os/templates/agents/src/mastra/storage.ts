@@ -10,5 +10,5 @@ const connectionString =
   process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
 
 export const storage = connectionString
-  ? new PostgresStore({ connectionString })
+  ? new PostgresStore({ id: "marketing-os", connectionString })
   : undefined;

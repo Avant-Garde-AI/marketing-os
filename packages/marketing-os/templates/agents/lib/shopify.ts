@@ -3,9 +3,17 @@
  *
  * Provides both REST and GraphQL Admin API access through a single interface.
  * All tools and skills should use this client instead of making direct fetch calls.
+ *
+ * Authentication resolves in order:
+ *   1. An explicit accessToken passed to createShopifyClient
+ *   2. The Marketing OS platform token broker, when MARKETING_OS_API_URL and
+ *      MARKETING_OS_API_KEY are set (the token comes from the Marketing OS
+ *      Shopify app installed on the store)
+ *   3. SHOPIFY_ACCESS_TOKEN (manual token, legacy setup)
  */
 
 const SHOPIFY_API_VERSION = "2025-04";
+const BROKER_TOKEN_TTL_MS = 10 * 60 * 1000;
 
 export interface ShopifyClientConfig {
   storeUrl?: string;
@@ -34,6 +42,42 @@ export class ShopifyApiError extends Error {
   }
 }
 
+let _brokerToken: { token: string; fetchedAt: number } | null = null;
+
+async function fetchBrokerToken(): Promise<string> {
+  const apiUrl = process.env.MARKETING_OS_API_URL!;
+  const apiKey = process.env.MARKETING_OS_API_KEY!;
+
+  if (_brokerToken && Date.now() - _brokerToken.fetchedAt < BROKER_TOKEN_TTL_MS) {
+    return _brokerToken.token;
+  }
+
+  const response = await fetch(
+    `${apiUrl.replace(/\/$/, "")}/api/shopify-token`,
+    { headers: { Authorization: `Bearer ${apiKey}` } }
+  );
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ShopifyApiError(
+      `Marketing OS token broker error: ${response.status} ${response.statusText}`,
+      response.status,
+      body
+    );
+  }
+
+  const { accessToken } = (await response.json()) as { accessToken: string };
+  _brokerToken = { token: accessToken, fetchedAt: Date.now() };
+  return accessToken;
+}
+
+async function resolveAccessToken(explicit?: string): Promise<string> {
+  if (explicit) return explicit;
+  if (process.env.MARKETING_OS_API_URL && process.env.MARKETING_OS_API_KEY) {
+    return fetchBrokerToken();
+  }
+  return process.env.SHOPIFY_ACCESS_TOKEN!;
+}
+
 /**
  * Create a Shopify API client.
  *
@@ -41,13 +85,12 @@ export class ShopifyApiError extends Error {
  */
 export function createShopifyClient(config?: ShopifyClientConfig) {
   const storeUrl = config?.storeUrl ?? process.env.SHOPIFY_STORE_URL!;
-  const accessToken = config?.accessToken ?? process.env.SHOPIFY_ACCESS_TOKEN!;
 
   const baseUrl = `https://${storeUrl}/admin/api/${SHOPIFY_API_VERSION}`;
-  const headers = {
-    "X-Shopify-Access-Token": accessToken,
+  const getHeaders = async (): Promise<Record<string, string>> => ({
+    "X-Shopify-Access-Token": await resolveAccessToken(config?.accessToken),
     "Content-Type": "application/json",
-  };
+  });
 
   return {
     /**
@@ -63,7 +106,7 @@ export function createShopifyClient(config?: ShopifyClientConfig) {
       const url = `${baseUrl}/${endpoint}`;
       const response = await fetch(url, {
         ...options,
-        headers: { ...headers, ...options?.headers },
+        headers: { ...(await getHeaders()), ...options?.headers },
       });
 
       if (!response.ok) {
@@ -91,7 +134,7 @@ export function createShopifyClient(config?: ShopifyClientConfig) {
       const url = `${baseUrl}/graphql.json`;
       const response = await fetch(url, {
         method: "POST",
-        headers,
+        headers: await getHeaders(),
         body: JSON.stringify({ query, variables }),
       });
 

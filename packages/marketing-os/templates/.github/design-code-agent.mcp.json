@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "design-code-agent": {
+      "command": "npx",
+      "args": ["--yes", "@marketing-os/design-loop", "design-code-agent-mcp"],
+      "env": {
+        "DESIGN_LOOP_REAL": "1",
+        "SHOPIFY_THEME_PATH": ".",
+        "SHOPIFY_PORT": "9292",
+        "DESIGN_CRITIC_ENDPOINT": "${DESIGN_CRITIC_ENDPOINT}",
+        "DESIGN_CRITIC_API_KEY": "${DESIGN_CRITIC_API_KEY}",
+        "DESIGN_CRITIC_MODEL": "${DESIGN_CRITIC_MODEL}",
+        "DESIGN_MCP_ENDPOINT": "${DESIGN_MCP_ENDPOINT}",
+        "DESIGN_MCP_SNAPSHOT": "${DESIGN_MCP_SNAPSHOT}",
+        "DESIGN_SKILLSET_VERSION": "${DESIGN_SKILLSET_VERSION}",
+        "DESIGN_BRAND_DOC_VERSION": "${DESIGN_BRAND_DOC_VERSION}"
+      }
+    }
+  }
+}

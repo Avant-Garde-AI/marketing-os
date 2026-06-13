@@ -23,13 +23,54 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The design-code agent is delegated to as an MCP server (see
+      # .github/design-code-agent.mcp.json). Shopify CLI is needed for the
+      # implementer's live render loop (`shopify theme dev`).
+      - name: Install Shopify CLI
+        run: npm i -g @shopify/cli
+
       - uses: anthropics/claude-code-action@v1
+        env:
+          # Consumed by the design-code-agent MCP server (the implementer's
+          # render → see → refine loop). Point at the central GCP serving plane
+          # in production; any OpenAI-compatible vision endpoint works for OSS.
+          DESIGN_CRITIC_ENDPOINT: ${{ secrets.DESIGN_CRITIC_ENDPOINT }}
+          DESIGN_CRITIC_API_KEY: ${{ secrets.DESIGN_CRITIC_API_KEY }}
+          DESIGN_CRITIC_MODEL: ${{ vars.DESIGN_CRITIC_MODEL }}
+          DESIGN_MCP_ENDPOINT: ${{ secrets.DESIGN_MCP_ENDPOINT }}
+          DESIGN_MCP_SNAPSHOT: ${{ vars.DESIGN_MCP_SNAPSHOT }}
+          DESIGN_SKILLSET_VERSION: ${{ vars.DESIGN_SKILLSET_VERSION }}
+          DESIGN_BRAND_DOC_VERSION: ${{ vars.DESIGN_BRAND_DOC_VERSION }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            You are the Marketing OS agent for this Shopify store.
-            Read CLAUDE.md for full instructions and context.
-            Read /docs/ for brand guidelines.
+            You are the PLANNER/orchestrator for this Shopify store's Marketing OS.
+            Read CLAUDE.md for context and /docs/ (incl. brand-design.md) for the brand.
+
+            Your job is to PLAN store-improvement work and DELEGATE all theme-code
+            implementation to the design-code agent. You do NOT edit theme files
+            yourself — you have no Edit/Write tools by design.
+
+            Workflow:
+            1. Interpret the request and form a plan.
+            2. For each implementation unit, call
+               mcp__design-code-agent__implement_design_change with a TaskSpec
+               (intent, scope.pages/sections, brandDesignRef pointing at the
+               committed brand-design.md, acceptanceCriteria, constraints).
+            3. Poll mcp__design-code-agent__get_work_report until each task is
+               completed / escalated / rejected. Read the WorkReport.
+            4. If a report is `escalated`, decide: accept the best candidate,
+               send mcp__design-code-agent__revise_design_change with concrete
+               feedback, or surface to the owner. If `rejected` (a guardrail /
+               asset-boundary refusal), respect it — do not work around it.
+            5. The implementer writes files into the working tree. Use git
+               (via Bash) to create a branch, commit the implementer's changes,
+               and open ONE PR via `gh`, summarizing the WorkReport(s):
+               conformance, loop health, gates, and any unresolved sub-tasks.
 
             Event: ${{ github.event_name }}
             ${{ github.event_name == 'issues' &&
@@ -43,9 +84,10 @@ jobs:
             ${{ github.event_name == 'repository_dispatch' &&
                 format('Dispatch payload: {0}',
                   toJSON(github.event.client_payload)) || '' }}
-
-            Execute the appropriate skill and create a PR with your changes.
           claude_args: >-
-            --max-turns 20
+            --max-turns 30
             --model claude-sonnet-4-20250514
-            --allowedTools Edit,Read,Write,Bash
+            --mcp-config .github/design-code-agent.mcp.json
+            --allowedTools "Read,Grep,Glob,Bash,mcp__design-code-agent__implement_design_change,mcp__design-code-agent__get_work_report,mcp__design-code-agent__revise_design_change"
+            --disallowedTools "Edit,Write,NotebookEdit"
+            --append-system-prompt "You are a planner that delegates implementation. You must never edit Liquid, sections, templates, or theme assets directly; all code changes go through the design-code-agent MCP tools. Owning the PR and the plan is your responsibility; writing theme code is not."

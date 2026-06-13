@@ -1,0 +1,50 @@
+{
+  "name": "@marketing-os/design-loop",
+  "version": "0.1.0",
+  "description": "Design-code deep agent: render → see → refine Shopify theme implementation, with the Design Work Contract for orchestrator delegation",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": "./dist/index.js",
+    "./contract": "./dist/contract.js"
+  },
+  "bin": {
+    "design-code-agent": "./dist/delegation/cli.js",
+    "design-code-agent-mcp": "./dist/delegation/mcp-server.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "mcp": "node dist/delegation/mcp-server.js"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "optionalDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "playwright": "^1.49.0",
+    "pixelmatch": "^6.0.0",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/design-loop"
+  }
+}

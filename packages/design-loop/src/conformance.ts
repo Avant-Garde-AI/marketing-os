@@ -15,6 +15,7 @@ import type {
   Finding,
   VisualDiff,
 } from "./types.js";
+import type { DesignKnowledge } from "./design-mcp/types.js";
 
 export interface EvaluateInput {
   bundle: CaptureBundleRef;
@@ -23,36 +24,50 @@ export interface EvaluateInput {
   wcag: "A" | "AA" | "AAA";
   critic: CriticProvider;
   visualDiff?: VisualDiff;
+  /** When set, the persona read comes from the hosted Design MCP (PRD §4.1). */
+  knowledge?: DesignKnowledge;
+  brandDesignRef?: { path: string; version: string };
 }
 
 export async function evaluateConformance(input: EvaluateInput): Promise<ConformanceResult> {
-  const { bundle, brand, intent, wcag, critic, visualDiff } = input;
+  const { bundle, brand, intent, wcag, critic, visualDiff, knowledge, brandDesignRef } = input;
 
+  // Deterministic gates are ALWAYS computed locally and are authoritative — the
+  // remote MCP read can never buy back a dark-pattern or a11y failure (PRD §3/§4.4).
   const darkPattern = checkDarkPatterns(bundle);
   const a11y = checkA11y(bundle, wcag);
   const tokenFidelity = checkTokenFidelity(bundle, brand);
 
-  const { personaFit, flags } = await critic.critique({ bundle, brand, intent });
+  let personaFit: ConformanceResult["personaFit"];
+  let flags: Finding[];
+  let source: ConformanceResult["source"];
+
+  if (knowledge) {
+    const remote = await knowledge.validateDesignConformance({
+      captureBundleRef: bundle, // by reference (PRD §4.2)
+      brandDesignRef: brandDesignRef ?? { path: "", version: "" },
+      brand,
+      intent,
+      wcag,
+    });
+    personaFit = remote.personaFit;
+    flags = remote.flags;
+    source = "design-mcp";
+  } else {
+    const c = await critic.critique({ bundle, brand, intent });
+    personaFit = c.personaFit;
+    flags = c.flags;
+    source = "local";
+  }
 
   const score = computeScore({ personaFit, flags, darkPattern, a11y, tokenFidelity, visualDiff });
-
-  // Hard gates dominate: a dark-pattern hit or an a11y violation fails
-  // conformance regardless of how good the persona fit is.
   const passed =
     darkPattern.passed &&
     a11y.passed &&
     !(visualDiff?.regression ?? false) &&
     score >= 0.85;
 
-  return {
-    score,
-    passed,
-    personaFit,
-    flags,
-    gates: { darkPattern, a11y, tokenFidelity },
-    visualDiff,
-    source: "local",
-  };
+  return { score, passed, personaFit, flags, gates: { darkPattern, a11y, tokenFidelity }, visualDiff, source };
 }
 
 interface ScoreInput {

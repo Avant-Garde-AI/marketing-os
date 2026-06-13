@@ -67,6 +67,7 @@ export async function runDesignAgent(spec: TaskSpec, deps: RunAgentDeps): Promis
         intent: spec.intent,
         brand: spec.brand,
         scope: { pages: [plan.page], sections: plan.sections, files: plan.files },
+        brandDesignRef: spec.brandDesignRef,
         wcag: spec.guardrails.wcag,
         maxIterations,
         acceptThreshold: deps.config.acceptThreshold,

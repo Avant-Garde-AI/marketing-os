@@ -189,6 +189,8 @@ export interface ImplementInput {
   /** Critique from the previous iteration, if any. */
   priorCritique?: ConformanceResult;
   workspaceDir: string;
+  /** Design MCP, for consulting category conventions / patterns mid-implementation. */
+  knowledge?: import("./design-mcp/types.js").DesignKnowledge;
 }
 
 export interface ImplementOutput {
@@ -216,6 +218,10 @@ export interface DesignLoopProviders {
   critic: CriticProvider;
   implementer: Implementer;
   diff?: DiffProvider;
+  /** Design MCP (PRD §4.1). When set, conformance routes through it. */
+  knowledge?: import("./design-mcp/types.js").DesignKnowledge;
+  /** Capture-bundle ingestion (PRD §4.2). When set, bundles upload by reference. */
+  uploader?: import("./upload.js").BundleUploader;
 }
 
 // ── Loop result ──────────────────────────────────────────────────────────────

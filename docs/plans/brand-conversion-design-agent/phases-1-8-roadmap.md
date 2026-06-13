@@ -20,9 +20,13 @@ Each phase gets its own detailed doc when it's next up. This captures repo mappi
 
 ---
 
-## Phase 2 — Design MCP client + capture-bundle contract
+## Phase 2 — Design MCP client + capture-bundle contract  ✅ SHIPPED (mock tier, 2026-06-13)
 
-**Deliverable:** consume PRD §4.1 (5 tools) and §4.2 (capture bundle, signed-URL upload).
+**Built:** `DesignKnowledge` interface for all 5 §4.1 tools with `MockDesignKnowledge` (deterministic) + `RemoteDesignMcp` (@ts-nocheck MCP client); client-side `assertAbstracted` asset-boundary guard. `BundleUploader` (PRD §4.2) with `localUploader`/`mockSignedUrlUploader`/remote signed-URL uploader. Conformance now routes through `validate_design_conformance` when a `DesignKnowledge` is present (`source=design-mcp`) while **local deterministic gates stay authoritative (veto)**; the bundle is uploaded and passed **by reference**. `DesignKnowledge` also threaded into `ImplementInput` so the implementer can consult conventions/patterns mid-implementation. 18/18 tests, bench 6/6, build/typecheck clean. `buildProviders` auto-wires the remote MCP + uploader when `DESIGN_MCP_ENDPOINT` / `CAPTURE_BUNDLE_UPLOAD_URL` are set (already passed through in `design-code-agent.mcp.json`). **Open:** validate against the real hosted Design MCP once the knowledge-plane contract is final.
+
+---
+
+**Original deliverable:** consume PRD §4.1 (5 tools) and §4.2 (capture bundle, signed-URL upload).
 
 **Lands in:** an MCP client in `templates/agents/src/mastra/` (Mastra MCP client) for the conversational/decision-point calls, and a capture-bundle **uploader** in `design-loop` (local path → signed GCS URL). Swap `design-loop`'s local `conformance.ts` for `validate_design_conformance` (same return shape — see Phase 0 §3).
 

@@ -26,3 +26,14 @@ export {
 } from "./providers/index.js";
 export { runBench, formatBench, type BenchRunResult, type BenchCaseResult } from "./bench/runner.js";
 export { BENCH_CASES, type BenchCase } from "./bench/cases.js";
+export {
+  assertAbstracted,
+  type DesignKnowledge,
+  type CategoryConventions,
+  type DesignPrinciple,
+  type ReferencePattern,
+  type TokenRecommendation,
+  type ValidateConformanceInput,
+} from "./design-mcp/types.js";
+export { MockDesignKnowledge } from "./design-mcp/mock.js";
+export { localUploader, mockSignedUrlUploader, type BundleUploader } from "./upload.js";

@@ -28,6 +28,7 @@ export interface RefineLoopInput {
   intent: string;
   brand: BrandContext;
   scope: { pages: string[]; sections: string[]; files: string[] };
+  brandDesignRef: { path: string; version: string };
   wcag: "A" | "AA" | "AAA";
   maxIterations: number;
   acceptThreshold: number;
@@ -76,6 +77,7 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
       iteration,
       priorCritique,
       workspaceDir: input.workspaceDir,
+      knowledge: providers.knowledge,
     });
 
     if (impl.refusal) {
@@ -92,19 +94,22 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
     }
 
     emit(input, { phase: "rendering", iteration, note: "Rendering preview" });
-    const bundle = await providers.capture.capture({
+    const local = await providers.capture.capture({
       page: input.page,
       baseUrl: providers.themeServer.baseUrl(),
       manifest: baseManifest(),
       outDir: `${input.outDir}/iter-${iteration}`,
     });
 
-    emit(input, { phase: "critiquing", iteration, note: "Evaluating conformance" });
+    // Visual diff runs on the local pixels; conformance/report use the uploaded
+    // ref so the bundle is passed to the MCP by reference (PRD §4.2).
     let visualDiff: VisualDiff | undefined;
     if (providers.diff && baseline) {
-      visualDiff = await providers.diff.compare({ baseline, candidate: bundle });
+      visualDiff = await providers.diff.compare({ baseline, candidate: local });
     }
+    const bundle = providers.uploader ? await providers.uploader.upload(local) : local;
 
+    emit(input, { phase: "critiquing", iteration, note: "Evaluating conformance" });
     const conformance = await evaluateConformance({
       bundle,
       brand: input.brand,
@@ -112,6 +117,8 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
       wcag: input.wcag,
       critic: providers.critic,
       visualDiff,
+      knowledge: providers.knowledge,
+      brandDesignRef: input.brandDesignRef,
     });
 
     const candidate: LoopCandidate = {

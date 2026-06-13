@@ -34,11 +34,27 @@ export async function buildProviders(
     ]);
 
   const themeServer = await createThemeServer(config);
+
+  // Design MCP (PRD §4.1) + capture-bundle ingestion (PRD §4.2) wire in when
+  // their endpoints are configured; otherwise conformance stays local.
+  let knowledge: DesignLoopProviders["knowledge"];
+  if (config.designMcpEndpoint) {
+    const { createRemoteDesignMcp } = await import("../design-mcp/remote.js");
+    knowledge = await createRemoteDesignMcp(config);
+  }
+  let uploader: DesignLoopProviders["uploader"];
+  if (process.env["CAPTURE_BUNDLE_UPLOAD_URL"]) {
+    const { createSignedUrlUploader } = await import("../upload-remote.js");
+    uploader = createSignedUrlUploader(config);
+  }
+
   return {
     themeServer,
     capture: createPlaywrightCapture(config),
     critic: createVlmCritic(config),
     implementer: createLlmImplementer(config),
     diff: createVisualDiff(config),
+    knowledge,
+    uploader,
   };
 }

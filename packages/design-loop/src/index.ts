@@ -37,3 +37,4 @@ export {
 } from "./design-mcp/types.js";
 export { MockDesignKnowledge } from "./design-mcp/mock.js";
 export { localUploader, mockSignedUrlUploader, type BundleUploader } from "./upload.js";
+export * from "./brand/index.js";

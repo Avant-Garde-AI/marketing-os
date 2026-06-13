@@ -1,7 +1,7 @@
 # Brand Conversion Design Agent — Build Plan (Overview)
 
 **Source spec:** Brand Conversion Design Agent Technical PRD v1.1
-**Status (2026-06-13):** Phases **0 + 1 + 2 shipped** (mock/stub tier) in `packages/design-loop` + the steered GH-runner planner. Conformance routes through the Design MCP (mock) with local gates authoritative; capture bundles upload by reference. Build/typecheck/18 tests/bench all green. Open items: live I/O adapters, real hosted Design MCP validation, npm publish (Phase 7). Next: Phase 3 (Guided Brand Definition → `brand-design.md`).
+**Status (2026-06-13):** **MVP shipped — Phases 0, 1, 2, 3** (mock/stub tier). `packages/design-loop` holds the render→see→refine loop, the Design Work Contract + delegation surface, the Design MCP client (mock), and the `brand-design.md` authoring flow (`src/brand/`). Console template has the brand-definition agent; GH runner has the steered planner. 24 tests + bench 6/6 + typecheck + build all green. Open items: live I/O adapters, real hosted Design MCP validation, npm publish (Phase 7). Next: Phases 4–8 (skill library, NeuroGraph fork, measure-better, release machine, quality bar).
 **This repo's role:** the **experience plane** — the OSS Mastra harness that runs in the client environment.
 **Companion (out of scope here):** `marketing-os-agents` — the **knowledge plane** (Design ontology, Design MCP, skill library, eval/bench). We build *against* its contracts; we do not build it.
 

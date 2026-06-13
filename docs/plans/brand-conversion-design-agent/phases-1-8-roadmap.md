@@ -36,9 +36,13 @@ Each phase gets its own detailed doc when it's next up. This captures repo mappi
 
 ---
 
-## Phase 3 — Guided Brand Definition flow + `brand-design.md`
+## Phase 3 — Guided Brand Definition flow + `brand-design.md`  ✅ SHIPPED (2026-06-13)
 
-**Deliverable:** the onboarding hook (PRD §1 Phase A, §2 schema, §8). Conversational, co-creative; converges to `brand-design.md` with the §2 front-matter and 9 sections; **commits it to the client repo**.
+**Built:** `src/brand/` in design-loop — `BrandDesignDoc` schema (§2 front-matter + 9 sections); lossless `serialize`/`parse`; `draftBrandDesign` (MCP-grounded first pass via `DesignKnowledge`); `PersonaSource` fork (`elicitedPersona` + `neurographPersonaStub`, the §4.5 seam); `toBrandContext` bridge so `brand-design.md` becomes the loop's north star; `Committer` (`memoryCommitter` + GitHub-contents commit in the template). Console wiring in `templates/agents`: `brand-definition-agent.ts` (conversational, generated-with-the-human, commits only on approval, offers immediate-proof improvements) + `tools/brand-design.ts` (`draft-brand-design` / `commit-brand-design` via GitHub Contents API) + registered in the Mastra instance + `@marketing-os/design-loop` added to `package.json.hbs` (pending publish). 24/24 tests incl. round-trip + persona fork + bridge + commit. **MVP (Phases 0–3) complete.**
+
+---
+
+**Original deliverable:** the onboarding hook (PRD §1 Phase A, §2 schema, §8). Conversational, co-creative; converges to `brand-design.md` with the §2 front-matter and 9 sections; **commits it to the client repo**.
 
 **Lands in:** the console — a new brand-definition agent/flow in `templates/agents/` (`src/mastra/agents/` + an onboarding UI route under `app/`). Uses Design MCP (Phase 2) for category-grounded proposals ("brands in your category lead with X"). Commits via the existing GitHub lib.
 

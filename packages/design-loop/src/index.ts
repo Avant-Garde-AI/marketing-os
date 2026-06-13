@@ -24,3 +24,5 @@ export {
   type BuildProvidersOptions,
   type StubScenario,
 } from "./providers/index.js";
+export { runBench, formatBench, type BenchRunResult, type BenchCaseResult } from "./bench/runner.js";
+export { BENCH_CASES, type BenchCase } from "./bench/cases.js";

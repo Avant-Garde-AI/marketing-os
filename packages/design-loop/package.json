@@ -10,7 +10,8 @@
   },
   "bin": {
     "design-code-agent": "./dist/delegation/cli.js",
-    "design-code-agent-mcp": "./dist/delegation/mcp-server.js"
+    "design-code-agent-mcp": "./dist/delegation/mcp-server.js",
+    "design-loop-bench": "./dist/bench/cli.js"
   },
   "files": [
     "dist"
@@ -21,7 +22,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "mcp": "node dist/delegation/mcp-server.js"
+    "mcp": "node dist/delegation/mcp-server.js",
+    "bench": "node dist/bench/cli.js"
   },
   "dependencies": {
     "zod": "^3.25.0"

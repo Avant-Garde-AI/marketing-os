@@ -6,6 +6,7 @@ export default defineConfig({
     "src/contract.ts",
     "src/delegation/cli.ts",
     "src/delegation/mcp-server.ts",
+    "src/bench/cli.ts",
   ],
   format: ["esm"],
   target: "node20",

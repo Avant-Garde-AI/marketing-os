@@ -28,6 +28,8 @@ export interface StubScenario {
   injectA11y?: boolean;
   /** Implementer refuses (rejected path) when the intent matches. */
   refuseIfIntentMatches?: RegExp;
+  /** Force the diff provider to report a visual regression. */
+  forceRegression?: boolean;
   /** VLM design-quality flags to attach. */
   flags?: Finding[];
 }
@@ -105,7 +107,10 @@ export function createStubProviders(scenario: StubScenario = {}): DesignLoopProv
   };
 
   const diff: DiffProvider = {
-    compare: async () => ({ mismatch: 0.02, changedPixels: 1200, totalPixels: 60000, regression: false }),
+    compare: async () =>
+      scenario.forceRegression
+        ? { mismatch: 0.82, changedPixels: 49200, totalPixels: 60000, regression: true }
+        : { mismatch: 0.02, changedPixels: 1200, totalPixels: 60000, regression: false },
   };
 
   return { themeServer, capture, critic, implementer, diff };

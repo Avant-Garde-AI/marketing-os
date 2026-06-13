@@ -11,6 +11,7 @@
 import { evaluateConformance } from "./conformance.js";
 import type {
   BrandContext,
+  CaptureBundleRef,
   CaptureManifest,
   ConformanceResult,
   DesignLoopProviders,
@@ -44,7 +45,26 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
   const history: LoopCandidate[] = [];
   let best: LoopCandidate | null = null;
   let priorCritique: ConformanceResult | undefined;
-  let baseline: LoopCandidate | null = null;
+
+  const baseManifest = (): CaptureManifest => ({
+    page: input.page,
+    themeRef: input.themeRef,
+    commit: null,
+    capturedAt: input.now(),
+    versionVector: input.versionVector,
+  });
+
+  // Capture the pre-change state so every iteration can be checked for visual
+  // regressions against it — changes must not silently break existing work.
+  let baseline: CaptureBundleRef | null = null;
+  if (providers.diff) {
+    baseline = await providers.capture.capture({
+      page: input.page,
+      baseUrl: providers.themeServer.baseUrl(),
+      manifest: baseManifest(),
+      outDir: `${input.outDir}/baseline`,
+    });
+  }
 
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
     emit(input, { phase: "implementing", iteration, note: `Implementing (iteration ${iteration})` });
@@ -72,25 +92,17 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
     }
 
     emit(input, { phase: "rendering", iteration, note: "Rendering preview" });
-    const baseUrl = providers.themeServer.baseUrl();
-    const manifest: CaptureManifest = {
-      page: input.page,
-      themeRef: input.themeRef,
-      commit: null,
-      capturedAt: input.now(),
-      versionVector: input.versionVector,
-    };
     const bundle = await providers.capture.capture({
       page: input.page,
-      baseUrl,
-      manifest,
+      baseUrl: providers.themeServer.baseUrl(),
+      manifest: baseManifest(),
       outDir: `${input.outDir}/iter-${iteration}`,
     });
 
     emit(input, { phase: "critiquing", iteration, note: "Evaluating conformance" });
     let visualDiff: VisualDiff | undefined;
     if (providers.diff && baseline) {
-      visualDiff = await providers.diff.compare({ baseline: baseline.bundle, candidate: bundle });
+      visualDiff = await providers.diff.compare({ baseline, candidate: bundle });
     }
 
     const conformance = await evaluateConformance({
@@ -111,7 +123,6 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
     };
     history.push(candidate);
     if (best === null || conformance.score > best.conformance.score) best = candidate;
-    if (baseline === null) baseline = candidate;
 
     emit(input, {
       phase: "critiquing",

@@ -17,7 +17,7 @@ const program = new Command();
 program
   .name("marketing-os")
   .description("AI marketing operations for Shopify, powered by your git repo")
-  .version("0.7.0");
+  .version("0.8.0");
 
 // Default command (create - interactive flow)
 program

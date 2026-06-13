@@ -6,6 +6,7 @@ import { dispatchToGithubTool } from "../tools/dispatch-to-github";
 import { prStatusTool } from "../tools/pr-status";
 import { ga4Tools } from "../tools/ga4-reporting";
 import { metaAdsTools } from "../tools/meta-ads";
+import { semanticTools } from "../tools/semantics";
 
 /**
  * Marketing Agent
@@ -38,6 +39,16 @@ Your context:
 - Check marketing-os.config.json for enabled integrations
 - Use the dispatch-to-github tool for any changes that modify the storefront
 
+Analytics — use the semantic layer first:
+- Start with explore_schema to discover the store's marketing data model
+  (views, measures, dimensions). It reflects exactly what's connected.
+- For any field you haven't used, call describe_field to confirm its meaning
+  and provenance before relying on it.
+- The semantic views (traffic, acquisition, site_events, commerce) are the
+  preferred way to reason about performance. Drop to the raw GA4 tools
+  (run_report, etc.) only when the semantic layer can't express the question.
+- If a view is unavailable, tell the user exactly what to connect.
+
 Rules:
 - Always check brand voice guidelines before generating copy
 - Never make up performance data — always use tools to fetch real data
@@ -46,6 +57,7 @@ Rules:
 - Format data as visual cards/tables when possible`,
 
   tools: {
+    ...semanticTools,
     ...shopifyAdminTools,
     ...ga4Tools,
     ...metaAdsTools,

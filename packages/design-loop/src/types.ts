@@ -191,6 +191,8 @@ export interface ImplementInput {
   workspaceDir: string;
   /** Design MCP, for consulting category conventions / patterns mid-implementation. */
   knowledge?: import("./design-mcp/types.js").DesignKnowledge;
+  /** Pinned design skills selected for this task — the execution vocabulary (PRD §4.3). */
+  skills?: import("./skills/types.js").DesignSkill[];
 }
 
 export interface ImplementOutput {
@@ -222,6 +224,8 @@ export interface DesignLoopProviders {
   knowledge?: import("./design-mcp/types.js").DesignKnowledge;
   /** Capture-bundle ingestion (PRD §4.2). When set, bundles upload by reference. */
   uploader?: import("./upload.js").BundleUploader;
+  /** Pinned design skill-set (PRD §4.3). When set, skills are selected + invoked. */
+  skillSet?: import("./skills/types.js").SkillSet;
 }
 
 // ── Loop result ──────────────────────────────────────────────────────────────
@@ -247,4 +251,6 @@ export interface LoopResult {
   history: LoopCandidate[];
   /** Critique attached to the best candidate when escalated (PRD §1 Phase B). */
   critique?: string;
+  /** Design skills selected/invoked for this sub-task (provenance, PRD §6). */
+  skillsInvoked: string[];
 }

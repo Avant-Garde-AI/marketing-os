@@ -48,6 +48,16 @@ export async function buildProviders(
     uploader = createSignedUrlUploader(config);
   }
 
+  // Pin + pull the design skill-set at session start (PRD §4.3). A remote
+  // registry serves versioned artifacts; otherwise the bundled v0 set is used.
+  const pin = { version: config.versionVector.skillset };
+  const { LocalSkillSetSource, pullSkillSet } = await import("../skills/source.js");
+  type Src = import("../skills/types.js").SkillSetSource;
+  const source: Src = process.env["DESIGN_SKILLSET_REGISTRY"]
+    ? ((await import("../skills/remote.js")).createRemoteSkillSetSource(config) as Src)
+    : new LocalSkillSetSource();
+  const skillSet = await pullSkillSet(source, pin);
+
   return {
     themeServer,
     capture: createPlaywrightCapture(config),
@@ -56,5 +66,6 @@ export async function buildProviders(
     diff: createVisualDiff(config),
     knowledge,
     uploader,
+    skillSet,
   };
 }

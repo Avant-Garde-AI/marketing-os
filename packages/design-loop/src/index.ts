@@ -38,3 +38,15 @@ export {
 export { MockDesignKnowledge } from "./design-mcp/mock.js";
 export { localUploader, mockSignedUrlUploader, type BundleUploader } from "./upload.js";
 export * from "./brand/index.js";
+export {
+  loadLocalSkillSet,
+  LOCAL_SKILLSET,
+  selectSkills,
+  LocalSkillSetSource,
+  pullSkillSet,
+  type DesignSkill,
+  type SkillSet,
+  type SkillManifest,
+  type SkillSetPin,
+  type SkillSetSource,
+} from "./skills/index.js";

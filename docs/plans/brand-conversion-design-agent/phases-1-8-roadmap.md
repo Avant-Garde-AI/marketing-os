@@ -54,9 +54,13 @@ Each phase gets its own detailed doc when it's next up. This captures repo mappi
 
 ---
 
-## Phase 4 — Skill-library integration (pinned pull + invoke)
+## Phase 4 — Skill-library integration (pinned pull + invoke)  ✅ SHIPPED (2026-06-13)
 
-**Deliverable:** pull a versioned skill-set artifact (tarball/OCI + manifest), pin in config, load at session start, invoke (PRD §4.3).
+**Built:** `src/skills/` in design-loop — `DesignSkill`/`SkillSet`/`SkillManifest`/`SkillSetPin` model; bundled **v0 skill-set** (establish-type-scale, build-pdp-above-fold, implement-hero-section, apply-spacing-system, responsive-breakpoint-pass, collection-grid-system); `SkillSetSource` with `LocalSkillSetSource` (honors pin, rejects mismatch) + `RemoteSkillSetSource` (@ts-nocheck tarball/OCI pull); `selectSkills(intent, sections)` ranked, with "all" as a compatibility bonus not a trigger. Wired through: `buildProviders` pins+pulls the set at session start (local default, remote when `DESIGN_SKILLSET_REGISTRY` set); the refine loop selects per sub-task and passes skills to `ImplementInput`; the deep agent aggregates `WorkReport.provenance.skillsInvoked` and stamps `versionVector.skillset` from the pinned set. 29/29 tests (selection, pull/pin, provenance, version stamp) + bench 6/6. **Open:** real remote skill-set registry + the §5 skill-optimization loop (Phase 6+ traces feed it).
+
+---
+
+**Original deliverable:** pull a versioned skill-set artifact (tarball/OCI + manifest), pin in config, load at session start, invoke (PRD §4.3).
 
 **Lands in:** extend `templates/agents/lib/skills.ts` + `_registry.ts.hbs` with a **remote, versioned** source on top of today's local-dir loader. Add skill-set version to config + the version vector.
 

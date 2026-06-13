@@ -9,6 +9,7 @@
  * `rejected` — the intended success path, not a failure.
  */
 import { evaluateConformance } from "./conformance.js";
+import { selectSkills } from "./skills/select.js";
 import type {
   BrandContext,
   CaptureBundleRef,
@@ -47,6 +48,14 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
   let best: LoopCandidate | null = null;
   let priorCritique: ConformanceResult | undefined;
 
+  // Reach for the pinned skill-set's applicable skills once per sub-task — the
+  // agent's execution vocabulary (PRD §4.3). Passed to the implementer each
+  // iteration and recorded as provenance.
+  const selectedSkills = providers.skillSet
+    ? selectSkills(providers.skillSet.skills, { intent: input.intent, sections: input.scope.sections })
+    : [];
+  const skillsInvoked = selectedSkills.map((s) => s.id);
+
   const baseManifest = (): CaptureManifest => ({
     page: input.page,
     themeRef: input.themeRef,
@@ -78,6 +87,7 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
       priorCritique,
       workspaceDir: input.workspaceDir,
       knowledge: providers.knowledge,
+      skills: selectedSkills,
     });
 
     if (impl.refusal) {
@@ -90,6 +100,7 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
         maxIterations,
         best,
         history,
+        skillsInvoked,
       };
     }
 
@@ -147,6 +158,7 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
         maxIterations,
         best,
         history,
+        skillsInvoked,
       };
     }
 
@@ -166,6 +178,7 @@ export async function runRefineLoop(input: RefineLoopInput): Promise<LoopResult>
     best,
     history,
     critique: best ? summarizeCritique(best.conformance) : "No candidate produced.",
+    skillsInvoked,
   };
 }
 

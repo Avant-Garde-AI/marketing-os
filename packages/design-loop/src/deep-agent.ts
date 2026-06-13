@@ -87,7 +87,8 @@ export async function runDesignAgent(spec: TaskSpec, deps: RunAgentDeps): Promis
     await deps.providers.themeServer.stop().catch(() => undefined);
   }
 
-  return assembleReport(spec, results, maxIterations, deps.config);
+  const skillsetVersion = deps.providers.skillSet?.manifest.version ?? deps.config.versionVector.skillset;
+  return assembleReport(spec, results, maxIterations, deps.config, skillsetVersion);
 }
 
 function decompose(spec: TaskSpec): SubTaskPlan[] {
@@ -105,6 +106,7 @@ function assembleReport(
   results: { plan: SubTaskPlan; loop: LoopResult }[],
   maxIterations: number,
   config: DesignLoopConfig,
+  skillsetVersion: string,
 ): WorkReport {
   const subTasks: SubTaskReport[] = results.map(({ plan, loop }) => ({
     subTask: plan.subTask,
@@ -174,8 +176,11 @@ function assembleReport(
     unresolved,
     recommendations: buildRecommendations(results),
     subTasks,
-    provenance: { skillsInvoked: [], patternsInvoked: [] },
-    versionVector: config.versionVector,
+    provenance: {
+      skillsInvoked: unique(results.flatMap((r) => r.loop.skillsInvoked)),
+      patternsInvoked: [],
+    },
+    versionVector: { ...config.versionVector, skillset: skillsetVersion },
   };
 }
 

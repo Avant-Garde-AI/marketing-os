@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "marketing-os": {
+      "type": "http",
+      "url": "${MARKETING_OS_MCP_URL}",
+      "headers": {
+        "Authorization": "Bearer ${MARKETOS_GATEWAY_TOKEN}"
+      }
+    }
+  }
+}

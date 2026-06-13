@@ -43,6 +43,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|auth/callback).*)",
+    // api/mcp has its own connector-token auth and must not be redirected to login.
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/mcp|auth/callback).*)",
   ],
 };

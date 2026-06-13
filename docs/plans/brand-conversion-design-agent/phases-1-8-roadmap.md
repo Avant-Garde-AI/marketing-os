@@ -82,9 +82,13 @@ Each phase gets its own detailed doc when it's next up. This captures repo mappi
 
 ---
 
-## Phase 6 — Measure-better instrumentation
+## Phase 6 — Measure-better instrumentation  ✅ SHIPPED (2026-06-13)
 
-**Deliverable:** emit the PRD §6 trace per design action (skill/pattern provenance, loop health, conformance pre/post, visual outcome, owner signal, conversion anchor, version vector) to the knowledge-plane ingestion endpoint.
+**Built:** `src/trace/` in design-loop — `DesignTrace` (the §6 signals: provenance, loop health, conformance pre/post, visual outcome, owner signal, conversion anchor, version vector), **generalizable-by-construction** (no brand copy, no bundle location, no brandId, no free text). `buildTrace(report, opts)` derives it from the WorkReport (added `loopHealth.firstPassScore` for the "pre" read). De-id boundary (PRD §5): `scrubTrace` redacts brand secrets + `assertNoLeak` **fails closed** if any secret remains. Sinks: `collectingSink`/`jsonlSink`/`nullSink` + `@ts-nocheck` remote POST sink. `DelegationService` emits a preliminary trace on completion (consent-gated, scrub secrets auto-derived from `spec.brand`) and `recordOutcome(taskId, {ownerSignal, conversionAnchor})` emits the owner/A-B signal. Trace emission is opt-in (`traceConsent`/`DESIGN_TRACE_ENABLED`). 35/35 tests (signals present, no-leak, consent-off no-op, recordOutcome, fail-closed guard). **Open:** real ingestion endpoint + server-side de-id; A/B wiring (PRD §10 open Q1).
+
+---
+
+**Original deliverable:** emit the PRD §6 trace per design action (skill/pattern provenance, loop health, conformance pre/post, visual outcome, owner signal, conversion anchor, version vector) to the knowledge-plane ingestion endpoint.
 
 **Lands in:** a trace emitter that **consumes `WorkReport`s directly** — `provenance`, `version_vector`, `loop_health`, and `conformance` are already contract fields (see `agent-topology-and-contract.md` §3.2), so most of §6 is "serialize the WorkReport + de-id." Plus console hooks (owner accept/reject). **Client-side scrub** brand tokens/copy before egress; de-id at ingestion (PRD §5 boundary).
 

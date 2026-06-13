@@ -21,6 +21,9 @@ export interface DesignLoopConfig {
   designMcpEndpoint: string;
   /** Where capture bundles are written. */
   workDir: string;
+  /** Trace emission is consented + configurable per client (PRD §5/§6). */
+  traceEnabled: boolean;
+  traceEndpoint: string;
   versionVector: VersionVector;
 }
 
@@ -45,6 +48,8 @@ export function loadConfig(overrides: Partial<DesignLoopConfig> = {}): DesignLoo
     criticModel: env("DESIGN_CRITIC_MODEL", "claude-sonnet-4-6"),
     designMcpEndpoint: env("DESIGN_MCP_ENDPOINT", ""),
     workDir: env("DESIGN_LOOP_WORKDIR", ".design-loop"),
+    traceEnabled: env("DESIGN_TRACE_ENABLED", "false") === "true",
+    traceEndpoint: env("DESIGN_TRACE_ENDPOINT", ""),
     versionVector: {
       agent: env("DESIGN_AGENT_VERSION", "design-loop@0.1.0"),
       skillset: env("DESIGN_SKILLSET_VERSION", "none"),

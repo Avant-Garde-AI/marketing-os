@@ -10,6 +10,10 @@ import { runDesignAgent } from "../deep-agent.js";
 import { loadConfig, type DesignLoopConfig } from "../config.js";
 import { buildProviders } from "../providers/index.js";
 import type { DesignLoopProviders } from "../types.js";
+import { buildTrace } from "../trace/build.js";
+import { scrubTrace, type ScrubSecrets } from "../trace/scrub.js";
+import { nullSink, type TraceSink } from "../trace/emit.js";
+import type { ConversionAnchor, DesignTrace, OwnerSignal } from "../trace/types.js";
 import {
   CONTRACT_VERSION,
   revisionSpecSchema,
@@ -46,18 +50,26 @@ export interface DelegationServiceOptions {
   /** Override provider construction (tests inject stub providers). */
   buildProviders?: (config: DesignLoopConfig) => Promise<DesignLoopProviders>;
   now?: () => string;
+  /** Where de-identified traces go (PRD §6). Defaults to nullSink. */
+  traceSink?: TraceSink;
+  /** Trace emission is opt-in/consented per client (PRD §5). Default false. */
+  traceConsent?: boolean;
 }
 
 export class DelegationService {
   private readonly config: DesignLoopConfig;
   private readonly makeProviders: (config: DesignLoopConfig) => Promise<DesignLoopProviders>;
   private readonly now: () => string;
+  private readonly traceSink: TraceSink;
+  private readonly traceConsent: boolean;
   private readonly tasks = new Map<string, TaskRecord>();
 
   constructor(options: DelegationServiceOptions = {}) {
     this.config = loadConfig(options.config);
     this.makeProviders = options.buildProviders ?? ((c) => buildProviders(c));
     this.now = options.now ?? (() => new Date().toISOString());
+    this.traceSink = options.traceSink ?? nullSink;
+    this.traceConsent = options.traceConsent ?? this.config.traceEnabled;
   }
 
   /** `implement_design_change`. With async=false, resolves only when complete. */
@@ -121,9 +133,47 @@ export class DelegationService {
         record.report = errorReport(spec, this.config, err);
         record.status = "blocked";
       }
+      // Emit a preliminary trace at completion (owner reacts later via
+      // recordOutcome). Never fail the task on a trace error.
+      await this.emitTrace(record, "pending").catch(() => undefined);
     })();
 
     return record;
+  }
+
+  /**
+   * Record the owner accept/reject/revise (and optional A/B lift) for a finished
+   * task and emit the outcome trace (PRD §6). The planner/console calls this
+   * once the owner has reacted.
+   */
+  async recordOutcome(
+    taskId: string,
+    outcome: { ownerSignal: OwnerSignal; conversionAnchor?: ConversionAnchor },
+  ): Promise<DesignTrace | null> {
+    const record = this.tasks.get(taskId);
+    if (!record) return null;
+    await record.done;
+    return this.emitTrace(record, outcome.ownerSignal, outcome.conversionAnchor);
+  }
+
+  private async emitTrace(
+    record: TaskRecord,
+    ownerSignal: OwnerSignal,
+    conversionAnchor?: ConversionAnchor,
+  ): Promise<DesignTrace | null> {
+    if (!this.traceConsent || !record.report) return null;
+    try {
+      const trace = buildTrace(record.report, { ownerSignal, conversionAnchor, now: this.now });
+      const scrubbed = scrubTrace(trace, this.scrubSecrets(record.spec));
+      await this.traceSink.emit(scrubbed);
+      return scrubbed;
+    } catch {
+      return null;
+    }
+  }
+
+  private scrubSecrets(spec: TaskSpec): ScrubSecrets {
+    return { brandId: spec.brand.brandId, tokens: Object.values(spec.brand.tokens ?? {}) };
   }
 }
 

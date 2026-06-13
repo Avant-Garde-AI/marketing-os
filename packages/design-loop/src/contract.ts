@@ -133,6 +133,8 @@ export const workReportSchema = z.object({
     maxIterations: z.number().int().positive(),
     escalated: z.boolean(),
     firstPassConformance: z.boolean(),
+    /** Aggregate conformance score of the first iteration (the "pre" read). */
+    firstPassScore: z.number().min(0).max(1).optional(),
     bestCandidateCritique: z.string().optional(),
   }),
   gates: z.object({

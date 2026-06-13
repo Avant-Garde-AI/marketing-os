@@ -50,3 +50,19 @@ export {
   type SkillSetPin,
   type SkillSetSource,
 } from "./skills/index.js";
+export {
+  buildTrace,
+  scrubTrace,
+  assertNoLeak,
+  collectingSink,
+  jsonlSink,
+  nullSink,
+  designTraceSchema,
+  TRACE_VERSION,
+  type DesignTrace,
+  type OwnerSignal,
+  type ConversionAnchor,
+  type ScrubSecrets,
+  type TraceSink,
+  type BuildTraceInput,
+} from "./trace/index.js";

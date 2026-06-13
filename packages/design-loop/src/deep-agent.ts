@@ -129,6 +129,10 @@ function assembleReport(
   const totalIterations = results.reduce((sum, r) => sum + r.loop.iterations, 0);
   const firstPassConformance =
     results.length > 0 && results.every((r) => r.loop.history[0]?.conformance.passed === true);
+  const firstScores = results
+    .map((r) => r.loop.history[0]?.conformance.score)
+    .filter((s): s is number => typeof s === "number");
+  const firstPassScore = firstScores.length > 0 ? Math.min(...firstScores) : undefined;
 
   const unresolved = results
     .filter((r) => r.loop.escalated || loopStatus(r.loop) === "blocked")
@@ -155,6 +159,7 @@ function assembleReport(
       maxIterations,
       escalated: results.some((r) => r.loop.escalated),
       firstPassConformance,
+      firstPassScore,
       bestCandidateCritique: worst ? (results.find((r) => r.loop.best === worst)?.loop.critique) : undefined,
     },
     gates: {

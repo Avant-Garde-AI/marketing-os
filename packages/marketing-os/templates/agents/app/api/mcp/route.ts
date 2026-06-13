@@ -7,6 +7,7 @@
 // verified against the Marketing OS platform.
 
 import { extractToken, verifyConnectorToken } from "@/lib/connector-auth";
+import { verifyProxyHandoff } from "@/lib/proxy-auth";
 import { runExploreSchema, runDescribeField } from "@/src/mastra/semantics/introspect";
 import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
@@ -277,10 +278,12 @@ export function GET() {
 }
 
 export async function POST(req: Request) {
-  // Auth: connector token via Bearer or ?token=.
+  // Auth: a connector token (Bearer or ?token=), OR a router-signed proxy
+  // handoff (Shopify App Proxy path — Shopify's HMAC was verified upstream).
   const token = extractToken(req);
-  const auth = token ? await verifyConnectorToken(token) : { valid: false };
-  if (!auth.valid) {
+  const tokenAuth = token ? await verifyConnectorToken(token) : { valid: false };
+  const authed = tokenAuth.valid || verifyProxyHandoff(req);
+  if (!authed) {
     return Response.json(
       { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized: a valid connector token is required." } },
       { status: 401, headers: { ...CORS_HEADERS, "WWW-Authenticate": "Bearer" } }

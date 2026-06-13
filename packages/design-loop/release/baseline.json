@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "passedCases": [
+    "converges-and-accepts",
+    "respects-cap-and-escalates",
+    "dark-pattern-hard-fails",
+    "a11y-violation-caught",
+    "visual-regression-detected",
+    "asset-boundary-abstains"
+  ]
+}

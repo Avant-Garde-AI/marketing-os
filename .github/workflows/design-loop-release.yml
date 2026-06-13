@@ -1,0 +1,88 @@
+name: design-loop release
+
+on:
+  # Weekly bench-gated release cadence (PRD §7). Monday 13:00 UTC.
+  schedule:
+    - cron: '0 13 * * 1'
+  # Cut a release by pushing a design-loop-v* tag.
+  push:
+    tags:
+      - 'design-loop-v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g. 0.2.0)'
+        required: false
+      publish:
+        description: 'Publish to npm if the gate passes'
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @marketing-os/design-loop typecheck
+
+      - name: Build
+        run: pnpm --filter @marketing-os/design-loop build
+
+      - name: Test
+        run: pnpm --filter @marketing-os/design-loop test
+
+      - name: Resolve version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            echo "value=${GITHUB_REF#refs/tags/design-loop-v}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "value=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$(node -p "require('./packages/design-loop/package.json').version")" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Bench gate: blocks on a11y failures and on previously-fixed cases
+      # re-failing (PRD §7). Updates the baseline only on a pass.
+      - name: Release gate
+        working-directory: packages/design-loop
+        run: |
+          node dist/release/cli.js \
+            --version "${{ steps.version.outputs.value }}" \
+            --baseline release/baseline.json \
+            --report release/bench-report.md \
+            --update-baseline
+
+      - name: Upload bench report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: design-loop-bench-report
+          path: packages/design-loop/release/bench-report.md
+
+      # Staged rollout: publish only when explicitly requested or on a tag, and
+      # only after the gate passes. Promotion to "recommended" fleet-wide happens
+      # after the canary cohort (Arthaus) validates — see RELEASING.md.
+      - name: Publish to npm
+        if: ${{ (github.event_name == 'push') || (github.event.inputs.publish == 'true') }}
+        working-directory: packages/design-loop
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

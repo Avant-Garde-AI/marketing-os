@@ -98,9 +98,13 @@ Each phase gets its own detailed doc when it's next up. This captures repo mappi
 
 ---
 
-## Phase 7 — Release pipeline + canary cohort
+## Phase 7 — Release pipeline + canary cohort  ✅ SHIPPED (2026-06-13; publish step pending go-ahead)
 
-**Deliverable:** central, bench-gated weekly releases; staged canary → recommended; clients pin + pull on their schedule (PRD §7).
+**Built:** `src/release/` — `evaluateGate` (pure policy: a11y zero-tolerance + previously-fixed-re-failing both block unconditionally; other failures within a threshold), `runReleaseGate` (bench + evaluate + markdown report), baseline read/write, `design-loop-release-gate` CLI; committed `release/baseline.json` (the 6 v0 cases). Package made publishable: tsup now emits **dts** (index + contract), `exports` carry `types`, `prepublishOnly` builds, `npm pack --dry-run` verified (16 files, dist js+d.ts+README). CI `.github/workflows/design-loop-release.yml` — weekly cron + `design-loop-v*` tag + dispatch → typecheck/build/test → release gate (updates baseline on pass, uploads bench report) → **guarded** `npm publish`. `RELEASING.md` documents pinning (agent×skill-set×MCP snapshot, all on the version vector), staged canary = **Arthaus**, and the recommended-version signal. 43/43 tests incl. 8 gate-policy tests. **NOT done: the actual `npm publish`** — intentionally left for explicit go-ahead (irreversible/outward-facing).
+
+---
+
+**Original deliverable:** central, bench-gated weekly releases; staged canary → recommended; clients pin + pull on their schedule (PRD §7).
 
 **Lands in:** `packages/marketing-os` release flow (changesets already present) + a bench gate in CI (full tier from knowledge plane) + a recommended-version signal + changelog with bench deltas. Skill-set and MCP-snapshot releases ride the same discipline; compatibility in manifests.
 

@@ -66,3 +66,15 @@ export {
   type TraceSink,
   type BuildTraceInput,
 } from "./trace/index.js";
+export {
+  evaluateGate,
+  runReleaseGate,
+  baselineFrom,
+  formatGateReport,
+  readBaseline,
+  writeBaseline,
+  type GatePolicy,
+  type GateBaseline,
+  type GateEvaluation,
+  type GateResult,
+} from "./release/index.js";

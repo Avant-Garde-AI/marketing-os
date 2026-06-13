@@ -5,13 +5,20 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    ".": "./dist/index.js",
-    "./contract": "./dist/contract.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contract": {
+      "types": "./dist/contract.d.ts",
+      "default": "./dist/contract.js"
+    }
   },
   "bin": {
     "design-code-agent": "./dist/delegation/cli.js",
     "design-code-agent-mcp": "./dist/delegation/mcp-server.js",
-    "design-loop-bench": "./dist/bench/cli.js"
+    "design-loop-bench": "./dist/bench/cli.js",
+    "design-loop-release-gate": "./dist/release/cli.js"
   },
   "files": [
     "dist"
@@ -23,7 +30,9 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "mcp": "node dist/delegation/mcp-server.js",
-    "bench": "node dist/bench/cli.js"
+    "bench": "node dist/bench/cli.js",
+    "release:gate": "node dist/release/cli.js",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "zod": "^3.25.0"

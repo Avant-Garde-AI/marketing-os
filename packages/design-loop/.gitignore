@@ -1,0 +1,4 @@
+dist/
+node_modules/
+release/bench-report.md
+*.tgz

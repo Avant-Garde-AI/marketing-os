@@ -1,3 +1,5 @@
+> **STATUS (2026-06-13): SHIPPED (stub tier).** `packages/design-loop` built; contract, gates, conformance merge, bounded loop, deep agent, delegation surface, and the bench all green (14/14 vitest, bench 6/6). Live I/O adapters (theme-dev, Playwright capture) authored but not yet exercised against a real store. Phase 1 (delegation + steered planner) shipped on top — see `agent-topology-and-contract.md`. Commits `e3fcdf0`, `1fe21fe`.
+
 # Phase 0 — Shopify Dev-Loop Subsystem (detailed, executable)
 
 **Goal:** the core mechanic. An agent that **renders a Shopify theme change, sees its own output via a VLM, and iterates toward a target within a bounded loop.** De-risk this before anything else (PRD §9).

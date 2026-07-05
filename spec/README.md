@@ -22,6 +22,7 @@ The goal: a store owner or agency partner goes from syncing their Shopify theme 
 | 8 | [08-COMMUNITY-ECOSYSTEM.md](./08-COMMUNITY-ECOSYSTEM.md) | Community & Ecosystem — skill contribution format, governance, partner integration patterns |
 | 9 | [09-REPOSITORY-STRUCTURE.md](./09-REPOSITORY-STRUCTURE.md) | Repository Structure — the `marketing-os` monorepo itself (the repo that builds and publishes the CLI + templates) |
 | 10 | [10-IMPLEMENTATION-PLAN.md](./10-IMPLEMENTATION-PLAN.md) | Implementation Plan — phased build order, milestones, and agent coding instructions |
+| 11 | [11-HOSTED-PATH.md](./11-HOSTED-PATH.md) | Hosted Path — platform-owned deployment (default tier): Shopify App front door, pooled multi-tenant runtime, git-on-demand, draft-theme review loop, eject path |
 
 ## Key Technology Decisions
 

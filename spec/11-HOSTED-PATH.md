@@ -136,6 +136,7 @@ Target: **install → live console in under 2 minutes**, no infra provisioned in
 | Platform async job runner | **Build** | H4 — largest net-new piece |
 
 > **Repo of record:** the hosted platform (Shopify app, broker, router) lives in the sibling repo `marketing-os-app`, not this monorepo. This repo owns the CLI, `templates/agents/` (the client side of every platform contract), and specs.
+> **H1 execution plan:** `marketing-os-app/docs/LISTING-READINESS.md` — task-level work plan (tenant purge, privacy policy, review-readiness checks, listing collateral) with hard constraints protecting the live Arthaus tenant and cross-repo API contracts.
 
 ---
 

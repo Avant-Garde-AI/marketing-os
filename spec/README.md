@@ -23,6 +23,7 @@ The goal: a store owner or agency partner goes from syncing their Shopify theme 
 | 9 | [09-REPOSITORY-STRUCTURE.md](./09-REPOSITORY-STRUCTURE.md) | Repository Structure — the `marketing-os` monorepo itself (the repo that builds and publishes the CLI + templates) |
 | 10 | [10-IMPLEMENTATION-PLAN.md](./10-IMPLEMENTATION-PLAN.md) | Implementation Plan — phased build order, milestones, and agent coding instructions |
 | 11 | [11-HOSTED-PATH.md](./11-HOSTED-PATH.md) | Hosted Path — platform-owned deployment (default tier): Shopify App front door, pooled multi-tenant runtime, git-on-demand, draft-theme review loop, eject path |
+| 13 | [13-CONSOLE-DESIGN-RETROFIT.md](./13-CONSOLE-DESIGN-RETROFIT.md) | Console Design Retrofit — light-primary UX overhaul of the agents console: tokens, typography registers, screen-by-screen IA, motion system, embedded tier, phased build plan (Spec 12 = Store MCP, tracked in phase commits) |
 
 ## Key Technology Decisions
 

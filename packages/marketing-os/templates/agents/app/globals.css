@@ -1,225 +1,222 @@
 @import "tailwindcss";
 
 /**
- * Avant-Garde Brand System
- * ========================
- * Quiet luxury meets editorial precision
- * Dark navy, warm gold, cream paper, serif typefaces, no rounded corners
+ * Avant-Garde Console — Instrument Tier
+ * =====================================
+ * Spec 13 (Console Design Retrofit): editorial at the edges, instrument at
+ * the core. Light-primary. Cream canvas, white cards, navy ink, gold only
+ * where the user can act. Radius 0. No bold. No traffic-light status colors.
+ *
+ * Tailwind v4 CSS-first: all tokens live here (no tailwind.config.js layer).
  */
 
-@layer base {
-  :root {
-    /* ─── Core Brand Colors ─────────────────────────────────────── */
-    --color-navy: #1B263B;
-    --color-navy-hsl: 218 37% 17%;
-    --color-gold: #C4A47C;
-    --color-gold-hsl: 34 33% 63%;
-    --color-cream: #FAFAF9;
-    --color-cream-hsl: 40 14% 98%;
+@theme {
+  /* ─── Surfaces ─────────────────────────────────────────────── */
+  --color-page: #fafaf9;                          /* cream — the default */
+  --color-raised: #ffffff;                        /* cards/panels on cream */
+  --color-inverse: #1b263b;                       /* navy — moment bands only */
+  --color-inverse-raised: #22304a;                /* card on navy */
 
-    /* ─── Semantic Tokens (Light Mode - Cream Background) ──────── */
-    --background: 40 14% 98%;          /* cream */
-    --foreground: 218 37% 17%;         /* navy */
-    --card: 0 0% 100%;                 /* white */
-    --card-foreground: 218 37% 17%;    /* navy */
-    --popover: 0 0% 100%;
-    --popover-foreground: 218 37% 17%;
-    --primary: 218 37% 17%;            /* navy */
-    --primary-foreground: 40 14% 98%;  /* cream */
-    --secondary: 34 33% 63%;           /* gold */
-    --secondary-foreground: 218 37% 17%;
-    --muted: 40 14% 95%;               /* near-cream */
-    --muted-foreground: 218 37% 40%;   /* mid navy */
-    --accent: 34 33% 63%;              /* gold */
-    --accent-foreground: 218 37% 17%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 218 37% 17% / 0.1;       /* navy/10 */
-    --input: 218 37% 17% / 0.1;
-    --ring: 34 33% 63%;                /* gold focus ring */
-    --radius: 0px;                     /* NO rounded corners */
+  /* ─── Ink (navy + opacity does all secondary work) ─────────── */
+  --color-ink: #1b263b;
+  --color-ink-2: rgb(27 38 59 / 0.7);             /* secondary text */
+  --color-ink-3: rgb(27 38 59 / 0.5);             /* placeholder/disabled */
+  --color-hairline: rgb(27 38 59 / 0.12);         /* borders, rules */
+  --color-hairline-strong: rgb(27 38 59 / 0.24);
 
-    /* ─── Typography ────────────────────────────────────────────── */
-    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    --font-body: 'Lora', Georgia, 'Times New Roman', serif;
-    --font-script: 'Pinyon Script', cursive;
+  /* on-inverse ink */
+  --color-paper: #fafaf9;
+  --color-paper-2: rgb(250 250 249 / 0.72);
+  --color-paper-line: rgb(250 250 249 / 0.16);
 
-    /* ─── Shadows ───────────────────────────────────────────────── */
-    --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.05);
-    --shadow-card-hover: 0 20px 40px -8px rgba(0, 0, 0, 0.12);
+  /* ─── Accent — gold is interactive, never a large fill ─────── */
+  --color-gold: #c4a47c;
+  --color-gold-quiet: rgb(196 164 124 / 0.12);
+  --color-gold-line: rgb(196 164 124 / 0.4);
+
+  /* destructive text only — never fills */
+  --color-danger: #c9252d;
+
+  /* ─── Type ──────────────────────────────────────────────────── */
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-body: "Lora", Georgia, "Times New Roman", serif;
+  --font-script: "Pinyon Script", cursive;
+
+  --tracking-eyebrow: 0.2em;
+
+  /* ─── Elevation ─────────────────────────────────────────────── */
+  --shadow-card: 0 4px 20px -4px rgb(0 0 0 / 0.05);
+  --shadow-card-lg: 0 12px 32px -8px rgb(0 0 0 / 0.08);
+
+  /* ─── Motion (spec 13 §5) ───────────────────────────────────── */
+  --ease-out-quiet: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-quiet: cubic-bezier(0.7, 0, 0.84, 0);
+
+  --animate-enter: enter 280ms var(--ease-out-quiet) both;
+  --animate-enter-2: enter 280ms var(--ease-out-quiet) 40ms both;
+  --animate-enter-3: enter 280ms var(--ease-out-quiet) 80ms both;
+  --animate-rule-draw: rule-draw 400ms var(--ease-out-quiet) 120ms both;
+  --animate-band-up: band-up 400ms var(--ease-out-quiet) both;
+
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
-
-  .dark {
-    /* ─── Dark Mode (Navy Background) ───────────────────────────── */
-    --background: 218 37% 17%;         /* navy */
-    --foreground: 40 14% 98%;          /* cream */
-    --card: 218 37% 22%;               /* lighter navy */
-    --card-foreground: 40 14% 98%;
-    --popover: 218 37% 20%;
-    --popover-foreground: 40 14% 98%;
-    --primary: 34 33% 63%;             /* gold */
-    --primary-foreground: 218 37% 17%;
-    --secondary: 218 37% 25%;
-    --secondary-foreground: 40 14% 98%;
-    --muted: 218 37% 25%;
-    --muted-foreground: 40 14% 70%;
-    --accent: 34 33% 63%;              /* gold */
-    --accent-foreground: 218 37% 17%;
-    --border: 40 14% 98% / 0.1;
-    --input: 40 14% 98% / 0.1;
-    --ring: 34 33% 63%;
+  @keyframes rule-draw {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  @keyframes band-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer-slide {
+    from { transform: translateX(-100%); }
+    to   { transform: translateX(200%); }
   }
 }
 
+/* ─── Base ──────────────────────────────────────────────────────── */
 @layer base {
   * {
-    border-color: hsl(var(--border));
+    border-color: var(--color-hairline);
+    border-radius: 0; /* the brand's sharp edges, everywhere */
   }
 
   html {
-    scroll-behavior: smooth;
+    background-color: var(--color-page);
   }
 
   body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
+    background-color: var(--color-page);
+    color: var(--color-ink);
     font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.55;
+    font-weight: 400;
     font-feature-settings: "liga" 1, "kern" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    line-height: 1.625;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1, h2, h3 {
     font-family: var(--font-display);
-    letter-spacing: -0.025em;
-    line-height: 1;
+    font-weight: 400;
+    letter-spacing: -0.015em;
+    line-height: 1.15;
   }
 
   ::selection {
-    background-color: rgba(196, 164, 124, 0.2);
-    color: #1B263B;
+    background-color: var(--color-gold-quiet);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--color-gold);
+    outline-offset: 2px;
   }
 }
 
 /* ─── Scrollbar ─────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-hairline-strong); }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold); }
 
-::-webkit-scrollbar-track {
-  background: #f5f5f4;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #C4A47C;
-  border-radius: 0;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #1B263B;
-}
-
-/* ─── Brand Utility Classes ─────────────────────────────────────── */
+/* ─── Instrument utilities (spec 13 §3–§5) ──────────────────────── */
 @layer utilities {
-  .font-display {
-    font-family: var(--font-display);
-  }
+  /* tabular figures for all data numerals */
+  .tnum { font-feature-settings: "tnum" 1, "lnum" 1; }
 
-  .font-body {
+  /* the one surviving tracked-uppercase: eyebrows */
+  .eyebrow {
     font-family: var(--font-body);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-eyebrow);
+    color: var(--color-gold);
   }
 
-  .font-script {
-    font-family: var(--font-script);
-  }
-
-  .tracking-label {
-    letter-spacing: 0.2em;
-  }
-
-  .leading-hero {
-    line-height: 0.9;
-  }
-
-  /* Gold rule line */
-  .rule-gold {
+  /* gold rule that draws in on page enter (signature #2) */
+  .rule {
     display: inline-block;
     width: 3rem;
     height: 1px;
-    background-color: #C4A47C;
+    background-color: var(--color-gold);
+  }
+  .rule-draw {
+    transform-origin: left;
+    animation: var(--animate-rule-draw);
   }
 
-  /* Eyebrow label style */
-  .eyebrow {
-    font-family: var(--font-body);
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-    color: #C4A47C;
+  /* tertiary action: text + arrow, gold on hover */
+  .arrow-link {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    font-weight: 500;
+    color: var(--color-ink);
+    transition: color 160ms var(--ease-out-quiet);
   }
+  .arrow-link:hover { color: var(--color-gold); }
+  .arrow-link::after {
+    content: "→";
+    transition: transform 160ms var(--ease-out-quiet);
+  }
+  .arrow-link:hover::after { transform: translateX(2px); }
 
-  /* Gold accent bar animation */
-  .accent-bar {
+  /* active/hover accent bar — 2px, never at rest (spec §4) */
+  .bar-active { box-shadow: inset 2px 0 0 var(--color-gold); }
+
+  /* streaming busy indicator: thin gold underline shimmer (signature #4) */
+  .shimmer-line {
+    position: relative;
+    overflow: hidden;
+    height: 1px;
+    background: var(--color-hairline);
+  }
+  .shimmer-line::after {
+    content: "";
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background-color: #C4A47C;
-    transform: scaleY(0);
-    transform-origin: top;
-    transition: transform 0.5s ease-out;
+    inset: 0;
+    width: 40%;
+    background: var(--color-gold);
+    animation: shimmer-slide 1.2s var(--ease-out-quiet) infinite;
   }
 
-  .group:hover .accent-bar {
-    transform: scaleY(1);
+  /* loading skeleton: hairline shimmer, no pulse */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: rgb(27 38 59 / 0.05);
   }
-
-  /* Grayscale to color on hover */
-  .grayscale-hover {
-    filter: grayscale(100%) sepia(20%);
-    opacity: 0.9;
-    transition: all 1s ease-in-out;
-  }
-
-  .group:hover .grayscale-hover {
-    filter: grayscale(0%) sepia(0%);
-    transform: scale(1.05);
-  }
-
-  /* Reveal animation */
-  .reveal-on-hover {
-    opacity: 0;
-    transform: translateY(10px);
-    transition: all 0.5s ease-out;
-  }
-
-  .group:hover .reveal-on-hover {
-    opacity: 1;
-    transform: translateY(0);
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+    animation: shimmer-slide 1.4s var(--ease-out-quiet) infinite;
   }
 }
 
-/* ─── Animations ────────────────────────────────────────────────── */
-@keyframes fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+/* ─── Embedded quiet tier (spec 13 §4, for the Polaris host) ────── */
+[data-surface="embedded"] {
+  --color-page: transparent;
+  background: transparent;
 }
+[data-surface="embedded"] .eyebrow { letter-spacing: 0.08em; }
+[data-surface="embedded"] h1,
+[data-surface="embedded"] h2 { font-size: 20px; }
+[data-surface="embedded"] .font-script { display: none; }
 
-@keyframes slide-up {
-  0% { opacity: 0; transform: translateY(40px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+/* ─── Reduced motion: opacity-only, ≤80ms, globally ─────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 80ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 80ms !important;
+  }
+  .rule-draw { animation: none; }
+  [class*="animate-enter"] { animation-name: none; opacity: 1; transform: none; }
 }

@@ -3,6 +3,12 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { Eyebrow } from "@/components/primitives";
+
+/**
+ * Login — the console's one full-editorial surface (spec 13 §4).
+ * Cream form panel · navy manifesto panel. Everything inside is quiet.
+ */
 
 function LoginForm() {
   const router = useRouter();
@@ -17,7 +23,7 @@ function LoginForm() {
     const error = searchParams.get("error");
     if (error === "auth_failed") {
       setIsError(true);
-      setMessage("Authentication failed. Please try again.");
+      setMessage("That sign-in didn't work. Try again.");
     }
   }, [searchParams]);
 
@@ -29,23 +35,14 @@ function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        throw error;
-      }
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
       router.push("/");
       router.refresh();
     } catch (error) {
       setIsError(true);
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Invalid email or password. Please try again."
+        error instanceof Error ? error.message : "Invalid email or password."
       );
     } finally {
       setLoading(false);
@@ -53,105 +50,98 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-card border border-border p-10">
-      {/* Eyebrow */}
-      <div className="flex items-center gap-4 mb-8">
-        <span className="w-8 h-[1px] bg-secondary" />
-        <span className="text-xs font-semibold text-secondary uppercase tracking-label">
-          Authentication
-        </span>
+    <form onSubmit={handleLogin} className="animate-enter-2 space-y-5">
+      <div>
+        <label htmlFor="email" className="mb-2 block text-[13px] font-medium text-ink-2">
+          Email
+        </label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full border border-hairline bg-raised px-4 py-3 text-[15px] transition-colors duration-[160ms] placeholder:text-ink-3 focus:border-gold focus:outline-none"
+        />
       </div>
 
-      <h2 className="font-display text-3xl tracking-tight mb-8">Sign in</h2>
+      <div>
+        <label htmlFor="password" className="mb-2 block text-[13px] font-medium text-ink-2">
+          Password
+        </label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full border border-hairline bg-raised px-4 py-3 text-[15px] transition-colors duration-[160ms] placeholder:text-ink-3 focus:border-gold focus:outline-none"
+        />
+      </div>
 
-      <form onSubmit={handleLogin} className="space-y-6">
-        <div>
-          <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-label mb-3">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@localhost"
-            required
-            className="w-full px-4 py-3 border border-border bg-background text-foreground font-body focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-label mb-3">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter password"
-            required
-            className="w-full px-4 py-3 border border-border bg-background text-foreground font-body focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-primary-foreground py-3 font-medium text-sm uppercase tracking-label hover:shadow-card-lg disabled:opacity-50 transition-all"
-        >
-          {loading ? "Signing in..." : "Sign in"}
-        </button>
-      </form>
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-inverse py-3 text-[14px] font-medium text-paper transition-opacity duration-[160ms] hover:opacity-90 disabled:opacity-40"
+      >
+        {loading ? "Signing in…" : "Sign in"}
+      </button>
 
       {message && (
-        <p
-          className={`mt-6 text-sm text-center font-light ${
-            isError ? "text-red-400" : "text-muted-foreground"
-          }`}
-        >
+        <p className={`text-center text-sm ${isError ? "text-danger" : "text-ink-2"}`}>
           {message}
         </p>
       )}
-    </div>
+    </form>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-8 px-4">
-        {/* Header */}
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <span className="w-12 h-[1px] bg-secondary" />
-            <span className="text-xs font-semibold text-secondary uppercase tracking-label">
-              Avant-Garde
-            </span>
-            <span className="w-12 h-[1px] bg-secondary" />
+    <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
+      {/* Form side — cream */}
+      <div className="flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-sm">
+          <div className="animate-enter mb-10">
+            <div className="mb-6">
+              <Eyebrow draw>Marketing OS</Eyebrow>
+            </div>
+            <h1 className="text-[34px] leading-tight">
+              Agentic <span className="italic">Commerce,</span>
+              <br />
+              In Practice.
+            </h1>
+            <p className="mt-3 text-[15px] text-ink-2">
+              Sign in to your store&apos;s console.
+            </p>
           </div>
-          <h1 className="font-display text-5xl tracking-tight mb-4">
-            Marketing <span className="italic">OS</span>
-          </h1>
-          <p className="text-muted-foreground font-light leading-relaxed">
-            AI marketing operations for your Shopify store
-          </p>
+
+          <Suspense fallback={<div className="skeleton h-64 w-full" />}>
+            <LoginForm />
+          </Suspense>
         </div>
+      </div>
 
-        <Suspense fallback={<div className="bg-card border border-border p-10 animate-pulse h-80" />}>
-          <LoginForm />
-        </Suspense>
-
-        <p className="text-center text-xs text-muted-foreground font-light uppercase tracking-label">
-          Default credentials are shown in the console after init
-        </p>
-
-        {/* Footer accent */}
-        <div className="flex items-center justify-center gap-4 pt-4">
-          <span className="w-8 h-[1px] bg-border" />
-          <span className="font-script text-xl text-muted-foreground">Agentic Commerce</span>
-          <span className="w-8 h-[1px] bg-border" />
+      {/* Manifesto side — the navy moment */}
+      <div className="relative hidden items-center justify-center bg-inverse px-12 lg:flex">
+        <div className="absolute left-8 top-8 h-16 w-16 border border-gold-line" />
+        <div className="max-w-md">
+          <div className="mb-8 flex items-center gap-4">
+            <span className="rule" />
+            <span className="eyebrow">Manifesto</span>
+          </div>
+          <blockquote className="font-display text-[28px] italic leading-snug text-paper">
+            &ldquo;The future of commerce isn&apos;t just automated. It&apos;s
+            autonomous, elegant, and intelligent.&rdquo;
+          </blockquote>
+          <div className="mt-8 flex items-center justify-between border-t border-paper-line pt-6">
+            <span className="text-xs uppercase tracking-[0.2em] text-paper-2">
+              Avant-Garde Labs
+            </span>
+            <span className="font-script text-3xl text-paper-2">Avant-Garde.</span>
+          </div>
         </div>
+        <div className="absolute bottom-8 right-8 h-16 w-16 border border-gold-line" />
       </div>
     </div>
   );

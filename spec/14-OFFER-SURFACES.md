@@ -52,8 +52,21 @@ Runtime contract — these are product requirements, not aspirations:
                  "suppressAfterDismissDays": 14, "maxPerSession": 1 },
     "audience": { "newVisitorsOnly": true, "excludeSubscribed": true,
                   "pages": ["collection", "product"] },
-    "experiment": { "id": "exp_88", "arms": ["control", "v1", "v2"],
-                    "assignment": "hash" },          // deterministic hash(visitorId, expId); control = no surface
+    "experiment": {
+      "id": "exp_88",
+      "policy": "fixed",                    // fixed | thompson — D2: bandit-NATIVE architecture from day one;
+      "allocation": 3,                      //   A/B/n is just the fixed-allocation policy. Reallocating = the
+      "arms": [                             //   server rewrites weights + bumps `allocation`; the runtime never changes.
+        { "key": "control", "weight": 0.34 },   // control = no surface, always present
+        { "key": "v1", "weight": 0.33 },
+        { "key": "v2", "weight": 0.33 }
+      ]
+    },
+    // Assignment: hash(visitorId, expId) → [0,1) → walk cumulative weights.
+    // STICKY: once assigned, a visitor keeps their arm (stored locally + on every
+    // event with the allocation version); new weights apply to new visitors only.
+    // Analysis spine keeps per-arm Beta posteriors from O1 — the same numbers
+    // drive the sequential test (fixed) and Thompson weights (bandit) later.
     "variants": { "v1": { "content": { /* copy, incentive, imagery ref */ },
                           "style": { /* brand-token values, baked server-side */ } },
                   "v2": { … } },
@@ -134,4 +147,7 @@ No new top-level section in v1: offers live in **Chat** (creation + approval), *
 
 O0–O2 is a demoable "agent designed this offer, I approved it, it's live on Arthaus." O3–O4 is where it becomes the flywheel.
 
-**Open decisions (need Garrett):** D1 — v1 incentive scope (recommend: email-capture offers only — discount code, threshold, content/early-access; cart/checkout offers later). D2 — bandit in v1 or v2 (recommend v2; fixed-split A/B/n first, the seam is built in). D3 — does offer approval also file a git record for audit (recommend no; config + trace is the audit trail, git is for theme code).
+**Decisions (LOCKED, Garrett · July 2026):**
+- **D1 — email-capture offers only in v1** (discount code, free-shipping threshold, content/early-access). Cart/checkout offers later.
+- **D2 — A/B/n first, on the full bandit architecture from day one.** Assignment is always weighted-arm allocation; fixed-split is the `fixed` policy. The analysis spine (per-arm exposure/capture counters, Beta posteriors) ships in O1 so both the sequential test and later Thompson reallocation read the same numbers. Robust testing is the engine's spine, not a bolt-on.
+- **D3 — no git round-trip on offer approval.** Config + outcome trace is the audit trail; git is for theme code. (O0's hand-authored manifest lives in the agents repo as a bootstrap convenience, superseded by the platform store in O2.)

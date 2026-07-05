@@ -1,111 +1,164 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
 import { Eyebrow } from "@/components/primitives";
+import {
+  GenCard,
+  Unavailable,
+  RevenueTrend,
+  ChannelBreakdown,
+  LandingConversion,
+  SessionsCompare,
+  ProposalCard,
+  type RevenueTrendData,
+  type ChannelData,
+  type LandingData,
+  type CompareData,
+  type ProposalData,
+} from "@/components/chat/gen-ui";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+/**
+ * Chat — the console's primary work surface, now on the AI SDK v6 UIMessage
+ * stream. Assistant messages arrive as typed parts; tool parts render through
+ * the registered generative-UI components (static pattern, spec 13 addendum).
+ */
 
 const SUGGESTIONS = [
-  "How many orders did we get this week?",
-  "Write Instagram copy for our bestseller",
+  "How did revenue trend last month?",
+  "Which channels drive our traffic?",
+  "Which landing pages convert best?",
   "Update the hero headline to emphasize sustainability",
-  "What's the status of open marketing changes?",
 ];
 
+/* tool name → renderer. Keys cover both Mastra naming styles. */
+const CHART_TITLES: Record<string, string> = {
+  chart_revenue_trend: "Revenue trend",
+  chartRevenueTrend: "Revenue trend",
+  chart_channel_breakdown: "Channels",
+  chartChannelBreakdown: "Channels",
+  chart_landing_conversion: "Landing page conversion",
+  chartLandingConversion: "Landing page conversion",
+  chart_sessions_compare: "Sessions — period over period",
+  chartSessionsCompare: "Sessions — period over period",
+};
+const PROPOSAL_NAMES = new Set(["propose_storefront_change", "proposeStorefrontChange"]);
+
+/** A bad tool payload must never whitescreen the console. */
+class PartBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (this.state.failed) {
+      return <p className="mt-2 text-[13px] text-ink-3">Couldn&apos;t render that result — the answer continues without it.</p>;
+    }
+    return this.props.children;
+  }
+}
+
+function ChartOutput({ name, output }: { name: string; output: unknown }) {
+  const data = output as { unavailable?: boolean; reason?: string };
+  if (!data || typeof data !== "object") return <Unavailable reason="No data returned." />;
+  if (data.unavailable) return <Unavailable reason={data.reason ?? "Data unavailable."} />;
+  const n = name.toLowerCase();
+  if (n.includes("revenue")) return <RevenueTrend data={output as RevenueTrendData} />;
+  if (n.includes("channel")) return <ChannelBreakdown data={output as ChannelData} />;
+  if (n.includes("landing")) return <LandingConversion data={output as LandingData} />;
+  if (n.includes("sessions") || n.includes("compare")) return <SessionsCompare data={output as CompareData} />;
+  return <Unavailable reason="No renderer registered for this result." />;
+}
+
+interface ToolPartLike {
+  type: string;
+  toolCallId: string;
+  state: "input-streaming" | "input-available" | "output-available" | "output-error";
+  output?: unknown;
+  errorText?: string;
+}
+
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const { messages, sendMessage, status, error } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
+  const busy = status === "submitted" || status === "streaming";
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, status]);
 
-  // Playbooks can deep-link with a prefilled prompt (?prompt=…)
   useEffect(() => {
     const prompt = new URLSearchParams(window.location.search).get("prompt");
     if (prompt) setInput(prompt);
   }, []);
 
-  async function submit(e: React.FormEvent) {
+  function submit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || streaming) return;
-
-    const newMessages: Message[] = [...messages, { role: "user", content: text }];
-    setMessages(newMessages);
+    if (!text || busy) return;
     setInput("");
-    setStreaming(true);
-
-    const assistantIdx = newMessages.length;
-    setMessages((m) => [...m, { role: "assistant", content: "" }]);
-
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
-      });
-
-      if (!res.ok || !res.body) {
-        throw new Error(`${res.status} ${res.statusText}`);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        accumulated += decoder.decode(value, { stream: true });
-        setMessages((m) => {
-          const updated = [...m];
-          updated[assistantIdx] = { role: "assistant", content: accumulated };
-          return updated;
-        });
-      }
-    } catch {
-      setMessages((m) => {
-        const updated = [...m];
-        updated[assistantIdx] = {
-          role: "assistant",
-          content: "That didn't go through. The conversation is unchanged — try again.",
-        };
-        return updated;
-      });
-    } finally {
-      setStreaming(false);
-    }
+    void sendMessage({ text });
   }
 
-  const lastIsStreaming = (i: number) =>
-    streaming && i === messages.length - 1 && messages[i]?.role === "assistant";
+  function requestChanges(target: string, feedback: string) {
+    void sendMessage({ text: `Revise the ${target} proposal: ${feedback}` });
+  }
+
+  function renderToolPart(part: ToolPartLike) {
+    const name = part.type.replace(/^tool-/, "");
+    const isChart = name in CHART_TITLES;
+    const isProposal = PROPOSAL_NAMES.has(name);
+
+    if (part.state === "output-error") {
+      return <p className="mt-2 text-[13px] text-ink-3">That lookup didn&apos;t complete — the answer continues without it.</p>;
+    }
+    if (isChart) {
+      if (part.state !== "output-available") {
+        return <GenCard title={CHART_TITLES[name] ?? "Working"} loading />;
+      }
+      return (
+        <GenCard title={CHART_TITLES[name] ?? "Result"}>
+          <ChartOutput name={name} output={part.output} />
+        </GenCard>
+      );
+    }
+    if (isProposal) {
+      if (part.state !== "output-available") {
+        return <GenCard title="Drafting proposal" loading />;
+      }
+      const data = part.output as ProposalData;
+      return <ProposalCard data={data} onRequestChanges={(fb) => requestChanges(data.target, fb)} />;
+    }
+    // Other tools stay visible but quiet.
+    if (part.state === "output-available") {
+      return <p className="mt-1 text-[12px] text-ink-3">Checked {name.replace(/[-_]/g, " ")}.</p>;
+    }
+    return <p className="mt-1 text-[12px] text-ink-3">Checking {name.replace(/[-_]/g, " ")}…</p>;
+  }
 
   return (
     <div className="flex h-screen flex-col">
-      {/* Quiet header */}
       <div className="border-b border-hairline px-8 py-4">
-        <div className="mx-auto max-w-[720px]">
+        <div className="mx-auto max-w-[760px]">
           <Eyebrow>Chat</Eyebrow>
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto px-8 py-8">
-        <div className="mx-auto max-w-[720px] space-y-7">
+        <div className="mx-auto max-w-[760px] space-y-7">
           {messages.length === 0 && (
             <div className="animate-enter pt-14 text-center">
               <h1 className="mb-3 text-[28px]">
                 Ask your <span className="italic">marketing agent.</span>
               </h1>
               <p className="mx-auto mb-10 max-w-md text-[15px] text-ink-2">
-                Store questions, ad copy, storefront changes. Anything that ships
-                goes through review first.
+                Answers arrive with the evidence — charts from your live store
+                data. Changes arrive as proposals you approve.
               </p>
               <div className="mx-auto grid max-w-xl grid-cols-1 gap-2 text-left sm:grid-cols-2">
                 {SUGGESTIONS.map((prompt) => (
@@ -121,48 +174,58 @@ export default function ChatPage() {
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <div key={i} className={msg.role === "user" ? "flex justify-end" : "flex justify-start"}>
-              <div
-                className={
-                  msg.role === "user"
-                    ? "max-w-[80%] border border-hairline bg-raised px-5 py-3.5 text-[15px] leading-relaxed"
-                    : "max-w-[92%] text-[15px] leading-relaxed whitespace-pre-wrap"
-                }
-              >
-                {msg.content}
-                {lastIsStreaming(i) && (
-                  <div className="shimmer-line mt-3 w-24" aria-label="Thinking" />
-                )}
-              </div>
+          {messages.map((msg) => (
+            <div key={msg.id} className={msg.role === "user" ? "flex justify-end" : "block"}>
+              {msg.role === "user" ? (
+                <div className="max-w-[80%] border border-hairline bg-raised px-5 py-3.5 text-[15px] leading-relaxed">
+                  {msg.parts.map((p, i) => (p.type === "text" ? <span key={i}>{p.text}</span> : null))}
+                </div>
+              ) : (
+                <div className="max-w-full text-[15px] leading-relaxed">
+                  {msg.parts.map((p, i) => {
+                    if (p.type === "text") {
+                      return p.text ? <p key={i} className="mb-2 max-w-[68ch] whitespace-pre-wrap">{p.text}</p> : null;
+                    }
+                    if (p.type.startsWith("tool-")) {
+                      return <div key={(p as unknown as ToolPartLike).toolCallId ?? i}><PartBoundary>{renderToolPart(p as unknown as ToolPartLike)}</PartBoundary></div>;
+                    }
+                    return null;
+                  })}
+                </div>
+              )}
             </div>
           ))}
 
+          {busy && <div className="shimmer-line w-24" aria-label="Thinking" />}
+          {error && (
+            <p className="text-[13px] text-ink-2">
+              That didn&apos;t go through. The conversation is unchanged — try again.
+            </p>
+          )}
           <div ref={bottomRef} />
         </div>
       </div>
 
-      {/* Composer */}
       <div className="border-t border-hairline px-8 py-5">
-        <div className="mx-auto max-w-[720px]">
+        <div className="mx-auto max-w-[760px]">
           <form onSubmit={submit} className="flex gap-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              disabled={streaming}
+              disabled={busy}
               placeholder="Ask your marketing agent…"
               className="flex-1 border border-hairline bg-raised px-4 py-3 text-[15px] placeholder:text-ink-3 transition-colors duration-[160ms] focus:border-gold focus:outline-none disabled:opacity-50"
             />
             <button
               type="submit"
-              disabled={streaming || !input.trim()}
+              disabled={busy || !input.trim()}
               className="bg-inverse px-6 py-3 text-[14px] font-medium text-paper transition-opacity duration-[160ms] hover:opacity-90 disabled:opacity-40"
             >
               Send
             </button>
           </form>
           <p className="mt-2.5 text-xs text-ink-3">
-            Storefront changes are reviewed before going live.
+            Storefront changes are proposed here and reviewed before going live.
           </p>
         </div>
       </div>

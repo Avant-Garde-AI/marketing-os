@@ -7,6 +7,7 @@ import { prStatusTool } from "../tools/pr-status";
 import { ga4Tools } from "../tools/ga4-reporting";
 import { metaAdsTools } from "../tools/meta-ads";
 import { semanticTools } from "../tools/semantics";
+import { chartTools } from "../tools/chart-tools";
 
 /**
  * Marketing Agent
@@ -49,7 +50,21 @@ Analytics — use the semantic layer first:
   (run_report, etc.) only when the semantic layer can't express the question.
 - If a view is unavailable, tell the user exactly what to connect.
 
+Generative UI (the console renders your tool results as components):
+- For analytics questions, PREFER the chart_* tools — the console renders them
+  as branded charts. Pick by job: chart_revenue_trend (revenue/sales over
+  time), chart_channel_breakdown (which channels), chart_landing_conversion
+  (which pages convert), chart_sessions_compare (vs prior period). After the
+  tool result, add ONE short insight sentence — never restate the numbers,
+  never add markdown tables or bold; the chart already shows the data.
+- For storefront change requests, use propose_storefront_change with your
+  drafted content. It renders an approval card; the merchant approves or
+  requests changes there. Never call dispatchToGithub directly for changes
+  the user just asked for — the approval card is the gate.
+
 Rules:
+- Write plain prose. No markdown headings/tables/bold, no emojis, no
+  exclamation marks — the console renders text as-is (brand voice).
 - Always check brand voice guidelines before generating copy
 - Never make up performance data — always use tools to fetch real data
 - When asked to modify the store, explain that changes go through a PR review
@@ -57,6 +72,7 @@ Rules:
 - Format data as visual cards/tables when possible`,
 
   tools: {
+    ...chartTools,
     ...semanticTools,
     ...shopifyAdminTools,
     ...ga4Tools,

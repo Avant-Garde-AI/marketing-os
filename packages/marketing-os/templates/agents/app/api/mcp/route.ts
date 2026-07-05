@@ -8,6 +8,7 @@
 
 import { extractToken, verifyConnectorToken } from "@/lib/connector-auth";
 import { verifyProxyHandoff } from "@/lib/proxy-auth";
+import { HOSTED, getTenant, runWithTenant, type TenantContext } from "@/lib/tenant-context";
 import { runExploreSchema, runDescribeField } from "@/src/mastra/semantics/introspect";
 import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
@@ -277,6 +278,24 @@ export function GET() {
   });
 }
 
+/** Resolve the request's tenant from whichever auth succeeded. */
+function resolveTenantFromAuth(
+  req: Request,
+  tokenAuth: { valid: boolean; tenantId?: string; shop?: string; storeSlug?: string }
+): TenantContext | null {
+  if (tokenAuth.valid && tokenAuth.shop && tokenAuth.storeSlug) {
+    return { tenantId: tokenAuth.tenantId, shop: tokenAuth.shop, storeSlug: tokenAuth.storeSlug };
+  }
+  // Proxy handoff: shop travels in the router-signed header.
+  const shop = req.headers.get("x-mos-proxy-shop");
+  if (shop) {
+    return { shop, storeSlug: shop.replace(/\.myshopify\.com$/, "") };
+  }
+  // Client-owned fallback: the deployment is the tenant (env-derived).
+  if (!HOSTED) return getTenant();
+  return null;
+}
+
 export async function POST(req: Request) {
   // Auth: a connector token (Bearer or ?token=), OR a router-signed proxy
   // handoff (Shopify App Proxy path — Shopify's HMAC was verified upstream).
@@ -290,6 +309,18 @@ export async function POST(req: Request) {
     );
   }
 
+  // Per-request tenant resolution (spec 11 §3.1): in the pooled hosted runtime
+  // the tenant is NEVER implied by the deployment. Every downstream data
+  // access (broker tokens, Shopify client, semantic model cache, storage)
+  // reads this context.
+  const tenant = resolveTenantFromAuth(req, tokenAuth);
+  if (!tenant) {
+    return Response.json(
+      { jsonrpc: "2.0", id: null, error: { code: -32001, message: "Unauthorized: could not resolve a tenant for this request." } },
+      { status: 401, headers: CORS_HEADERS }
+    );
+  }
+
   const clientProtocol = req.headers.get("mcp-protocol-version") ?? undefined;
 
   let payload: unknown;
@@ -299,18 +330,20 @@ export async function POST(req: Request) {
     return Response.json(rpcError(null, -32700, "Parse error"), { status: 400, headers: CORS_HEADERS });
   }
 
-  // Batch or single
-  if (Array.isArray(payload)) {
-    const responses = (await Promise.all(payload.map((m) => dispatch(m as RpcRequest, clientProtocol)))).filter(
-      (r): r is object => r !== null
-    );
-    return Response.json(responses, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
-  }
+  return runWithTenant(tenant, async () => {
+    // Batch or single
+    if (Array.isArray(payload)) {
+      const responses = (await Promise.all(payload.map((m) => dispatch(m as RpcRequest, clientProtocol)))).filter(
+        (r): r is object => r !== null
+      );
+      return Response.json(responses, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
+    }
 
-  const response = await dispatch(payload as RpcRequest, clientProtocol);
-  if (response === null) {
-    // Notification — acknowledge with 202 and no body.
-    return new Response(null, { status: 202, headers: CORS_HEADERS });
-  }
-  return Response.json(response, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
+    const response = await dispatch(payload as RpcRequest, clientProtocol);
+    if (response === null) {
+      // Notification — acknowledge with 202 and no body.
+      return new Response(null, { status: 202, headers: CORS_HEADERS });
+    }
+    return Response.json(response, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
+  });
 }

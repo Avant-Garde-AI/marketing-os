@@ -12,9 +12,11 @@
  *   2. A raw GA4_ACCESS_TOKEN + GA4_PROPERTY_ID (local dev / manual setup)
  */
 
+import { HOSTED } from "./tenant-context";
+import { getBrokerToken, BrokerError } from "./broker-client";
+
 const ADMIN_BASE = "https://analyticsadmin.googleapis.com/v1beta";
 const DATA_BASE = "https://analyticsdata.googleapis.com/v1beta";
-const BROKER_TTL_SAFETY_MS = 60 * 1000; // refresh 60s before expiry
 
 export class GA4ReconnectRequiredError extends Error {
   constructor(
@@ -37,70 +39,42 @@ export class GA4ApiError extends Error {
   }
 }
 
-interface BrokerToken {
+interface ResolvedGA4Token {
   accessToken: string;
   propertyId: string | null;
-  expiresAt: number;
 }
 
-let _cached: BrokerToken | null = null;
-
-async function fetchBrokerToken(): Promise<BrokerToken> {
-  const apiUrl = process.env.MARKETING_OS_API_URL!;
-  const deploymentKey = process.env.MARKETING_OS_DEPLOYMENT_KEY!;
-
-  const res = await fetch(`${apiUrl.replace(/\/$/, "")}/api/broker/token`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${deploymentKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ provider: "google", product: "ga4" }),
-  });
-
-  if (!res.ok) {
-    const body = (await res.json().catch(() => null)) as
-      | { error?: string; message?: string; reconnect_url?: string; connect_url?: string }
-      | null;
-    if (body?.error === "RECONNECT_REQUIRED" || body?.error === "PROVIDER_NOT_CONNECTED") {
-      throw new GA4ReconnectRequiredError(
-        body.message ?? "Google must be reconnected.",
-        body.reconnect_url ?? body.connect_url
-      );
+async function resolveToken(): Promise<ResolvedGA4Token> {
+  // Broker path — tenant-aware (per-tenant cache lives in broker-client).
+  // Client-owned auths with the deployment key; hosted with the platform
+  // service key + per-request tenant context.
+  if (
+    process.env.MARKETING_OS_API_URL &&
+    (process.env.MARKETING_OS_DEPLOYMENT_KEY || HOSTED)
+  ) {
+    try {
+      const token = await getBrokerToken("google", "ga4");
+      return {
+        accessToken: token.accessToken,
+        propertyId:
+          ((token.context as { ga4_default_property_id?: string })
+            ?.ga4_default_property_id as string) ?? null,
+      };
+    } catch (err) {
+      if (err instanceof BrokerError) {
+        if (err.code === "RECONNECT_REQUIRED" || err.code === "PROVIDER_NOT_CONNECTED") {
+          throw new GA4ReconnectRequiredError(err.message, err.actionUrl);
+        }
+        throw new GA4ApiError(`Marketing OS broker error: ${err.message}`, err.status);
+      }
+      throw err;
     }
-    throw new GA4ApiError(
-      `Marketing OS broker error: ${res.status} ${res.statusText}`,
-      res.status,
-      body
-    );
-  }
-
-  const data = (await res.json()) as {
-    access_token: string;
-    expires_in: number;
-    context?: { ga4_default_property_id?: string };
-  };
-
-  return {
-    accessToken: data.access_token,
-    propertyId: data.context?.ga4_default_property_id ?? null,
-    expiresAt: Date.now() + data.expires_in * 1000 - BROKER_TTL_SAFETY_MS,
-  };
-}
-
-async function resolveToken(): Promise<BrokerToken> {
-  // Broker path
-  if (process.env.MARKETING_OS_API_URL && process.env.MARKETING_OS_DEPLOYMENT_KEY) {
-    if (_cached && Date.now() < _cached.expiresAt) return _cached;
-    _cached = await fetchBrokerToken();
-    return _cached;
   }
   // Raw-token fallback (local dev)
   if (process.env.GA4_ACCESS_TOKEN) {
     return {
       accessToken: process.env.GA4_ACCESS_TOKEN,
       propertyId: process.env.GA4_PROPERTY_ID ?? null,
-      expiresAt: Date.now() + 5 * 60 * 1000,
     };
   }
   throw new GA4ReconnectRequiredError(

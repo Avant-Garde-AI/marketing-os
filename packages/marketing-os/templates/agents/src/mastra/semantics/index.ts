@@ -10,12 +10,15 @@ import { compileModel, type CompileContext, type DiscoveredField } from "./compi
 import type { CompiledModel, CompiledView, Provider } from "./types";
 import { ga4, GA4ReconnectRequiredError } from "../../../lib/ga4";
 import { getShopifyClient } from "../../../lib/shopify";
+import { getTenant } from "../../../lib/tenant-context";
 
 export * from "./types";
 export { compileModel } from "./compile";
 
 const MODEL_TTL_MS = 5 * 60 * 1000;
-let _cache: { model: CompiledModel; at: number } | null = null;
+// Keyed by tenant slug: the pooled hosted runtime serves many stores from one
+// process, and each compiles its own model (connections, currency, tz).
+const _cache = new Map<string, { model: CompiledModel; at: number }>();
 
 function ga4ScopePrefix(scope?: string): string {
   return scope === "USER" ? "customUser" : "customEvent";
@@ -57,7 +60,11 @@ async function loadStoreSettings(): Promise<{ currency: string; timezone: string
   const fallback = {
     currency: process.env.STORE_CURRENCY ?? "USD",
     timezone: process.env.STORE_TIMEZONE ?? "UTC",
-    slug: process.env.STORE_SLUG ?? (process.env.SHOPIFY_STORE_URL ?? "store").replace(/\..*$/, ""),
+    // Tenant context first (pooled runtime), env second (client-owned).
+    slug:
+      getTenant().storeSlug ||
+      process.env.STORE_SLUG ||
+      (process.env.SHOPIFY_STORE_URL ?? "store").replace(/\..*$/, ""),
   };
   try {
     const shopify = getShopifyClient();
@@ -75,8 +82,10 @@ async function loadStoreSettings(): Promise<{ currency: string; timezone: string
 }
 
 export async function getStoreModel(force = false): Promise<CompiledModel> {
-  if (!force && _cache && Date.now() - _cache.at < MODEL_TTL_MS) {
-    return _cache.model;
+  const tenantKey = getTenant().storeSlug || "__default__";
+  const cached = _cache.get(tenantKey);
+  if (!force && cached && Date.now() - cached.at < MODEL_TTL_MS) {
+    return cached.model;
   }
 
   const [ga4Connected, store] = await Promise.all([detectGA4(), loadStoreSettings()]);
@@ -93,7 +102,7 @@ export async function getStoreModel(force = false): Promise<CompiledModel> {
     discovered,
   });
 
-  _cache = { model, at: Date.now() };
+  _cache.set(tenantKey, { model, at: Date.now() });
   return model;
 }
 

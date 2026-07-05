@@ -4,6 +4,17 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
 
+  // Hosted (pooled) mode: the console is served through the Shopify admin,
+  // not this deployment's Supabase-auth pages. Only /api/mcp (own connector
+  // auth, excluded from the matcher) is exposed; everything else is refused so
+  // per-tenant surfaces can never be reached with deployment-wide auth.
+  if (process.env.MARKETING_OS_MODE === "hosted") {
+    return new NextResponse(
+      "This is a pooled Marketing OS runtime. Use your store's MCP endpoint or the Shopify admin console.",
+      { status: 403 }
+    );
+  }
+
   // Skip auth in local development
   if (process.env.NODE_ENV === "development") {
     return response;

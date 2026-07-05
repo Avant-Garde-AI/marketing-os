@@ -129,10 +129,13 @@ Target: **install → live console in under 2 minutes**, no infra provisioned in
 | Credential broker, per-tenant keys, `link` (`src/commands/link.ts`, `templates/agents/lib/ga4.ts`, `lib/shopify.ts`) | **Exists** | Deploy live; make mandatory in hosted |
 | Semantic layer + GA4/Shopify connectors (`templates/agents/src/mastra/semantics/`) | **Exists** | Already broker-based; ~no change |
 | Mastra agents/tools/skills (`templates/agents/src/mastra/`) | **Exists** | Make `tenant_id` request-resolved |
+| Shopify App: OAuth, embedded admin (App Bridge), tenant registry, live broker, App Proxy, GDPR compliance webhooks | **Exists** — sibling repo `marketing-os-app` (`Avant-Garde-AI/marketing-os-app`) | Most of H1 is already built and live at avant-garde-marketing-os.vercel.app; Arthaus runs through it as a normal tenant |
 | Pooled deployment + schema-per-tenant routing | **Build** | H2 |
-| Shopify App (OAuth, embedded admin, draft-theme review) | **Build** | H1/H3 — the front door, biggest unlock |
+| Draft-theme review loop | **Build** | H3 — extends `marketing-os-app` |
 | Git-on-demand provisioner + reconcile job | **Build** | H3 |
 | Platform async job runner | **Build** | H4 — largest net-new piece |
+
+> **Repo of record:** the hosted platform (Shopify app, broker, router) lives in the sibling repo `marketing-os-app`, not this monorepo. This repo owns the CLI, `templates/agents/` (the client side of every platform contract), and specs.
 
 ---
 
@@ -142,7 +145,7 @@ Sizing is relative (S/M/L ≈ days / ~1 wk / 2+ wks focused work).
 
 | Phase | Deliverable | Size | Depends on |
 |---|---|---|---|
-| **H1 — Front door** | Shopify app (OAuth, scopes, session-token auth), tenant registry live, broker deployed as public service, tokens vaulted per tenant | **M** | — |
+| **H1 — Front door** | ~~Shopify app, tenant registry, broker~~ **largely exists in `marketing-os-app`.** Remaining: listing readiness — GDPR compliance webhooks (done 2026-07), Billing API or managed pricing, protected-customer-data approval for `read_orders`/`read_customers`, privacy policy URL, listing assets, App Store submission | **S–M** | — |
 | **H2 — Pooled runtime** | Agents app runs multi-tenant on platform Vercel; per-request tenant resolution; schema-per-tenant Postgres + search_path routing; embedded console renders in Shopify admin | **L** | H1 |
 | **H3 — Git-on-demand + review loop** | Repo provisioner (`mos-tenants/<shop>` + theme snapshot); Shopify→git reconcile (webhook + sweep); draft-theme apply/preview/approve/publish loop | **L** | H1 (H2 only for the approve UI) |
 | **H4 — Async job runner** | Queue + worker running Claude Code / design-loop against platform repos, feeding H3's review loop | **L** | H3 |

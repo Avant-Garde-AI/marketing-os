@@ -12,11 +12,11 @@
 
 ## 1. Subsystem shape
 
-New workspace package: **`packages/design-loop/`** (`@marketing-os/design-loop`).
+New workspace package: **`packages/design-loop/`** (`@avant-garde/design-loop`).
 
 ```
 packages/design-loop/
-  package.json            # @marketing-os/design-loop; deps: playwright, sharp, pixelmatch, zod
+  package.json            # @avant-garde/design-loop; deps: playwright, sharp, pixelmatch, zod
   src/
     index.ts              # programmatic entry: runDesignLoop(opts)
     cli.ts                # `design-loop run --target … --page … --max-iters 4`

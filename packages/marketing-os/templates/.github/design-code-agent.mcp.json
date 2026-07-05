@@ -2,7 +2,7 @@
   "mcpServers": {
     "design-code-agent": {
       "command": "npx",
-      "args": ["--yes", "@marketing-os/design-loop", "design-code-agent-mcp"],
+      "args": ["--yes", "@avant-garde/design-loop", "design-code-agent-mcp"],
       "env": {
         "DESIGN_LOOP_REAL": "1",
         "SHOPIFY_THEME_PATH": ".",

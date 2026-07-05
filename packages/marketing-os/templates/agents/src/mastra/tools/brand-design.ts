@@ -10,7 +10,7 @@ import {
   MockDesignKnowledge,
   DEFAULT_BRAND_DESIGN_PATH,
   type DesignKnowledge,
-} from "@marketing-os/design-loop";
+} from "@avant-garde/design-loop";
 
 /**
  * Brand-definition tools for the guided onboarding flow (PRD §1 Phase A).

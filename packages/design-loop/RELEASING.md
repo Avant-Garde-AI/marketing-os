@@ -1,4 +1,4 @@
-# Releasing `@marketing-os/design-loop`
+# Releasing `@avant-garde/design-loop`
 
 Central, bench-gated releases; clients pull on their own schedule (PRD §7).
 
@@ -21,7 +21,7 @@ On a pass the baseline is updated and the bench report (`release/bench-report.md
 
 Three versions move independently; each client deployment pins all three and upgrades on its own schedule:
 
-- **agent** — `@marketing-os/design-loop` (this package)
+- **agent** — `@avant-garde/design-loop` (this package)
 - **skill-set** — the design skill-set (`DESIGN_SKILLSET_VERSION`, pulled at session start)
 - **MCP snapshot** — the Design MCP knowledge snapshot (`DESIGN_MCP_SNAPSHOT`)
 
@@ -35,7 +35,7 @@ All three are stamped on every `WorkReport.versionVector` and every emitted trac
 ## Publishing (manual until the npm token is wired)
 
 ```bash
-pnpm --filter @marketing-os/design-loop build   # prepublishOnly also runs this
+pnpm --filter @avant-garde/design-loop build   # prepublishOnly also runs this
 cd packages/design-loop && npm publish --access public --provenance
 ```
 

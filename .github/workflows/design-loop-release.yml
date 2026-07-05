@@ -40,13 +40,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: pnpm --filter @marketing-os/design-loop typecheck
+        run: pnpm --filter @avant-garde/design-loop typecheck
 
       - name: Build
-        run: pnpm --filter @marketing-os/design-loop build
+        run: pnpm --filter @avant-garde/design-loop build
 
       - name: Test
-        run: pnpm --filter @marketing-os/design-loop test
+        run: pnpm --filter @avant-garde/design-loop test
 
       - name: Resolve version
         id: version

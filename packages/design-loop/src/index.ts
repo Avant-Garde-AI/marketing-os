@@ -1,5 +1,5 @@
 /**
- * @marketing-os/design-loop
+ * @avant-garde/design-loop
  *
  * The design-code deep agent: the render → see → refine engine plus the Design
  * Work Contract for orchestrator delegation. See

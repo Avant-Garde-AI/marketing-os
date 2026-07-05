@@ -1,4 +1,4 @@
-# @marketing-os/design-loop
+# @avant-garde/design-loop
 
 The **design-code deep agent** for Marketing OS: the render → see → refine engine
 for on-brand, conversion-driven Shopify theme implementation, plus the **Design
@@ -49,14 +49,14 @@ shape, so the local merge can be swapped for the hosted MCP call (set
 ## Run
 
 ```bash
-pnpm --filter @marketing-os/design-loop build
-pnpm --filter @marketing-os/design-loop test
+pnpm --filter @avant-garde/design-loop build
+pnpm --filter @avant-garde/design-loop test
 
 # CLI (stub providers — no external deps):
 node dist/delegation/cli.js run --task task.json --report report.json --stub
 
 # MCP server (needs @modelcontextprotocol/sdk; what the GH-runner planner connects to):
-pnpm --filter @marketing-os/design-loop mcp
+pnpm --filter @avant-garde/design-loop mcp
 ```
 
 A live run (`DESIGN_LOOP_REAL=1` + a configured critic endpoint + `shopify theme

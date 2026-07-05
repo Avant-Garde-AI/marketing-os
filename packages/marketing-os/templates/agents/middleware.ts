@@ -5,10 +5,15 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request });
 
   // Hosted (pooled) mode: the console is served through the Shopify admin,
-  // not this deployment's Supabase-auth pages. Only /api/mcp (own connector
-  // auth, excluded from the matcher) is exposed; everything else is refused so
-  // per-tenant surfaces can never be reached with deployment-wide auth.
+  // not this deployment's Supabase-auth pages. Exposed surfaces each carry
+  // their own per-tenant auth: /api/mcp (connector tokens, excluded from the
+  // matcher) and /api/chat (platform-signed chat handoff, verified in-route).
+  // Everything else is refused so per-tenant surfaces can never be reached
+  // with deployment-wide auth.
   if (process.env.MARKETING_OS_MODE === "hosted") {
+    if (request.nextUrl.pathname.startsWith("/api/chat")) {
+      return response;
+    }
     return new NextResponse(
       "This is a pooled Marketing OS runtime. Use your store's MCP endpoint or the Shopify admin console.",
       { status: 403 }

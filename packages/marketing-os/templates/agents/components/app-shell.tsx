@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   MessageSquare,
   BookOpen,
+  Layers,
   Clock,
   PanelLeftClose,
   PanelLeftOpen,
@@ -27,6 +28,7 @@ const NAV = [
   { label: "Overview", href: "/", icon: LayoutGrid },
   { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Playbooks", href: "/playbooks", icon: BookOpen },
+  { label: "Surfaces", href: "/surfaces", icon: Layers },
   { label: "Activity", href: "/activity", icon: Clock },
 ];
 

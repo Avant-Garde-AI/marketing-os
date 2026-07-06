@@ -81,7 +81,23 @@ Frequency capping, dismissal memory (localStorage + suppression rules), and expe
 
 Hosted-first: surface manifests, experiment state, and event aggregates live in the **platform DB** (tenant-scoped, alongside spec-12's tenant registry; H2's schema-per-tenant when it lands). The proxy endpoint resolves shop → tenant → manifest exactly as the MCP path does today. On **eject** (H5), the surfaces API is part of the agents deployment and state rides the tenant's own Postgres — same one-tree invariant as everything else.
 
-### 1.4 Email destination
+### 1.4 Where per-store expression lives (no theme builds)
+
+**The component template is shared; the store is data.** Surface markup, a11y,
+focus management, triggers, and assignment live in the runtime's web components
+— shipped identically to every store via the extension, versioned by
+`shopify app deploy`. Per-store expression is manifest data only: copy,
+incentive, style tokens (with `font: inherit` so surfaces wear the theme's own
+face). There is **no per-store build step and no theme-git coupling**; offer
+iteration is a config write. The graduation ladder: (1) manifest data — the
+default; (2) new surface *types* — new runtime components, framework-level,
+all stores; (3) bespoke store-specific markup — theme code via the **design
+agent** (PR + gates + review), bridged by `placement: "inline-slot"`: the
+theme owns position, the framework owns content. O0 bootstraps the manifest
+from the agents repo (`config/surfaces.json`); O2 moves it to the tenant DB
+per D3.
+
+### 1.5 Email destination
 
 We replace the **capture + display** layer, not the ESP. Captured emails land as Shopify customers with consent; Klaviyo/Shopify Email/whatever syncs downstream natively. No sending infrastructure in scope, v1 or otherwise.
 

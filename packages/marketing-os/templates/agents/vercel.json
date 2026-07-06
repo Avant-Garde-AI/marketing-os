@@ -8,5 +8,11 @@
       "maxDuration": 300,
       "memory": 1024
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/offer-review",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

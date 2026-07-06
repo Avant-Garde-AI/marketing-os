@@ -59,7 +59,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // api/mcp has its own connector-token auth and must not be redirected to login.
-    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/mcp|auth/callback).*)",
+    // api/mcp (connector tokens), api/surfaces (router-signed proxy handoff),
+    // and api/cron (CRON_SECRET / Vercel cron) carry their own auth and must
+    // not be redirected to login.
+    "/((?!_next/static|_next/image|favicon.ico|api/webhooks|api/mcp|api/surfaces|api/cron|auth/callback).*)",
   ],
 };

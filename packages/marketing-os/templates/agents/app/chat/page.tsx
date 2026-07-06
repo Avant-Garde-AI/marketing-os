@@ -11,11 +11,17 @@ import {
   ChannelBreakdown,
   LandingConversion,
   SessionsCompare,
+  OfferPerformance,
+  OfferProposalCard,
+  OfferDecisionCard,
   ProposalCard,
   type RevenueTrendData,
   type ChannelData,
   type LandingData,
   type CompareData,
+  type OfferPerfData,
+  type OfferProposalData,
+  type OfferDecisionData,
   type ProposalData,
 } from "@/components/chat/gen-ui";
 
@@ -29,6 +35,7 @@ const SUGGESTIONS = [
   "How did revenue trend last month?",
   "Which channels drive our traffic?",
   "Which landing pages convert best?",
+  "How is the Collector\u2019s List performing?",
   "Update the hero headline to emphasize sustainability",
 ];
 
@@ -42,8 +49,12 @@ const CHART_TITLES: Record<string, string> = {
   chartLandingConversion: "Landing page conversion",
   chart_sessions_compare: "Sessions — period over period",
   chartSessionsCompare: "Sessions — period over period",
+  chart_offer_performance: "Offer performance",
+  chartOfferPerformance: "Offer performance",
 };
 const PROPOSAL_NAMES = new Set(["propose_storefront_change", "proposeStorefrontChange"]);
+const OFFER_PROPOSAL_NAMES = new Set(["propose_offer", "proposeOffer"]);
+const OFFER_REVIEW_NAMES = new Set(["review_offer_experiment", "reviewOfferExperiment"]);
 
 /** A bad tool payload must never whitescreen the console. */
 class PartBoundary extends React.Component<{ children: React.ReactNode }, { failed: boolean }> {
@@ -67,6 +78,7 @@ function ChartOutput({ name, output }: { name: string; output: unknown }) {
   if (n.includes("revenue")) return <RevenueTrend data={output as RevenueTrendData} />;
   if (n.includes("channel")) return <ChannelBreakdown data={output as ChannelData} />;
   if (n.includes("landing")) return <LandingConversion data={output as LandingData} />;
+  if (n.includes("offer")) return <OfferPerformance data={output as OfferPerfData} />;
   if (n.includes("sessions") || n.includes("compare")) return <SessionsCompare data={output as CompareData} />;
   return <Unavailable reason="No renderer registered for this result." />;
 }
@@ -113,6 +125,7 @@ export default function ChatPage() {
     const name = part.type.replace(/^tool-/, "");
     const isChart = name in CHART_TITLES;
     const isProposal = PROPOSAL_NAMES.has(name);
+    if (OFFER_PROPOSAL_NAMES.has(name)) { /* handled below */ }
 
     if (part.state === "output-error") {
       return <p className="mt-2 text-[13px] text-ink-3">That lookup didn&apos;t complete — the answer continues without it.</p>;
@@ -126,6 +139,21 @@ export default function ChatPage() {
           <ChartOutput name={name} output={part.output} />
         </GenCard>
       );
+    }
+    if (OFFER_REVIEW_NAMES.has(name)) {
+      if (part.state !== "output-available") {
+        return <GenCard title="Reviewing experiment" loading />;
+      }
+      const d = part.output as OfferDecisionData & { unavailable?: boolean; reason?: string };
+      if (d.unavailable) return <GenCard title="Experiment review"><Unavailable reason={d.reason ?? "No data."} /></GenCard>;
+      return <OfferDecisionCard data={d} />;
+    }
+    if (OFFER_PROPOSAL_NAMES.has(name)) {
+      if (part.state !== "output-available") {
+        return <GenCard title="Designing offer" loading />;
+      }
+      const data = part.output as OfferProposalData;
+      return <OfferProposalCard data={data} onRequestChanges={(fb) => void sendMessage({ text: `Revise the "${data.title}" offer: ${fb}` })} />;
     }
     if (isProposal) {
       if (part.state !== "output-available") {

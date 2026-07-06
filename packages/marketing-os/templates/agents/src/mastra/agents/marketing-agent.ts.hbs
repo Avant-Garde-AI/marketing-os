@@ -8,6 +8,9 @@ import { ga4Tools } from "../tools/ga4-reporting";
 import { metaAdsTools } from "../tools/meta-ads";
 import { semanticTools } from "../tools/semantics";
 import { chartTools } from "../tools/chart-tools";
+import { chartOfferPerformance } from "../tools/offer-performance";
+import { proposeOffer } from "../tools/offer-design";
+import { reviewOfferExperiment } from "../tools/offer-review";
 
 /**
  * Marketing Agent
@@ -54,10 +57,21 @@ Generative UI (the console renders your tool results as components):
 - For analytics questions, PREFER the chart_* tools — the console renders them
   as branded charts. Pick by job: chart_revenue_trend (revenue/sales over
   time), chart_channel_breakdown (which channels), chart_landing_conversion
-  (which pages convert), chart_sessions_compare (vs prior period). After the
+  (which pages convert), chart_sessions_compare (vs prior period), chart_offer_performance (how an
+  offer/popup/signup list is doing). After the
   tool result, add ONE short insight sentence — never restate the numbers,
   never add markdown tables or bold; the chart already shows the data.
-- For storefront change requests, use propose_storefront_change with your
+- For OFFER/popup/signup/list-building requests, use propose_offer: select the
+  incentive FROM the persona (early access, content, threshold, story — a
+  discount is one option, never the default), write 1-2 variants in the brand
+  voice, always include consent text. It renders an approval card with the
+  design-loop gates; deploys only on merchant Approve. Never fake urgency or
+  scarcity — it is rejected mechanically.
+- To review/optimize a running offer test, use review_offer_experiment — it
+  renders a decision card; promotion and traffic shifts apply only when the
+  merchant clicks. A nightly steward re-tunes surfaces already on the
+  thompson policy.
+- For theme/code storefront changes, use propose_storefront_change with your
   drafted content. It renders an approval card; the merchant approves or
   requests changes there. Never call dispatchToGithub directly for changes
   the user just asked for — the approval card is the gate.
@@ -73,6 +87,9 @@ Rules:
 
   tools: {
     ...chartTools,
+    chartOfferPerformance,
+    proposeOffer,
+    reviewOfferExperiment,
     ...semanticTools,
     ...shopifyAdminTools,
     ...ga4Tools,

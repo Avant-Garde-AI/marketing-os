@@ -35,6 +35,33 @@ const PLAYBOOKS = [
     category: "Analytics",
     prompt: "Generate this week's performance digest.",
   },
+  {
+    vol: "04",
+    id: "design-offer",
+    name: "Design an Offer",
+    description:
+      "The agent designs a persona-grounded storefront offer — incentive, copy, experiment arms — for your approval.",
+    category: "Offers",
+    prompt: "Design a new offer for our store and propose it for my review.",
+  },
+  {
+    vol: "05",
+    id: "offer-experiment-review",
+    name: "Offer Experiment Review",
+    description:
+      "Read a running offer test: promote the winner, shift traffic, keep collecting, or call it a wash.",
+    category: "Offers",
+    prompt: "Review our running offer experiments and recommend next moves.",
+  },
+  {
+    vol: "06",
+    id: "offer-portfolio-audit",
+    name: "Offer Portfolio Audit",
+    description:
+      "What is live, what is fatigued, and where the funnel has no offer at all.",
+    category: "Offers",
+    prompt: "Audit our offer portfolio: what is live, how is each performing, and what gaps should we fill?",
+  },
 ];
 
 export default function PlaybooksPage() {

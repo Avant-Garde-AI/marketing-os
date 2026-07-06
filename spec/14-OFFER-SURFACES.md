@@ -1,6 +1,6 @@
 # 14 — Storefront Surfaces & the Offer Agent
 
-> **Status:** Draft for review · July 2026
+> **Status:** **SHIPPED — O0–O5 complete** · July 2026 (O0 runtime+SDK+extension `marketing-os-7` · O1 metrics+posteriors · O2 deploy-on-approve · O3 policy loop+steward · O4 design-loop gates+§6 traces · O5 template default). Live validation pending the Arthaus app-embed toggle.
 > **Owner:** Marketing OS core
 > **Depends on:** 11-HOSTED-PATH (platform app, App Proxy, pooled runtime), 13-CONSOLE-DESIGN-RETROFIT (approval widget, GenUI chat), design-loop (gates, capture, traces), 12-Store-MCP (semantic layer)
 > **First target:** Arthaus (canary), then template default.

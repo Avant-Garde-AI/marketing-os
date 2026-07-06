@@ -1,0 +1,49 @@
+{
+  "version": "1",
+  "surfaces": [
+    {
+      "id": "ofr_collectors_list_v1",
+      "type": "offer",
+      "placement": "corner-card",
+      "trigger": { "kind": "delay", "seconds": 10, "suppressAfterDismissDays": 14, "maxPerSession": 1 },
+      "audience": { "newVisitorsOnly": true, "excludeSubscribed": true, "pages": ["home", "collection", "product"] },
+      "experiment": {
+        "id": "exp_collectors_01",
+        "policy": "fixed",
+        "allocation": 1,
+        "arms": [
+          { "key": "control", "weight": 0.34 },
+          { "key": "v1", "weight": 0.33 },
+          { "key": "v2", "weight": 0.33 }
+        ]
+      },
+      "variants": {
+        "v1": {
+          "content": {
+            "eyebrow": "The Collector's List",
+            "headline": "First to the drops.",
+            "body": "Limited prints sell in editions. Collectors on the list see each drop before it opens.",
+            "placeholder": "Email address",
+            "cta": "Join the list",
+            "success": "You're on the list. First look, next drop.",
+            "consent": "By joining you agree to receive email from Arthaus. Unsubscribe anytime."
+          },
+          "style": { "bg": "#ffffff", "ink": "#1a1a1a", "ink2": "rgba(26,26,26,.72)", "accent": "#8d6c42", "line": "rgba(26,26,26,.16)", "font": "inherit" }
+        },
+        "v2": {
+          "content": {
+            "eyebrow": "The Collector's List",
+            "headline": "Editions close. Be early.",
+            "body": "A short note when a new edition opens — the story behind the work, before it sells through.",
+            "placeholder": "Email address",
+            "cta": "Join",
+            "success": "Welcome. The next edition note is yours first.",
+            "consent": "By joining you agree to receive email from Arthaus. Unsubscribe anytime."
+          },
+          "style": { "bg": "#ffffff", "ink": "#1a1a1a", "ink2": "rgba(26,26,26,.72)", "accent": "#8d6c42", "line": "rgba(26,26,26,.16)", "font": "inherit" }
+        }
+      },
+      "consent": { "capturesEmail": true }
+    }
+  ]
+}

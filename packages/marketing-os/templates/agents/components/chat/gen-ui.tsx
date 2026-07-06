@@ -226,6 +226,341 @@ export function SessionsCompare({ data }: { data: CompareData }) {
   );
 }
 
+/* ── offer performance funnel (spec 14, O1) ─────────────────────── */
+
+export interface OfferPerfArm {
+  arm: string;
+  exposures: number;
+  impressions: number;
+  captures: number;
+  dismisses: number;
+  captureRate: number | null;
+  ci95: [number, number] | null;
+  pBest: number | null;
+  attributedCustomers: number;
+  attributedOrders: number;
+  attributedRevenue: number;
+}
+export interface OfferPerfData { surfaceId: string; days: number; arms: OfferPerfArm[] }
+
+export function OfferPerformance({ data }: { data: OfferPerfData }) {
+  const shown = data.arms.filter((a) => a.arm !== "control");
+  const control = data.arms.find((a) => a.arm === "control");
+  const maxImp = Math.max(...shown.map((a) => a.impressions), 1);
+  const best = shown.reduce<OfferPerfArm | null>(
+    (b, a) => ((a.pBest ?? 0) > (b?.pBest ?? -1) ? a : b), null);
+
+  return (
+    <div>
+      <table className="w-full border-collapse text-[14px]">
+        <thead>
+          <tr>
+            {["Arm", "Shown", "Captures", "Capture rate", "P(best)", "Attributed"].map((h) => (
+              <th key={h} className="border-b border-hairline-strong px-2.5 py-2 text-left text-[10px] font-medium uppercase tracking-[0.1em] text-ink-3">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((a) => (
+            <tr key={a.arm} className={a === best && shown.length > 1 ? "font-medium" : ""}>
+              <td className="tnum border-b border-hairline px-2.5 py-2"
+                  style={a === best && shown.length > 1 ? { boxShadow: "inset 0 -1px 0 var(--color-gold)" } : undefined}>
+                {a.arm}
+              </td>
+              <td className="tnum border-b border-hairline px-2.5 py-2">
+                <span className="mr-2 inline-block h-2 align-middle"
+                      style={{ width: (a.impressions / maxImp) * 70, background: MARK }} />
+                {a.impressions.toLocaleString()}
+              </td>
+              <td className="tnum border-b border-hairline px-2.5 py-2">{a.captures.toLocaleString()}</td>
+              <td className="tnum border-b border-hairline px-2.5 py-2">
+                {a.captureRate === null ? "—" : `${(a.captureRate * 100).toFixed(1)}%`}
+                {a.ci95 && (
+                  <span className="ml-1 text-[11px] text-ink-3">
+                    [{(a.ci95[0] * 100).toFixed(1)}–{(a.ci95[1] * 100).toFixed(1)}]
+                  </span>
+                )}
+              </td>
+              <td className="tnum border-b border-hairline px-2.5 py-2">
+                {a.pBest === null ? "—" : `${Math.round(a.pBest * 100)}%`}
+              </td>
+              <td className="tnum border-b border-hairline px-2.5 py-2">
+                {a.attributedCustomers > 0
+                  ? `${a.attributedCustomers} · $${a.attributedRevenue.toLocaleString()}`
+                  : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="mt-2.5 text-[11.5px] text-ink-3">
+        {control ? `Control held out: ${control.exposures.toLocaleString()} exposures. ` : ""}
+        Last {data.days} days · credible intervals at 95% · attribution via consented captures.
+      </p>
+    </div>
+  );
+}
+
+/* ── offer proposal card (spec 14, O2 — deploy-on-approve) ──────── */
+
+export interface OfferProposalData {
+  proposalId: string;
+  title: string;
+  hypothesis: string;
+  gates?: {
+    passed: boolean;
+    darkPattern: { passed: boolean; findings: { code: string; message: string }[] };
+    consentPresent: boolean;
+    componentGuarantees: string[];
+  };
+  surface: {
+    id: string;
+    placement: string;
+    experiment?: { arms?: { key: string; weight: number }[] };
+    variants?: Record<string, { content?: Record<string, string> }>;
+  };
+  reviewNote: string;
+}
+
+export function OfferProposalCard({
+  data,
+  onRequestChanges,
+}: {
+  data: OfferProposalData;
+  onRequestChanges: (feedback: string) => void;
+}) {
+  const [state, setState] = useState<"review" | "revising" | "deploying" | "live" | "error">("review");
+  const [feedback, setFeedback] = useState("");
+  const [error, setError] = useState("");
+  const variants = Object.entries(data.surface.variants ?? {});
+  const arms = data.surface.experiment?.arms ?? [];
+
+  async function approve() {
+    setState("deploying");
+    try {
+      const res = await fetch("/api/offers/deploy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ surface: data.surface }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Deploy failed.");
+      setState("live");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Deploy failed.");
+      setState("error");
+    }
+  }
+
+  if (state === "live") {
+    return (
+      <div className="animate-enter mt-3 bg-inverse px-7 py-8 text-paper">
+        <div className="flex items-center gap-3.5">
+          <span className="inline-block h-px w-12 bg-gold" />
+          <span className="eyebrow">Deployed</span>
+        </div>
+        <h3 className="mt-3 font-display text-[24px]">Live. <em className="italic">In practice.</em></h3>
+        <p className="mt-1.5 text-[12.5px] text-paper-2">
+          {data.title} — running as an experiment with a held-out control. Ask me how it&apos;s
+          performing any time.
+        </p>
+        <div className="mt-4 font-script text-[21px] text-paper-2">Avant-Garde.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative ml-2.5 mt-4">
+      <div className="pointer-events-none absolute -left-2.5 -top-2.5 h-full w-full border border-gold-line" />
+      <div className="relative border border-hairline bg-raised shadow-card">
+        <div className="flex items-baseline justify-between gap-3 border-b border-hairline px-4 py-3">
+          <span className="text-[13px] font-semibold">New offer — {data.title}</span>
+          <span className="border-b border-gold px-1 text-[11.5px] font-medium">Needs review</span>
+        </div>
+        <div className="px-4 py-4">
+          <p className="mb-3 text-[13.5px] text-ink-2">{data.hypothesis}</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {variants.map(([key, v]) => (
+              <div key={key} className="border border-hairline p-4">
+                <div className="mb-2 flex items-baseline justify-between">
+                  <span className="text-[10px] uppercase tracking-[0.14em] text-ink-3">{key}</span>
+                  {v.content?.eyebrow && <span className="eyebrow" style={{ fontSize: 9 }}>{v.content.eyebrow}</span>}
+                </div>
+                <div className="font-display text-[17px] leading-snug">{v.content?.headline}</div>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-ink-2">{v.content?.body}</p>
+                <div className="mt-3 inline-block bg-inverse px-3 py-1.5 text-[11.5px] font-medium text-paper">
+                  {v.content?.cta}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[11.5px] text-ink-3">
+            Split: {arms.map((a) => `${a.key} ${Math.round(a.weight * 100)}%`).join(" · ")} ·{" "}
+            {data.surface.placement} · email capture with consent
+          </p>
+          {data.gates && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11.5px]">
+              <span className={data.gates.darkPattern.passed ? "border border-hairline-strong px-2 py-0.5 text-ink-2" : "border-b border-gold px-2 py-0.5 font-medium text-danger"}>
+                Dark patterns · {data.gates.darkPattern.passed ? "pass" : "FAIL"}
+              </span>
+              <span className={data.gates.consentPresent ? "border border-hairline-strong px-2 py-0.5 text-ink-2" : "border-b border-gold px-2 py-0.5 font-medium text-danger"}>
+                Consent · {data.gates.consentPresent ? "present" : "MISSING"}
+              </span>
+              {data.gates.componentGuarantees.map((gu) => (
+                <span key={gu} className="border border-hairline-strong px-2 py-0.5 text-ink-2">{gu} · pass</span>
+              ))}
+            </div>
+          )}
+          {data.gates && !data.gates.darkPattern.passed && (
+            <p className="mt-2 text-[12px] text-danger">
+              {data.gates.darkPattern.findings.map((f) => f.message).join(" · ")}
+            </p>
+          )}
+        </div>
+        <div className="border-t border-hairline px-4 py-3">
+          {state === "revising" ? (
+            <div className="flex w-full gap-2">
+              <input
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="What should change?"
+                aria-label="Revision feedback"
+                className="flex-1 border border-hairline bg-page px-3 py-2 text-[14px] focus:border-gold focus:outline-none"
+              />
+              <button
+                onClick={() => feedback.trim() && onRequestChanges(feedback.trim())}
+                className="bg-inverse px-4 py-2 text-[13.5px] font-medium text-paper hover:opacity-90"
+              >
+                Send
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={approve}
+                disabled={state === "deploying" || (data.gates ? !data.gates.passed : false)}
+                title={data.gates && !data.gates.passed ? "Gates failed — request changes instead" : undefined}
+                className="bg-inverse px-5 py-2.5 text-[14px] font-medium text-paper transition-opacity duration-[160ms] hover:opacity-90 disabled:opacity-40"
+              >
+                {state === "deploying" ? "Deploying…" : "Approve & run"}
+              </button>
+              <button
+                onClick={() => setState("revising")}
+                disabled={state === "deploying"}
+                className="border border-hairline-strong px-5 py-2.5 text-[14px] font-medium transition-colors duration-[160ms] hover:border-gold disabled:opacity-40"
+              >
+                Request changes
+              </button>
+              <span className="ml-auto text-[12px] text-ink-3">{data.reviewNote}</span>
+            </div>
+          )}
+          {state === "error" && <p className="mt-2 text-[13px] text-danger">{error}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── offer decision card (spec 14, O3 — apply-on-approve) ───────── */
+
+export interface OfferDecisionData {
+  surfaceId: string;
+  decision: "promote" | "reallocate" | "continue" | "wash";
+  rationale: string;
+  winner: string | null;
+  arms: { arm: string; impressions: number; captures: number; captureRate: number | null; pBest: number | null }[];
+  actionable: boolean;
+  proposedMode: "promote" | "thompson" | null;
+}
+
+const DECISION_LABEL: Record<string, string> = {
+  promote: "Promote the winner",
+  reallocate: "Shift traffic to the leader",
+  continue: "Keep collecting",
+  wash: "No meaningful difference",
+};
+
+export function OfferDecisionCard({ data }: { data: OfferDecisionData }) {
+  const [state, setState] = useState<"idle" | "applying" | "applied" | "error">("idle");
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<{ arms?: { after?: { key: string; weight: number }[] } } | null>(null);
+  const shown = data.arms.filter((a) => a.arm !== "control");
+
+  async function apply() {
+    if (!data.proposedMode) return;
+    setState("applying");
+    try {
+      const res = await fetch("/api/offers/reallocate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ surfaceId: data.surfaceId, mode: data.proposedMode, winner: data.winner ?? undefined }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Apply failed.");
+      setResult(json);
+      setState("applied");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Apply failed.");
+      setState("error");
+    }
+  }
+
+  if (state === "applied") {
+    const after = result?.arms?.after ?? [];
+    return (
+      <div className="animate-enter mt-3 bg-inverse px-7 py-8 text-paper">
+        <div className="flex items-center gap-3.5">
+          <span className="inline-block h-px w-12 bg-gold" />
+          <span className="eyebrow">{data.proposedMode === "promote" ? "Promoted" : "Reallocated"}</span>
+        </div>
+        <h3 className="mt-3 font-display text-[24px]">
+          {data.proposedMode === "promote" ? <>Winner promoted. <em className="italic">In practice.</em></> : <>Traffic shifted. <em className="italic">Learning faster.</em></>}
+        </h3>
+        <p className="tnum mt-1.5 text-[12.5px] text-paper-2">
+          New split: {after.map((a) => `${a.key} ${Math.round(a.weight * 100)}%`).join(" · ")} — sticky visitors keep their arm; new visitors follow the new weights.
+        </p>
+        <div className="mt-4 font-script text-[21px] text-paper-2">Avant-Garde.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-enter mt-3 border border-hairline bg-raised shadow-card" style={{ boxShadow: "inset 2px 0 0 var(--color-gold)" }}>
+      <div className="flex items-baseline justify-between gap-3 border-b border-hairline px-4 py-2.5">
+        <span className="text-[13px] font-semibold">Experiment review — {data.surfaceId}</span>
+        <span className={data.actionable ? "border-b border-gold px-1 text-[11.5px] font-medium" : "text-[11.5px] text-ink-3"}>
+          {DECISION_LABEL[data.decision]}
+        </span>
+      </div>
+      <div className="px-4 py-4">
+        <p className="mb-3 text-[13.5px] leading-relaxed text-ink-2">{data.rationale}</p>
+        <div className="tnum flex flex-wrap gap-4 text-[12.5px] text-ink-2">
+          {shown.map((a) => (
+            <span key={a.arm} className={data.winner === a.arm ? "font-medium text-ink" : ""}>
+              {a.arm}: {a.captureRate !== null ? `${(a.captureRate * 100).toFixed(1)}%` : "—"}
+              {a.pBest !== null && ` · P(best) ${Math.round(a.pBest * 100)}%`}
+              {` · n=${a.impressions.toLocaleString()}`}
+            </span>
+          ))}
+        </div>
+      </div>
+      {data.actionable && (
+        <div className="flex items-center gap-2.5 border-t border-hairline px-4 py-3">
+          <button
+            onClick={apply}
+            disabled={state === "applying"}
+            className="bg-inverse px-5 py-2.5 text-[14px] font-medium text-paper transition-opacity duration-[160ms] hover:opacity-90 disabled:opacity-40"
+          >
+            {state === "applying" ? "Applying…" : data.proposedMode === "promote" ? "Promote winner" : "Shift traffic"}
+          </button>
+          <span className="ml-auto text-[12px] text-ink-3">Control stays held out either way.</span>
+        </div>
+      )}
+      {state === "error" && <p className="px-4 pb-3 text-[13px] text-danger">{error}</p>}
+    </div>
+  );
+}
+
 /* ── the approval widget ────────────────────────────────────────── */
 
 export interface ProposalData {

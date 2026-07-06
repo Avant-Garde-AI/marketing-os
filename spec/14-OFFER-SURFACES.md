@@ -88,14 +88,27 @@ focus management, triggers, and assignment live in the runtime's web components
 — shipped identically to every store via the extension, versioned by
 `shopify app deploy`. Per-store expression is manifest data only: copy,
 incentive, style tokens (with `font: inherit` so surfaces wear the theme's own
-face). There is **no per-store build step and no theme-git coupling**; offer
-iteration is a config write. The graduation ladder: (1) manifest data — the
-default; (2) new surface *types* — new runtime components, framework-level,
-all stores; (3) bespoke store-specific markup — theme code via the **design
-agent** (PR + gates + review), bridged by `placement: "inline-slot"`: the
-theme owns position, the framework owns content. O0 bootstraps the manifest
-from the agents repo (`config/surfaces.json`); O2 moves it to the tenant DB
-per D3.
+face). There is **no per-store build step and no theme-git coupling by default**;
+offer iteration is a config write.
+
+**The client SDK (`window.mos`) is the seam between the two worlds.** The
+runtime exposes `mos.surfaces.register(type, renderer)`: theme-specific UI
+code — built by the **design agent in the git theme** through its normal
+PR + gates + review pipeline — claims rendering for a surface type and
+receives a controller (`mount / dismiss / capture / track / tokens` + the
+arm's variant content). The SDK retains ownership of *whether, what, when,
+and how it's measured*: eligibility, sticky weighted-arm assignment,
+triggers, suppression, consent capture, attribution, and events all stay
+centralized; control-arm visitors never reach a renderer. The built-in card
+registers through the same public API as the fallback, so every store works
+out of the box and any store can graduate to bespoke theme UI without losing
+management, experiments, or optimization.
+
+The graduation ladder: (1) manifest data on the built-in renderer — the
+default; (2) **theme-native renderer via the SDK** — bespoke pixels, framework
+brains; (3) new surface *types* — new runtime components, framework-level,
+all stores. O0 bootstraps the manifest from the agents repo
+(`config/surfaces.json`); O2 moves it to the tenant DB per D3.
 
 ### 1.5 Email destination
 

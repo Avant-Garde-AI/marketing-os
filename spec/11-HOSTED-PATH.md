@@ -1,7 +1,18 @@
 # 11 — Hosted Path (Platform-Owned Deployment)
 
 > Marketing OS · Open Conjecture · July 2026
-> Status: **Approved for build** — decisions below are committed defaults; revisit only with new evidence.
+> Status: **BUILT & LIVE-VERIFIED (2026-07-05→07) — all phases H1–H5.**
+> H1 front door (listing items in `marketing-os-app/docs/LISTING-READINESS.md`) ·
+> H2 pooled runtime + embedded native console (per-request tenancy, 2-tenant isolation
+> verified) · H3 reconcile + draft-theme review loop (live storefront previews; 3 real
+> theme swaps caught by the D2 guard) · H4 job runner + sandboxed Claude Code executor
+> (chunked steps, stale-lease reclaim, budget metering; design-loop = command #2 next) ·
+> H5 eject (canonical flip / repo transfer / pg_dump / credential mint, verified on a
+> demo tenant). Tenant mirrors live in GitHub org **Marketing-OS-Sites** under the
+> **marketing-os-platform** GitHub App identity (App ID 4231174).
+> **As-built operational reference: `marketing-os-app/docs/PLATFORM.md`.** Remaining:
+> human click-pass, App Store submission, per-tenant hosted chat memory.
+> Original spec below, decisions unchanged (D1/D2/D3 all held in production).
 
 ---
 

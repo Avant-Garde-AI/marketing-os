@@ -26,6 +26,7 @@ The goal: a store owner or agency partner goes from syncing their Shopify theme 
 | 12 | [12-STORE-MCP-AND-SEMANTIC-LAYER.md](./12-STORE-MCP-AND-SEMANTIC-LAYER.md) | Storefront MCP — per-store unified MCP endpoint, marketing semantic layer over GA4/Shopify, credential broker, App Proxy delivery (Tranche 1 SHIPPED 2026-07; as-built in marketing-os-app/docs/PLATFORM.md) |
 | 13 | [13-CONSOLE-DESIGN-RETROFIT.md](./13-CONSOLE-DESIGN-RETROFIT.md) | Console Design Retrofit — light-primary UX overhaul of the agents console: tokens, typography registers, screen-by-screen IA, motion system, embedded tier, phased build plan (Spec 12 = Store MCP, tracked in phase commits) |
 | 14 | [14-OFFER-SURFACES.md](./14-OFFER-SURFACES.md) | Storefront Surfaces & the Offer Agent — app-embed surface framework (manifest, runtime, events) + the AI offer engine: persona-grounded offers, gated + approved + shipped as experiments; the suite's first-party conversion anchor |
+| 15 | [15-SLACK-INTEGRATION.md](./15-SLACK-INTEGRATION.md) | Slack Integration — one-click "Add to Slack" from the embedded admin; DM/@mention/slash chat with the tenant's agents via the existing chat handoff; thread↔memory continuity; proactive digests + gated approvals; hosted + client-deployed tiers (DRAFT, D1–D4 open) |
 
 ## Key Technology Decisions
 

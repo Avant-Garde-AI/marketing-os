@@ -14,6 +14,17 @@ export const maxDuration = 120;
 
 export async function POST(req: Request) {
   const params = await req.json();
+
+  // Thread↔memory continuity (spec 15 §3). A `threadId` in the body — sent by
+  // the Slack integration front door for a client-deployed tenant (spec 15 §5)
+  // — is mapped to the agent's memory scope. `params` extends
+  // AgentExecutionOptions, so `memory` rides through to the agent. The
+  // interactive console omits threadId and is unaffected; an explicit
+  // params.memory is never clobbered.
+  if (params?.threadId && !params.memory) {
+    params.memory = { thread: String(params.threadId), resource: "storefront" };
+  }
+
   const stream = await handleChatStream({
     mastra,
     agentId: "marketing-agent",

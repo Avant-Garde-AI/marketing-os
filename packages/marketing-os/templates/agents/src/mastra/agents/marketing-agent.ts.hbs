@@ -1,6 +1,7 @@
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { storage } from "../storage";
+import { getTenantStorage } from "../tenant-storage";
 import { shopifyAdminTools } from "../tools/shopify-admin";
 import { dispatchToGithubTool } from "../tools/dispatch-to-github";
 import { prStatusTool } from "../tools/pr-status";
@@ -24,11 +25,27 @@ import { reviewOfferExperiment } from "../tools/offer-review";
  * - Dispatch storefront changes to the async pipeline (via GitHub issues)
  * - Provide strategic marketing recommendations
  */
+// Memory backing (spec 11 §3.2 / H2). Hosted (pooled) mode resolves memory
+// PER TENANT, PER REQUEST from the tenant's own Postgres schema: the dynamic
+// function runs inside runWithTenant, so getTenantStorage() sees the correct
+// tenant via AsyncLocalStorage and Mastra's thread/message tables live in
+// tenant_<slug>. Client-owned mode uses the static single-schema store (or no
+// memory at all when no DB is configured, so the console still builds/runs).
+// This is what makes thread↔memory continuity real (Slack + console): callers
+// pass { memory: { thread, resource } } to the agent and the runtime keys
+// persistence on it. See app/api/chat/route.ts.
+const HOSTED = process.env.MARKETING_OS_MODE === "hosted";
+const memory = HOSTED
+  ? async () => new Memory({ storage: await getTenantStorage() })
+  : storage
+    ? new Memory({ storage })
+    : undefined;
+
 export const marketingAgent = new Agent({
   id: "marketing-agent",
   name: "Marketing Agent",
   model: "anthropic/claude-sonnet-4-6",
-  ...(storage ? { memory: new Memory({ storage }) } : {}),
+  ...(memory ? { memory } : {}),
   instructions: `You are the Marketing OS agent for a Shopify store.
 
 Your capabilities:

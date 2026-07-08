@@ -28,6 +28,7 @@ The goal: a store owner or agency partner goes from syncing their Shopify theme 
 | 14 | [14-OFFER-SURFACES.md](./14-OFFER-SURFACES.md) | Storefront Surfaces & the Offer Agent — app-embed surface framework (manifest, runtime, events) + the AI offer engine: persona-grounded offers, gated + approved + shipped as experiments; the suite's first-party conversion anchor |
 | 15 | [15-SLACK-INTEGRATION.md](./15-SLACK-INTEGRATION.md) | Slack Integration — one-click "Add to Slack" from the embedded admin; DM/@mention/slash chat with the tenant's agents via the existing chat handoff; thread↔memory continuity; proactive digests + gated approvals; hosted + client-deployed tiers (S0–S1 built + deployed) |
 | 16 | [16-MODEL-AND-CREDENTIAL-TOPOLOGY.md](./16-MODEL-AND-CREDENTIAL-TOPOLOGY.md) | Model & Credential Topology — DECISION: model chosen by workload (Gemini/GCP for conversational chat surfaces; Claude reserved for Claude Code git-edit pipeline), key ownership follows tier (hosted shared pool vs self-deployed own key); what's per-tenant vs shared; chat-routing as-built vs target |
+| 17 | [17-RICH-SURFACES-SLACK.md](./17-RICH-SURFACES-SLACK.md) | Rich Surfaces — bring the console generative UI (charts, metric cards, approval cards) into Slack via a shared structured-artifacts contract: mrkdwn/Block Kit, chart PNGs, interactive buttons (BUILDING) |
 
 ## Key Technology Decisions
 

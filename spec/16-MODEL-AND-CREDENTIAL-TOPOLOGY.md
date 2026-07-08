@@ -1,6 +1,6 @@
 # 16 — Model & Credential Topology: Workload Split + Tier Keys
 
-> **Status:** **DECISION of record**, 2026-07-07. Supersedes the implicit "one Anthropic key for everything" assumption.
+> **Status:** **DECISION of record**, 2026-07-07. Supersedes the implicit "one Anthropic key for everything" assumption. **Hosted chat migrated to Gemini and verified live 2026-07-07** (pooled runtime; console + Slack). Template/self-deployed migration is a scoped follow-up (§8).
 > **Why this exists:** to fix, unambiguously, *which model provider runs which workload*, *whose compute runs it*, and *whose key pays* — across the pooled-hosted and self-deployed tiers. Written after the first live Slack test hit an empty Anthropic account and forced the question.
 > **Related:** 11-HOSTED-PATH (tiers, pooled runtime, eject), 12-STORE-MCP (broker, provider creds), 15-SLACK-INTEGRATION (chat surface), 05-AGENTS-AND-SKILLS (agent/model config).
 
@@ -107,3 +107,20 @@ Recommendation: go **straight to Gemini** if GCP/Vertex creds are ready (it's th
 | Platform `ANTHROPIC_API_KEY` | `marketing-os-app` (Vercel prod) + GH App | Claude Code git-edit pipeline (hosted tenants) |
 | Tenant `ANTHROPIC_API_KEY` | tenant repo GH Actions secret / own env | Claude Code git-edit pipeline (self-deployed) |
 | Provider secrets (Google/Shopify/Meta) | Supabase **Vault**, per-tenant `secret_ref` | tool execution — never a model key |
+
+---
+
+## 8. Implementation status (2026-07-07)
+
+**DONE — hosted conversational chat on Gemini (live, verified):**
+- `marketing-os-hosted-agents`: `marketingAgent` model = `google/gemini-2.5-flash` (was `anthropic/claude-sonnet-4-6`); added `@ai-sdk/google`. Serves **both** console and Slack (both hit the pooled `/api/chat`).
+- Gemini key: created on GCP project **`avant-garde-platform`** (Generative Language API), restricted to that API, set as `GOOGLE_GENERATIVE_AI_API_KEY` in the pooled runtime's Vercel prod env. The Mastra model router reads it.
+- **Tool-schema fixes Gemini required** (Anthropic tolerated loose schemas; Gemini needs a concrete `type` on every node and rejects untyped array `items` / `z.any()`): typed the GA4 `run_report` `orderBys` + `dimensionFilter`, and the semantic-query filter `value`. Verified: `/api/chat` → 200, zero LLM errors (it previously errored first on Anthropic credits, then on the schema).
+
+**FOLLOW-UP — template / self-deployed default is still on Anthropic for chat.**
+Flipping the template (`packages/marketing-os/templates/agents`) default to Gemini needs a **tool-schema audit first**: the template agent carries more tools than the pooled one (chart + offer tools), and several inputs are Gemini-hostile —
+- same as hosted: GA4 `orderBys`/`dimensionFilter`, semantic `value`;
+- **additional:** offer tools use **dynamic-key `z.record(...)` inputs** (e.g. `propose_offer.variants` keyed by arm "v1"/"v2"), which Gemini function-calling does not accept — they must be reshaped (e.g. to a typed array of `{ key, … }`).
+Until then the template stays on `anthropic/*` for chat (works for self-deployed tenants bringing their own Anthropic key). A self-deployed tenant wanting Gemini needs: the audit shipped, `@ai-sdk/google` added, and its own GCP key as `GOOGLE_GENERATIVE_AI_API_KEY`.
+
+**Unchanged:** Claude Code git-edit pipeline stays on Anthropic, keyed by tier. Tier-aware chat routing (`agentsUrl ?? pooled`, spec 15 S5) is still open — all chat is pooled today.

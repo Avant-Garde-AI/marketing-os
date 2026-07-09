@@ -77,3 +77,28 @@ To make reports worth reading, spec 17's renderer + agent gain:
 - **R1:** console Reports tab (CRUD + run-now + preview).
 - **R2:** inline conversational save (agent offers a "save as recurring report" button mid-chat).
 - **R3:** dashboards as multi-report bundles; per-card scheduling; digest roll-ups.
+
+---
+
+## 8. Store Analytics Context (C-series) — DONE + LIVE 2026-07-09
+
+The "tune the query" capability: a per-store **default footprint** applied to base
+metrics everywhere (chat + all reports), so numbers reflect the markets a store
+actually services. Structure = a saved fragment of the semantic layer's OWN
+filter DSL (`{field, op, value}`), not a new abstraction.
+
+- **C0 (governed merge + disclosure):** `validateQuery` merges the saved default
+  filters into any view that exposes the field (per-view), unless the user
+  filtered it explicitly (query overrides). Disclosed in `applied_defaults`.
+- **C0b (cross-provider):** `country_code` (ISO) added to `traffic` (GA4
+  `countryId`) and `commerce` (Shopify `shipping_address.country_code`); the
+  Shopify resolver now applies filters (previously dropped). One saved context
+  governs sessions AND orders/revenue → conversion is computed on one footprint.
+- **C1 (conversational):** `set_store_metrics_context` / `get_store_metrics_context`
+  tools; region tokens expand (EU→27, EEA, NA, UK→GB, ANZ). Say "count only
+  US/Canada/UK/EU/Australia" → parsed → 31 ISO codes saved. Storage:
+  `mos_store_context` table (runtime-owned, keyed by shop); read at model compile.
+- Validated for Arthaus: context saved from chat; metrics + reports inherit it.
+
+**Next (C2/C3):** console "Markets & metric context" panel; per-report/per-query
+overrides ("EU-only report", "show all countries"); a change log.

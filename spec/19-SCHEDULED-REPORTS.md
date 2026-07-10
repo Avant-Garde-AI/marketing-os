@@ -100,5 +100,5 @@ filter DSL (`{field, op, value}`), not a new abstraction.
   `mos_store_context` table (runtime-owned, keyed by shop); read at model compile.
 - Validated for Arthaus: context saved from chat; metrics + reports inherit it.
 
-**Next (C2/C3):** console "Markets & metric context" panel; per-report/per-query
+**C2 — DONE + LIVE 2026-07-09:** console "Markets & metric context" panel (app.markets.tsx + nav) — view/edit the serviced-markets footprint (ISO + region expansion), same mos_store_context row as the chat tool. **Next (C3):** per-report/per-query
 overrides ("EU-only report", "show all countries"); a change log.

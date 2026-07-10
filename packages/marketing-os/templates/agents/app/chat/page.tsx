@@ -1,9 +1,13 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
+import type { UIMessage } from "ai";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Eyebrow } from "@/components/primitives";
+import { ConversationSidebar } from "@/components/chat/conversation-sidebar";
 import {
   GenCard,
   Unavailable,
@@ -30,6 +34,28 @@ import {
  * stream. Assistant messages arrive as typed parts; tool parts render through
  * the registered generative-UI components (static pattern, spec 13 addendum).
  */
+
+const MARKDOWN_COMPONENTS = {
+  p: (props: React.ComponentPropsWithoutRef<"p">) => <p className="mb-2 last:mb-0" {...props} />,
+  strong: (props: React.ComponentPropsWithoutRef<"strong">) => (
+    <strong className="font-medium text-ink" {...props} />
+  ),
+  ul: (props: React.ComponentPropsWithoutRef<"ul">) => (
+    <ul className="mb-2 ml-5 list-disc space-y-1 last:mb-0" {...props} />
+  ),
+  ol: (props: React.ComponentPropsWithoutRef<"ol">) => (
+    <ol className="mb-2 ml-5 list-decimal space-y-1 last:mb-0" {...props} />
+  ),
+  a: (props: React.ComponentPropsWithoutRef<"a">) => (
+    <a className="text-gold underline underline-offset-2 hover:opacity-80" target="_blank" rel="noreferrer" {...props} />
+  ),
+  code: (props: React.ComponentPropsWithoutRef<"code">) => (
+    <code className="bg-raised px-1 py-0.5 text-[13px]" {...props} />
+  ),
+  pre: (props: React.ComponentPropsWithoutRef<"pre">) => (
+    <pre className="mb-2 overflow-x-auto border border-hairline bg-raised p-3 text-[13px] last:mb-0" {...props} />
+  ),
+};
 
 const SUGGESTIONS = [
   "How did revenue trend last month?",
@@ -95,8 +121,34 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // The active conversation. useChat's `id` re-keys its internal state, so a
+  // new id + fresh `messages` (New chat, or picking a past conversation from
+  // the sidebar) produces an independent conversation instead of appending to
+  // the current one. The same id is also the `threadId` sent to /api/chat, so
+  // client-side chat identity and server-side memory thread identity match.
+  const [threadId, setThreadIdState] = useState<string>(() => crypto.randomUUID());
+  const threadIdRef = useRef(threadId);
+  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+
+  function setThreadId(id: string) {
+    threadIdRef.current = id;
+    setThreadIdState(id);
+  }
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        body: () => ({ threadId: threadIdRef.current }),
+      }),
+    [],
+  );
+
   const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    id: threadId,
+    messages: initialMessages,
+    transport,
   });
   const busy = status === "submitted" || status === "streaming";
 
@@ -108,6 +160,45 @@ export default function ChatPage() {
     const prompt = new URLSearchParams(window.location.search).get("prompt");
     if (prompt) setInput(prompt);
   }, []);
+
+  // A brand-new thread needs a row in the sidebar; an existing one may just
+  // have been auto-titled by Mastra after this exchange. Refresh right after
+  // streaming ends, and once more after title generation has had a moment.
+  const wasBusy = useRef(false);
+  useEffect(() => {
+    if (wasBusy.current && !busy) {
+      setSidebarRefreshKey((k) => k + 1);
+      const t = setTimeout(() => setSidebarRefreshKey((k) => k + 1), 2500);
+      return () => clearTimeout(t);
+    }
+    wasBusy.current = busy;
+  }, [busy]);
+
+  function newChat() {
+    setThreadId(crypto.randomUUID());
+    setInitialMessages([]);
+    setInput("");
+  }
+
+  async function selectConversation(id: string) {
+    if (busy) return;
+    try {
+      const res = await fetch(`/api/conversations/${id}/messages`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const loaded: UIMessage[] = Array.isArray(data.messages)
+        ? data.messages.map((m: { role: "user" | "assistant"; content: string }) => ({
+            id: crypto.randomUUID(),
+            role: m.role,
+            parts: [{ type: "text", text: m.content }],
+          }))
+        : [];
+      setThreadId(id);
+      setInitialMessages(loaded);
+    } catch {
+      // Leave the current conversation as-is rather than losing it.
+    }
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -170,7 +261,15 @@ export default function ChatPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen">
+      <ConversationSidebar
+        activeThreadId={threadId}
+        onSelect={selectConversation}
+        onNewChat={newChat}
+        refreshKey={sidebarRefreshKey}
+      />
+
+      <div className="flex h-screen flex-1 flex-col">
       <div className="border-b border-hairline px-8 py-4">
         <div className="mx-auto max-w-[760px]">
           <Eyebrow>Chat</Eyebrow>
@@ -212,7 +311,13 @@ export default function ChatPage() {
                 <div className="max-w-full text-[15px] leading-relaxed">
                   {msg.parts.map((p, i) => {
                     if (p.type === "text") {
-                      return p.text ? <p key={i} className="mb-2 max-w-[68ch] whitespace-pre-wrap">{p.text}</p> : null;
+                      return p.text ? (
+                        <div key={i} className="mb-2 max-w-[68ch] last:mb-0">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+                            {p.text}
+                          </ReactMarkdown>
+                        </div>
+                      ) : null;
                     }
                     if (p.type.startsWith("tool-")) {
                       return <div key={(p as unknown as ToolPartLike).toolCallId ?? i}><PartBoundary>{renderToolPart(p as unknown as ToolPartLike)}</PartBoundary></div>;
@@ -256,6 +361,7 @@ export default function ChatPage() {
             Storefront changes are proposed here and reviewed before going live.
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

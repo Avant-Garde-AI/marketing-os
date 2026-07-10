@@ -36,10 +36,24 @@ import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/extern
 // pass { memory: { thread, resource } } to the agent and the runtime keys
 // persistence on it. See app/api/chat/route.ts.
 const HOSTED = process.env.MARKETING_OS_MODE === "hosted";
+// Auto-titling: Mastra names each thread after its first exchange using this
+// model, and calls updateThread itself — no custom title-generation code
+// needed. Flash (not the main agent's model) since this is a one-shot
+// classification call, not the analytics tool loop.
+const TITLE_GENERATION = {
+  model: "google/gemini-2.5-flash",
+  instructions:
+    "Generate a concise 3-6 word title summarizing what this conversation " +
+    "is about. No trailing punctuation, no quotes.",
+} as const;
 const memory = HOSTED
-  ? async () => new Memory({ storage: await getTenantStorage() })
+  ? async () =>
+      new Memory({
+        storage: await getTenantStorage(),
+        options: { generateTitle: TITLE_GENERATION },
+      })
   : storage
-    ? new Memory({ storage })
+    ? new Memory({ storage, options: { generateTitle: TITLE_GENERATION } })
     : undefined;
 
 // Base tool map. In hosted mode a tenant's enabled external MCP servers

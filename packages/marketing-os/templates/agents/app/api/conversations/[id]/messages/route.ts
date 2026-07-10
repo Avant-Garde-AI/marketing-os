@@ -13,7 +13,7 @@ function messageText(msg: MastraDBMessage): string {
   return parts
     .filter((p): p is { type: "text"; text: string } => p.type === "text")
     .map((p) => p.text)
-    .join("");
+    .join("\n\n");
 }
 
 /** Replay a past conversation's messages so the console can hydrate it when selected. */

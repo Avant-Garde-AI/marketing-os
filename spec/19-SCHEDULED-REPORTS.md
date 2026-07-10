@@ -74,7 +74,7 @@ To make reports worth reading, spec 17's renderer + agent gain:
 ## 7. Phases
 
 - **▶ R0 (this PR):** `ScheduledReport` model, `runReportToSlack`, `/mos report save|run|list`, `/api/cron/reports`, Option A chart types + rich KPI + agent analysis. Flagship built-in prompt: **Weekly Store Review**.
-- **R1:** console Reports tab (CRUD + run-now + preview).
+- **R1 — DONE + LIVE 2026-07-09:** console Reports tab (app.reports.tsx) — list, run-now, pause/resume, delete, schedule a built-in report to a linked Slack channel; nav link added.
 - **R2:** inline conversational save (agent offers a "save as recurring report" button mid-chat).
 - **R3:** dashboards as multi-report bundles; per-card scheduling; digest roll-ups.
 

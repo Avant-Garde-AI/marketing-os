@@ -82,8 +82,8 @@ Ships in `packages/skills/brand-conversion/` (OSS, this repo); per-tenant enable
 
 ## 6. Build phases
 
-- **B0 — Reads first.** `brand-conversion-profile` + `brand-conversion-scorecard` as tools, rendered as branded scorecard/grade cards in Slack. Immediate value, zero write-risk, and it exercises the score. (`storefront-heuristic-audit`, `copy-coherence-check` follow.)
-- **B1 — The score report.** Wire `brand-conversion-profile` into a spec-19 monthly report.
+- **B0 — Reads first — DONE + LIVE 2026-07-09.** `brand-conversion-profile` + `brand-conversion-scorecard` as tools, rendered as branded scorecard/grade cards in Slack. Immediate value, zero write-risk, and it exercises the score. (`storefront-heuristic-audit`, `copy-coherence-check` follow.)
+- **B1 — The score report — DONE + LIVE 2026-07-09** (built-in `scorecard` report; runnable + schedulable). Wire `brand-conversion-profile` into a spec-19 monthly report.
 - **B2 — First Action.** `bcd.quick_wins` on the spec-20 Action framework → design-loop `TaskSpec` → draft-theme proposal → the existing approval card. Proves the read→propose→approve→implement loop for BCD.
 - **B3 — homepage-optimizer + pdp-enhancer** as Actions on the same rails.
 - **B4 — Skill-pack packaging** in `packages/skills/` + registry enable.

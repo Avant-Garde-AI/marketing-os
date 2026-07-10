@@ -119,7 +119,7 @@ One Action → many renderers. Same shape as the report/chart work.
 | **Storefront** | theme diff | `storefront.publish`* |
 | **Lifecycle** | segment explorer | `segment.create`, `email.draft` |
 
-`*` exists today in some form. **The everyday grind — order lookup, refund, price/inventory edit, draft customer reply — is the wedge**; it's what makes "automate what we do in Shopify" true.
+**The first real pack is spec 21 (Brand Conversion Design)** — 4 read skills + 3 Actions on the design-loop; it replaces the placeholder rows above for the storefront/optimization categories. `*` exists today in some form. **The everyday grind — order lookup, refund, price/inventory edit, draft customer reply — is the wedge**; it's what makes "automate what we do in Shopify" true.
 
 ## 8. Build phases
 

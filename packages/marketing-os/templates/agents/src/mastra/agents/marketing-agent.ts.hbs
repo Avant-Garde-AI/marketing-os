@@ -12,6 +12,7 @@ import { chartTools } from "../tools/chart-tools";
 import { chartOfferPerformance } from "../tools/offer-performance";
 import { proposeOffer } from "../tools/offer-design";
 import { reviewOfferExperiment } from "../tools/offer-review";
+import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
 
 /**
  * Marketing Agent
@@ -41,12 +42,23 @@ const memory = HOSTED
     ? new Memory({ storage })
     : undefined;
 
-export const marketingAgent = new Agent({
-  id: "marketing-agent",
-  name: "Marketing Agent",
-  model: "anthropic/claude-sonnet-4-6",
-  ...(memory ? { memory } : {}),
-  instructions: `You are the Marketing OS agent for a Shopify store.
+// Base tool map. In hosted mode a tenant's enabled external MCP servers
+// (spec 18) are merged on top per request via the dynamic `tools` function
+// below — the fetch is TTL-cached per tenant in external-mcp.
+const baseMarketingTools = {
+  ...chartTools,
+  chartOfferPerformance,
+  proposeOffer,
+  reviewOfferExperiment,
+  ...semanticTools,
+  ...shopifyAdminTools,
+  ...ga4Tools,
+  ...metaAdsTools,
+  dispatchToGithub: dispatchToGithubTool,
+  prStatus: prStatusTool,
+};
+
+const BASE_INSTRUCTIONS = `You are the Marketing OS agent for a Shopify store.
 
 Your capabilities:
 - Answer questions about store performance using analytics tools
@@ -100,18 +112,22 @@ Rules:
 - Never make up performance data — always use tools to fetch real data
 - When asked to modify the store, explain that changes go through a PR review
 - Be concise and actionable in your responses
-- Format data as visual cards/tables when possible`,
+- Format data as visual cards/tables when possible`;
 
-  tools: {
-    ...chartTools,
-    chartOfferPerformance,
-    proposeOffer,
-    reviewOfferExperiment,
-    ...semanticTools,
-    ...shopifyAdminTools,
-    ...ga4Tools,
-    ...metaAdsTools,
-    dispatchToGithub: dispatchToGithubTool,
-    prStatus: prStatusTool,
-  },
+export const marketingAgent = new Agent({
+  id: "marketing-agent",
+  name: "Marketing Agent",
+  model: "anthropic/claude-sonnet-4-6",
+  ...(memory ? { memory } : {}),
+  // Hosted: append connected external servers' usage instructions so the model
+  // knows how to drive their tools; client-owned: static base instructions.
+  instructions: HOSTED
+    ? async () => BASE_INSTRUCTIONS + (await getExternalMcpInstructions())
+    : BASE_INSTRUCTIONS,
+  // Hosted: merge the tenant's enabled external MCP tools (spec 18) on top of
+  // the native tools per request. A down/rate-limited server contributes no
+  // tools and never fails the turn (see external-mcp.ts).
+  tools: HOSTED
+    ? async () => ({ ...baseMarketingTools, ...(await getExternalMcpTools()) })
+    : baseMarketingTools,
 });

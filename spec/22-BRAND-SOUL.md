@@ -96,7 +96,20 @@ Format rules, inherited from DESIGN.md's conformance philosophy: canonical secti
 
 **Open-sourcing:** the spec, linter, and a reference parser ship in this repo (`packages/brand-md/`), Apache 2.0, mirroring DESIGN.md's positioning — with an explicit compatibility note that `design_ref` points at a conforming DESIGN.md.
 
-## 3. The deliverables pair: brand.md + DESIGN.md
+## 3. The Brand Soul Manifest — the target outcome set
+
+The pipeline's deliverable is not one document but a **versioned manifest of four artifacts** — the complete, portable brand core every store converges to (Arthaus's worked instances in `packages/brand-md/examples/arthaus/` are the reference):
+
+| # | Artifact | Role | Produced by |
+|---|---|---|---|
+| 1 | `research-brief.md` (+ research output) | The research contract + the `@research` evidence base | Stage 1–2 |
+| 2 | `brand.md` | The soul — versioned, provenance-tagged strategy | Stage 3 |
+| 3 | `design-exploration-prompts.md` (+ selected candidates) | The visual discovery record — prompt pack + owner-selected reference captures | Stage 4 |
+| 4 | `DESIGN.md` | The body — Google-spec visual system, every claim traceable to a selection | Stage 4 |
+
+Each artifact versions independently but cross-references; the manifest as a whole is what the Brand console section renders, what exports on eject, and what the context engine distills from.
+
+### 3b. The deliverables pair: brand.md + DESIGN.md
 
 The Brand section produces **two portable artifacts**:
 - **`brand.md`** — the soul: strategy, persona, voice, positioning, conversion philosophy.

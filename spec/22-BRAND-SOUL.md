@@ -1,6 +1,6 @@
 # 22 — Brand Soul: the `brand.md` Specification & the Brand Section
 
-> **Status:** DRAFT — vision + format proposal. Awaiting Garrett's Arthaus-redesign reference materials (queries, prompts, result document structures) to seed the canonical sections.
+> **Status:** DRAFT — format seeded. **BS0 in progress 2026-07-10:** Garrett provided the "Arthaus Brand Definition & Direction Guide v1.0" (April 2026, 16 sections); the reference instances are hand-authored at `packages/brand-md/examples/arthaus/` (`brand.md` + Google-conforming `DESIGN.md`). The canonical section list below is now **derived from that real document**, not invented.
 > **Depends on:** 20-CAPABILITY-SUITE (brand.md is the context every capability reads), 21-BRAND-CONVERSION-AGENT (the scorecard grounds in it), design-loop PRD §1 Phase A (`brandDefinitionAgent` — already in the hosted runtime), 13-CONSOLE-DESIGN-RETROFIT (the Brand section lives in the console).
 > **External anchor:** Google Labs' **DESIGN.md** specification (open-sourced 2026-04-21, Apache 2.0, `github.com/google-labs-code/design.md`). `brand.md` is its deliberate sibling: DESIGN.md tells agents how the brand *looks*; brand.md tells agents who the brand *is*.
 
@@ -65,6 +65,29 @@ The prose: why this promise, the founding story, what the brand refuses to be…
 ## Provenance & Change Log
 ```
 
+### Canonical sections — v0, derived from the Arthaus guide (BS0)
+
+The Arthaus Brand Definition & Direction Guide (16 sections, owner-approved) is the empirical seed. Its structure maps to brand.md v0 as follows — see `packages/brand-md/examples/arthaus/brand.md` for the worked instance:
+
+1. **Essence & North Star** — the one line + the *customer sentence* the brand engineers for (the north star as a quote, not a metric — its signals decompose into measurable claims).
+2. **Mission, Vision & Purpose**
+3. **Positioning & Promise** — the FOR/IS/THAT/UNLIKE/BECAUSE statement as structured front matter; the promise as named pillars.
+4. **Audience Architecture** — personas with **weighted decision hierarchies** (0–100). The Arthaus guide's biggest lesson: a persona's ranked, numeric decision drivers are the single most machine-usable brand asset — every creative/merchandising agent can sort its choices by them.
+5. **Voice & Tone** — voice essence + pillars, each with ✔/✘ example pairs (the examples ARE the spec for a generative agent); a `never` list; a **tone-modulation-by-context table** (homepage / PDP / email / ads / error states / AI concierge).
+6. **Messaging Framework** — message hierarchy + funnel-stage messaging with example lines.
+7. **Experience Principles** — ordered UX principles.
+8. **Product & Merchandising Principles** — incl. pricing architecture.
+9. **Brand Architecture** — multi-surface ecosystem with per-surface voice registers.
+10. **Content & Editorial Strategy** *(optional)*
+11. **Channel Guidelines** *(optional — P-Max/Meta/Pinterest/Email specifics)*
+12. **AI & Personalization Voice** — explicit voice rules for AI interactions ("never reference the technology", "recommend 2–3, not 20"). Front-mattered as `ai_voice_rules` for direct per-turn injection into our own agents.
+13. **Governance: Do's & Don'ts** — bright-line ✔/✘ table.
+14. **Competitive Differentiation**
+15. **Measurement & Brand Health** — metrics mapped to the promise; front-mattered as `health_metrics`, the natural `@data` re-derivation hooks into the semantic layer.
+16. **Provenance & Change Log**
+
+Visual identity (the guide's §7: palette, type, photography art direction) extracts to the sibling **DESIGN.md** — the guide's hex values, type directions, and visual do's/don'ts translate cleanly into Google-spec tokens + prose (`packages/brand-md/examples/arthaus/DESIGN.md`).
+
 Format rules, inherited from DESIGN.md's conformance philosophy: canonical section order; unknown sections preserved, never errored; duplicate headings rejected; a linter with error/warning/info severities (`missing-essence`, `unowned-claim` — a token with no provenance tag, `stale-data-claim` — a data-derived claim past its freshness window, `broken-persona-ref`).
 
 **Provenance model (the open-source differentiator):** every front-matter claim carries an origin tag — `@owner` (stated by the human, highest authority), `@agent` (proposed by the definition agent, owner-approved), `@data` (derived from connected analytics/commerce, carries a freshness window and re-derivation query). The change log section records each version bump with who/what/why. This is what makes the document *trustworthy enough* to sit under every creative act.
@@ -96,7 +119,7 @@ brand.md is not a document that sits in a tab — it is **injected context**:
 
 ## 6. Build phases
 
-- **BS0 — Format + seed.** Ingest Garrett's Arthaus reference materials; finalize brand.md v0 sections + front-matter schema; hand-author Arthaus's brand.md + DESIGN.md as the reference instances. (No code beyond a schema.)
+- **BS0 — Format + seed — DONE 2026-07-10.** Ingested the Arthaus Brand Definition & Direction Guide v1.0; derived the v0 canonical sections + front-matter schema (§2 above); hand-authored `packages/brand-md/examples/arthaus/brand.md` + Google-conforming `DESIGN.md`. Note: the Arthaus source guide is CONFIDENTIAL and is NOT committed — the brand.md instance distills it; whether the Arthaus instance itself stays in the eventual OSS cut (vs. a fictionalized example brand) is an open question (#5).
 - **BS1 — Linter + parser** in `packages/brand-md/` (OSS scaffold, versioning + provenance rules).
 - **BS2 — Definition agent v2.** Point `brandDefinitionAgent` at the v0 format; add refine/diff/version-bump; surface in console chat + Slack.
 - **BS3 — Brand console section** (Soul/Define/Design/History views, top-of-nav).
@@ -108,4 +131,5 @@ brand.md is not a document that sits in a tab — it is **injected context**:
 1. **Distillation** — the full brand.md may be large; what's the per-turn distilled form (front matter only? per-skill sections?) and who maintains the distillation?
 2. **Authority conflicts** — when `@data` contradicts `@owner` (e.g. the stated persona isn't who actually buys), the agent should *surface* the tension in a refine session, never silently rewrite. Encode as a linter rule or agent behavior?
 3. **NeuroGraph coupling** — persona claims can reference PDO personas (`neurograph_ref`); how hard should the format depend on it vs. degrade gracefully?
-4. **Multi-brand stores** — one brand.md per store for v0; sub-brands later?
+4. **Multi-brand stores** — one brand.md per store for v0; sub-brands later? (The Arthaus guide's §10 Brand Architecture suggests the v0 answer: one brand.md, with per-surface voice registers inside it — Marketplace/Easel/Academy are registers of one voice, not separate brands.)
+5. **OSS example privacy** — the Arthaus reference instance distills a confidential strategy document. Before the BS5 open-source cut, decide: keep Arthaus as the public reference (with owner sign-off) or fictionalize an example brand and keep Arthaus's instance tenant-private.

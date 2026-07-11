@@ -179,3 +179,14 @@ brand.md is not a document that sits in a tab — it is **injected context**:
 3. **NeuroGraph coupling** — persona claims can reference PDO personas (`neurograph_ref`); how hard should the format depend on it vs. degrade gracefully?
 4. **Multi-brand stores** — one brand.md per store for v0; sub-brands later? (The Arthaus guide's §10 Brand Architecture suggests the v0 answer: one brand.md, with per-surface voice registers inside it — Marketplace/Easel/Academy are registers of one voice, not separate brands.)
 5. **OSS example privacy** — the Arthaus reference instance distills a confidential strategy document. Before the BS5 open-source cut, decide: keep Arthaus as the public reference (with owner sign-off) or fictionalize an example brand and keep Arthaus's instance tenant-private.
+
+## 10. The public Brand Portal (built 2026-07-11)
+
+The manifest's outward face — one source of truth, two audiences:
+
+- **Humans:** `/brand/{slug}` on the hosted runtime renders the Brand Soul as an editorial, magazine-grade read in the Avant-Garde theme (warm paper, ink + gold, Playfair masthead over Lora prose, numbered sections, pull-quotes, the DESIGN.md palette as a spread, the north-star customer sentence as the lede). The agency-brand-book experience, self-serve.
+- **Agents:** `/brand/{slug}/llms.txt` is the discovery index; `/brand/{slug}/file/brand.md` and `/brand/{slug}/file/DESIGN.md` serve the raw documents (`text/markdown`). Any agent writing copy for, recommending, or representing the brand can fetch its soul naturally. The HTML page advertises the markdown alternate in its metadata.
+- **Publication filter:** the portal is an overview, not the strategy dossier — inward sections (Competitive Differentiation, Measurement & Brand Health) and inward front-matter keys (`health_metrics`) are stripped before anything leaves; YAML is filtered line-wise so provenance comments survive. DESIGN.md ships full (visual systems are meant to travel). The v1 exclusion list is opinionated; a `portal:` front-matter config can override later.
+- **Follow-up:** serving `/.well-known/`-style paths from the store's own domain via the Shopify App Proxy, so discovery starts at the brand's domain rather than ours.
+
+Live for Arthaus: https://marketing-os-hosted-agents.vercel.app/brand/arthaus-website (HA fc8d23d, PR #3).

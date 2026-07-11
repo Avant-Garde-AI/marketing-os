@@ -46,3 +46,34 @@ skills and make storefront improvements via pull requests.
 ## Available Skills
 Read `/agents/src/mastra/skills/` for the full list of available skills
 and their expected inputs/outputs.
+
+## Console Upgrades — where edits go (IMPORTANT)
+
+The `agents/` console in this repo is a **rendered instance of the published
+Marketing OS layer** (the `templates/agents/` scaffold in the open-source
+`marketing-os` repo). It auto-upgrades via `marketing-os upgrade`, which
+re-renders template-managed files with this store's config.
+
+**The path for any change to the console/admin experience:**
+1. Make the edit in the `marketing-os` repo under
+   `packages/marketing-os/templates/agents/` (develop/prove it in the pooled
+   `marketing-os-hosted-agents` twin first when practical).
+2. Bump the `marketing-os` package version.
+3. Run `marketing-os upgrade --yes` in THIS repo on a fresh branch → review
+   the diff → PR.
+
+**Never hand-edit template-managed files here** — the next upgrade will
+overwrite them. Store-specific content lives in the protected paths (`docs/`,
+`agents/brand/`, custom skills in `agents/src/mastra/skills/`, `.env`,
+`marketing-os.config.json`) and survives upgrades.
+
+## Brand Soul (agents/brand/)
+
+`agents/brand/` holds this store's Brand Soul manifest — `brand.md` (strategy,
+voice, guardrails; versioned + provenance-tagged), `DESIGN.md` (visual system),
+plus the research brief and design-exploration prompts that produced them.
+These files are **canonical** (D1: files are truth) and are injected into
+every agent turn. Refinements happen in co-creative agent sessions and save as
+new DB working versions; committing an approved version back to these files
+goes through the normal PR pipeline. The public portal at `/brand/{slug}`
+(+ `llms.txt` and raw files) publishes an outward-safe subset.

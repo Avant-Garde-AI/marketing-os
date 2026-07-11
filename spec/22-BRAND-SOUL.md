@@ -190,3 +190,7 @@ The manifest's outward face — one source of truth, two audiences:
 - **Follow-up:** serving `/.well-known/`-style paths from the store's own domain via the Shopify App Proxy, so discovery starts at the brand's domain rather than ours.
 
 Live for Arthaus: https://marketing-os-hosted-agents.vercel.app/brand/arthaus-website (HA fc8d23d, PR #3).
+
+### §10b — Storefront discovery closure (built 2026-07-11)
+
+The cold-start chain now completes on the store's own domain. Shopify auto-generates `/agents.md` + `/llms.txt` on every storefront (theme-template-customizable since 2026-05-28); the Brand Soul pipeline's **Stage 5 — PUBLISH** (playbook) composes `templates/agents.md.liquid` — Shopify's commerce/UCP content preserved verbatim + a Brand Identity section pointing at the App-Proxy brand endpoints (`/apps/mcp/brand/llms.txt` → `brand.md`/`DESIGN.md`, added to the platform proxy router) — and dispatches it as a **theme PR for owner approval**. Chain: robots.txt → agents.md/llms.txt → brand index → brand.md + DESIGN.md, zero external hops. First canonical run: Arthaus-Inc/marketplace PR #17 (the first approved agent theme edit through the git pipeline). Default for all new stores via the playbook (template v0.13.1).

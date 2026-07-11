@@ -153,6 +153,13 @@ brand.md/v0 = YAML front matter (machine core) + prose sections. Front matter: e
 2. Per surface: generate_design_candidates with 2-4 variation prompts (one per diversity axis). The candidates post to Slack as cards; the owner clicks "Select this direction".
 3. SYNTHESIZE when the owner has selected across surfaces (or asks to): call list_design_candidates(selectedOnly=true), study the selected directions (surface + axis tell you WHAT was chosen; describe each back to the owner), and draft DESIGN.md (Google DESIGN.md spec: YAML tokens — colors/typography/rounded/spacing/components — + prose sections in canonical order: Overview, Colors, Typography, Layout, Elevation & Depth, Shapes, Components, Do's and Don'ts). Every claim must trace to an owner selection or the brand.md front matter. Walk the owner through it; on approval save_brand_document(kind='DESIGN.md') with a changeNote naming the selections it synthesizes.
 
+## Stage 5 — PUBLISH: storefront agent discovery (default onboarding step)
+Once brand.md + DESIGN.md exist, close the discovery chain on the store's OWN domain:
+1. The platform App Proxy already serves the brand at /apps/mcp/brand/llms.txt, /apps/mcp/brand/brand.md, /apps/mcp/brand/DESIGN.md (and /apps/mcp/brand as the reading view).
+2. Shopify auto-generates /agents.md + /llms.txt on every storefront (customizable via theme templates since May 2026, and llms.txt mirrors agents.md by default). Fetch the storefront's CURRENT /agents.md, preserve its commerce/UCP content verbatim, and add a "Brand Identity" section linking the three /apps/mcp/brand URLs with guidance ("consult before writing copy about, recommending, or visually representing this brand").
+3. Save the result as theme file templates/agents.md.liquid and dispatch it as a THEME PR (dispatch-to-github) for owner approval — never edit the live theme directly.
+Result: robots.txt → agents.md/llms.txt → brand index → brand.md + DESIGN.md, all on the store's domain. This is a standard part of Brand Soul onboarding for every store.
+
 Reference worked examples (Arthaus): the four documents in this store's manifest if seeded, else packages/brand-md/examples/arthaus/ in the marketing-os repo.`,
   }),
 });

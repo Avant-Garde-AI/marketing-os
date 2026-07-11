@@ -2,12 +2,12 @@
 version: alpha
 name: Arthaus
 description: >-
-  Effortless sophistication — elevated enough to signal quality and curatorial
-  credibility, warm enough to feel approachable and livable, restrained enough
-  to let the art be the hero. The design system is a frame, not a painting.
-  Soul document: ./brand.md (brand.md/v0).
+  Effortless sophistication, rooted in the vision-PDP aesthetic: contemplative
+  whitespace, editorial serif typography, warm parchment tones, and art
+  presented in natural light with real shadow. The design system is a frame,
+  not a painting. Soul document: ./brand.md (brand.md/v0, version 2).
 colors:
-  soft-white: "#F7F5F2"
+  warm-parchment: "#F5F2ED"
   charcoal: "#2D2D2D"
   warm-gray: "#6B6560"
   bronze: "#B07D4F"
@@ -16,7 +16,8 @@ colors:
   dusty-blue: "#8FA3B0"
   deep-ink: "#1A1A2E"
   primary: "{colors.bronze}"
-  background: "{colors.soft-white}"
+  background: "{colors.warm-parchment}"
+  background-transactional: "#FFFFFF"
   text: "{colors.charcoal}"
   text-secondary: "{colors.warm-gray}"
   success: "{colors.sage}"
@@ -25,10 +26,18 @@ typography:
     fontFamily: "Canela, 'Freight Display', 'Noe Display', Georgia, serif"
     fontWeight: 500
     letterSpacing: "0em"
+  artwork-title:
+    fontFamily: "Canela, 'Freight Display', 'Noe Display', Georgia, serif"
+    fontSize: 26px
+    fontWeight: 500
   body:
     fontFamily: "Inter, Söhne, Graphik, system-ui, sans-serif"
     fontSize: 17px
     lineHeight: 1.55
+    fontWeight: 400
+  editorial-description:
+    fontFamily: "Inter, Söhne, Graphik, system-ui, sans-serif"
+    fontSize: 15px
     fontWeight: 400
   label:
     fontFamily: "Inter, Söhne, Graphik, system-ui, sans-serif"
@@ -49,77 +58,93 @@ spacing:
   xl: 96px
 components:
   button-primary:
+    backgroundColor: "{colors.charcoal}"
+    textColor: "#FFFFFF"
+    rounded: "{rounded.none}"
+    height: 52px
+  button-accent:
     backgroundColor: "{colors.bronze}"
-    textColor: "{colors.soft-white}"
+    textColor: "#FFFFFF"
     rounded: "{rounded.none}"
-    typography: "{typography.label}"
-  button-secondary:
-    backgroundColor: "transparent"
-    textColor: "{colors.charcoal}"
-    rounded: "{rounded.none}"
+  title-divider:
+    backgroundColor: "{colors.bronze}"
+    width: 40px
+    height: 1px
   card:
     backgroundColor: "#FFFFFF"
     textColor: "{colors.charcoal}"
     rounded: "{rounded.none}"
     padding: "{spacing.md}"
+  sticky-cta-bar:
+    backgroundColor: "{colors.warm-parchment}"
+    height: 60px
   badge-collector:
     backgroundColor: "{colors.deep-ink}"
-    textColor: "{colors.soft-white}"
+    textColor: "#FFFFFF"
 ---
 
 ## Overview
 
-Arthaus's visual system embodies **effortless sophistication**. The palette is
-drawn from the warmth of natural materials — linen, clay, raw wood, aged paper
-— and is intentionally neutral: it is a canvas for the art itself. The
-experience should feel like a well-lit gallery in a lived-in home — calm,
-considered, warm.
+Arthaus's visual system is rooted in the **vision PDP**: contemplative
+whitespace, editorial serif typography, warm parchment tones, and framed art
+photographed in natural light with real shadow. It should feel like a gallery
+wall in warm afternoon light — the art provides all chromatic energy; the
+system provides the frame. This aesthetic is a competitive moat: Minted looks
+like e-commerce, Desenio looks like a catalog — Arthaus looks like an
+editorial gallery experience that happens to be shoppable.
 
 ## Colors
 
-- **Soft White `#F7F5F2`** — primary background. Warm, never stark; the color
-  of good linen paper. Backgrounds are always Soft White or pure white.
-- **Charcoal `#2D2D2D`** — primary text and headings. Deep but not pure black.
-- **Warm Gray `#6B6560`** — secondary text and captions; brown-warm, never a
-  cold blue-gray.
-- **Warm Bronze `#B07D4F`** — the single accent. CTAs, accent lines, highlight
-  moments. Evokes framing and craftsmanship, never "luxury gold." Used for
-  **one focal CTA per viewport** — never body text, never large fills.
-- Secondary (functional, not decorative): **Muted Sage** for success/in-stock,
-  **Soft Terracotta** for warm seasonal groupings, **Dusty Blue** for
-  navigation/filters and cool groupings, **Deep Ink** only in the collector
-  (Easel) experience layer to signal premium context.
-- **Never place colored backgrounds behind art** — the art provides its own
-  color. The palette should feel like a gallery wall: neutral, warm, breathing.
+- **Warm Parchment `#F5F2ED`** — the foundation tone of the entire experience;
+  the color of good cotton paper and natural linen. Warmer than standard
+  white; this is what gives the brand its distinctive warmth. *(v2: replaces
+  Soft White `#F7F5F2`.)*
+- **Backgrounds alternate by context:** parchment for editorial/browsing
+  contexts (collections, PDP hero, Academy), pure white for
+  configuration/transactional contexts (size/frame selection, cart, checkout).
+- **Charcoal `#2D2D2D`** — primary text; deep but never pure black.
+- **Warm Gray `#6B6560`** — secondary text; brown-warm, never blue-gray.
+- **Warm Bronze `#B07D4F`** — the single accent: one focal CTA per viewport,
+  the thin 40px divider beneath artwork titles, hover/active states. Evokes
+  natural wood framing and craftsmanship — never "luxury gold," never body
+  text, never large fills.
+- Secondary (functional): **Sage** success/in-stock, **Terracotta** warm
+  seasonal groupings, **Dusty Blue** navigation/filters and cool groupings,
+  **Deep Ink** reserved exclusively for the Collector/Easel layer.
+- **Never place colored backgrounds behind art.**
 
 ## Typography
 
-- **Display/headings:** a modern serif with editorial character (Canela /
-  Freight Display / Noe Display direction) — literary and warm, not geometric-
-  cold, not decorative. Signals that Arthaus takes art and storytelling
-  seriously without feeling museum-institutional.
-- **Body/UI:** a humanist sans (Inter / Söhne / Graphik direction), 16–18px,
-  line-height 1.5–1.6 — modern, readable, warm; not clinical, not trendy.
-- **Specs:** a clean monospace (IBM Plex Mono / JetBrains Mono), used
-  exclusively for material specifications, edition numbers, and dimensions —
-  visually separating factual claims from editorial voice.
-- All-caps only for very small labels (category tags, nav, "NEW" badges),
-  letter-spacing 0.05–0.1em. **Never all-caps headings or CTAs.**
-- Pull quotes and artist quotes: serif, larger size, warm gray — editorial
-  moments.
+- **Display serif** (Canela / Freight Display / Noe Display direction) —
+  literary and warm. Used for **artwork titles on PDPs** (large, editorial,
+  centered), collection names, pull quotes, and page headings. This treatment
+  creates the contemplative, editorial pace that distinguishes Arthaus.
+- **Body/UI sans** (Inter / Söhne / Graphik direction), 16–18px, line-height
+  1.5–1.6. Editorial descriptions may set italic at ~15px.
+- **Monospace for specs** (IBM Plex Mono / JetBrains Mono) — material specs,
+  edition details, dimensions. When you see monospace, it's a verified fact.
+- All-caps only for very small labels (category tags, nav, trust badges),
+  letter-spacing 0.05–0.1em. Never all-caps headings or CTAs.
+- **The ARTHAUS wordmark** uses the spaced-letterform serif treatment,
+  consistent across all touchpoints.
 
 ## Layout
 
-Generous whitespace; minimal UI chrome; the art provides the visual energy.
-Grid layouts should feel like a curated gallery wall, not a search results
-page. Information is layered (progressive depth): first viewport = spatial fit
-and emotional resonance; scrolling reveals specs, artist story, companions.
+Generous whitespace at vision-PDP density — never compress content to reduce
+scroll depth. Grids feel like curated gallery walls with relaxed spacing.
+Information layers progressively: first viewport = spatial fit + emotional
+resonance; scrolling reveals specs, artist story, companions. Mobile is the
+primary design target (single vertical scroll, three-act PDP); desktop uses a
+two-column configure zone (sticky hero left, configuration right) and should
+feel *more* expansive, not more compressed.
 
 ## Elevation & Depth
 
-Flat to near-flat. Hairline borders and generous spacing do the separating
-work; shadows, if used, are barely perceptible. Nothing floats, pops, or
-demands attention.
+Flat to near-flat UI; hairline borders and spacing do the separating work.
+Physical depth belongs to the *photography*: the canonical hero treatment is
+the framed artwork shot at a slight angle with soft natural shadow on a warm
+parchment/linen surface — it reads as an object you want to own, not a flat
+file on a screen.
 
 ## Shapes
 
@@ -128,28 +153,39 @@ walls. No pills, no heavy rounding.
 
 ## Components
 
-- **Primary button:** bronze fill, soft-white label text, square corners — one
-  per viewport.
-- **Cards / product tiles:** white on soft-white, hairline separation, art
-  image dominant (in-room lifestyle shot as the default primary image, never a
-  flat isolated artwork).
-- **Collector badge/context:** deep-ink treatment appears only in the Easel
-  layer.
+- **Primary CTA:** charcoal fill, white text, full-width on mobile, 48–56px
+  height. Bronze is reserved for accent moments and focal links.
+- **Title divider:** the 40px × 1px bronze line centered beneath artwork
+  titles — the signature editorial mark.
+- **Sticky CTA bar (PDP):** appears when the user scrolls past the native Add
+  to Cart; slim (56–64px), semi-transparent warm parchment with a subtle top
+  border; dismisses when scrolling back up.
+- **Frame selectors:** real texture photography swatches (natural oak, black,
+  white, no frame) — never flat color circles.
+- **Material callout card:** subtle background, bold sans label, specs in
+  monospace.
+- **Trust badges:** four icons in a row (guarantee, shipping, sustainability,
+  authenticity), small sans labels.
+- **Collector context:** deep-ink treatment appears only in the Easel layer.
+- **Natural wood** (raw oak, light ash) recurs as a brand material across
+  frame photography, UI accents, and packaging — the tactile expression of
+  the archival-quality promise.
 - Motion: subtle and smooth. Nothing blinks or bounces.
 
 ## Do's and Don'ts
 
-- ✔ Show art in room context as the primary image — ✘ flat isolated art as
-  the default presentation.
-- ✔ Warm, natural, directional lighting (golden-hour window light) — ✘ cool,
-  clinical studio lighting.
-- ✔ Real, lived-in rooms with furniture, plants, books — ✘ bare staging or
-  minimalist voids.
-- ✔ Include a scale cue in every product image (sofa, chair, figure) — ✘ art
-  without size reference.
-- ✔ Neutral UI; the art carries the color — ✘ colored backgrounds or
-  competing graphics behind art.
-- ✔ Generous whitespace, calm layouts — ✘ cramming, flashing, or
-  attention-seeking UI.
-- ✔ Diverse room types and living situations — ✘ only unattainable
-  aspirational spaces.
+- ✔ Warm parchment backgrounds for editorial contexts — ✘ cool grays or
+  stark white as the primary canvas.
+- ✔ Framed art with natural shadow as the PDP hero — ✘ flat isolated product
+  images as primary presentation.
+- ✔ Lifestyle in-room images on collection/browse grids — ✘ flat art grids
+  without spatial context.
+- ✔ Editorial serif for artwork titles and collection names — ✘ sans-serif
+  artwork titles (loses the editorial character).
+- ✔ Warm, natural, directional lighting — ✘ cool clinical studio lighting.
+- ✔ Real, lived-in rooms with scale cues in every shot — ✘ bare staging or
+  art without size reference.
+- ✔ Vision-PDP whitespace density — ✘ compressing content to shorten the
+  scroll.
+- ✔ Real frame-texture swatches — ✘ flat color circles for frame options.
+- ✔ Diverse room types and living situations — ✘ only unattainable spaces.

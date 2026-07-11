@@ -13,6 +13,9 @@ import { chartOfferPerformance } from "../tools/offer-performance";
 import { proposeOffer } from "../tools/offer-design";
 import { reviewOfferExperiment } from "../tools/offer-review";
 import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
+import { brandSoulTools } from "../tools/brand-soul";
+import { getBrandInstructions } from "../brand/store";
+import { getTenant } from "../../../lib/tenant-context";
 
 /**
  * Marketing Agent
@@ -65,12 +68,25 @@ const baseMarketingTools = {
   proposeOffer,
   reviewOfferExperiment,
   ...semanticTools,
+  ...brandSoulTools,
   ...shopifyAdminTools,
   ...ga4Tools,
   ...metaAdsTools,
   dispatchToGithub: dispatchToGithubTool,
   prStatus: prStatusTool,
 };
+
+// Brand Soul context (spec 22 BS4/D5): the distilled brand.md front matter is
+// appended to instructions per request, TTL-cached. In this client-owned
+// deployment brand.md reads files-first from agents/brand/ (D1). Empty string
+// when no brand.md exists — never an error, never a blocked turn.
+async function brandContext(): Promise<string> {
+  try {
+    return await getBrandInstructions(getTenant().shop);
+  } catch {
+    return "";
+  }
+}
 
 const BASE_INSTRUCTIONS = `You are the Marketing OS agent for a Shopify store.
 
@@ -136,8 +152,8 @@ export const marketingAgent = new Agent({
   // Hosted: append connected external servers' usage instructions so the model
   // knows how to drive their tools; client-owned: static base instructions.
   instructions: HOSTED
-    ? async () => BASE_INSTRUCTIONS + (await getExternalMcpInstructions())
-    : BASE_INSTRUCTIONS,
+    ? async () => BASE_INSTRUCTIONS + (await getExternalMcpInstructions()) + (await brandContext())
+    : async () => BASE_INSTRUCTIONS + (await brandContext()),
   // Hosted: merge the tenant's enabled external MCP tools (spec 18) on top of
   // the native tools per request. A down/rate-limited server contributes no
   // tools and never fails the turn (see external-mcp.ts).

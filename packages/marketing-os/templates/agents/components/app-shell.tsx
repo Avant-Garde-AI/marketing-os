@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   MessageSquare,
   BookOpen,
+  Palette,
   Layers,
   Clock,
   PanelLeftClose,
@@ -27,6 +28,7 @@ import { createClient } from "@/lib/supabase/client";
 const NAV = [
   { label: "Overview", href: "/", icon: LayoutGrid },
   { label: "Chat", href: "/chat", icon: MessageSquare },
+  { label: "Brand", href: "/brand", icon: Palette },
   { label: "Playbooks", href: "/playbooks", icon: BookOpen },
   { label: "Surfaces", href: "/surfaces", icon: Layers },
   { label: "Activity", href: "/activity", icon: Clock },
@@ -65,7 +67,8 @@ export function AppShell({
   }
 
   // Login is the one full-editorial surface — no shell.
-  if (pathname.startsWith("/login")) return <>{children}</>;
+  // Bare surfaces: login and the public Brand Portal render without the rail.
+  if (pathname.startsWith("/login") || pathname.startsWith("/brand/")) return <>{children}</>;
 
   return (
     <div className="flex min-h-screen">

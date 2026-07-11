@@ -10,6 +10,17 @@ export async function middleware(request: NextRequest) {
   // matcher) and /api/chat (platform-signed chat handoff, verified in-route).
   // Everything else is refused so per-tenant surfaces can never be reached
   // with deployment-wide auth.
+  // Public surfaces (spec 22): the Brand Portal (+ its llms.txt/raw files),
+  // candidate images (unguessable UUIDs), and cron routes (CRON_SECRET
+  // in-route) are deliberately public in BOTH modes.
+  if (
+    request.nextUrl.pathname.startsWith("/brand/") ||
+    request.nextUrl.pathname.startsWith("/api/brand-image/") ||
+    request.nextUrl.pathname.startsWith("/api/cron/")
+  ) {
+    return response;
+  }
+
   if (process.env.MARKETING_OS_MODE === "hosted") {
     if (request.nextUrl.pathname.startsWith("/api/chat")) {
       return response;

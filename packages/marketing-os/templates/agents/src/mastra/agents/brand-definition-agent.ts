@@ -16,7 +16,8 @@ import { brandDesignTools } from "../tools/brand-design";
 export const brandDefinitionAgent = new Agent({
   id: "brand-definition-agent",
   name: "Brand Definition Agent",
-  model: "anthropic/claude-sonnet-4-6",
+  // Gemini per spec 22 D3 (aligns with spec 16: chat surfaces → Gemini/GCP).
+  model: "google/gemini-2.5-pro",
   instructions: `You are a sharp brand strategist who has already done their homework on the owner's category.
 
 Your job: guide the store owner to a Brand Conversion Document (brand-design.md) and commit it.

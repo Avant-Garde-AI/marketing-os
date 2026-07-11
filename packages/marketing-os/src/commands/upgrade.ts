@@ -87,6 +87,7 @@ const FILE_CATEGORIES = {
     "agents/.env.local",
     "agents/src/mastra/skills/*.ts",
     "agents/brand/**/*", // the store's Brand Soul manifest (spec 22 D1: files are truth)
+    "agents/config/**/*", // store-specific runtime config (offer surfaces, etc.)
     "marketing-os.config.json",
   ],
 };

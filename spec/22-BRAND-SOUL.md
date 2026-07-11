@@ -90,7 +90,7 @@ Visual identity (the guide's §7: palette, type, photography art direction) extr
 
 Format rules, inherited from DESIGN.md's conformance philosophy: canonical section order; unknown sections preserved, never errored; duplicate headings rejected; a linter with error/warning/info severities (`missing-essence`, `unowned-claim` — a token with no provenance tag, `stale-data-claim` — a data-derived claim past its freshness window, `broken-persona-ref`).
 
-**Provenance model (the open-source differentiator):** every front-matter claim carries an origin tag — `@owner` (stated by the human, highest authority), `@agent` (proposed by the definition agent, owner-approved), `@data` (derived from connected analytics/commerce, carries a freshness window and re-derivation query). The change log section records each version bump with who/what/why. This is what makes the document *trustworthy enough* to sit under every creative act.
+**Provenance model (the open-source differentiator):** every front-matter claim carries an origin tag — `@owner` (stated by the human, highest authority), `@agent` (proposed by the definition agent, owner-approved), `@data` (derived from the store's own connected analytics/commerce, carries a freshness window and re-derivation query), `@research` (externally researched — competitive/market claims carrying a citation and research date, produced by the definition pipeline's deep-research stage; stale research is re-runnable from the preserved brief). The change log section records each version bump with who/what/why. This is what makes the document *trustworthy enough* to sit under every creative act.
 
 **Open-sourcing:** the spec, linter, and a reference parser ship in this repo (`packages/brand-md/`), Apache 2.0, mirroring DESIGN.md's positioning — with an explicit compatibility note that `design_ref` points at a conforming DESIGN.md.
 
@@ -102,7 +102,17 @@ The Brand section produces **two portable artifacts**:
 
 The two cross-reference (`design_ref` / front-matter `description` pointing back). The BCD scorecard's "Visual & design system" category audits the live site against DESIGN.md; the brand categories audit against brand.md.
 
-## 4. The Brand section (console)
+## 4. The definition pipeline: compose → deep research → iterate
+
+How the Arthaus guide was *actually* produced — and therefore how the product must work. A brand soul isn't interviewed into existence from a blank slate; the real process had three stages, each now a pipeline stage:
+
+**Stage 1 — COMPOSE.** The agent drafts a *deep research brief* from the store's category, goals, and an initial owner interview. The brief is itself a governed artifact with a derived template (worked example: `packages/brand-md/examples/arthaus/research-brief.md`): Context & Objective (position hypothesis + persona sketch) → tiered competitive set (direct / adjacent / intent-adjacent) with five per-competitor dimensions (positioning & voice, target customer, product & merchandising, technology & discovery, acquisition & growth) → aesthetic-adjacent brand benchmarking (the brands shaping the persona's taste baseline, not just competitors) → one category-specific strategic deep-dive (Arthaus: gallery-wall bundling) → AI/discovery tech landscape → content-commerce models → paid acquisition landscape → supply-side dynamics → a **demanded output format** (landscape summary, competitor profiles, positioning map, whitespace analysis, risk assessment, tactical recommendations) that the distiller can parse. The owner reviews/edits the brief before dispatch — it's the research contract.
+
+**Stage 2 — RESEARCH.** Dispatch the brief to a deep-research agent. **Decision: wrap, don't build.** The Gemini Deep Research API is generally accessible (public preview, paid tier): `deep-research-preview-04-2026` (speed) and `deep-research-max-preview-04-2026` (comprehensiveness) via the now-GA Interactions API, priced at Gemini 3.1 Pro token rates — and it supports **MCP servers**, meaning the researcher can consult the store's own MCP/semantic layer mid-run (competitive claims grounded against our own numbers). This also stays inside the spec-16 Gemini/GCP decision — same key, same billing. Our differentiation is not the research harness; it's the **composer** (the brief template) and the **distiller** (below). A self-built Mastra multi-agent research harness (the BCD-audit pattern scaled up: planner → parallel searchers → synthesizer) remains the documented fallback if the preview API's limits bite — but it's not the starting point.
+
+**Stage 3 — ITERATE.** The distiller parses the research output into `@research`-tagged evidence (positioning map, whitespace, risks — each with citation + date), and the `brandDefinitionAgent` runs the strategy-iteration session Garrett described: research-grounded proposals walked through with the owner section by section, tension-surfacing where research contradicts the owner's hypothesis, converging on the owner-approved brand.md (+ DESIGN.md). The brief and the research output are both preserved as pipeline artifacts — re-running research from the same brief months later is how `@research` claims refresh.
+
+## 5. The Brand section (console)
 
 A new **top-level "Brand" section, near the top of the nav** (above Reports/Markets):
 - **Soul view** — brand.md rendered beautifully (editorial-at-edges, spec 13), each claim showing its provenance chip and version.
@@ -110,23 +120,23 @@ A new **top-level "Brand" section, near the top of the nav** (above Reports/Mark
 - **Design view** — DESIGN.md rendered with live token swatches; export/download both files (portability is the point).
 - **History** — version timeline with per-claim change attribution.
 
-## 5. The context engine
+## 6. The context engine
 
 brand.md is not a document that sits in a tab — it is **injected context**:
 - The hosted runtime loads the tenant's brand.md at request time and prepends a distilled brand context to every agent turn (same seam as the store-identity system message in `/api/chat` and the Store Analytics Context merge — this is the third leg: identity, metrics context, **brand soul**).
 - Skills declare what they read (spec 20): creative skills get voice + persona + guardrails; BCD gets everything; the design-loop gets DESIGN.md + guardrails.
 - `@data` claims re-derive on their freshness windows via the semantic layer — the soul stays current without human re-entry.
 
-## 6. Build phases
+## 7. Build phases
 
 - **BS0 — Format + seed — DONE 2026-07-10.** Ingested the Arthaus Brand Definition & Direction Guide v1.0; derived the v0 canonical sections + front-matter schema (§2 above); hand-authored `packages/brand-md/examples/arthaus/brand.md` + Google-conforming `DESIGN.md`. Note: the Arthaus source guide is CONFIDENTIAL and is NOT committed — the brand.md instance distills it; whether the Arthaus instance itself stays in the eventual OSS cut (vs. a fictionalized example brand) is an open question (#5).
 - **BS1 — Linter + parser** in `packages/brand-md/` (OSS scaffold, versioning + provenance rules).
-- **BS2 — Definition agent v2.** Point `brandDefinitionAgent` at the v0 format; add refine/diff/version-bump; surface in console chat + Slack.
+- **BS2 — Definition pipeline v2.** Point `brandDefinitionAgent` at the v0 format and give it the full §4 pipeline: brief composer (template from the Arthaus example), Gemini Deep Research dispatch (Interactions API, `deep-research-preview-04-2026`; `-max` for the initial definition run), research distiller (`@research` evidence), and the refine/diff/version-bump iteration session. Surface in console chat + Slack.
 - **BS3 — Brand console section** (Soul/Define/Design/History views, top-of-nav).
 - **BS4 — Context engine.** Per-turn brand context injection in the hosted runtime; skill-level read declarations; `@data` freshness re-derivation.
 - **BS5 — Open-source cut.** Spec doc + linter + examples published; provenance/versioning positioned as the extension DESIGN.md alpha lacks.
 
-## 7. Open questions
+## 8. Open questions
 
 1. **Distillation** — the full brand.md may be large; what's the per-turn distilled form (front matter only? per-skill sections?) and who maintains the distillation?
 2. **Authority conflicts** — when `@data` contradicts `@owner` (e.g. the stated persona isn't who actually buys), the agent should *surface* the tension in a refine session, never silently rewrite. Encode as a linter rule or agent behavior?

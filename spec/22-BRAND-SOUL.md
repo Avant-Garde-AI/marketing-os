@@ -154,6 +154,8 @@ brand.md is not a document that sits in a tab — it is **injected context**:
 
 ## 7. Build phases
 
+> **Build status 2026-07-10:** BS1 ✅ · BS2 ✅ (tools + playbook; full guided-session UX iterates from here) · BS2b prompt-pack composer ✅ via playbook (generation fan-out + gallery pending) · BS3 pending · BS4 ✅ · BS5 pending. Arthaus manifest seeded (4 docs v1) and live: distilled brand context (4.4KB) injects into both chat lanes; manifest tools + Deep Research dispatch deployed (HA 54f3b8d; deep research not yet exercised on a real run). Validated via two live turns in #arthaus (200, 0 errors).
+
 - **BS0 — Format + seed — DONE 2026-07-10.** Ingested the Arthaus Brand Definition & Direction Guide v1.0; derived the v0 canonical sections + front-matter schema (§2 above); hand-authored `packages/brand-md/examples/arthaus/brand.md` + Google-conforming `DESIGN.md`. Note: the Arthaus source guide is CONFIDENTIAL and is NOT committed — the brand.md instance distills it; whether the Arthaus instance itself stays in the eventual OSS cut (vs. a fictionalized example brand) is an open question (#5).
 - **BS1 — Linter + parser** in `packages/brand-md/` (OSS scaffold, versioning + provenance rules).
 - **BS2 — Definition pipeline v2.** Point `brandDefinitionAgent` at the v0 format and give it the full §4 pipeline: brief composer (template from the Arthaus example), Gemini Deep Research dispatch (Interactions API, `deep-research-preview-04-2026`; `-max` for the initial definition run), research distiller (`@research` evidence), and the refine/diff/version-bump iteration session. Surface in console chat + Slack.

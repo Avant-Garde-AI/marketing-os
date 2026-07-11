@@ -162,9 +162,17 @@ brand.md is not a document that sits in a tab — it is **injected context**:
 - **BS4 — Context engine.** Per-turn brand context injection in the hosted runtime; skill-level read declarations; `@data` freshness re-derivation.
 - **BS5 — Open-source cut.** Spec doc + linter + examples published; provenance/versioning positioned as the extension DESIGN.md alpha lacks.
 
-## 8. Open questions
+## 8. Decisions (Garrett, 2026-07-10)
 
-1. **Distillation** — the full brand.md may be large; what's the per-turn distilled form (front matter only? per-skill sections?) and who maintains the distillation?
+- **D1 — Manifest storage: the platform-managed store repo + DB index.** The hosted platform already creates and manages a per-store GitHub repo on sync (spec 11), used until the customer ejects. The manifest artifacts (research-brief.md, brand.md, DESIGN.md, design-exploration-prompts.md + captures) live there as files — canonical, git-versioned, eject-ready by construction. A `mos_brand_documents` DB table indexes them (tenant, artifact kind, version, provenance metadata, distilled context) for fast console reads, context-engine loads, and provenance queries. Files are truth; DB is the index.
+- **D2 — Candidate gallery: Slack-first quick pass, console for the deep session.** Stage-4 candidates post to Slack as branded image cards with selection buttons (the spec-17 approval-card pattern); the console Brand section hosts the full-gallery deep review.
+- **D3 — Definition agent runs on Gemini**, aligning with spec 16 (chat surfaces → Gemini/GCP). The v1 agent's Claude Sonnet model is replaced; no spec-16 exception.
+- **D4 — Deep research is an async job**: fire the Interactions-API run, poll from cron, post to Slack on completion (the scheduled-reports shape).
+- **D5 — Per-turn distillation: front matter only** (~2–3KB — voice, ai_voice_rules, copy formulas, guardrails, tone table). Prose sections load on demand via a tool when an agent needs depth.
+
+## 9. Open questions
+
+1. ~~**Distillation**~~ — resolved by D5 (front matter only per-turn; prose on demand).
 2. **Authority conflicts** — when `@data` contradicts `@owner` (e.g. the stated persona isn't who actually buys), the agent should *surface* the tension in a refine session, never silently rewrite. Encode as a linter rule or agent behavior?
 3. **NeuroGraph coupling** — persona claims can reference PDO personas (`neurograph_ref`); how hard should the format depend on it vs. degrade gracefully?
 4. **Multi-brand stores** — one brand.md per store for v0; sub-brands later? (The Arthaus guide's §10 Brand Architecture suggests the v0 answer: one brand.md, with per-surface voice registers inside it — Marketplace/Easel/Academy are registers of one voice, not separate brands.)

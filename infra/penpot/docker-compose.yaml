@@ -1,0 +1,175 @@
+# Marketing OS — Design Surfaces (spec 23) — managed Penpot stack
+#
+# DS0 spike configuration: local single-instance, dev-grade auth, pinned version.
+# Derived from upstream docker/images/docker-compose.yaml (kept verbatim as
+# docker-compose.upstream.yaml for diffing on upgrades — spec 23 §8).
+#
+# Version pinning (spec 23 §8): bump PENPOT_VERSION deliberately; run the canary
+# suite (packages/design-surfaces) against the candidate before adopting.
+#
+# FLAGS — two documented sets:
+#   DS0/local (this file):
+#     enable-prepl-server        service-account + admin ops via manage.py/prepl
+#     enable-access-tokens       RPC auth for the design-surfaces adapter
+#     enable-backend-api-doc     live OpenAPI at /api/openapi for the canary suite
+#     enable-registration        bootstrap only — how the service account is born locally
+#     enable-login-with-password service account logs in programmatically
+#     disable-email-verification local only
+#     disable-secure-session-cookies local only (no TLS)
+#     enable-mcp                 the managed MCP lane (DS5)
+#   PRODUCTION (spec 23 §3 lockdown — apply before any real tenant):
+#     disable-registration disable-email-verification→enable, enable-secure-session-cookies,
+#     enable-login-with-oidc (platform IdP), login-with-password kept ONLY for the
+#     service account path (spec 23 §3 session minting), enable-access-tokens,
+#     enable-prepl-server bound to internal network only, enable-mcp, enable-webhooks.
+#
+# Production hosting is NOT this file — see docs/plans/design-surfaces/REVISIT.md.
+
+x-flags: &penpot-flags
+  PENPOT_FLAGS: >-
+    enable-prepl-server
+    enable-access-tokens
+    enable-backend-api-doc
+    enable-registration
+    enable-login-with-password
+    disable-email-verification
+    disable-secure-session-cookies
+    enable-mcp
+    enable-webhooks
+    disable-onboarding
+    disable-telemetry
+
+x-uri: &penpot-public-uri
+  PENPOT_PUBLIC_URI: http://localhost:9001
+
+x-body-size: &penpot-http-body-size
+  PENPOT_HTTP_SERVER_MAX_BODY_SIZE: 367001600
+  PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: 367001600
+
+x-secret-key: &penpot-secret-key
+  # Local dev key only. Production: 512-bit random, injected from secret store.
+  PENPOT_SECRET_KEY: mos-ds0-local-dev-secret-key-not-for-production
+
+networks:
+  penpot:
+
+volumes:
+  penpot_postgres_v15:
+  penpot_assets:
+
+services:
+  penpot-frontend:
+    image: "penpotapp/frontend:${PENPOT_VERSION:-2.16}"
+    restart: always
+    ports:
+      - 9001:8080
+    volumes:
+      - penpot_assets:/opt/data/assets
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+      - penpot-mcp
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-flags, *penpot-http-body-size, *penpot-public-uri]
+
+  penpot-backend:
+    image: "penpotapp/backend:${PENPOT_VERSION:-2.16}"
+    restart: always
+    ports:
+      # prepl exposed on localhost only, for scripts/penpot/* service-account ops.
+      # PRODUCTION: never publish this port; internal network only.
+      - 127.0.0.1:6063:6063
+    volumes:
+      - penpot_assets:/opt/data/assets
+    depends_on:
+      penpot-postgres:
+        condition: service_healthy
+      penpot-valkey:
+        condition: service_healthy
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-flags, *penpot-public-uri, *penpot-http-body-size, *penpot-secret-key]
+      PENPOT_DATABASE_URI: postgresql://penpot-postgres/penpot
+      PENPOT_DATABASE_USERNAME: penpot
+      PENPOT_DATABASE_PASSWORD: penpot
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+      PENPOT_OBJECTS_STORAGE_BACKEND: fs
+      PENPOT_OBJECTS_STORAGE_FS_DIRECTORY: /opt/data/assets
+      PENPOT_TELEMETRY_ENABLED: "false"
+      PENPOT_PREPL_HOST: 0.0.0.0
+      PENPOT_SMTP_DEFAULT_FROM: no-reply@localhost
+      PENPOT_SMTP_DEFAULT_REPLY_TO: no-reply@localhost
+      PENPOT_SMTP_HOST: penpot-mailcatch
+      PENPOT_SMTP_PORT: 1025
+      PENPOT_SMTP_TLS: "false"
+      PENPOT_SMTP_SSL: "false"
+
+  penpot-mcp:
+    image: "penpotapp/mcp:${PENPOT_VERSION:-2.16}"
+    restart: always
+    networks:
+      - penpot
+
+  penpot-exporter:
+    image: "penpotapp/exporter:${PENPOT_VERSION:-2.16}"
+    restart: always
+    depends_on:
+      penpot-valkey:
+        condition: service_healthy
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-secret-key]
+      # The exporter's Chromium navigates to PUBLIC_URI/render.html — inside
+      # the compose network that must be the internal frontend, not the
+      # host-published localhost:9001 (unreachable from the container).
+      PENPOT_PUBLIC_URI: http://penpot-frontend:8080
+      PENPOT_INTERNAL_URI: http://penpot-frontend:8080
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+
+  penpot-postgres:
+    image: "postgres:15"
+    restart: always
+    stop_signal: SIGINT
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penpot"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+      start_period: 2s
+    volumes:
+      - penpot_postgres_v15:/var/lib/postgresql/data
+    networks:
+      - penpot
+    environment:
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - POSTGRES_DB=penpot
+      - POSTGRES_USER=penpot
+      - POSTGRES_PASSWORD=penpot
+
+  penpot-valkey:
+    image: valkey/valkey:8.1
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - penpot
+    environment:
+      - VALKEY_EXTRA_FLAGS=--maxmemory 128mb --maxmemory-policy volatile-lfu
+
+  penpot-mailcatch:
+    image: sj26/mailcatcher:latest
+    restart: always
+    expose:
+      - '1025'
+    ports:
+      - "1080:1080"
+    networks:
+      - penpot

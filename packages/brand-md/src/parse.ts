@@ -4,25 +4,24 @@ import type { BrandDocument, BrandFrontMatter, BrandSection } from "./types";
 const FRONT_MATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 /**
- * Parse a brand.md document: YAML front matter + `##` sections.
- * The raw front-matter source is preserved (provenance lives in YAML comments).
- * Throws on missing/invalid front matter — a brand.md without a soul is not a
- * brand.md. Section-level problems are the linter's job, not the parser's.
+ * Parse a front-matter markdown document: YAML front matter + `##` sections.
+ * Shared by brand.md (the soul) and DESIGN.md (the body) — both are the same
+ * physical format. `docName` labels error messages only.
  */
-export function parseBrandMd(raw: string): BrandDocument {
+export function parseFrontMatterDocument(raw: string, docName = "brand.md"): BrandDocument {
   const m = raw.match(FRONT_MATTER_RE);
-  if (!m) throw new Error("brand.md: missing YAML front matter (--- ... ---)");
+  if (!m) throw new Error(`${docName}: missing YAML front matter (--- ... ---)`);
   const frontMatterRaw = m[1];
   let frontMatter: BrandFrontMatter;
   try {
     frontMatter = parseYaml(frontMatterRaw) as BrandFrontMatter;
   } catch (e) {
-    throw new Error(`brand.md: invalid front matter YAML: ${e instanceof Error ? e.message : e}`);
+    throw new Error(`${docName}: invalid front matter YAML: ${e instanceof Error ? e.message : e}`);
   }
   if (!frontMatter || typeof frontMatter !== "object") {
-    throw new Error("brand.md: front matter is not a mapping");
+    throw new Error(`${docName}: front matter is not a mapping`);
   }
-  if (!frontMatter.name) throw new Error("brand.md: front matter `name` is required");
+  if (!frontMatter.name) throw new Error(`${docName}: front matter \`name\` is required`);
 
   const body = raw.slice(m[0].length);
   const sections: BrandSection[] = [];
@@ -37,6 +36,16 @@ export function parseBrandMd(raw: string): BrandDocument {
     sections.push({ heading: marks[i].heading, body: body.slice(marks[i].contentStart, end).trim() });
   }
   return { frontMatter, frontMatterRaw, sections, raw };
+}
+
+/**
+ * Parse a brand.md document: YAML front matter + `##` sections.
+ * The raw front-matter source is preserved (provenance lives in YAML comments).
+ * Throws on missing/invalid front matter — a brand.md without a soul is not a
+ * brand.md. Section-level problems are the linter's job, not the parser's.
+ */
+export function parseBrandMd(raw: string): BrandDocument {
+  return parseFrontMatterDocument(raw, "brand.md");
 }
 
 /**

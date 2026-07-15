@@ -1,0 +1,46 @@
+{
+  "name": "@avant-garde/design-surfaces",
+  "version": "0.1.0",
+  "description": "Design Surface layer (spec 23): Penpot adapter over the safe RPC set, file-first compose lane via @penpot/library, server-side export, tenant provisioning, and the canary conformance suite",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "design-surfaces": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:canary": "PENPOT_CANARY=1 vitest run test/canary.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@penpot/library": "^1.2.0-RC2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "tsx": "^4.7.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0",
+    "@avant-garde/brand-md": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/design-surfaces"
+  }
+}

@@ -13,10 +13,14 @@ export async function middleware(request: NextRequest) {
   // Public surfaces (spec 22): the Brand Portal (+ its llms.txt/raw files),
   // candidate images (unguessable UUIDs), and cron routes (CRON_SECRET
   // in-route) are deliberately public in BOTH modes.
+  // Design-surface exports (spec 23 §6): renders addressed by unguessable
+  // Penpot file/page UUIDs, same access model as brand-image — Slack blocks
+  // and the console fetch them directly.
   if (
     request.nextUrl.pathname.startsWith("/brand/") ||
     request.nextUrl.pathname.startsWith("/api/brand-image/") ||
-    request.nextUrl.pathname.startsWith("/api/cron/")
+    request.nextUrl.pathname.startsWith("/api/cron/") ||
+    request.nextUrl.pathname.startsWith("/api/design-surfaces/export/")
   ) {
     return response;
   }

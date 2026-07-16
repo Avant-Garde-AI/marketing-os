@@ -14,6 +14,7 @@ import { proposeOffer } from "../tools/offer-design";
 import { reviewOfferExperiment } from "../tools/offer-review";
 import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
 import { brandSoulTools } from "../tools/brand-soul";
+import { designSurfaceTools } from "../tools/design-surfaces";
 import { getBrandInstructions } from "../brand/store";
 import { getTenant } from "../../../lib/tenant-context";
 
@@ -69,6 +70,7 @@ const baseMarketingTools = {
   reviewOfferExperiment,
   ...semanticTools,
   ...brandSoulTools,
+  ...designSurfaceTools,
   ...shopifyAdminTools,
   ...ga4Tools,
   ...metaAdsTools,

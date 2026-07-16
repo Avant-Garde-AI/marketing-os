@@ -12,6 +12,28 @@
 - **Proof** — `scripts/demo-arthaus.ts`: real Arthaus DESIGN.md → tokens → composed IG post → editable Penpot file in tenant-arthaus → on-brand PNG (Lora headline, bronze eyebrow, ink band). `arthaus-demo-post.png`.
 - **SM0 scaffold** — `packages/skills/social-media` (artifact formats + planning read tools).
 
+## Tranche 2 status (2026-07-16)
+
+**Hosted runtime WIRED + DEPLOYED** (marketing-os-hosted-agents 98d95f4 + 97e6170):
+design-surfaces core + DTCG compiler vendored into `lib/design-surfaces/`
+(npm publish blocked — swap for the published packages when Garrett runs
+`npm login`); agent tools `compose_design_surface` / `export_design_surface` /
+`list_design_surfaces` merged into the marketing agent (DESIGN.md → tokens
+auto-loaded per tenant); `/api/design-surfaces/export/[fileId]` serves renders
+(exempted from the hosted 403 guard, brand-image access model); tenant teams
+provision idempotently on first use (tenant = team). Verified live against
+production Penpot via `scripts/verify-design-surfaces.ts`. PENPOT_* env set on
+Vercel production.
+
+**Still open in tranche 2:** onboarding-time provisioning in marketing-os-app
+(currently provision-on-first-use only); `mos_design_surfaces` persistence
+(tools return live Penpot ids; the DB index stays unapplied until the console
+needs it); social skill runtime enable (SocialRepo binding); template v0.14.0
++ the Arthaus upgrade PR; **human end-to-end validation** — ask the agent in
+console/Slack chat to "draft an Instagram post" and confirm the tool fires,
+the edit link opens, and the export renders in chat (the spec-18-E4-style
+"take a look" step).
+
 ## Findings that must feed back into spec 23
 
 1. **`/api/export` protocol is session-authed, not token-authed.** The exporter's

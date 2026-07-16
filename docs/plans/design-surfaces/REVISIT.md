@@ -23,7 +23,12 @@ auto-loaded per tenant); `/api/design-surfaces/export/[fileId]` serves renders
 (exempted from the hosted 403 guard, brand-image access model); tenant teams
 provision idempotently on first use (tenant = team). Verified live against
 production Penpot via `scripts/verify-design-surfaces.ts`. PENPOT_* env set on
-Vercel production.
+Vercel production. **DEPLOYED + VERIFIED LIVE 2026-07-16** (dpl_BxaBAS9nK…):
+`/api/design-surfaces/export/{fileId}` on marketing-os-hosted-agents.vercel.app
+returns HTTP 200 image/png rendered by the GCE exporter — the full chain
+Vercel → design.avant-garde.ai → PNG works in production. NB: this repo does
+NOT auto-deploy from git — deploys are `vercel deploy --prod` from a verified
+checkout (deploy-source-verification practice).
 
 **Still open in tranche 2:** onboarding-time provisioning in marketing-os-app
 (currently provision-on-first-use only); `mos_design_surfaces` persistence

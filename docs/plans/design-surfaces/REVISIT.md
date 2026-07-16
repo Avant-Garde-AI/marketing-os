@@ -47,12 +47,31 @@
 
 ## Parked / deferred (needs discussion)
 
-1. **Production Penpot hosting.** The compose stack runs anywhere Docker runs,
-   but NOT on Vercel — this is the platform's first always-on stateful service.
-   Options: Fly.io / Railway / a small VM + the official Helm chart. Sizing
-   guidance: 4 CPU / 16 GB reaches "thousands of users". Needs a decision
-   before any real tenant touches DS4 (embedded canvas needs a stable domain
-   for the proxy-alias scheme). **Blocking for production, not for dev.**
+1. **Production Penpot hosting — ✅ RESOLVED 2026-07-16 (Garrett: GCE).**
+   LIVE at **https://design.avant-garde.ai** — GCE `penpot-design`
+   (avant-garde-platform, us-central1-a, e2-standard-2, static IP
+   34.133.193.251, 80GB pd-balanced, nightly snapshots ×14d), DNS A record in
+   the axon-platform `avant-garde` Cloud DNS zone, Caddy auto-TLS, prod flag
+   set LOCKED (registration disabled post-bootstrap), deployed via
+   `infra/penpot/deploy.sh`. **Production canary 6/6 green**; the Arthaus demo
+   ran against prod with a byte-identical export (deterministic compose).
+   `tenant-arthaus` provisioned. Residual items:
+   - Secrets: service-account token+password currently on the VM `.env` + the
+     dev Mac (`~/.mos-penpot-prod-*`) + Vercel env — move to Vault as the
+     canonical home; rotate when done.
+   - **No SMTP provider** — team invitations don't actually email (mailcatcher
+     only, tunnel to :1080 to read). Needed before inviting real merchant
+     users. Also `svc@marketing-os.internal` is a non-routable address by
+     design.
+   - CI/CD: deploys are `deploy.sh` from a workstation; a GitHub Action doing
+     the same on infra/penpot changes is the natural next step.
+   - e2-standard-2 (2 vCPU/8GB) — resize to e2-standard-4 if exporter load
+     shows; watch memory.
+   - **npm publish still blocked** — `npm whoami` is 401 on this machine;
+     hosted-agents consumes the design-surfaces core VENDORED into
+     `lib/design-surfaces/` until Garrett runs `npm login` and we publish
+     @avant-garde/design-surfaces + brand-md, then swap the vendor for the
+     dependency.
 2. **DS4 embedded canvas (iframe) not started this run.** D2 says iframe-first;
    the per-tenant proxy alias + frame-ancestors injection needs the production
    domain topology (item 1) and the console repo. The full-window fallback and

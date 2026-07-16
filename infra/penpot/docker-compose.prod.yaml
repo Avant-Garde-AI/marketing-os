@@ -1,0 +1,164 @@
+# Marketing OS — managed Penpot, PRODUCTION (spec 23 §3)
+#
+# Runs on GCE: project avant-garde-platform, vm penpot-design (us-central1-a),
+# static IP 34.133.193.251, https://design.avant-garde.ai (Caddy auto-TLS).
+# Deployed by infra/penpot/deploy.sh; secrets live ONLY in /opt/penpot/.env on
+# the VM (never in git). See README.md for the runbook.
+#
+# Differences from the local DS0 stack (docker-compose.yaml):
+#   - Caddy terminates TLS on 80/443; the frontend is NOT host-published.
+#   - PENPOT_FLAGS comes from .env so registration can be flipped off after
+#     the one-time service-account bootstrap without editing this file.
+#   - Secret key + public URI from .env.
+#   - Caddy is where DS4's per-tenant frame-ancestors injection will live.
+
+x-uri: &penpot-public-uri
+  PENPOT_PUBLIC_URI: ${PENPOT_PUBLIC_URI:-https://design.avant-garde.ai}
+
+x-flags: &penpot-flags
+  # Bootstrap set (first boot): includes enable-registration.
+  # Steady state: deploy.sh flips PENPOT_FLAGS in .env to the locked set
+  # (disable-registration) after the service account exists.
+  PENPOT_FLAGS: ${PENPOT_FLAGS}
+
+x-body-size: &penpot-http-body-size
+  PENPOT_HTTP_SERVER_MAX_BODY_SIZE: 367001600
+  PENPOT_HTTP_SERVER_MAX_MULTIPART_BODY_SIZE: 367001600
+
+x-secret-key: &penpot-secret-key
+  PENPOT_SECRET_KEY: ${PENPOT_SECRET_KEY}
+
+networks:
+  penpot:
+
+volumes:
+  penpot_postgres_v15:
+  penpot_assets:
+  caddy_data:
+  caddy_config:
+
+services:
+  caddy:
+    image: caddy:2
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - penpot
+    depends_on:
+      - penpot-frontend
+
+  penpot-frontend:
+    image: "penpotapp/frontend:${PENPOT_VERSION:-2.16}"
+    restart: always
+    volumes:
+      - penpot_assets:/opt/data/assets
+    depends_on:
+      - penpot-backend
+      - penpot-exporter
+      - penpot-mcp
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-flags, *penpot-http-body-size, *penpot-public-uri]
+
+  penpot-backend:
+    image: "penpotapp/backend:${PENPOT_VERSION:-2.16}"
+    restart: always
+    volumes:
+      - penpot_assets:/opt/data/assets
+    depends_on:
+      penpot-postgres:
+        condition: service_healthy
+      penpot-valkey:
+        condition: service_healthy
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-flags, *penpot-public-uri, *penpot-http-body-size, *penpot-secret-key]
+      PENPOT_DATABASE_URI: postgresql://penpot-postgres/penpot
+      PENPOT_DATABASE_USERNAME: penpot
+      PENPOT_DATABASE_PASSWORD: penpot
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+      PENPOT_OBJECTS_STORAGE_BACKEND: fs
+      PENPOT_OBJECTS_STORAGE_FS_DIRECTORY: /opt/data/assets
+      PENPOT_TELEMETRY_ENABLED: "false"
+      # prepl stays UNPUBLISHED in production (docker-network only).
+      PENPOT_PREPL_HOST: 0.0.0.0
+      PENPOT_SMTP_DEFAULT_FROM: no-reply@avant-garde.ai
+      PENPOT_SMTP_DEFAULT_REPLY_TO: no-reply@avant-garde.ai
+      # No SMTP provider yet — invitations don't email (REVISIT). Mailcatcher
+      # kept so sent mail is inspectable via SSH tunnel to :1080.
+      PENPOT_SMTP_HOST: penpot-mailcatch
+      PENPOT_SMTP_PORT: 1025
+      PENPOT_SMTP_TLS: "false"
+      PENPOT_SMTP_SSL: "false"
+
+  penpot-mcp:
+    image: "penpotapp/mcp:${PENPOT_VERSION:-2.16}"
+    restart: always
+    networks:
+      - penpot
+
+  penpot-exporter:
+    image: "penpotapp/exporter:${PENPOT_VERSION:-2.16}"
+    restart: always
+    depends_on:
+      penpot-valkey:
+        condition: service_healthy
+    networks:
+      - penpot
+    environment:
+      << : [*penpot-secret-key]
+      # Exporter Chromium must reach the frontend on the docker network — the
+      # adapter rewrites returned asset URIs to the public origin.
+      PENPOT_PUBLIC_URI: http://penpot-frontend:8080
+      PENPOT_INTERNAL_URI: http://penpot-frontend:8080
+      PENPOT_REDIS_URI: redis://penpot-valkey/0
+
+  penpot-postgres:
+    image: "postgres:15"
+    restart: always
+    stop_signal: SIGINT
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U penpot"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+      start_period: 2s
+    volumes:
+      - penpot_postgres_v15:/var/lib/postgresql/data
+    networks:
+      - penpot
+    environment:
+      - POSTGRES_INITDB_ARGS=--data-checksums
+      - POSTGRES_DB=penpot
+      - POSTGRES_USER=penpot
+      - POSTGRES_PASSWORD=penpot
+
+  penpot-valkey:
+    image: valkey/valkey:8.1
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+    networks:
+      - penpot
+    environment:
+      - VALKEY_EXTRA_FLAGS=--maxmemory 128mb --maxmemory-policy volatile-lfu
+
+  penpot-mailcatch:
+    image: sj26/mailcatcher:latest
+    restart: always
+    expose:
+      - '1025'
+    networks:
+      - penpot

@@ -1,0 +1,11 @@
+# Caddy front for the managed Penpot instance (auto-TLS via Let's Encrypt).
+#
+# DS4 note (spec 23 §3 D2): this proxy is where per-tenant embedding lands —
+# a site block per tenant console domain alias that strips X-Frame-Options and
+# injects `Content-Security-Policy: frame-ancestors <tenant console origin>`.
+# Until DS4, the default same-origin behavior stands.
+
+design.avant-garde.ai {
+	encode gzip
+	reverse_proxy penpot-frontend:8080
+}

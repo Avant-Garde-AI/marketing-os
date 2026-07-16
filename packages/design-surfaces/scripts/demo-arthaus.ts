@@ -101,4 +101,4 @@ const artifact = await exportSurface(adapter, {
 const out = join(here, "../arthaus-demo-post.png");
 writeFileSync(out, artifact.data);
 console.log(`exported ${artifact.data.length} bytes → ${out} (sha256 ${artifact.sha256.slice(0, 12)}…)`);
-console.log(`open in Penpot: http://localhost:9001/#/workspace?team-id=${team.id}&file-id=${surface.penpot.fileId}&page-id=${surface.penpot.pageId}`);
+console.log(`open in Penpot: ${process.env.PENPOT_URL ?? "http://localhost:9001"}/#/workspace?team-id=${team.id}&file-id=${surface.penpot.fileId}&page-id=${surface.penpot.pageId}`);

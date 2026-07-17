@@ -1,7 +1,7 @@
 {
-  "name": "@avant-garde/skill-social-media",
+  "name": "@avant-garde/skill-kit",
   "version": "0.1.0",
-  "description": "Social Media Agent skill pack (spec 24, SM0): social/ artifact formats (strategy, calendar, post) + ungated planning read tools. No publishing, no Actions — those land in SM2 on the spec 20 framework.",
+  "description": "Shared library for Marketing OS skill packs (05-AGENT-LIBRARY-HARDENING H6): the StoreRepo seam, SkillToolDefinition, YAML-front-matter document helpers, provenance types, and the spec 20 Action contract types.",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -11,8 +11,7 @@
     }
   },
   "files": [
-    "dist",
-    "instructions.md"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
@@ -22,7 +21,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@avant-garde/skill-kit": "workspace:*",
     "yaml": "^2.4.0",
     "zod": "^3.25.0"
   },
@@ -38,6 +36,6 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/Avant-Garde-AI/marketing-os",
-    "directory": "packages/skills/social-media"
+    "directory": "packages/skill-kit"
   }
 }

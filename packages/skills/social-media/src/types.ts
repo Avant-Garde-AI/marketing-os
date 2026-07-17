@@ -13,18 +13,15 @@
  * front-matter split, prose body preserved verbatim for round-trips.
  */
 
-import type { z } from "zod";
+import type { ProvenanceClaim, StoreRepo } from "@avant-garde/skill-kit";
 
 // ---------------------------------------------------------------------------
 // Provenance (spec 24 §1 — post claims carry origin like every brand claim)
+// Canonical types live in @avant-garde/skill-kit (05 H6); re-exported here so
+// existing consumers keep importing from the pack.
 // ---------------------------------------------------------------------------
 
-export type ProvenanceOrigin = "owner" | "agent" | "data";
-
-export interface ProvenanceClaim {
-  claim: string;
-  origin: ProvenanceOrigin;
-}
+export type { ProvenanceOrigin, ProvenanceClaim } from "@avant-garde/skill-kit";
 
 // ---------------------------------------------------------------------------
 // social/strategy.md
@@ -134,39 +131,19 @@ export interface SocialPost {
 // ---------------------------------------------------------------------------
 
 /**
- * Minimal accessor over the tenant's store repo. The hosted runtime binds it
- * to the store's git repo (GitHub contents API, local checkout, …); tests bind
- * it to an in-memory map. Paths are repo-relative (e.g. "social/strategy.md").
+ * Minimal accessor over the tenant's store repo — now the shared `StoreRepo`
+ * seam from @avant-garde/skill-kit (05 H6: one binding implementation in the
+ * hosted runtime serves every pack). `SocialRepo` remains as the pack-local
+ * alias so existing consumers compile unchanged.
  *
  * `writeFile` exists on the interface for SM1+ (asset pipeline) and so a
  * single binding serves the whole pack's lifecycle — the SM0 read tools never
  * call it.
  */
-export interface SocialRepo {
-  readFile(path: string): Promise<string | null>;
-  writeFile(path: string, content: string): Promise<void>;
-  list(prefix: string): Promise<string[]>;
-}
+export type SocialRepo = StoreRepo;
 
 // ---------------------------------------------------------------------------
-// Tool definition shape
+// Tool definition shape — canonical in @avant-garde/skill-kit, re-exported.
 // ---------------------------------------------------------------------------
 
-/**
- * Plain tool definition — deliberately NOT a Mastra `createTool` instance.
- * This package stays free of @mastra/core so the hosted runtime (which owns
- * the Mastra version) wraps these at merge time:
- *
- *   createTool({ id, description, inputSchema, outputSchema,
- *                execute: ({ context }) => def.execute(context) })
- */
-export interface SkillToolDefinition<
-  I extends z.ZodTypeAny = z.ZodTypeAny,
-  O extends z.ZodTypeAny = z.ZodTypeAny,
-> {
-  id: string;
-  description: string;
-  inputSchema: I;
-  outputSchema: O;
-  execute: (input: z.infer<I>) => Promise<z.infer<O>>;
-}
+export type { SkillToolDefinition } from "@avant-garde/skill-kit";

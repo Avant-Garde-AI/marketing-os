@@ -19,6 +19,9 @@ import {
   Layers,
   PenTool,
   CalendarDays,
+  CalendarRange,
+  Mail,
+  Blocks,
   Clock,
   PanelLeftClose,
   PanelLeftOpen,
@@ -32,9 +35,12 @@ const NAV = [
   { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Brand", href: "/brand", icon: Palette },
   { label: "Playbooks", href: "/playbooks", icon: BookOpen },
+  { label: "Calendar", href: "/calendar", icon: CalendarRange },
+  { label: "Email", href: "/email", icon: Mail },
   { label: "Surfaces", href: "/surfaces", icon: Layers },
   { label: "Design Studio", href: "/studio", icon: PenTool },
   { label: "Social", href: "/social", icon: CalendarDays },
+  { label: "Skills", href: "/skills", icon: Blocks },
   { label: "Activity", href: "/activity", icon: Clock },
 ];
 

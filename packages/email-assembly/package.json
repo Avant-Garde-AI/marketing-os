@@ -1,0 +1,41 @@
+{
+  "name": "@avant-garde/email-assembly",
+  "version": "0.1.0",
+  "description": "Email Campaign Agent's HTML seam (docs/email-campaign-agent/04): skeleton extraction/sanitization from a store's reference Klaviyo templates, and the pure, deterministic assembleEmail(skeleton, sections, copy, tokens) → email.html pipeline with mechanical invariants. Never talks to Klaviyo or Penpot.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "htmlparser2": "^9.1.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/email-assembly"
+  }
+}

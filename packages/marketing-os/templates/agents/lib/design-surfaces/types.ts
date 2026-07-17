@@ -1,8 +1,9 @@
 /**
- * Vendored from marketing-os packages/design-surfaces @ 2026-07-16 — npm
- * publish blocked (no auth); replace with @avant-garde/design-surfaces when
- * published. Do not edit here without porting back.
- *
+ * Vendored from marketing-os packages/design-surfaces @ 2026-07-17 (multi-board
+ * WS2-R1) — replace with @avant-garde/design-surfaces when published.
+ * Do not edit here without porting back.
+ */
+/**
  * Design Surface layer types — spec 23 §2.
  *
  * The layer is domain-agnostic by rule: `kind` and `boundTo` are opaque
@@ -100,16 +101,49 @@ export type ComposeElement =
  * by @avant-garde/brand-md's compiler. Embedded verbatim via addTokensLib. */
 export type DtcgTokens = Record<string, unknown>;
 
+/**
+ * One board of a composed surface, owning its elements (WS2-R1 multi-board).
+ *
+ * Element coordinates are BOARD-RELATIVE: (0,0) is the board's own top-left,
+ * regardless of where the board lands on the page. The compose layer places
+ * boards in a vertical column and translates element coordinates to page
+ * space itself — Penpot's file format stores every shape in absolute page
+ * coordinates (see the coordinate-semantics note in compose.ts).
+ *
+ * `name` is the addressing key for per-board export (exportSurfaceBoards) —
+ * consuming packs use it as the slot name (e.g. email section slots), so keep
+ * names unique within a spec.
+ */
+export interface BoardSpec {
+  name: string;
+  width: number;
+  height: number;
+  background?: Fill;
+  elements: ComposeElement[];
+}
+
 export interface ComposeSpec {
   fileName: string;
   pageName?: string;
-  board: {
+  /**
+   * Single-board sugar (the original shipped shape): `board` + top-level
+   * `elements` is exactly equivalent to `boards: [{ ...board, elements }]`.
+   * Provide either this pair OR `boards`, never both.
+   */
+  board?: {
     name: string;
     width: number;
     height: number;
     background?: Fill;
   };
-  elements: ComposeElement[];
+  /** Elements of the single-board sugar form; board-relative coordinates. */
+  elements?: ComposeElement[];
+  /**
+   * Multi-board form (WS2-R1): boards lay out vertically on ONE page in
+   * declaration order — board N at x=0, y = sum of previous board heights
+   * + N × BOARD_GUTTER (compose.ts). Tokens/libraryColors stay file-level.
+   */
+  boards?: BoardSpec[];
   /** Brand token sets embedded into the file (Penpot design-tokens/v1). */
   tokens?: DtcgTokens;
   /** Library colors registered on the file, e.g. from DESIGN.md palette. */

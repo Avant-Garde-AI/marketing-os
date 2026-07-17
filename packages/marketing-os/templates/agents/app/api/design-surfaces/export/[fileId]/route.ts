@@ -37,15 +37,31 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ fileId: str
   if (pageId && !UUID_RE.test(pageId)) return new Response("bad page id", { status: 400 });
   const scaleRaw = Number(sp.get("scale") ?? "1");
   const scale = Number.isFinite(scaleRaw) ? Math.min(Math.max(scaleRaw, 0.1), 4) : 1;
+  // Multi-board surfaces (WS2-R1): ?board=<name> renders that board (email
+  // sections address boards by slot name); absent → the page's first board.
+  const boardName = sp.get("board") ?? undefined;
 
   try {
     const adapter = getDesignSurfaceAdapter();
-    let pid = pageId;
-    if (!pid) {
-      pid = (await adapter.getFileStructure(fileId)).pages[0]?.id;
-      if (!pid) return new Response("file has no pages", { status: 404 });
+    const structure = await adapter.getFileStructure(fileId);
+    const page = pageId ? structure.pages.find((p) => p.id === pageId) : structure.pages[0];
+    if (!page) return new Response("file has no pages", { status: 404 });
+    let objectId: string | undefined;
+    if (boardName) {
+      const board = page.boards?.find((b) => b.name === boardName);
+      if (!board) {
+        const available = (page.boards ?? []).map((b) => b.name).join(", ");
+        return new Response(`no board "${boardName}" (have: ${available})`, { status: 404 });
+      }
+      objectId = board.id;
     }
-    const artifact = await exportSurface(adapter, { fileId, pageId: pid, format, scale });
+    const artifact = await exportSurface(adapter, {
+      fileId,
+      pageId: page.id,
+      ...(objectId ? { objectId } : {}),
+      format,
+      scale,
+    });
     return new Response(new Uint8Array(artifact.data), {
       headers: {
         "Content-Type": CONTENT_TYPES[format],

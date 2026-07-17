@@ -8,7 +8,11 @@
  * `parse(serialize(x))` deep-equals `x` for all three artifact types.
  */
 
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import {
+  frontMatterDocument as document,
+  splitFrontMatter,
+  validateFrontMatter as validate,
+} from "@avant-garde/skill-kit";
 import { z } from "zod";
 import type {
   CalendarSlot,
@@ -17,44 +21,6 @@ import type {
   SocialStrategy,
 } from "./types";
 import { POST_STATUSES } from "./types";
-
-// ---------------------------------------------------------------------------
-// Shared front-matter plumbing (mirrors brand-md/src/parse.ts)
-// ---------------------------------------------------------------------------
-
-const FRONT_MATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-
-function splitFrontMatter(raw: string, docName: string): { frontMatter: unknown; body: string } {
-  const m = raw.match(FRONT_MATTER_RE);
-  if (!m) throw new Error(`${docName}: missing YAML front matter (--- ... ---)`);
-  let frontMatter: unknown;
-  try {
-    frontMatter = parseYaml(m[1] ?? "");
-  } catch (e) {
-    throw new Error(`${docName}: invalid front matter YAML: ${e instanceof Error ? e.message : e}`);
-  }
-  if (!frontMatter || typeof frontMatter !== "object") {
-    throw new Error(`${docName}: front matter is not a mapping`);
-  }
-  return { frontMatter, body: raw.slice(m[0].length) };
-}
-
-function document(frontMatter: Record<string, unknown>, body: string): string {
-  const yamlSrc = stringifyYaml(frontMatter).trimEnd();
-  const trimmedBody = body.trim();
-  return `---\n${yamlSrc}\n---\n\n${trimmedBody}${trimmedBody ? "\n" : ""}`;
-}
-
-function validate<T>(schema: z.ZodType<T>, value: unknown, docName: string): T {
-  const result = schema.safeParse(value);
-  if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-      .join("; ");
-    throw new Error(`${docName}: invalid front matter — ${issues}`);
-  }
-  return result.data;
-}
 
 // ---------------------------------------------------------------------------
 // Canonical repo paths

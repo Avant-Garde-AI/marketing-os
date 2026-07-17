@@ -1,0 +1,41 @@
+{
+  "name": "@avant-garde/skill-kit",
+  "version": "0.1.0",
+  "description": "Shared library for Marketing OS skill packs (05-AGENT-LIBRARY-HARDENING H6): the StoreRepo seam, SkillToolDefinition, YAML-front-matter document helpers, provenance types, and the spec 20 Action contract types.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "yaml": "^2.4.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/skill-kit"
+  }
+}

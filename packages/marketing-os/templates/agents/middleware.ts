@@ -16,11 +16,16 @@ export async function middleware(request: NextRequest) {
   // Design-surface exports (spec 23 §6): renders addressed by unguessable
   // Penpot file/page UUIDs, same access model as brand-image — Slack blocks
   // and the console fetch them directly.
+  // Action execute (spec 20 A1): ACTIONS_GATE_SECRET verified in-route —
+  // only the platform gate holds it. Email preview (02 §7): HMAC-tokened
+  // per (shop, campaign) since campaign ids are guessable; verified in-route.
   if (
     request.nextUrl.pathname.startsWith("/brand/") ||
     request.nextUrl.pathname.startsWith("/api/brand-image/") ||
     request.nextUrl.pathname.startsWith("/api/cron/") ||
-    request.nextUrl.pathname.startsWith("/api/design-surfaces/export/")
+    request.nextUrl.pathname.startsWith("/api/design-surfaces/export/") ||
+    request.nextUrl.pathname.startsWith("/api/actions/execute") ||
+    request.nextUrl.pathname.startsWith("/api/email/preview/")
   ) {
     return response;
   }

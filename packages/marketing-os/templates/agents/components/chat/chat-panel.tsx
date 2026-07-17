@@ -11,6 +11,8 @@ import { ConversationSidebar } from "@/components/chat/conversation-sidebar";
 import {
   GenCard,
   Unavailable,
+  ImageGallery,
+  type GalleryData,
   RevenueTrend,
   ChannelBreakdown,
   LandingConversion,
@@ -59,6 +61,34 @@ const MARKDOWN_COMPONENTS = {
     <pre className="mb-2 overflow-x-auto border border-hairline bg-raised p-3 text-[13px] last:mb-0" {...props} />
   ),
 };
+
+/**
+ * The ```mos-gallery``` directive (brand-soul candidates AND design-surface
+ * export renders — the WS4 REVISIT fix: these previously rendered as raw
+ * JSON in a <pre>). A fenced block whose language is mos-gallery and whose
+ * body parses as {title?, images:[{id?, url, label?}]} routes to the gallery
+ * renderer; anything else (including a still-streaming, not-yet-valid JSON
+ * body) falls back to the plain code block until it completes.
+ */
+function galleryFromPre(children: React.ReactNode): GalleryData | null {
+  const el = React.Children.toArray(children)[0];
+  if (!React.isValidElement(el)) return null;
+  const p = el.props as { className?: string; children?: React.ReactNode };
+  if (!p.className?.includes("language-mos-gallery")) return null;
+  const text = Array.isArray(p.children)
+    ? p.children.filter((c): c is string => typeof c === "string").join("")
+    : typeof p.children === "string"
+      ? p.children
+      : null;
+  if (!text) return null;
+  try {
+    const parsed = JSON.parse(text) as GalleryData;
+    if (parsed && Array.isArray(parsed.images)) return parsed;
+  } catch {
+    // Incomplete while streaming, or malformed — keep the raw block.
+  }
+  return null;
+}
 
 const DEFAULT_SUGGESTIONS = [
   "How did revenue trend last month?",
@@ -240,6 +270,32 @@ export function ChatPanel({
     void sendMessage({ text: `Revise the ${target} proposal: ${feedback}` });
   }
 
+  // Per-instance markdown components: the base set plus the mos-gallery
+  // interception on <pre>, wired to this conversation's sendMessage so a
+  // gallery selection continues the thread.
+  const markdownComponents = useMemo(
+    () => ({
+      ...MARKDOWN_COMPONENTS,
+      pre: (props: React.ComponentPropsWithoutRef<"pre">) => {
+        const gallery = galleryFromPre(props.children);
+        if (gallery) {
+          return (
+            <ImageGallery
+              data={gallery}
+              onSelect={(img) =>
+                void sendMessage({
+                  text: `Use ${img.label ? `the "${img.label}" option` : "this one"}${img.id ? ` (id ${img.id})` : ""}.`,
+                })
+              }
+            />
+          );
+        }
+        return MARKDOWN_COMPONENTS.pre(props);
+      },
+    }),
+    [sendMessage],
+  );
+
   function renderToolPart(part: ToolPartLike) {
     const name = part.type.replace(/^tool-/, "");
     const isChart = name in CHART_TITLES;
@@ -338,7 +394,7 @@ export function ChatPanel({
                     if (p.type === "text") {
                       return p.text ? (
                         <div key={i} className="mb-2 max-w-[68ch] last:mb-0">
-                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                             {p.text}
                           </ReactMarkdown>
                         </div>

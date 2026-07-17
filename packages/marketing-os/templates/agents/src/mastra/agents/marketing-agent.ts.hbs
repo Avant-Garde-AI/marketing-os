@@ -16,6 +16,10 @@ import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/extern
 import { brandSoulTools } from "../tools/brand-soul";
 import { designSurfaceTools } from "../tools/design-surfaces";
 import { socialTools } from "../tools/social";
+import { actionTools } from "../tools/actions";
+import { emailTools } from "../tools/email";
+import { getEmailEnablement } from "../../../lib/email/enablement";
+import { instructions as emailInstructions } from "../../../lib/email/instructions";
 import { instructions as socialInstructions } from "../../../lib/social/instructions";
 import { getBrandInstructions } from "../brand/store";
 import { getTenant } from "../../../lib/tenant-context";
@@ -74,6 +78,10 @@ const baseMarketingTools = {
   ...brandSoulTools,
   ...designSurfaceTools,
   ...socialTools,
+  // spec 20 A1: the agent's ONLY write interface — proposes a governed Action
+  // for human approval. Execute paths are structurally unreachable from here
+  // (they live behind the platform gate's service secret).
+  ...actionTools,
   ...shopifyAdminTools,
   ...ga4Tools,
   ...metaAdsTools,
@@ -158,18 +166,40 @@ export const marketingAgent = new Agent({
   // (spec 24 SM0 — static, same merge point as the Brand Soul context), then
   // (hosted) connected external servers' usage notes, then the per-request
   // brand context.
+  // Pack instructions merge in deterministic id order (05 H5.1: base → brand
+  // → packs by id — email-campaign < social-media), each pack under its own
+  // heading, only when enabled.
   instructions: HOSTED
-    ? async () =>
+    ? async () => {
+        const email = (await getEmailEnablement()).enabled ? emailInstructions + "\n\n" : "";
+        return (
+          BASE_INSTRUCTIONS +
+          "\n\n" +
+          email +
+          socialInstructions +
+          (await getExternalMcpInstructions()) +
+          (await brandContext())
+        );
+      }
+    : async () =>
         BASE_INSTRUCTIONS +
         "\n\n" +
+        (process.env.EMAIL_PACK_ENABLED === "1" ? emailInstructions + "\n\n" : "") +
         socialInstructions +
-        (await getExternalMcpInstructions()) +
-        (await brandContext())
-    : async () => BASE_INSTRUCTIONS + "\n\n" + socialInstructions + (await brandContext()),
-  // Hosted: merge the tenant's enabled external MCP tools (spec 18) on top of
-  // the native tools per request. A down/rate-limited server contributes no
-  // tools and never fails the turn (see external-mcp.ts).
+        (await brandContext()),
+  // Hosted: merge the tenant's enabled external MCP tools (spec 18) and the
+  // enablement-gated email pack (05 H1.2: pack enabled AND Klaviyo connected)
+  // on top of the native tools per request. A down/rate-limited source
+  // contributes no tools and never fails the turn. Client-owned: the email
+  // pack is env-driven (EMAIL_PACK_ENABLED=1 — the deployment IS the tenant).
   tools: HOSTED
-    ? async () => ({ ...baseMarketingTools, ...(await getExternalMcpTools()) })
-    : baseMarketingTools,
+    ? async () => ({
+        ...baseMarketingTools,
+        ...((await getEmailEnablement()).enabled ? emailTools : {}),
+        ...(await getExternalMcpTools()),
+      })
+    : {
+        ...baseMarketingTools,
+        ...(process.env.EMAIL_PACK_ENABLED === "1" ? emailTools : {}),
+      },
 });

@@ -1,0 +1,44 @@
+{
+  "name": "@avant-garde/skill-email-campaign",
+  "version": "0.1.0",
+  "description": "Email Campaign Agent skill pack (docs/email-campaign-agent, Klaviyo-first): email/ artifact formats (strategy, calendar, campaign, skeleton), ungated planning + Klaviyo read tools, and the four spec 20 Actions (approve_plan, create_campaign_draft, schedule_campaign, cancel_send). Plans derive from the Brand Soul; nothing sends without an approval nonce.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "instructions.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@avant-garde/email-assembly": "workspace:*",
+    "@avant-garde/skill-kit": "workspace:*",
+    "yaml": "^2.4.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/skills/email-campaign"
+  }
+}

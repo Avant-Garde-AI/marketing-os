@@ -8,6 +8,12 @@ import type { CalendarSlot } from "@/lib/social/types";
  * Social — the calendar view (spec 24 §6, SM0 read-only; spec 13 style:
  * editorial at the edges, a dense month grid in the middle).
  *
+ * NOTE (WS4-R2): /calendar — the cross-channel calendar over the
+ * mos_calendar_items projection — supersedes this page as THE calendar. This
+ * page stays as the social pack's channel-specific surface (pillar framing,
+ * plan-a-month flow) and its post detail routes remain the "social" channel's
+ * click-through target in lib/calendar/routes.ts.
+ *
  * The month renders from social/calendar/{YYYY-MM}.md (?month=YYYY-MM,
  * defaulting to the latest calendar present). Slots land on their days as
  * cards with channel / pillar / status; a slot with a post links into the
@@ -247,7 +253,11 @@ export default async function SocialPage({
             )}
             <p className="animate-enter-3 mt-2 text-[11.5px] text-ink-3">
               Read-only for now — approving, scheduling, and publishing arrive with the
-              action framework. Refine the plan in chat.
+              action framework. Refine the plan in chat. Every channel together lives on{" "}
+              <Link href="/calendar" className="arrow-link">
+                the calendar
+              </Link>
+              .
             </p>
           </>
         ) : (

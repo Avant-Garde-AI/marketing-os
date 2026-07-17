@@ -423,23 +423,35 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
     // ---- Reads ----
 
     async listAudiences(): Promise<KlaviyoAudience[]> {
-      // Profile counts via additional-fields (03 §6 — carries stricter rate
-      // limits; acceptable at audience-selection frequency).
+      // LIVE-VERIFIED 2026-07-17 (Arthaus, revision 2026-07-15):
+      // `additional-fields=profile_count` is REJECTED on the collection
+      // endpoints ("additional-fields must be in []") — counts are only
+      // served on single-resource GETs. So: list the collections plain, then
+      // fetch counts per audience (03 §6's stricter-rate-limit surface; the
+      // per-tenant gate + audience-selection frequency keep this cheap).
       const [lists, segments] = await Promise.all([
-        listAll(EP.lists, { "additional-fields[list]": "profile_count" }),
-        listAll(EP.segments, { "additional-fields[segment]": "profile_count" }),
+        listAll(EP.lists),
+        listAll(EP.segments),
       ]);
-      const toAudience =
-        (type: "list" | "segment") =>
-        (r: JsonApiResource): KlaviyoAudience => ({
-          type,
-          id: r.id,
-          name: attr<string>(r, "name") ?? r.id,
-          ...(typeof attr<number>(r, "profile_count") === "number"
-            ? { profileCount: attr<number>(r, "profile_count") }
-            : {}),
-        });
-      return [...lists.map(toAudience("list")), ...segments.map(toAudience("segment"))];
+      const withCount = async (type: "list" | "segment", r: JsonApiResource): Promise<KlaviyoAudience> => {
+        const base: KlaviyoAudience = { type, id: r.id, name: attr<string>(r, "name") ?? r.id };
+        try {
+          const single = await request({
+            path: `${type === "list" ? EP.lists : EP.segments}/${r.id}`,
+            query: { [`additional-fields[${type}]`]: "profile_count" },
+          });
+          const one = (single.data as JsonApiResource | JsonApiResource[] | null);
+          const res = Array.isArray(one) ? one[0] : one;
+          const count = res ? attr<number>(res, "profile_count") : undefined;
+          return typeof count === "number" ? { ...base, profileCount: count } : base;
+        } catch {
+          return base; // counts are advisory; the audience itself matters
+        }
+      };
+      return Promise.all([
+        ...lists.map((r) => withCount("list", r)),
+        ...segments.map((r) => withCount("segment", r)),
+      ]);
     },
 
     async listTemplates(): Promise<KlaviyoTemplateSummary[]> {

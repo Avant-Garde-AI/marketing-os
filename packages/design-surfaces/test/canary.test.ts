@@ -18,11 +18,13 @@
  *   7. POST /api/export (UNDOCUMENTED — penpot/penpot#4978)
  *   8. export-binfile (snapshots / eject)
  *   9. OpenAPI doc presence (api/main/doc/openapi.json) — drift detection aid
+ *  10. multi-board files (WS2-R1): board names survive import in get-file's
+ *      objects map, and /api/export renders each root frame independently
  */
 
 import { describe, expect, it } from "vitest";
 import { DesignSurfaceAdapter } from "../src/adapter.js";
-import { createSurface, exportSurface } from "../src/surface.js";
+import { createSurface, exportSurface, exportSurfaceBoards } from "../src/surface.js";
 
 const enabled = !!process.env.PENPOT_CANARY && !!process.env.PENPOT_ACCESS_TOKEN;
 const d = describe.runIf(enabled);
@@ -85,6 +87,82 @@ d("penpot canary (live)", () => {
     // PNG magic
     expect(artifact.data[0]).toBe(0x89);
     expect(artifact.data[1]).toBe(0x50);
+  });
+
+  it("10: multi-board compose → import → name round-trip → per-board export @2x (WS2-R1)", async () => {
+    const team = await adapter.provisionTenantTeam(slug);
+    const project = await adapter.ensureProject(team.id, "Design Surfaces");
+    const { surface } = await createSurface(adapter, {
+      tenantId: slug,
+      teamId: team.id,
+      projectId: project.id,
+      kind: "canary.multiboard",
+      boundTo: { type: "canary", id: "suite" },
+      spec: {
+        fileName: `canary-multi-${Math.floor(Math.random() * 1e9)}`,
+        boards: [
+          {
+            name: "hero",
+            width: 600,
+            height: 300,
+            background: { fillColor: "#F5F0E8" },
+            elements: [
+              { type: "rect", x: 20, y: 20, width: 560, height: 100, fills: [{ fillColor: "#1A1A2E" }] },
+              { type: "text", x: 30, y: 40, width: 540, height: 60, characters: "hero", fontSize: "32", fills: [{ fillColor: "#F5F0E8" }] },
+            ],
+          },
+          {
+            name: "banner",
+            width: 600,
+            height: 200,
+            background: { fillColor: "#1A1A2E" },
+            elements: [
+              { type: "text", x: 30, y: 70, width: 540, height: 60, characters: "banner", fontSize: "32", fills: [{ fillColor: "#F5F0E8" }] },
+            ],
+          },
+          {
+            name: "feature",
+            width: 600,
+            height: 250,
+            background: { fillColor: "#FFFFFF" },
+            elements: [
+              { type: "rect", x: 200, y: 25, width: 200, height: 200, fills: [{ fillColor: "#B0413E" }] },
+            ],
+          },
+        ],
+      },
+    });
+
+    // Board-name round-trip: compose → import → getFileStructure.
+    const structure = await adapter.getFileStructure(surface.penpot.fileId);
+    const page = structure.pages.find((p) => p.id === surface.penpot.pageId);
+    expect(page).toBeTruthy();
+    expect(page!.boards.map((b) => b.name).sort()).toEqual(["banner", "feature", "hero"]);
+
+    // Per-board export by name at the email scale (@2x), subset selection.
+    const artifacts = await exportSurfaceBoards(adapter, {
+      fileId: surface.penpot.fileId,
+      pageId: surface.penpot.pageId,
+      names: ["hero", "banner"],
+      scale: 2,
+    });
+    expect(Object.keys(artifacts).sort()).toEqual(["banner", "hero"]);
+    for (const [name, artifact] of Object.entries(artifacts)) {
+      expect(artifact.data[0], `${name} is a PNG`).toBe(0x89);
+      expect(artifact.data[1]).toBe(0x50);
+    }
+    // Correct per-board dimensions at scale 2 (read from the PNG IHDR).
+    expect({ w: artifacts.hero.width, h: artifacts.hero.height }).toEqual({ w: 1200, h: 600 });
+    expect({ w: artifacts.banner.width, h: artifacts.banner.height }).toEqual({ w: 1200, h: 400 });
+
+    // Unknown names fail loud, listing what exists.
+    await expect(
+      exportSurfaceBoards(adapter, {
+        fileId: surface.penpot.fileId,
+        pageId: surface.penpot.pageId,
+        names: ["not-a-board"],
+      }),
+    ).rejects.toThrow(/not found; available boards/);
   });
 
   it("8: snapshots a file via export-binfile", async () => {

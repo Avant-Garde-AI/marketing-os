@@ -30,14 +30,30 @@ Vercel → design.avant-garde.ai → PNG works in production. NB: this repo does
 NOT auto-deploy from git — deploys are `vercel deploy --prod` from a verified
 checkout (deploy-source-verification practice).
 
+**Template v0.14.0 SHIPPED** (marketing-os 18ec07e — design-surfaces mirrored
+into templates/agents/ per the spec 22 brand-soul precedent, byte-identical
+vendor) and the **Arthaus upgrade PR is OPEN:
+Arthaus-Inc/marketplace#26** (branch upgrade/marketing-os-0.14, applied
+surgically because the store's agents/ carries custom console work; tsc +
+next build clean). Merge prerequisite: set PENPOT_* + MOS_AGENTS_PUBLIC_URL on
+the Arthaus console's Vercel project (documented in the PR; project lives
+outside the scopes enumerable from this machine).
+
+Found during the upgrade run: **`marketing-os upgrade --yes` isn't actually
+non-interactive** — it still prompts (confirm + per-file conflict selects) and
+dies without a TTY; a real `--yes`/`--ci` path is needed before upgrades can be
+automated. (An expect-driven attempt also fought inquirer's redraws.) Also:
+the 0.13.x-era store config was still stamped 0.13.0, and two stale template
+tests predate specs 13/14 (tailwind.config.ts expectation, agents/config
+assertion) — flagged by the template agent, untouched.
+
 **Still open in tranche 2:** onboarding-time provisioning in marketing-os-app
 (currently provision-on-first-use only); `mos_design_surfaces` persistence
 (tools return live Penpot ids; the DB index stays unapplied until the console
-needs it); social skill runtime enable (SocialRepo binding); template v0.14.0
-+ the Arthaus upgrade PR; **human end-to-end validation** — ask the agent in
-console/Slack chat to "draft an Instagram post" and confirm the tool fires,
-the edit link opens, and the export renders in chat (the spec-18-E4-style
-"take a look" step).
+needs it); social skill runtime enable (SocialRepo binding); **human
+end-to-end validation** — ask the agent in console/Slack chat to "draft an
+Instagram post" and confirm the tool fires, the edit link opens, and the
+export renders in chat (the spec-18-E4-style "take a look" step).
 
 ## Findings that must feed back into spec 23
 

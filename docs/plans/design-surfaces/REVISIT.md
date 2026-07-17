@@ -110,11 +110,15 @@ export renders in chat (the spec-18-E4-style "take a look" step).
      the same on infra/penpot changes is the natural next step.
    - e2-standard-2 (2 vCPU/8GB) — resize to e2-standard-4 if exporter load
      shows; watch memory.
-   - **npm publish still blocked** — `npm whoami` is 401 on this machine;
-     hosted-agents consumes the design-surfaces core VENDORED into
-     `lib/design-surfaces/` until Garrett runs `npm login` and we publish
-     @avant-garde/design-surfaces + brand-md, then swap the vendor for the
-     dependency.
+   - **npm publish ✅ RESOLVED 2026-07-17** — @avant-garde/brand-md@0.1.0
+     (code only — examples/ stripped from the artifact: the Arthaus instance
+     distills a confidential document, spec 22 BS5), design-surfaces@0.1.0,
+     and marketing-os@0.14.0 are live on the registry (Garrett enabled npm
+     2FA; publishes are OTP-gated). Follow-ups: swap the VENDORED copies in
+     hosted-agents `lib/design-surfaces/` (and the Arthaus repo after PR #26)
+     for the published packages on next touch; set up npm **trusted
+     publishing** (GitHub Actions OIDC) so future publishes are CI-driven
+     with no OTP.
 2. **DS4 embedded canvas (iframe) not started this run.** D2 says iframe-first;
    the per-tenant proxy alias + frame-ancestors injection needs the production
    domain topology (item 1) and the console repo. The full-window fallback and

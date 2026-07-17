@@ -97,6 +97,69 @@ export const campaign: EmailCampaign = {
 };
 
 // ---------------------------------------------------------------------------
+// Arthaus-flavored DTCG tokens — the shape @avant-garde/brand-md's
+// compileDesignTokens emits for packages/brand-md/examples/arthaus/DESIGN.md
+// (subset; aliases kept as aliases to exercise resolution).
+// ---------------------------------------------------------------------------
+
+export const arthausTokens: Record<string, unknown> = {
+  $description: "Arthaus design tokens compiled from DESIGN.md",
+  $metadata: { tokenSetOrder: ["global"] },
+  global: {
+    colors: {
+      "warm-parchment": { $type: "color", $value: "#F5F2ED" },
+      charcoal: { $type: "color", $value: "#2D2D2D" },
+      "warm-gray": { $type: "color", $value: "#6B6560" },
+      bronze: { $type: "color", $value: "#B07D4F" },
+      "deep-ink": { $type: "color", $value: "#1A1A2E" },
+      primary: { $type: "color", $value: "{colors.bronze}" },
+      background: { $type: "color", $value: "{colors.warm-parchment}" },
+      "background-transactional": { $type: "color", $value: "#FFFFFF" },
+      text: { $type: "color", $value: "{colors.charcoal}" },
+      "text-secondary": { $type: "color", $value: "{colors.warm-gray}" },
+    },
+    typography: {
+      display: {
+        $type: "typography",
+        $value: {
+          fontFamily: ["Canela", "Freight Display", "Noe Display", "Georgia", "serif"],
+          fontWeight: 500,
+          letterSpacing: "0em",
+        },
+      },
+      body: {
+        $type: "typography",
+        $value: {
+          fontFamily: ["Inter", "Söhne", "Graphik", "system-ui", "sans-serif"],
+          fontSize: "17px",
+          lineHeight: 1.55,
+          fontWeight: 400,
+        },
+      },
+      specs: {
+        $type: "typography",
+        $value: { fontFamily: ["IBM Plex Mono", "JetBrains Mono", "monospace"], fontSize: "14px" },
+      },
+    },
+    spacing: {
+      md: { $type: "dimension", $value: "24px" },
+      lg: { $type: "dimension", $value: "48px" },
+    },
+    rounded: {
+      none: { $type: "dimension", $value: "0px" },
+      subtle: { $type: "dimension", $value: "2px" },
+    },
+    components: {
+      "button-primary": {
+        backgroundColor: { $type: "color", $value: "{colors.charcoal}" },
+        textColor: { $type: "color", $value: "#FFFFFF" },
+      },
+      card: { backgroundColor: { $type: "color", $value: "#FFFFFF" } },
+    },
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Fake KlaviyoClient
 // ---------------------------------------------------------------------------
 

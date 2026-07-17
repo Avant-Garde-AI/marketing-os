@@ -48,6 +48,49 @@ export type {
 export { createEmailTools, inlineUniversalContent } from "./tools";
 export type { EmailTools } from "./tools";
 export { instructions } from "./instructions";
+export {
+  // WS2-R2 — email compose templates (board vocabulary)
+  hero,
+  promoBanner,
+  productFeature,
+  editorialMoment,
+  emailComposeTemplates,
+  heroPayloadSchema,
+  promoBannerPayloadSchema,
+  productFeaturePayloadSchema,
+  editorialMomentPayloadSchema,
+  boardImageSchema,
+  EMAIL_BOARD_WIDTH,
+  EMAIL_BOARD_GEOMETRY,
+} from "./compose-templates";
+export type {
+  EmailBoardSpec,
+  EmailComposeElement,
+  EmailFill,
+  EmailImageMediaType,
+  BoardImage,
+  HeroPayload,
+  PromoBannerPayload,
+  ProductFeaturePayload,
+  EditorialMomentPayload,
+  EmailComposeTemplateName,
+} from "./compose-templates";
+export { resolveEmailBrandTheme, gfontId } from "./brand-tokens";
+export type { EmailBrandTheme, DtcgLikeTokens } from "./brand-tokens";
+// WS2-R6 — email design-system scaffold
+export { scaffoldEmailSystem } from "./scaffold";
+export type { ScaffoldEmailSystemOptions } from "./scaffold";
+// WS3-R5 — the four spec 20 Actions (inert until the A0/A1 runtime gate;
+// the hosted runtime registers them via createEmailActions)
+export { createEmailActions, campaignTemplateSlug, slotCampaignId } from "./actions";
+export type {
+  EmailActionDeps,
+  AssembledEmail,
+  ApprovePlanParams,
+  CreateDraftParams,
+  ScheduleParams,
+  CancelParams,
+} from "./actions";
 
 /** Spec 20 §5 metadata. */
 export const metadata = {

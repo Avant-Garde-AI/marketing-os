@@ -40,6 +40,14 @@ No `@mastra/core` dependency — plain `SkillToolDefinition`s; the runtime wraps
 
 Nonce discipline: any post-approval change (copy, canvas `edited`, audience, time, skeleton re-ingestion) invalidates the nonce and re-arms the card.
 
+## Compose templates (WS2-R2)
+
+The v1 board vocabulary (04 §7) as pure functions `(tokens, payload) → EmailBoardSpec` — `hero` (600×750), `promoBanner` (600×200), `productFeature` (600×740, name/price stay HTML), `editorialMoment` (600×600, generous token matting). Each payload has an exported zod schema (WS3's drafting flow authors payloads, nothing else); every board carries its background to the edges (the 04 §5 dark-mode rule) and display type only. `EmailBoardSpec` is a structural copy of design-surfaces' `BoardSpec` (multi-board, board-relative coordinates) — the pack stays dependency-free of design-surfaces; the hosted runtime passes boards to `composeSurfaceFile({ boards })` verbatim. Token resolution (`resolveEmailBrandTheme`) layers pack lookups over email-assembly's `resolveEmailTheme` — sparse tokens degrade to documented email-safe defaults, never throw.
+
+## Design-system scaffold (WS2-R6)
+
+`scaffoldEmailSystem(tokens, opts) → Record<path, content>`: the Arthaus-shaped `email/` design system for any store repo (06 §2) — brand-tokenized partials (head/header/footer/button/divider/product-card), three starter archetype templates (editorial, product-reminder, winback) using `<!--PARTIAL:name-->` markers + verbatim Klaviyo Django tags, the agent-facing `email/README.md` (tree, token table, the Django-vs-Liquid rules, registry discipline), empty `registry.json`, and `fixtures/sample-context.json`. Pure and deterministic (version stamps come from `opts`, never a clock); the caller owns repo writes. Every scaffolded template composes via email-assembly's `composePartials` and the composed editorial passes `extractSkeleton` — this is the PRD §8 Q5 cold-start skeleton. The footer's `{% unsubscribe %}` / `{% manage_preferences %}` tags are load-bearing compliance surface.
+
 ## Develop
 
 ```bash

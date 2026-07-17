@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@avant-garde/email-assembly": "workspace:*",
     "@avant-garde/skill-kit": "workspace:*",
     "yaml": "^2.4.0",
     "zod": "^3.25.0"

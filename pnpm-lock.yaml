@@ -216,6 +216,9 @@ importers:
 
   packages/skills/email-campaign:
     dependencies:
+      '@avant-garde/email-assembly':
+        specifier: workspace:*
+        version: link:../../email-assembly
       '@avant-garde/skill-kit':
         specifier: workspace:*
         version: link:../../skill-kit

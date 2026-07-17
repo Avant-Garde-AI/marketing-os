@@ -17,6 +17,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAction } from "../../../../lib/actions/registry";
 import { runWithTenant } from "../../../../lib/tenant-context";
+// Pack registrations are import side effects, and THIS route's module graph is
+// what the gate's dispatch sees — packs must register here explicitly (Next
+// bundles per route; a registration that only rides the chat/tools bundle is
+// invisible to this one).
+import "../../../../lib/social/register-actions";
+import "../../../../lib/email/register-actions";
 
 export const maxDuration = 120;
 

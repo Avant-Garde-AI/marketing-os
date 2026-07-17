@@ -122,6 +122,29 @@ export interface DesignSurfaceRef {
   pageId?: string;
 }
 
+/**
+ * Approval record written by social.schedule_post's execute (spec 24 D2 —
+ * approve-at-schedule). `hash` is the deterministic publish-material hash at
+ * approval time; the cron recomputes it from current file state before
+ * publishing, and any drift (copy edit, time move, creative rebinding)
+ * invalidates the approval — the post drops back and the card re-arms.
+ */
+export interface PostApproval {
+  hash: string;
+  /** ISO datetime the approval executed. */
+  at: string;
+}
+
+/** Platform write-back after a successful publish (spec 24 §1 index fields). */
+export interface PostPlatformResult {
+  /** The platform's media/post id. */
+  id: string;
+  /** Public permalink ("" when the platform didn't return one). */
+  permalink: string;
+  /** ISO datetime the publish completed. */
+  publishedAt: string;
+}
+
 export interface SocialPost {
   id: string;
   channel: string;
@@ -139,8 +162,36 @@ export interface SocialPost {
   targetLink: string;
   provenance: ProvenanceClaim[];
   status: PostStatus;
+  /** Approve-at-schedule consent record (absent until social.schedule_post executes). */
+  approval?: PostApproval;
+  /** Platform id + permalink once published. */
+  platform?: PostPlatformResult;
+  /** Last publish failure message (set when status is "failed"). */
+  failure?: string;
   /** Markdown body: the agent's rationale prose. */
   body: string;
+}
+
+// ---------------------------------------------------------------------------
+// Channel adapter seam (spec 24 §4 D3 — direct platform APIs)
+// ---------------------------------------------------------------------------
+
+/**
+ * A publishing connector for one channel — `publish(post, assetUrl) →
+ * {platformId, permalink}` (spec 24 §4). The pack declares the Actions against
+ * this interface; the RUNTIME implements it (lib/social/channels/*) and owns
+ * credential resolution: v1 is a single-tenant env-token bootstrap, the
+ * per-tenant token source (Vault / provider_connections, spec 12 pattern)
+ * drops into the same seam later.
+ */
+export interface SocialChannelAdapter {
+  channel: string;
+  /**
+   * Publish the post with `assetUrl` as its creative — a PUBLIC image URL the
+   * platform fetches (the design-surface export route). Must throw with a
+   * clear message on any platform rejection; the caller records failures.
+   */
+  publish(post: SocialPost, assetUrl: string): Promise<{ platformId: string; permalink: string }>;
 }
 
 // ---------------------------------------------------------------------------

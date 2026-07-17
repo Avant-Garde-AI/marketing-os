@@ -276,6 +276,22 @@ const postFrontMatterSchema = z.object({
     }),
   ),
   status: z.enum(POST_STATUSES),
+  approval: z
+    .object({
+      hash: z.string().min(1).describe("Publish-material hash at approval time"),
+      at: z.string().datetime({ offset: true }).describe("When the approval executed"),
+    })
+    .optional()
+    .describe("Approve-at-schedule consent record (spec 24 D2, written by social.schedule_post)"),
+  platform: z
+    .object({
+      id: z.string().min(1).describe("Platform media/post id"),
+      permalink: z.string().describe("Public permalink ('' when the platform returned none)"),
+      publishedAt: z.string().datetime({ offset: true }),
+    })
+    .optional()
+    .describe("Platform write-back after a successful publish"),
+  failure: z.string().optional().describe("Last publish failure message (status 'failed')"),
 });
 
 export function parsePost(raw: string): SocialPost {
@@ -294,6 +310,9 @@ export function parsePost(raw: string): SocialPost {
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
   if (fm.designSurface !== undefined) post.designSurface = fm.designSurface;
+  if (fm.approval !== undefined) post.approval = fm.approval;
+  if (fm.platform !== undefined) post.platform = fm.platform;
+  if (fm.failure !== undefined) post.failure = fm.failure;
   return post;
 }
 
@@ -307,6 +326,9 @@ export function serializePost(post: SocialPost): string {
   fm.targetLink = post.targetLink;
   fm.provenance = post.provenance;
   fm.status = post.status;
+  if (post.approval !== undefined) fm.approval = post.approval;
+  if (post.platform !== undefined) fm.platform = post.platform;
+  if (post.failure !== undefined) fm.failure = post.failure;
   return document(fm, post.body);
 }
 

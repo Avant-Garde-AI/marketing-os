@@ -1,7 +1,7 @@
 {
   "name": "@avant-garde/skill-social-media",
-  "version": "0.1.0",
-  "description": "Social Media Agent skill pack (spec 24, SM0): social/ artifact formats (strategy, calendar, post) + ungated planning read tools. No publishing, no Actions — those land in SM2 on the spec 20 framework.",
+  "version": "0.2.0",
+  "description": "Social Media Agent skill pack (spec 24): social/ artifact formats (strategy, calendar, post), ungated planning read tools, and the SM2 publish Actions (approve-at-schedule) on the spec 20 framework.",
   "type": "module",
   "license": "MIT",
   "exports": {

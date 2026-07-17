@@ -28,6 +28,9 @@ import {
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
 import type { SkillToolDefinition } from "../../../lib/social/types";
+// Importing this module also registers the pack's three publish Actions with
+// the propose_action registry (SM2 — same pattern as tools/email.ts).
+import "../../../lib/social/register-actions";
 
 const defs = createSocialTools(socialRepo);
 

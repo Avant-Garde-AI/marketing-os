@@ -1,7 +1,7 @@
 {
   "name": "@avant-garde/brand-md",
   "version": "0.1.0",
-  "description": "brand.md — an open format for describing a brand's soul to agents. Sibling of Google's DESIGN.md, with versioning and per-claim provenance.",
+  "description": "brand.md \u2014 an open format for describing a brand's soul to agents. Sibling of Google's DESIGN.md, with versioning and per-claim provenance.",
   "type": "module",
   "license": "Apache-2.0",
   "exports": {
@@ -11,8 +11,7 @@
     }
   },
   "files": [
-    "dist",
-    "examples"
+    "dist"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts",

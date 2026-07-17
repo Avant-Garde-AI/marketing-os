@@ -9,3 +9,16 @@ design.avant-garde.ai {
 	encode gzip
 	reverse_proxy penpot-frontend:8080
 }
+
+# DS4 per-tenant embed alias (spec 23 §3 D2): same-site with the tenant's
+# console (arthaus.cloud eTLD+1), so the Penpot session cookie flows inside
+# the console's iframe. XFO stripped; framing allowed ONLY from the tenant
+# console origins. One block per tenant console domain.
+design.arthaus.cloud {
+	encode gzip
+	reverse_proxy penpot-frontend:8080
+	header {
+		-X-Frame-Options
+		Content-Security-Policy "frame-ancestors 'self' https://www.arthaus.cloud https://arthaus.cloud"
+	}
+}

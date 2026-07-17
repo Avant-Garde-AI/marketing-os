@@ -145,6 +145,7 @@ export const composeDesignSurface = createTool({
     "Drafts are free — creating or iterating on a design never needs approval; publishing/using the export gates elsewhere. " +
     "Returns fileId/pageId plus studioPath — a console-relative link to the embedded Design Studio (canvas beside chat). " +
     "Link the user THERE, e.g. [Open in Studio](/studio?team-id=…&file-id=…); fall back to editUrl (the raw canvas URL) only where console paths don't resolve. " +
+    "When the draft is FOR a planned social post, pass kind 'social.post' and boundToId = the post id, then call social_link_design so the post's calendar entry links to the draft. " +
     "Use export_design_surface to render it as an image.",
   inputSchema: z.object({
     kind: z.string().describe("Surface kind, domain-owned and dot-namespaced, e.g. 'social.post', 'ad.creative'"),

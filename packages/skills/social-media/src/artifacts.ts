@@ -16,6 +16,7 @@ import {
 import { z } from "zod";
 import type {
   CalendarSlot,
+  DesignSurfaceRef,
   SocialCalendar,
   SocialPost,
   SocialStrategy,
@@ -218,6 +219,17 @@ const postFrontMatterSchema = z.object({
   copy: z.string().min(1).describe("The caption text"),
   copyFormulaRef: z.string().optional().describe("brand.md copy formula ref"),
   assetRefs: z.array(z.string()).describe("Repo-relative asset paths"),
+  // Explicit, first-class: the front-matter schemas STRIP unknown keys on
+  // parse (zod object default), so anything not named here would be silently
+  // dropped by a load→save round-trip.
+  designSurface: z
+    .object({
+      teamId: z.string().min(1).describe("Design Studio (Penpot) team id"),
+      fileId: z.string().min(1).describe("Design file id"),
+      pageId: z.string().min(1).optional().describe("Page within the file"),
+    })
+    .optional()
+    .describe("Design Studio surface bound to this post (spec 23 boundTo)"),
   targetLink: z.string().min(1).describe("Product/collection/editorial link"),
   provenance: z.array(
     z.object({
@@ -243,6 +255,7 @@ export function parsePost(raw: string): SocialPost {
   };
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
+  if (fm.designSurface !== undefined) post.designSurface = fm.designSurface;
   return post;
 }
 
@@ -252,8 +265,24 @@ export function serializePost(post: SocialPost): string {
   fm.copy = post.copy;
   if (post.copyFormulaRef !== undefined) fm.copyFormulaRef = post.copyFormulaRef;
   fm.assetRefs = post.assetRefs;
+  if (post.designSurface !== undefined) fm.designSurface = post.designSurface;
   fm.targetLink = post.targetLink;
   fm.provenance = post.provenance;
   fm.status = post.status;
   return document(fm, post.body);
+}
+
+/**
+ * Bind a composed Design Surface to a post (SM1 design-link glue, spec 24 §3).
+ * Pure: returns a new post with `designSurface` set — replacing any previous
+ * binding — leaving the input untouched. The caller persists the result via
+ * serializePost.
+ */
+export function linkDesignToPost(post: SocialPost, ref: DesignSurfaceRef): SocialPost {
+  const designSurface: DesignSurfaceRef = {
+    teamId: ref.teamId,
+    fileId: ref.fileId,
+    ...(ref.pageId !== undefined ? { pageId: ref.pageId } : {}),
+  };
+  return { ...post, designSurface };
 }

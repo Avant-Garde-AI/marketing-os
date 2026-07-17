@@ -7,10 +7,9 @@
  * malformed artifact.
  */
 
-import { parse as parseYaml } from "yaml";
 import { calendarPath, parseCalendar, parsePost, postPath } from "./artifacts";
 import { listSocialFiles, readSocialFile } from "./repo";
-import type { SocialCalendar, SocialPost } from "./types";
+import type { DesignSurfaceRef, SocialCalendar, SocialPost } from "./types";
 
 const CALENDAR_PATH_RE = /^social\/calendar\/(\d{4}-(?:0[1-9]|1[0-2]))\.md$/;
 
@@ -40,11 +39,11 @@ export async function loadCalendar(shop: string, month: string): Promise<SocialC
 }
 
 /**
- * A post plus its optional Design Surface binding. The binding is an OPTIONAL
- * `designSurface: { teamId, fileId, pageId? }` front-matter key the SM1 asset
- * pipeline records when it composes the post's surface (spec 24 §3 / spec 23
- * §2 boundTo). The canonical parser ignores unknown keys, so it's read here —
- * a console concern — without forking the vendored schema.
+ * A post plus its optional Design Surface binding — the OPTIONAL
+ * `designSurface: { teamId, fileId, pageId? }` front-matter key the SM1
+ * design-link glue (social_link_design) records when it binds the post's
+ * composed surface (spec 24 §3 / spec 23 §2 boundTo). The key is first-class
+ * in the vendored post schema, so it's read off the parsed post directly.
  */
 export interface PostDetail {
   post: SocialPost;
@@ -52,21 +51,8 @@ export interface PostDetail {
   studioPath: string | null;
 }
 
-const FRONT_MATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
-
-function extractStudioPath(raw: string): string | null {
-  const m = raw.match(FRONT_MATTER_RE);
-  if (!m) return null;
-  let fm: Record<string, unknown>;
-  try {
-    fm = parseYaml(m[1] ?? "") as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-  const ds = (fm?.designSurface ?? fm?.design_surface) as
-    | { teamId?: string; fileId?: string; pageId?: string }
-    | undefined;
-  if (!ds || typeof ds !== "object" || !ds.teamId || !ds.fileId) return null;
+function toStudioPath(ds: DesignSurfaceRef | undefined): string | null {
+  if (!ds) return null;
   const qs = new URLSearchParams({ "team-id": ds.teamId, "file-id": ds.fileId });
   if (ds.pageId) qs.set("page-id", ds.pageId);
   return `/studio?${qs.toString()}`;
@@ -77,7 +63,8 @@ export async function loadPost(shop: string, id: string): Promise<PostDetail | n
   try {
     const raw = await readSocialFile(shop, postPath(id));
     if (raw === null) return null;
-    return { post: parsePost(raw), studioPath: extractStudioPath(raw) };
+    const post = parsePost(raw);
+    return { post, studioPath: toStudioPath(post.designSurface) };
   } catch (e) {
     console.error(`[social] post ${id} unreadable:`, errMsg(e));
     return null;

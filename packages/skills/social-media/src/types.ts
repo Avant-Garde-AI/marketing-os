@@ -107,6 +107,21 @@ export const POST_STATUSES = [
 
 export type PostStatus = (typeof POST_STATUSES)[number];
 
+/**
+ * Design Studio surface bound to a post (SM1 design-link glue, spec 24 §3 /
+ * spec 23 §2 `boundTo`). Recorded in post.md front matter when the asset
+ * pipeline composes the post's creative, so the calendar entry links to the
+ * draft ("Open in Studio").
+ */
+export interface DesignSurfaceRef {
+  /** Design Studio (Penpot) team id. */
+  teamId: string;
+  /** Design file id. */
+  fileId: string;
+  /** Page within the file (the file's first page when absent). */
+  pageId?: string;
+}
+
 export interface SocialPost {
   id: string;
   channel: string;
@@ -118,6 +133,8 @@ export interface SocialPost {
   copyFormulaRef?: string;
   /** Repo-relative asset paths (spec 23 exports land in social/posts/{id}/assets/). */
   assetRefs: string[];
+  /** The composed Design Surface for this post's creative (absent until SM1 links one). */
+  designSurface?: DesignSurfaceRef;
   /** Target link: product / collection / editorial URL. */
   targetLink: string;
   provenance: ProvenanceClaim[];

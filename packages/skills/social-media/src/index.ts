@@ -18,6 +18,7 @@ export {
   serializeCalendar,
   parsePost,
   serializePost,
+  linkDesignToPost,
 } from "./artifacts";
 export {
   createSocialTools,

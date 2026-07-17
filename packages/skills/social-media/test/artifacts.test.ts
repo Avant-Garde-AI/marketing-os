@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calendarPath,
+  linkDesignToPost,
   parseCalendar,
   parsePost,
   parseStrategy,
@@ -9,7 +10,7 @@ import {
   serializePost,
   serializeStrategy,
 } from "../src/artifacts";
-import type { SocialCalendar, SocialPost, SocialStrategy } from "../src/types";
+import type { DesignSurfaceRef, SocialCalendar, SocialPost, SocialStrategy } from "../src/types";
 
 // ---------------------------------------------------------------------------
 // Arthaus-flavored fixtures
@@ -240,5 +241,72 @@ describe("social/posts/{id}/post.md", () => {
   it("builds canonical post paths and rejects path-unsafe ids", () => {
     expect(postPath("2026-09-ig-001")).toBe("social/posts/2026-09-ig-001/post.md");
     expect(() => postPath("../evil")).toThrow(/invalid post id/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// designSurface (SM1 design-link glue)
+// ---------------------------------------------------------------------------
+
+describe("post designSurface", () => {
+  const surfaceRef: DesignSurfaceRef = {
+    teamId: "1f9f7a2e-0000-8000-8000-000000000001",
+    fileId: "1f9f7a2e-0000-8000-8000-000000000002",
+    pageId: "1f9f7a2e-0000-8000-8000-000000000003",
+  };
+
+  it("round-trips a post with a designSurface binding", () => {
+    const post: SocialPost = { ...arthausPost, designSurface: surfaceRef };
+    expect(parsePost(serializePost(post))).toEqual(post);
+  });
+
+  it("round-trips a designSurface without the optional pageId", () => {
+    const { pageId: _pageId, ...noPage } = surfaceRef;
+    const post: SocialPost = { ...arthausPost, designSurface: noPage };
+    expect(parsePost(serializePost(post))).toEqual(post);
+  });
+
+  it("strips unknown front-matter keys on parse — designSurface is first-class so it survives", () => {
+    const md = serializePost({ ...arthausPost, designSurface: surfaceRef }).replace(
+      "---\n",
+      "---\nmystery: value\n",
+    );
+    const parsed = parsePost(md);
+    expect(parsed.designSurface).toEqual(surfaceRef);
+    expect(parsed).not.toHaveProperty("mystery");
+    // A load→save cycle drops the unknown key but keeps the binding.
+    expect(serializePost(parsed)).not.toContain("mystery");
+    expect(serializePost(parsed)).toContain("designSurface:");
+  });
+
+  it("rejects a designSurface missing fileId", () => {
+    const md = serializePost({ ...arthausPost, designSurface: surfaceRef }).replace(
+      /^\s+fileId: .*\n/m,
+      "",
+    );
+    expect(() => parsePost(md)).toThrow(/designSurface\.fileId/);
+  });
+
+  it("linkDesignToPost binds without mutating and replaces a prior binding", () => {
+    const original: SocialPost = { ...arthausPost };
+    const linked = linkDesignToPost(original, surfaceRef);
+    expect(linked.designSurface).toEqual(surfaceRef);
+    expect(original.designSurface).toBeUndefined();
+
+    const relinked = linkDesignToPost(linked, {
+      teamId: surfaceRef.teamId,
+      fileId: "1f9f7a2e-0000-8000-8000-00000000000f",
+    });
+    expect(relinked.designSurface).toEqual({
+      teamId: surfaceRef.teamId,
+      fileId: "1f9f7a2e-0000-8000-8000-00000000000f",
+    });
+    expect(relinked.designSurface).not.toHaveProperty("pageId");
+    // Everything else is untouched and the result round-trips.
+    expect({ ...relinked, designSurface: undefined }).toEqual({
+      ...arthausPost,
+      designSurface: undefined,
+    });
+    expect(parsePost(serializePost(relinked))).toEqual(relinked);
   });
 });

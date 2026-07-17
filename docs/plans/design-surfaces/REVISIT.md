@@ -63,18 +63,23 @@ served from www.arthaus.cloud + "Open in Design Studio" edit link. Garrett has
 a Penpot account (created via prepl manage.py; auto-added as admin on tenant
 teams — registered users bypass the invitation lane, so no-SMTP didn't bite).
 
-New findings from the live run:
-- **Console renderer gap:** the agent emitted the design-surface render as a
-  raw JSON `{title, images:[…]}` directive block — the console markdown
-  renderer doesn't know that shape (brand-image galleries use their own
-  directive). Wire design-surface exports into the gallery renderer.
-- **Tool-choice bias:** unprompted, the agent reached for
-  `generate_design_candidates` (BS2b moodboards) instead of
-  `compose_design_surface` for a social-post ask — and candidates errored that
-  night. The agent instructions should route "draft a post/ad design" intents
-  to compose (editable draft) and keep candidates for exploration.
+New findings from the live run (status 2026-07-17 PM):
+- **Console renderer gap — ✅ FIXED upstream**: the email-agent session's
+  v0.16.0 (marketing-os PR #4) taught chat-panel to render `mos-gallery`
+  fenced directives (galleryFromPre → ImageGallery), converging console and
+  Slack on one directive convention. A styled markdown `img` component also
+  landed (d0d333c) for directly-linked renders.
+- **Tool-choice bias — ✅ FIXED**: `compose_design_surface` descriptions now
+  explicitly outrank `generate_design_candidates` for deliverable drafts
+  (template d0d333c + hosted-agents 41dfa3d, deployed). Candidates =
+  exploration lane only. Arthaus picks this up with the next (0.16) upgrade
+  PR — deliberately left to the email session's gated upgrade path.
 - The BS2b image-generation pipeline returned empty on all 3 attempts during
-  the first test — separate reliability issue worth a look.
+  the first test — separate reliability issue, STILL OPEN.
+- **Cross-session note:** spec 20 A0/A1 (Action framework) + /api/actions/
+  execute + the email skill pack landed via the email-agent session (marketing-
+  os PR #4, hosted-agents PR #5) — the critical-path blocker is clearing;
+  social SM2 publish Actions can now build on it.
 
 ## Findings that must feed back into spec 23
 

@@ -52,6 +52,67 @@ export function Unavailable({ reason }: { reason: string }) {
   return <p className="py-2 text-sm text-ink-2">{reason}</p>;
 }
 
+/* ── image gallery (the ```mos-gallery``` directive) ────────────── */
+
+/**
+ * Renderer for the fenced ```mos-gallery``` blocks the agent emits for
+ * brand-soul candidate images AND design-surface export renders (the WS4
+ * REVISIT fix: exports previously fell through to a raw JSON <pre>). The
+ * chat markdown pipeline parses the fence's JSON and routes it here.
+ */
+export interface GalleryImage {
+  id?: string;
+  url: string;
+  label?: string;
+}
+export interface GalleryData {
+  title?: string;
+  images: GalleryImage[];
+}
+
+export function ImageGallery({
+  data,
+  onSelect,
+}: {
+  data: GalleryData;
+  /** When provided, each labeled image carries a select affordance. */
+  onSelect?: (image: GalleryImage) => void;
+}) {
+  const images = (data.images ?? []).filter((i) => typeof i?.url === "string" && i.url);
+  if (images.length === 0) return <Unavailable reason="No images in this set." />;
+  const cols = images.length === 1 ? "sm:grid-cols-1" : images.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3";
+  return (
+    <div className="animate-enter mt-3 border border-hairline bg-raised shadow-card" style={{ boxShadow: "inset 2px 0 0 var(--color-gold)" }}>
+      {data.title && (
+        <div className="border-b border-hairline px-4 py-2.5">
+          <span className="text-[13px] font-semibold">{data.title}</span>
+        </div>
+      )}
+      <div className={`grid grid-cols-1 gap-3 p-4 ${cols}`}>
+        {images.map((img, i) => (
+          <figure key={img.id ?? i} className="border border-hairline">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img.url} alt={img.label ?? `Image ${i + 1}`} className="w-full bg-page object-contain" />
+            {(img.label || onSelect) && (
+              <figcaption className="flex items-baseline justify-between gap-2 border-t border-hairline px-2.5 py-1.5">
+                <span className="text-[11px] uppercase tracking-[0.12em] text-ink-3">{img.label ?? ""}</span>
+                {onSelect && (
+                  <button
+                    onClick={() => onSelect(img)}
+                    className="text-[12px] font-medium text-ink transition-colors duration-[160ms] hover:text-gold"
+                  >
+                    Use this →
+                  </button>
+                )}
+              </figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ── KPI row + revenue trend ────────────────────────────────────── */
 
 export interface RevenueTrendData {

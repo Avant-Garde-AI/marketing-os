@@ -47,6 +47,33 @@ the 0.13.x-era store config was still stamped 0.13.0, and two stale template
 tests predate specs 13/14 (tailwind.config.ts expectation, agents/config
 assertion) — flagged by the template agent, untouched.
 
+**SM2 social publishing — BUILT + LIVE-VERIFIED 2026-07-17** (marketing-os
+0b4a3ba, hosted-agents dd24fbb deployed): publish Actions
+(social.schedule_post/publish_post/cancel_post) on the email session's Action
+framework; Instagram (graph.instagram.com container→publish) + Threads
+adapters with a `ChannelTokenSource` seam (env-token bootstrap now, per-tenant
+Vault later); `/api/cron/social` re-verifies the approval consent-hash before
+publishing (drift → reverts, never posts). **Live dry-run against @arthaushq:**
+real design-surface JPEG export → IG media container reached FINISHED, stopped
+before media_publish (nothing posted). `ARTHAUS_IG_ACCESS_TOKEN` (183-char,
+verified) now in marketing-os-app + hosted-agents + arthaus-agents envs.
+Cross-session fix: /api/actions/execute imports BOTH social + email
+register-actions (Next per-route bundling — otherwise gate dispatch 404s;
+email's was missing).
+
+Env-CLI gotcha logged: `vercel env add` piped stdin lands EMPTY in this
+sandbox, and the `?decrypt=true` REST read returns a MANGLED value — the only
+reliable paths are the Vercel dashboard or `vercel env pull` (183 chars, works)
++ REST POST to write. Bit us twice; don't trust decrypt-read or piped-add.
+
+**SM2 → Arthaus console:** the SM2 code is in the template + pooled runtime,
+NOT yet in arthaus-agents (the store console) — it flows via the next template
+upgrade PR, which should also carry the SM1 glue + the Studio-routing/render
+fixes. Deliberately NOT opened as a competing PR: the email session owns the
+active Arthaus upgrade cadence; the next upgrade should bundle social SM1+SM2 +
+email + polish together. The token is pre-staged in arthaus-agents for when it
+lands.
+
 **Still open in tranche 2:** onboarding-time provisioning in marketing-os-app
 (currently provision-on-first-use only); `mos_design_surfaces` persistence
 (tools return live Penpot ids; the DB index stays unapplied until the console

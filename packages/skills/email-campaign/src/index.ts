@@ -117,3 +117,19 @@ export const requires = {
     "klaviyo:write_images",
   ],
 } as const;
+
+/**
+ * Spec 20 §5 `reports` — spec 19 saved-report prompts this pack contributes
+ * (WS4-R5). The report cron runs these through the agent, whose merged email
+ * tools do the reading; the card plumbing is spec 17's.
+ */
+export const reports = [
+  {
+    id: "email-recap",
+    name: "Email Recap",
+    description:
+      "Per-campaign performance vs the store's trailing baseline, attribution basis stated.",
+    prompt:
+      "Produce this store's Email Recap. Use email_calendar_read for the current month and klaviyo_performance_read for every campaign that reached `sent` or `measured` in the reporting window (state the attribution basis it returns — never mix counting systems). For each campaign: subject, audience + size, delivered, open rate, click rate, CTOR, unsubscribes, conversions, revenue, revenue-per-recipient. Compare each metric to the store's trailing 90-day campaign averages from the same tool and call out material deltas (>20%) honestly, citing numbers. Close with what the next plan should repeat or drop, grounded in the readback (provenance: data).",
+  },
+] as const;

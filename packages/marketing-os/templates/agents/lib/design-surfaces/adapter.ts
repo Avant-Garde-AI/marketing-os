@@ -1,8 +1,9 @@
 /**
- * Vendored from marketing-os packages/design-surfaces @ 2026-07-16 — npm
- * publish blocked (no auth); replace with @avant-garde/design-surfaces when
- * published. Do not edit here without porting back.
- *
+ * Vendored from marketing-os packages/design-surfaces @ 2026-07-17 (multi-board
+ * WS2-R1) — replace with @avant-garde/design-surfaces when published.
+ * Do not edit here without porting back.
+ */
+/**
  * The Design Surface adapter — the safe RPC set (spec 23 §1) plus tenant
  * provisioning (spec 23 §7). Consuming packs and the platform talk to this,
  * never to Penpot directly.
@@ -168,15 +169,22 @@ export class DesignSurfaceAdapter {
 
   // ── File introspection (for export targets) ────────────────────────────
 
-  /** Returns page ids and the root frames (boards) per page. */
+  /**
+   * Returns page ids and the root frames (boards) per page, with board NAMES
+   * (WS2-R1 — per-board export addresses boards by name, so names must
+   * round-trip compose → import → structure). The get-file response's
+   * `objects` map carries each shape's `name` alongside type/parent; no extra
+   * RPC is needed — this only widens what we read from the same safe-set call.
+   * `boardIds` is kept alongside `boards` for existing callers.
+   */
   async getFileStructure(fileId: string): Promise<{
-    pages: { id: string; name: string; boardIds: string[] }[];
+    pages: { id: string; name: string; boardIds: string[]; boards: { id: string; name: string }[] }[];
   }> {
     const file = await this.client.rpc<{
       data?: {
         pagesIndex?: Record<
           string,
-          { id: string; name: string; objects?: Record<string, { id: string; type?: string; parentId?: string; "parent-id"?: string; frameId?: string }> }
+          { id: string; name: string; objects?: Record<string, { id: string; name?: string; type?: string; parentId?: string; "parent-id"?: string; frameId?: string }> }
         >;
         pages?: string[];
       };
@@ -189,13 +197,13 @@ export class DesignSurfaceAdapter {
       .filter((p): p is NonNullable<typeof p> => p != null)
       .map((p) => {
         const objects = p.objects ?? {};
-        const boardIds = Object.values(objects)
+        const boards = Object.values(objects)
           .filter((o) => {
             const parent = (o.parentId ?? o["parent-id"]) as string | undefined;
             return o.type === "frame" && o.id !== ROOT && parent === ROOT;
           })
-          .map((o) => o.id);
-        return { id: p.id, name: p.name, boardIds };
+          .map((o) => ({ id: o.id, name: o.name ?? "" }));
+        return { id: p.id, name: p.name, boardIds: boards.map((b) => b.id), boards };
       });
     return { pages };
   }

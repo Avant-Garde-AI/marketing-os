@@ -17,6 +17,8 @@ import {
   BookOpen,
   Palette,
   Layers,
+  PenTool,
+  CalendarDays,
   Clock,
   PanelLeftClose,
   PanelLeftOpen,
@@ -31,6 +33,8 @@ const NAV = [
   { label: "Brand", href: "/brand", icon: Palette },
   { label: "Playbooks", href: "/playbooks", icon: BookOpen },
   { label: "Surfaces", href: "/surfaces", icon: Layers },
+  { label: "Design Studio", href: "/studio", icon: PenTool },
+  { label: "Social", href: "/social", icon: CalendarDays },
   { label: "Activity", href: "/activity", icon: Clock },
 ];
 

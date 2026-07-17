@@ -15,6 +15,8 @@ import { reviewOfferExperiment } from "../tools/offer-review";
 import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
 import { brandSoulTools } from "../tools/brand-soul";
 import { designSurfaceTools } from "../tools/design-surfaces";
+import { socialTools } from "../tools/social";
+import { instructions as socialInstructions } from "../../../lib/social/instructions";
 import { getBrandInstructions } from "../brand/store";
 import { getTenant } from "../../../lib/tenant-context";
 
@@ -71,6 +73,7 @@ const baseMarketingTools = {
   ...semanticTools,
   ...brandSoulTools,
   ...designSurfaceTools,
+  ...socialTools,
   ...shopifyAdminTools,
   ...ga4Tools,
   ...metaAdsTools,
@@ -151,11 +154,18 @@ export const marketingAgent = new Agent({
   name: "Marketing Agent",
   model: "anthropic/claude-sonnet-4-6",
   ...(memory ? { memory } : {}),
-  // Hosted: append connected external servers' usage instructions so the model
-  // knows how to drive their tools; client-owned: static base instructions.
+  // Instruction merge order: base, then the social skill pack's instructions
+  // (spec 24 SM0 — static, same merge point as the Brand Soul context), then
+  // (hosted) connected external servers' usage notes, then the per-request
+  // brand context.
   instructions: HOSTED
-    ? async () => BASE_INSTRUCTIONS + (await getExternalMcpInstructions()) + (await brandContext())
-    : async () => BASE_INSTRUCTIONS + (await brandContext()),
+    ? async () =>
+        BASE_INSTRUCTIONS +
+        "\n\n" +
+        socialInstructions +
+        (await getExternalMcpInstructions()) +
+        (await brandContext())
+    : async () => BASE_INSTRUCTIONS + "\n\n" + socialInstructions + (await brandContext()),
   // Hosted: merge the tenant's enabled external MCP tools (spec 18) on top of
   // the native tools per request. A down/rate-limited server contributes no
   // tools and never fails the turn (see external-mcp.ts).

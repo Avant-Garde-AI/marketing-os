@@ -33,6 +33,15 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/** Console-relative Design Studio path (spec 23 DS4) — the abstraction seam:
+ * the console owns the Studio URL (/studio embeds the canvas next to chat);
+ * the raw Penpot editUrl is only the fallback for surfaces without a console. */
+function studioPath(teamId: string, fileId: string, pageId?: string): string {
+  const qs = new URLSearchParams({ "team-id": teamId, "file-id": fileId });
+  if (pageId) qs.set("page-id", pageId);
+  return `/studio?${qs.toString()}`;
+}
+
 // ── Brand tokens (DESIGN.md → DTCG, spec 23 §5) ──────────────────────────
 
 /** Solid hex color tokens from the compiled global set's `colors` group —
@@ -133,7 +142,9 @@ export const composeDesignSurface = createTool({
     "CREATE an editable draft design in the store's Design Studio (an on-brand design canvas) and return an edit link. " +
     "Composes a single board (e.g. an Instagram post at 1080x1080) from text and rectangle elements you lay out; the store's DESIGN.md brand tokens (palette, typography) are embedded automatically so the draft opens with the brand system attached. " +
     "Drafts are free — creating or iterating on a design never needs approval; publishing/using the export gates elsewhere. " +
-    "Returns fileId/pageId plus editUrl (share it so the owner can open and edit the draft). Use export_design_surface to render it as an image.",
+    "Returns fileId/pageId plus studioPath — a console-relative link to the embedded Design Studio (canvas beside chat). " +
+    "Link the user THERE, e.g. [Open in Studio](/studio?team-id=…&file-id=…); fall back to editUrl (the raw canvas URL) only where console paths don't resolve. " +
+    "Use export_design_surface to render it as an image.",
   inputSchema: z.object({
     kind: z.string().describe("Surface kind, domain-owned and dot-namespaced, e.g. 'social.post', 'ad.creative'"),
     boundToType: z.string().describe("Type of the domain object this design belongs to, e.g. 'post', 'offer'"),
@@ -153,7 +164,11 @@ export const composeDesignSurface = createTool({
     pageId: z.string().optional(),
     teamId: z.string().optional(),
     projectId: z.string().optional(),
-    editUrl: z.string().optional(),
+    studioPath: z
+      .string()
+      .optional()
+      .describe("Console-relative Design Studio link — prefer this when linking the user"),
+    editUrl: z.string().optional().describe("Raw canvas URL — fallback only"),
   }),
   execute: async (inputData: {
     kind: string;
@@ -206,6 +221,7 @@ export const composeDesignSurface = createTool({
         pageId,
         teamId,
         projectId,
+        studioPath: studioPath(teamId, fileId, pageId),
         editUrl: penpotEditUrl(teamId, fileId, pageId),
       };
     } catch (e) {
@@ -266,14 +282,24 @@ export const exportDesignSurface = createTool({
 export const listDesignSurfaces = createTool({
   id: "list_design_surfaces",
   description:
-    "List the store's Design Studio draft designs (the tenant's 'Design Surfaces' project) with edit links. " +
-    "Use to find an existing draft before composing a new one, or to hand the owner links to their designs.",
+    "List the store's Design Studio draft designs (the tenant's 'Design Surfaces' project) with links. " +
+    "Use to find an existing draft before composing a new one, or to hand the owner links to their designs — " +
+    "prefer each surface's studioPath (console-relative, opens the embedded Design Studio), falling back to editUrl.",
   inputSchema: z.object({}),
   outputSchema: z.object({
     ok: z.boolean(),
     note: z.string().optional(),
     surfaces: z
-      .array(z.object({ fileId: z.string(), name: z.string(), editUrl: z.string() }))
+      .array(
+        z.object({
+          fileId: z.string(),
+          name: z.string(),
+          studioPath: z
+            .string()
+            .describe("Console-relative Design Studio link — prefer this when linking the user"),
+          editUrl: z.string().describe("Raw canvas URL — fallback only"),
+        })
+      )
       .optional(),
   }),
   execute: async () => {
@@ -287,6 +313,7 @@ export const listDesignSurfaces = createTool({
         surfaces: files.map((f) => ({
           fileId: f.id,
           name: f.name,
+          studioPath: studioPath(home.teamId, f.id),
           editUrl: penpotEditUrl(home.teamId, f.id),
         })),
       };

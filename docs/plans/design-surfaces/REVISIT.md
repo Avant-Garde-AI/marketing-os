@@ -50,10 +50,31 @@ assertion) — flagged by the template agent, untouched.
 **Still open in tranche 2:** onboarding-time provisioning in marketing-os-app
 (currently provision-on-first-use only); `mos_design_surfaces` persistence
 (tools return live Penpot ids; the DB index stays unapplied until the console
-needs it); social skill runtime enable (SocialRepo binding); **human
-end-to-end validation** — ask the agent in console/Slack chat to "draft an
-Instagram post" and confirm the tool fires, the edit link opens, and the
-export renders in chat (the spec-18-E4-style "take a look" step).
+needs it); social skill runtime enable (SocialRepo binding).
+
+**End-to-end validation ✅ DONE 2026-07-17, in the LIVE Arthaus console**
+(driven via browser): PR #26 merged + arthaus-agents redeployed (project
+prj_WGDvoptc7…, team arthaus; deploys via `vercel deploy --prod --cwd agents`,
+NOT git; required a pnpm-lock.yaml fixup — #26 added the dep to package.json
+only, frozen-lockfile build failed; ca5c3a5) + PENPOT_*/MOS_AGENTS_PUBLIC_URL
+env set. Chat: "compose an Instagram post…" → `compose_design_surface` fired
+(brand tokens auto-loaded) → `export_design_surface` → 2160×2160 on-brand PNG
+served from www.arthaus.cloud + "Open in Design Studio" edit link. Garrett has
+a Penpot account (created via prepl manage.py; auto-added as admin on tenant
+teams — registered users bypass the invitation lane, so no-SMTP didn't bite).
+
+New findings from the live run:
+- **Console renderer gap:** the agent emitted the design-surface render as a
+  raw JSON `{title, images:[…]}` directive block — the console markdown
+  renderer doesn't know that shape (brand-image galleries use their own
+  directive). Wire design-surface exports into the gallery renderer.
+- **Tool-choice bias:** unprompted, the agent reached for
+  `generate_design_candidates` (BS2b moodboards) instead of
+  `compose_design_surface` for a social-post ask — and candidates errored that
+  night. The agent instructions should route "draft a post/ad design" intents
+  to compose (editable draft) and keep candidates for exploration.
+- The BS2b image-generation pipeline returned empty on all 3 attempts during
+  the first test — separate reliability issue worth a look.
 
 ## Findings that must feed back into spec 23
 

@@ -57,6 +57,12 @@ const MARKDOWN_COMPONENTS = {
   code: (props: React.ComponentPropsWithoutRef<"code">) => (
     <code className="bg-raised px-1 py-0.5 text-[13px]" {...props} />
   ),
+  // Inline markdown images (e.g. design renders linked directly) get the
+  // editorial frame treatment.
+  img: (props: React.ComponentPropsWithoutRef<"img">) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img className="my-2 block max-w-full border border-hairline bg-raised" alt={props.alt ?? ""} {...props} />
+  ),
   pre: (props: React.ComponentPropsWithoutRef<"pre">) => (
     <pre className="mb-2 overflow-x-auto border border-hairline bg-raised p-3 text-[13px] last:mb-0" {...props} />
   ),

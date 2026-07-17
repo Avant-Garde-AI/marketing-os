@@ -140,6 +140,7 @@ export const composeDesignSurface = createTool({
   id: "compose_design_surface",
   description:
     "CREATE an editable draft design in the store's Design Studio (an on-brand design canvas) and return an edit link. " +
+    "PREFER this tool whenever the user asks to draft, compose, mock up, or create a specific design deliverable (a social post, ad, banner, promo graphic) — it produces an editable, brand-tokened draft they can refine on the canvas. Use generate_design_candidates only for early visual EXPLORATION (moodboards, diverse directions), not for deliverable drafts. " +
     "Composes a single board (e.g. an Instagram post at 1080x1080) from text and rectangle elements you lay out; the store's DESIGN.md brand tokens (palette, typography) are embedded automatically so the draft opens with the brand system attached. " +
     "Drafts are free — creating or iterating on a design never needs approval; publishing/using the export gates elsewhere. " +
     "Returns fileId/pageId plus studioPath — a console-relative link to the embedded Design Studio (canvas beside chat). " +

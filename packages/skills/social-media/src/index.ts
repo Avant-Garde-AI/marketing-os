@@ -36,7 +36,7 @@ export type {
   GapAnalysis,
   PillarBalance,
 } from "./tools";
-export { createSocialActions, publishMaterial, approvalHash } from "./actions";
+export { createSocialActions, publishMaterial, approvalHash, verifyScheduleConsent } from "./actions";
 export type {
   SocialActionDeps,
   SchedulePostParams,

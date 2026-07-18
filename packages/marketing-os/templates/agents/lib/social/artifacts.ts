@@ -280,6 +280,11 @@ const postFrontMatterSchema = z.object({
     .object({
       hash: z.string().min(1).describe("Publish-material hash at approval time"),
       at: z.string().datetime({ offset: true }).describe("When the approval executed"),
+      surfaceRevn: z
+        .number()
+        .int()
+        .optional()
+        .describe("Penpot file revision of the bound Design Surface at approval time"),
     })
     .optional()
     .describe("Approve-at-schedule consent record (spec 24 D2, written by social.schedule_post)"),

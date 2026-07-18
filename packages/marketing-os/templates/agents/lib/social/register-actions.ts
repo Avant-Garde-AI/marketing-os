@@ -14,6 +14,7 @@ import { createSocialActions, type SocialActionDeps } from "./actions";
 import { socialRepo } from "./repo";
 import { adapterFor } from "./channels";
 import { registerAction } from "../actions/registry";
+import { getDesignSurfaceAdapter, isDesignSurfacesConfigured } from "../design-surfaces/config";
 import type { SocialPost } from "./types";
 
 /**
@@ -38,12 +39,33 @@ export function socialAssetUrl(post: SocialPost): string {
   return `${base.replace(/\/$/, "")}/api/design-surfaces/export/${fileId}?${qs.toString()}`;
 }
 
+/**
+ * Current canvas revision of the post's bound Design Surface — the
+ * canvas-edit detector behind approve-at-schedule (spec 23 `edited`
+ * fallback). Null on ANY failure by design: an unresolvable revision must
+ * degrade the consent check to hash-only, never block scheduling — a
+ * genuinely dead canvas fails the publish at asset-fetch, visibly.
+ */
+export async function socialSurfaceRevision(post: SocialPost): Promise<number | null> {
+  if (!post.designSurface || !isDesignSurfacesConfigured()) return null;
+  try {
+    const structure = await getDesignSurfaceAdapter().getFileStructure(post.designSurface.fileId);
+    return structure.revn;
+  } catch (e) {
+    console.error(
+      `[social] surface revision unavailable for post "${post.id}": ${e instanceof Error ? e.message : e}`,
+    );
+    return null;
+  }
+}
+
 /** One deps construction for every executor (propose preview, gate execute, cron). */
 export function socialActionDeps(): SocialActionDeps {
   return {
     repo: socialRepo,
     adapterFor: (channel) => adapterFor(channel),
     assetUrl: socialAssetUrl,
+    surfaceRevision: socialSurfaceRevision,
   };
 }
 

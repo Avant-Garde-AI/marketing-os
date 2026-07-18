@@ -171,11 +171,19 @@ export class DesignSurfaceAdapter {
    * `objects` map carries each shape's `name` alongside type/parent; no extra
    * RPC is needed — this only widens what we read from the same safe-set call.
    * `boardIds` is kept alongside `boards` for existing callers.
+   *
+   * `revn` is the file's revision number — Penpot bumps it on every edit, so
+   * it is the cheap edit-detection signal (spec 23 `edited` fallback): record
+   * it at approval time, re-read it before acting on the approval, and any
+   * canvas edit in between shows as a bump even when nothing else you read
+   * changed.
    */
   async getFileStructure(fileId: string): Promise<{
+    revn: number;
     pages: { id: string; name: string; boardIds: string[]; boards: { id: string; name: string }[] }[];
   }> {
     const file = await this.client.rpc<{
+      revn?: number;
       data?: {
         pagesIndex?: Record<
           string,
@@ -200,6 +208,6 @@ export class DesignSurfaceAdapter {
           .map((o) => ({ id: o.id, name: o.name ?? "" }));
         return { id: p.id, name: p.name, boardIds: boards.map((b) => b.id), boards };
       });
-    return { pages };
+    return { revn: file.revn ?? 0, pages };
   }
 }

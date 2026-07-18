@@ -140,6 +140,15 @@ export interface PostApproval {
   hash: string;
   /** ISO datetime the approval executed. */
   at: string;
+  /**
+   * Penpot revision of the bound Design Surface at approval time. Canvas
+   * edits bump the file's revn WITHOUT changing the designSurface ref, so the
+   * publish-material hash alone can't see them — the cron re-reads the revn
+   * and treats a bump as consent drift (spec 23 `edited` fallback; the
+   * webhook lane is SM3). Absent when the revision seam wasn't bound or the
+   * canvas was unreachable at approval time.
+   */
+  surfaceRevn?: number;
 }
 
 /** Platform write-back after a successful publish (spec 24 §1 index fields). */

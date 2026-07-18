@@ -7,8 +7,10 @@
  *
  *  1. RE-VERIFY THE CONSENT (D2 nonce discipline): recompute the publish-
  *     material hash from CURRENT file state and compare to the approval hash
- *     social.schedule_post recorded. Drift (copy edit, time move, creative
- *     rebinding) ⇒ the consent is void: the post drops back to asset_ready,
+ *     social.schedule_post recorded, then re-read the canvas revision (revn)
+ *     of the bound Design Surface. Drift (copy edit, time move, creative
+ *     rebinding, or a canvas edit that bumped the revn without changing the
+ *     binding) ⇒ the consent is void: the post drops back to asset_ready,
  *     the schedule is cleared, and the mismatch is flagged loudly — the card
  *     must re-arm. Nothing publishes.
  *  2. PUBLISH via social.publish_post's execute() — the SAME implementation
@@ -33,7 +35,7 @@ import { cronGate, cronSweep } from "../../../../lib/cron-frame";
 import { runWithTenant } from "../../../../lib/tenant-context";
 import { socialRepo } from "../../../../lib/social/repo";
 import { parsePost, postPath, serializePost } from "../../../../lib/social/artifacts";
-import { approvalHash, createSocialActions } from "../../../../lib/social/actions";
+import { createSocialActions, verifyScheduleConsent } from "../../../../lib/social/actions";
 import { socialActionDeps } from "../../../../lib/social/register-actions";
 import type { SocialPost } from "../../../../lib/social/types";
 
@@ -69,7 +71,8 @@ async function sweepShop(shop: string): Promise<PostSweepOutcome[]> {
   return runWithTenant({ shop, storeSlug: shop.replace(/\.myshopify\.com$/, "") }, async () => {
     const outcomes: PostSweepOutcome[] = [];
     const paths = (await socialRepo.list("social/posts/")).filter((p) => p.endsWith("/post.md"));
-    const publish = createSocialActions(socialActionDeps()).publishPost;
+    const deps = socialActionDeps();
+    const publish = createSocialActions(deps).publishPost;
 
     let handled = 0;
     for (const path of paths) {
@@ -88,15 +91,17 @@ async function sweepShop(shop: string): Promise<PostSweepOutcome[]> {
       if (!post.scheduledAt || Date.parse(post.scheduledAt) > Date.now()) continue;
       handled++;
 
-      // 1 — re-verify the approve-at-schedule consent (D2).
-      if (!post.approval || post.approval.hash !== approvalHash(post)) {
+      // 1 — re-verify the approve-at-schedule consent (D2): the publish-
+      // material hash AND the canvas revision (verifyScheduleConsent — the
+      // pack owns the semantics; canvas edits that don't change the
+      // designSurface ref show up as a revn bump).
+      const consent = await verifyScheduleConsent(post, deps);
+      if (!consent.ok) {
         const reverted: SocialPost = { ...post, status: "asset_ready" };
         delete reverted.scheduledAt;
         delete reverted.approval;
         await socialRepo.writeFile(postPath(post.id), serializePost(reverted));
-        const action = post.approval
-          ? "OUT-OF-BAND: publish material changed since approval — consent void, post back to asset_ready; re-propose social.schedule_post"
-          : "OUT-OF-BAND: scheduled post has no approval record — back to asset_ready; re-propose social.schedule_post";
+        const action = `OUT-OF-BAND: ${consent.reason} — consent void, post back to asset_ready; re-propose social.schedule_post`;
         console.error(`[cron-social] ${shop}/${post.id} ${action}`);
         outcomes.push({ id: post.id, action });
         continue;

@@ -53,6 +53,16 @@ export interface SocialActionDeps {
    * design-surface export route). Throws when the post has no surface bound.
    */
   assetUrl: (post: SocialPost) => string;
+  /**
+   * Current Penpot revision (revn) of the post's bound Design Surface — the
+   * canvas-edit detector (spec 23 `edited` fallback): edits bump the revn
+   * without touching the designSurface ref, which the publish-material hash
+   * can't see. Bound by the runtime to the design-surface adapter; return
+   * null when unresolvable (no surface, canvas unreachable) — the check
+   * degrades to hash-only, exactly the pre-seam behavior. Optional so repo
+   * bindings without a design-surface lane still typecheck.
+   */
+  surfaceRevision?: (post: SocialPost) => Promise<number | null>;
 }
 
 function sha256(s: string): string {
@@ -97,6 +107,35 @@ export function publishMaterial(post: SocialPost): Record<string, unknown> {
 /** The approve-at-schedule consent hash (stored in post.approval, re-checked by the cron). */
 export function approvalHash(post: SocialPost): string {
   return hashMaterial(publishMaterial(post));
+}
+
+/**
+ * The full consent re-verification the cron runs before publishing a
+ * scheduled post (D2): the publish-material hash (copy/time/binding drift)
+ * AND the canvas revision (edits that don't change the binding). Lives here
+ * so the consent semantics stay in the pack — the cron just acts on the
+ * verdict. A null current revision (canvas unreachable, seam unbound) skips
+ * the revision check rather than blocking: a genuinely unreachable canvas
+ * fails the publish at asset-fetch anyway, visibly.
+ */
+export async function verifyScheduleConsent(
+  post: SocialPost,
+  deps: Pick<SocialActionDeps, "surfaceRevision">,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!post.approval) return { ok: false, reason: "scheduled post has no approval record" };
+  if (post.approval.hash !== approvalHash(post)) {
+    return { ok: false, reason: "publish material changed since approval" };
+  }
+  if (post.approval.surfaceRevn != null && deps.surfaceRevision) {
+    const current = await deps.surfaceRevision(post);
+    if (current != null && current !== post.approval.surfaceRevn) {
+      return {
+        ok: false,
+        reason: `creative was edited on the canvas since approval (revision ${post.approval.surfaceRevn} → ${current})`,
+      };
+    }
+  }
+  return { ok: true };
 }
 
 /**
@@ -190,8 +229,15 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
       delete scheduled.failure;
       // The consent record the cron re-verifies (D2). Hash covers the post's
       // publish material AS APPROVED — current file state at execute time,
-      // which the gate guarantees matches the previewed state (nonce).
-      scheduled.approval = { hash: approvalHash(scheduled), at: new Date().toISOString() };
+      // which the gate guarantees matches the previewed state (nonce). The
+      // canvas revision pins the creative's PIXELS at approval time — edits
+      // bump it without changing the binding, so hash alone can't see them.
+      const surfaceRevn = (await deps.surfaceRevision?.(scheduled)) ?? null;
+      scheduled.approval = {
+        hash: approvalHash(scheduled),
+        at: new Date().toISOString(),
+        ...(surfaceRevn != null ? { surfaceRevn } : {}),
+      };
       await savePost(deps.repo, scheduled);
       return {
         ok: true,

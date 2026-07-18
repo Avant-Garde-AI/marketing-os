@@ -17,6 +17,7 @@ import {
   NOT_CONFIGURED_NOTE,
 } from "../../../lib/design-surfaces/config";
 import { getTenantTeam } from "../../../lib/design-surfaces/tenancy";
+import { checkComposeFit } from "../../../lib/design-surfaces/compose";
 import { createSurface, exportSurface } from "../../../lib/design-surfaces/surface";
 import { compileDesignTokens, type DtcgTokensFile } from "../../../lib/design-surfaces/dtcg";
 import type { ComposeElement, ComposeSpec, DtcgTokens, ExportFormat } from "../../../lib/design-surfaces/types";
@@ -142,6 +143,7 @@ export const composeDesignSurface = createTool({
     "CREATE an editable draft design in the store's Design Studio (an on-brand design canvas) and return an edit link. " +
     "PREFER this tool whenever the user asks to draft, compose, mock up, or create a specific design deliverable (a social post, ad, banner, promo graphic) — it produces an editable, brand-tokened draft they can refine on the canvas. Use generate_design_candidates only for early visual EXPLORATION (moodboards, diverse directions), not for deliverable drafts. " +
     "Composes a single board (e.g. an Instagram post at 1080x1080) from text and rectangle elements you lay out; the store's DESIGN.md brand tokens (palette, typography) are embedded automatically so the draft opens with the brand system attached. " +
+    "Layouts are fit-checked before composing: every element must sit fully inside the board, and text must have room to render (text overflows its declared box rather than clipping, so leave height for wrapping — roughly lines × fontSize × 1.2). A layout that overflows is rejected with exact findings; fix the coordinates and retry. " +
     "Drafts are free — creating or iterating on a design never needs approval; publishing/using the export gates elsewhere. " +
     "Returns fileId/pageId plus studioPath — a console-relative link to the embedded Design Studio (canvas beside chat). " +
     "Link the user THERE, e.g. [Open in Studio](/studio?team-id=…&file-id=…); fall back to editUrl (the raw canvas URL) only where console paths don't resolve. " +
@@ -201,6 +203,26 @@ export const composeDesignSurface = createTool({
         ...(brand.libraryColors ? { libraryColors: brand.libraryColors } : {}),
       };
 
+      // Fit gate (refinement backlog #1 — the sim's CTA clipped the board's
+      // bottom edge): declared-geometry errors AND estimated board-edge text
+      // clips both bounce back to the agent with exact findings, which beats
+      // shipping a draft that exports clipped. In-board text-box overflow is
+      // advisory only — it renders fine, so it rides along on success.
+      const fit = checkComposeFit(spec);
+      const blocking = [...fit.errors, ...fit.warnings.filter((w) => w.code === "text-board-clip")];
+      if (blocking.length > 0) {
+        return {
+          ok: false,
+          note:
+            "The layout does not fit the board — adjust the flagged elements and call compose_design_surface again:\n" +
+            blocking.map((f) => `- ${f.message}`).join("\n"),
+        };
+      }
+      const fitNote =
+        fit.warnings.length > 0
+          ? `Fit notes (draft still created): ${fit.warnings.map((f) => f.message).join(" ")}`
+          : undefined;
+
       const adapter = getDesignSurfaceAdapter();
       const { surface } = await createSurface(adapter, {
         tenantId: shop,
@@ -219,6 +241,7 @@ export const composeDesignSurface = createTool({
       const { fileId, pageId, teamId, projectId } = surface.penpot;
       return {
         ok: true,
+        ...(fitNote ? { note: fitNote } : {}),
         fileId,
         pageId,
         teamId,

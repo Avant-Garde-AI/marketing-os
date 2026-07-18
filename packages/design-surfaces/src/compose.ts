@@ -107,6 +107,122 @@ export function layoutBoards(boards: BoardSpec[], gutter: number = BOARD_GUTTER)
   });
 }
 
+// ── Fit check (refinement backlog #1) ────────────────────────────────────
+//
+// Composed drafts must not overflow their board: a clipped CTA in the first
+// live sim came from free-form (LLM-authored) layout with nothing validating
+// bounds. Two certainty tiers, kept separate on purpose:
+//
+//   error   — the DECLARED geometry violates the board rect. Certain from the
+//             spec alone; composeSurfaceFile refuses to build these.
+//   warning — a text element's RENDERED height (Penpot draws text past its
+//             declared box rather than clipping to it) is *estimated* to
+//             overflow. Heuristic — no font metrics here — so the library
+//             never blocks on it; enforcement policy belongs to callers
+//             (the agent tool boundary rejects board-edge clips).
+
+/** Average glyph width as a fraction of fontSize — deliberately LOW so the
+ * wrap estimate under-counts lines and board-clip findings stay rare enough
+ * to trust (a false block costs an agent turn; a miss costs one re-compose). */
+const AVG_CHAR_WIDTH_FACTOR = 0.5;
+/** Penpot's default line height when a text node sets none. */
+const DEFAULT_LINE_HEIGHT = 1.2;
+
+export interface FitFinding {
+  severity: "error" | "warning";
+  /** "out-of-bounds" | "nonpositive-size" (errors) · "text-board-clip" | "text-box-overflow" (warnings) */
+  code: "out-of-bounds" | "nonpositive-size" | "text-board-clip" | "text-box-overflow";
+  board: string;
+  element: string;
+  message: string;
+}
+
+export interface FitReport {
+  ok: boolean;
+  errors: FitFinding[];
+  warnings: FitFinding[];
+}
+
+/** Estimated rendered text height: newline paragraphs, each wrapped at the
+ * declared width using the average-glyph-width heuristic. */
+function estimateTextHeight(el: Extract<ComposeElement, { type: "text" }>): number {
+  const fontSize = Number(el.fontSize) || 16;
+  const lineHeight = Number(el.lineHeight) || DEFAULT_LINE_HEIGHT;
+  const lines = el.characters.split("\n").reduce((n, line) => {
+    const lineWidth = line.length * fontSize * AVG_CHAR_WIDTH_FACTOR;
+    return n + Math.max(1, Math.ceil(lineWidth / Math.max(el.width, 1)));
+  }, 0);
+  return lines * fontSize * lineHeight;
+}
+
+/**
+ * Validate a ComposeSpec's layout against its board rects. Element
+ * coordinates are board-relative, so each element checks against its own
+ * board's width/height directly. Pure and deterministic — same spec, same
+ * report.
+ */
+export function checkComposeFit(spec: ComposeSpec): FitReport {
+  const errors: FitFinding[] = [];
+  const warnings: FitFinding[] = [];
+  for (const board of resolveBoards(spec)) {
+    board.elements.forEach((el, i) => {
+      const id = el.name ?? `${el.type}#${i + 1}`;
+      if (el.width <= 0 || el.height <= 0) {
+        errors.push({
+          severity: "error",
+          code: "nonpositive-size",
+          board: board.name,
+          element: id,
+          message: `"${id}" on board "${board.name}" has non-positive size ${el.width}×${el.height}.`,
+        });
+        return;
+      }
+      const overRight = el.x + el.width - board.width;
+      const overBottom = el.y + el.height - board.height;
+      if (el.x < 0 || el.y < 0 || overRight > 0 || overBottom > 0) {
+        const spill = [
+          el.x < 0 ? `${-el.x}px past the left edge` : null,
+          el.y < 0 ? `${-el.y}px past the top edge` : null,
+          overRight > 0 ? `${overRight}px past the right edge` : null,
+          overBottom > 0 ? `${overBottom}px past the bottom edge` : null,
+        ]
+          .filter(Boolean)
+          .join(", ");
+        errors.push({
+          severity: "error",
+          code: "out-of-bounds",
+          board: board.name,
+          element: id,
+          message: `"${id}" (x=${el.x}, y=${el.y}, ${el.width}×${el.height}) extends ${spill} of board "${board.name}" (${board.width}×${board.height}).`,
+        });
+        return;
+      }
+      if (el.type === "text") {
+        const estHeight = Math.ceil(estimateTextHeight(el));
+        const estOverBottom = el.y + estHeight - board.height;
+        if (estOverBottom > 0) {
+          warnings.push({
+            severity: "warning",
+            code: "text-board-clip",
+            board: board.name,
+            element: id,
+            message: `"${id}" likely renders ~${estHeight}px tall (declared ${el.height}px) and would clip ~${estOverBottom}px past the bottom edge of board "${board.name}" — move it up, shorten the text, or reduce the font size.`,
+          });
+        } else if (estHeight > el.height) {
+          warnings.push({
+            severity: "warning",
+            code: "text-box-overflow",
+            board: board.name,
+            element: id,
+            message: `"${id}" likely renders ~${estHeight}px tall, overflowing its declared ${el.height}px box (stays on the board).`,
+          });
+        }
+      }
+    });
+  }
+  return { ok: errors.length === 0, errors, warnings };
+}
+
 /**
  * COORDINATE SEMANTICS (verified empirically against @penpot/library
  * 1.2.0-RC2 by unzipping the emitted binfile — see test/multiboard.test.ts):
@@ -185,6 +301,12 @@ function addElement(ctx: BuildContext, el: ComposeElement, dx: number, dy: numbe
  * unchanged from the shipped shape. Tokens and library colors are file-level.
  */
 export async function composeSurfaceFile(spec: ComposeSpec): Promise<Uint8Array> {
+  const fit = checkComposeFit(spec);
+  if (!fit.ok) {
+    throw new Error(
+      `ComposeSpec does not fit its board(s):\n${fit.errors.map((f) => `- ${f.message}`).join("\n")}`,
+    );
+  }
   const penpot = await lib();
   const ctx = penpot.createBuildContext();
 

@@ -7,17 +7,19 @@
  * awaiting a user token). Pinterest et al. add here, demand-driven (D1).
  *
  * CREDENTIAL SEAM — the per-tenant token source. Adapters never read env
- * directly; they ask a ChannelTokenSource. v1 binds `envTokenSource` — the
- * single-tenant bootstrap that reads the Arthaus tokens from the runtime's
- * env (ARTHAUS_IG_ACCESS_TOKEN, verified live 2026-07-17). Multi-tenant
- * replaces ONE binding: a source backed by Vault/provider_connections rows
- * (spec 12 credential-broker pattern, per-tenant OAuth via the Meta login
- * config) resolved inside runWithTenant — the adapters and Actions don't
- * change. The OAuth connect flow itself is the multi-tenant follow-up and is
- * deliberately NOT built here.
+ * directly; they ask a ChannelTokenSource. The default binding is
+ * `brokerTokenSource`: the platform's Vault-backed provider_connections row
+ * (provider 'meta', product = channel — one Meta connection covers both
+ * channels, matching the future config_id OAuth grant) resolved through the
+ * credential broker inside runWithTenant. `envTokenSource` — the original
+ * single-tenant bootstrap (ARTHAUS_IG_ACCESS_TOKEN, verified live
+ * 2026-07-17) — remains the fallback so an unconfigured broker or a
+ * not-yet-migrated tenant keeps publishing. The OAuth connect flow itself is
+ * the multi-tenant follow-up and is deliberately NOT built here.
  */
 
 import type { SocialChannelAdapter } from "../types";
+import { getBrokerToken } from "../../broker-client";
 import { createInstagramAdapter } from "./instagram";
 import { createThreadsAdapter } from "./threads";
 
@@ -47,12 +49,40 @@ export const envTokenSource: ChannelTokenSource = {
   },
 };
 
+/**
+ * Vault-backed source (refinement: social secrets → Vault): the platform's
+ * provider_connections row for provider 'meta' holds a JSON Vault secret of
+ * per-channel publish tokens; the broker serves the one for this channel
+ * (product = channel), cached per tenant in broker-client. Env is the
+ * explicit fallback on ANY broker failure — an unconfigured broker or an
+ * unmigrated tenant publishes exactly as before; when both lanes fail, the
+ * error names both so the operator sees the whole picture.
+ */
+export const brokerTokenSource: ChannelTokenSource = {
+  async accessToken(channel: string): Promise<string> {
+    let brokerFailure: string;
+    try {
+      return (await getBrokerToken("meta", channel)).accessToken;
+    } catch (e) {
+      brokerFailure = e instanceof Error ? e.message : String(e);
+    }
+    try {
+      return await envTokenSource.accessToken(channel);
+    } catch (e) {
+      const envFailure = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `no publish token for channel "${channel}" — broker: ${brokerFailure}; env fallback: ${envFailure}`,
+      );
+    }
+  },
+};
+
 const SUPPORTED = ["instagram", "threads"] as const;
 
 /** Adapter selection by post.channel (spec 24 §4 — the Action layer stays channel-agnostic). */
 export function adapterFor(
   channel: string,
-  tokens: ChannelTokenSource = envTokenSource,
+  tokens: ChannelTokenSource = brokerTokenSource,
 ): SocialChannelAdapter {
   switch (channel) {
     case "instagram":

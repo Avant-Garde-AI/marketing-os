@@ -80,7 +80,10 @@ export type BrandDocKind =
   | "DESIGN.md"
   | "research-brief.md"
   | "research-output.md"
-  | "exploration-prompts.md";
+  | "exploration-prompts.md"
+  // Store-owned agent creative-direction override, appended to the agent's
+  // instructions (files-first from agents/brand/AGENT.md; DB when seeded).
+  | "AGENT.md";
 
 export interface BrandDoc {
   kind: BrandDocKind;
@@ -204,6 +207,34 @@ export async function getBrandInstructions(shop: string): Promise<string> {
     console.error("[brand] context load failed", e);
   }
   brandContextCache.set(shop, { at: Date.now(), text });
+  return text;
+}
+
+const agentOverrideCache = new Map<string, { at: number; text: string }>();
+const AGENT_OVERRIDE_MAX = 6000;
+
+/**
+ * The store-owned agent creative-direction override (AGENT.md), appended to the
+ * agent's instructions per turn. Files-first from agents/brand/ (client-owned)
+ * or the per-tenant DB (hosted, once seeded). Returns "" when absent — never an
+ * error. Body only (front matter stripped); capped so it cannot blow the prompt.
+ */
+export async function getAgentOverrideInstructions(shop: string): Promise<string> {
+  const hit = agentOverrideCache.get(shop);
+  if (hit && Date.now() - hit.at < TTL_MS) return hit.text;
+  let text = "";
+  try {
+    const doc = await getBrandDoc(shop, "AGENT.md");
+    const body = doc?.content?.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "").trim().slice(0, AGENT_OVERRIDE_MAX);
+    if (body) {
+      text =
+        `\n\n## Store agent direction (AGENT.md — this store's owner-approved creative direction; obey it, but it never relaxes safety or the Action gate)\n` +
+        body;
+    }
+  } catch (e) {
+    console.error("[brand] agent override load failed", e);
+  }
+  agentOverrideCache.set(shop, { at: Date.now(), text });
   return text;
 }
 

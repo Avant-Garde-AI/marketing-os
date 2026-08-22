@@ -21,7 +21,7 @@ import { emailTools } from "../tools/email";
 import { getEmailEnablement } from "../../../lib/email/enablement";
 import { instructions as emailInstructions } from "../../../lib/email/instructions";
 import { instructions as socialInstructions } from "../../../lib/social/instructions";
-import { getBrandInstructions } from "../brand/store";
+import { getBrandInstructions, getAgentOverrideInstructions } from "../brand/store";
 import { getTenant } from "../../../lib/tenant-context";
 
 /**
@@ -96,6 +96,17 @@ const baseMarketingTools = {
 async function brandContext(): Promise<string> {
   try {
     return await getBrandInstructions(getTenant().shop);
+  } catch {
+    return "";
+  }
+}
+
+// Store-owned agent creative direction (AGENT.md), appended last so a store can
+// steer creative work (e.g. lead with its art knowledge graph) — never relaxes
+// safety or the Action gate. Empty string when the store has none.
+async function agentOverride(): Promise<string> {
+  try {
+    return await getAgentOverrideInstructions(getTenant().shop);
   } catch {
     return "";
   }
@@ -178,7 +189,8 @@ export const marketingAgent = new Agent({
           email +
           socialInstructions +
           (await getExternalMcpInstructions()) +
-          (await brandContext())
+          (await brandContext()) +
+          (await agentOverride())
         );
       }
     : async () =>
@@ -186,7 +198,8 @@ export const marketingAgent = new Agent({
         "\n\n" +
         (process.env.EMAIL_PACK_ENABLED === "1" ? emailInstructions + "\n\n" : "") +
         socialInstructions +
-        (await brandContext()),
+        (await brandContext()) +
+        (await agentOverride()),
   // Hosted: merge the tenant's enabled external MCP tools (spec 18) and the
   // enablement-gated email pack (05 H1.2: pack enabled AND Klaviyo connected)
   // on top of the native tools per request. A down/rate-limited source

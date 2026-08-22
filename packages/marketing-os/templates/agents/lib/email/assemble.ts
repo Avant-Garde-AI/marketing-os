@@ -59,9 +59,13 @@ const DEFAULT_FRAME = (slots: string[]) =>
     "<body>",
     '<div class="email-wrapper"><table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"><tr><td align="center">',
     '<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" class="email-container">',
-    "  <!--PARTIAL:header-->",
+    // Partials are full <table> blocks — they MUST sit inside a <tr><td>, not
+    // as bare children of the container <table>. A <table> directly inside a
+    // <table> closes the outer one per HTML parsing rules, orphaning every
+    // slot row so the body escapes the 600px column (proven in UAT).
+    "  <tr><td><!--PARTIAL:header--></td></tr>",
     ...slots.map((s) => `  <tr><td>{{slot:${s}}}</td></tr>`),
-    "  <!--PARTIAL:footer-->",
+    "  <tr><td><!--PARTIAL:footer--></td></tr>",
     "</table>",
     "</td></tr></table></div>",
     "</body>",
@@ -123,6 +127,12 @@ function issues(list: AssemblyIssue[]): string[] {
  * (+ same DESIGN.md + same skeleton) → byte-identical html. */
 export async function assembleCampaign(campaign: EmailCampaign): Promise<AssembledEmail> {
   const [skeletonSrc, tokens] = await Promise.all([resolveSkeleton(campaign), loadTokens()]);
+
+  // The store head's <!--TITLE--> marker is NOT a PARTIAL, so composePartials
+  // leaves it verbatim — substitute the subject here so the document <title> is
+  // real (not a literal "<!--TITLE-->"). Store-agnostic: a no-op when absent.
+  const titleText = (campaign.subject ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  skeletonSrc.html = skeletonSrc.html.replace(/<!--TITLE-->/g, titleText);
 
   const sections: EmailSection[] = [];
   let allUploaded = true;

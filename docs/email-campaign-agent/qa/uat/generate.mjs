@@ -115,7 +115,7 @@ const ARCHETYPES = [
     brief: (cat, ag) => `Archetype: editorial-story (mood-led collection announcement).
 Audience: newsletter subscribers who browse but haven't all purchased.
 Intent: introduce a contemplative collection for calm, lived-in rooms. Lead with the mood and the room; then the works.
-Slots: hero (heroImage), intro (heading L1 + paragraph + button), products (heading L2 + productRow up to 2), closing (framing/shipping reassurance paragraph).
+Slots & blocks: hero (heroImage) · intro (eyebrow + heading L1 [put the title in text] + paragraph + a callout emphasis:true with a brand truth) · products (eyebrow + heading L2 + productRow up to 2) · closing (ctaBand with eyebrow/heading/buttonText + trustBadges).
 ${ag}\nCatalog (use exact titles):\n${cat}`,
   },
   {
@@ -125,7 +125,7 @@ ${ag}\nCatalog (use exact titles):\n${cat}`,
     brief: (cat, ag) => `Archetype: artist-drop (a newly added artist just landed on Arthaus).
 Audience: subscribers who follow new work.
 Intent: introduce THIS artist as a person and their aesthetic (artist intimacy, never a CV), then show a few of their pieces. This is the template we reuse each time we add an artist.
-Slots: hero (heroImage of the lead piece), intro (heading L1 = a warm artist-forward line + paragraph on their voice/aesthetic + button "See the collection"), works (heading L2 + productRow of up to 3 of their pieces), closing (a short invitation paragraph).
+Slots & blocks: hero (heroImage of the lead piece) · intro (eyebrow "New to Arthaus" + heading L1 [the artist's name — put it in text, NEVER alt] + paragraph on their voice/aesthetic) · works (eyebrow + heading L2 + productRow of up to 3 of their pieces) · closing (ctaBand with heading + buttonText "See the collection" + trustBadges).
 ${ag}\nAll pieces below are by this one artist — feature them:\n${cat}`,
   },
   {
@@ -135,7 +135,7 @@ ${ag}\nAll pieces below are by this one artist — feature them:\n${cat}`,
     brief: (cat, ag) => `Archetype: set-feature (a dramatic, curated gallery-wall SET that hangs together).
 Audience: subscribers styling a feature wall.
 Intent: present these pieces as ONE cohesive, confident set — the drama is in the grouping. Bolder, more declarative voice than editorial (still Arthaus: no shouting, no clichés). Explain why they work together (shared palette/subject from the facets).
-Slots: hero (heroImage), intro (heading L1 = a bold set name + paragraph on why the set coheres + button "Shop the set"), set (heading L2 + productRow of 2-3 pieces from the set), closing (styling note paragraph — how to hang them).
+Slots & blocks: hero (heroImage) · intro (eyebrow "Gallery wall set" + heading L1 [a bold set name in text] + paragraph on why the set coheres) · set (featuredCard spotlighting ONE lead piece [productTitle + a description of why it anchors] + productRow of the other 2-3 pieces) · closing (a list style:"numbered" of how to hang them + ctaBand "Shop the set").
 ${ag}\nThe cohesive set (use exact titles):\n${cat}`,
   },
   {
@@ -177,8 +177,20 @@ const responseSchema = {
   properties: {
     subject: { type: "string" }, previewText: { type: "string" },
     sections: { type: "array", items: { type: "object",
-      properties: { slot: { type: "string" }, kind: { type: "string", enum: ["heading", "paragraph", "button", "productRow", "heroImage"] }, text: { type: "string" }, level: { type: "integer" }, href: { type: "string" }, productTitles: { type: "array", items: { type: "string" } }, alt: { type: "string" } },
-      required: ["slot", "kind"], propertyOrdering: ["slot", "kind", "text", "level", "href", "productTitles", "alt"] } },
+      properties: {
+        slot: { type: "string" },
+        kind: { type: "string", enum: ["heading", "paragraph", "button", "productRow", "heroImage", "eyebrow", "callout", "ctaBand", "featuredCard", "list", "trustBadges", "divider"] },
+        text: { type: "string" }, level: { type: "integer" }, href: { type: "string" },
+        productTitles: { type: "array", items: { type: "string" } }, alt: { type: "string" },
+        emphasis: { type: "boolean" },
+        heading: { type: "string" }, buttonText: { type: "string" },
+        productTitle: { type: "string" }, description: { type: "string" }, eyebrow: { type: "string" },
+        style: { type: "string", enum: ["numbered", "check", "feature"] },
+        listItems: { type: "array", items: { type: "object", properties: { title: { type: "string" }, text: { type: "string" } }, required: ["title"], propertyOrdering: ["title", "text"] } },
+        badges: { type: "array", items: { type: "string" } },
+      },
+      required: ["slot", "kind"],
+      propertyOrdering: ["slot", "kind", "text", "level", "href", "productTitles", "alt", "emphasis", "heading", "buttonText", "productTitle", "description", "eyebrow", "style", "listItems", "badges"] } },
   },
   required: ["subject", "previewText", "sections"], propertyOrdering: ["subject", "previewText", "sections"],
 };
@@ -215,14 +227,33 @@ function resolve(a, gen, catalog, heroImg) {
     let block;
     if (s.kind === "heading") block = { kind: "heading", text: copy, level: s.level === 1 || s.level === 3 ? s.level : 2 };
     else if (s.kind === "paragraph") block = { kind: "paragraph", text: copy };
+    else if (s.kind === "eyebrow") block = { kind: "eyebrow", text: copy };
+    else if (s.kind === "callout") block = { kind: "callout", text: copy, emphasis: s.emphasis === true };
+    else if (s.kind === "divider") { bySlot.has(s.slot) || bySlot.set(s.slot, []); bySlot.get(s.slot).push({ kind: "divider" }); continue; }
     else if (s.kind === "button") block = { kind: "button", text: s.text ?? "Explore", href: s.href || a.ctaHref };
-    else if (s.kind === "productRow") {
+    else if (s.kind === "ctaBand") {
+      const heading = (s.heading ?? s.text ?? "").trim();
+      if (!heading) { notes.push(`ctaBand in "${s.slot}" had no heading`); continue; }
+      block = { kind: "ctaBand", heading, buttonText: (s.buttonText || "Explore").trim(), buttonHref: s.href || a.ctaHref, ...(s.eyebrow ? { eyebrow: s.eyebrow.trim() } : {}) };
+    } else if (s.kind === "trustBadges") {
+      const items = (s.badges ?? []).map((b) => String(b).trim()).filter(Boolean).slice(0, 6);
+      if (!items.length) { notes.push(`trustBadges in "${s.slot}" had no items`); continue; }
+      block = { kind: "trustBadges", items };
+    } else if (s.kind === "list") {
+      const items = (s.listItems ?? []).filter((i) => i && i.title).map((i) => ({ title: String(i.title).trim(), ...(i.text ? { text: String(i.text).trim() } : {}) })).slice(0, 8);
+      if (!items.length) { notes.push(`list in "${s.slot}" had no items`); continue; }
+      block = { kind: "list", style: ["numbered", "check", "feature"].includes(s.style) ? s.style : "feature", items };
+    } else if (s.kind === "featuredCard") {
+      const c = s.productTitle ? findCat(s.productTitle) : null;
+      if (!c) { notes.push(`featuredCard in "${s.slot}" matched no catalog title (${JSON.stringify(s.productTitle)})`); continue; }
+      block = { kind: "featuredCard", imageUrl: c.imageUrl, title: c.title, href: c.href, price: c.price, ...(s.description ? { description: s.description.trim() } : {}), ...(s.eyebrow ? { eyebrow: s.eyebrow.trim() } : {}) };
+    } else if (s.kind === "productRow") {
       const items = (s.productTitles ?? []).map(findCat).filter(Boolean).map((c) => ({ name: c.title, price: c.price, href: c.href, imageUrl: c.imageUrl, alt: `${c.title}${c.vendor ? " by " + c.vendor : ""}` }));
       const uniq = [...new Map(items.map((i) => [i.name, i])).values()].slice(0, 3);
       if (!uniq.length) { notes.push(`productRow in "${s.slot}" matched no catalog titles`); continue; }
       block = { kind: "productRow", products: uniq };
     } else continue;
-    if (!block.text && block.kind !== "productRow") { notes.push(`empty ${block.kind} in "${s.slot}"`); continue; }
+    if (block.kind !== "productRow" && block.kind !== "ctaBand" && block.kind !== "featuredCard" && block.kind !== "list" && block.kind !== "trustBadges" && !block.text) { notes.push(`empty ${block.kind} in "${s.slot}"`); continue; }
     if (!bySlot.has(s.slot)) bySlot.set(s.slot, []); bySlot.get(s.slot).push(block);
   }
   for (const [slot, blocks] of bySlot) sections.push({ slot, type: "html", block: blocks });

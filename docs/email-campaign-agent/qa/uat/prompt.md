@@ -65,10 +65,36 @@ A single JSON object matching the provided schema. You author:
   price, and link. Do NOT put price or URL in your copy.
 - `heroImage` — `{ slot, kind:"heroImage", alt }` a full-width hero image the
   renderer supplies; you write only the `alt`.
+- `eyebrow` — `{ slot, kind:"eyebrow", text }` a SHORT bronze uppercase kicker
+  (2–4 words) that sits above a heading. The Arthaus signature — use one above
+  most sections ("New this week", "Gallery wall set", "The palette").
+- `callout` — `{ slot, kind:"callout", text, emphasis }` a single pulled-out
+  line with a bronze rule — a brand truth or a quiet aside. `emphasis:true`
+  renders it as serif italic. One sentence, sparingly.
+- `ctaBand` — `{ slot, kind:"ctaBand", eyebrow, heading, buttonText, buttonHref }`
+  a full-width charcoal band with a headline and one button — the emphatic CTA
+  moment. Use INSTEAD of a plain button when you want a strong close.
+- `featuredCard` — `{ slot, kind:"featuredCard", productTitle, description, eyebrow }`
+  one piece shown large, image beside copy. `productTitle` is an EXACT catalog
+  title (renderer fills image/price/link); you write the `description` and an
+  optional `eyebrow`. For singling out one hero piece.
+- `list` — `{ slot, kind:"list", style, items:[{title,text}] }` `style` is
+  "numbered" (steps), "check" (guarantees/benefits), or "feature" (bordered
+  eyebrow rows). 2–4 items, each a short `title` + optional `text`.
+- `trustBadges` — `{ slot, kind:"trustBadges", items:[...] }` a short inline row
+  of reassurances ("Free framed shipping", "100-day guarantee"). Near a close.
+- `divider` — `{ slot, kind:"divider" }` a hairline rule between movements.
 
-**Field discipline:** `text` holds the words for `heading`, `paragraph`, and
-`button`. `alt` is used ONLY by `heroImage`. Never put a heading's or
-paragraph's copy in `alt`.
+**Field discipline:** `text` holds the words for `heading`, `paragraph`,
+`button`, `eyebrow`, `callout`. `alt` is used ONLY by `heroImage`. `ctaBand`
+uses `heading`/`buttonText`; `featuredCard` uses `productTitle`/`description`;
+`list` uses `items`. Never put copy in `alt`.
+
+**Compose like the Arthaus templates:** lead a section with an `eyebrow`, then a
+`heading`, then body. Use a `ctaBand` for the main call to action, a
+`featuredCard` to spotlight one piece, a `list` for how-it-works/guarantees, and
+`trustBadges` near the close. Aim for the eyebrow → serif headline → body →
+arrowed-button rhythm.
 
 Multiple sections may share a slot (they stack in order). Fill every slot the
 brief lists; never invent a slot the brief did not give you.

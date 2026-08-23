@@ -72,16 +72,34 @@ const DEFAULT_FRAME = (slots: string[]) =>
     "</html>",
   ].join("\n");
 
+// Auto-detect the store's email root: a store with a pre-existing, Klaviyo-
+// connected `emails/` design system (e.g. Arthaus) uses `emails/`; a store the
+// agent scaffolded from scratch uses `email/`. Cached per tenant.
+const _emailRootCache = new Map<string, "email" | "emails">();
+export async function resolveEmailRoot(): Promise<"email" | "emails"> {
+  const shop = getTenant().shop;
+  const hit = _emailRootCache.get(shop);
+  if (hit) return hit;
+  const emailsPartials = await emailRepo.list("emails/partials/");
+  const root = emailsPartials.length > 0 ? "emails" : "email";
+  _emailRootCache.set(shop, root);
+  return root;
+}
+
 async function resolveSkeleton(campaign: EmailCampaign): Promise<{ html: string; source: string }> {
   const ingested = await emailRepo.readFile(skeletonHtmlPath(campaign.skeletonRef));
   if (ingested !== null) return { html: ingested, source: `skeleton:${campaign.skeletonRef}` };
 
-  // Scaffold path: compose the default frame from the store's partials.
-  const partialPaths = await emailRepo.list("email/partials/");
+  // Scaffold path: compose the default frame from the store's partials (the
+  // store's real design frame — emails/partials for Arthaus, email/partials for
+  // a scaffolded store).
+  const root = await resolveEmailRoot();
+  const dir = `${root}/partials/`;
+  const partialPaths = await emailRepo.list(dir);
   if (partialPaths.length > 0) {
     const partials: Record<string, string> = {};
     for (const p of partialPaths) {
-      const name = p.replace(/^email\/partials\//, "").replace(/\.html$/, "");
+      const name = p.replace(new RegExp(`^${root}/partials/`), "").replace(/\.html$/, "");
       const content = await emailRepo.readFile(p);
       if (content !== null) partials[name] = content;
     }
@@ -89,14 +107,14 @@ async function resolveSkeleton(campaign: EmailCampaign): Promise<{ html: string;
     const { html, report } = composePartials(DEFAULT_FRAME(slots), partials);
     if (report.missing.length > 0) {
       throw new Error(
-        `default frame needs partials [${report.missing.join(", ")}] — the scaffold is incomplete; re-run scaffoldEmailSystem`,
+        `default frame needs partials [${report.missing.join(", ")}] from ${dir} — the design system is incomplete`,
       );
     }
-    return { html, source: "scaffold-frame" };
+    return { html, source: `scaffold-frame:${root}` };
   }
 
   throw new Error(
-    `no skeleton "${campaign.skeletonRef}" and no email/partials/ — scaffold the email design system or ingest a reference template first`,
+    `no skeleton "${campaign.skeletonRef}" and no ${dir} — scaffold the email design system or ingest a reference template first`,
   );
 }
 

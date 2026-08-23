@@ -1,7 +1,6 @@
-/**
- * VENDORED from packages/skills/email-campaign — do not edit here; swap for
- * the published package on next touch (H8.3).
- */
+// VENDORED from packages/skills/email-campaign — do not edit here; swap for the
+// published package on next touch (H8.3).
+
 /**
  * The four email Actions (02 §1, WS3-R5) — spec 20 Action<P> declarations.
  *
@@ -35,11 +34,12 @@ import type {
   KlaviyoClient,
 } from "./types";
 import {
-  REGISTRY_PATH,
   STRATEGY_PATH,
   calendarPath,
-  campaignHtmlPath,
   campaignPath,
+  campaignTemplatePath,
+  registryPathFor,
+  resolveEmailRoot,
   parseCalendar,
   parseCampaign,
   parseRegistry,
@@ -324,10 +324,15 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
       if (!assembled.report.ok) {
         throw new Error(`assembly failed post-upload: ${assembled.report.errors.join("; ")}`);
       }
-      await deps.repo.writeFile(campaignHtmlPath(campaign.id), assembled.html);
+      // The rendered template lands in the store's email root — for an
+      // `emails/` store that's the real Klaviyo templates dir, pushable/
+      // triggerable through the existing tooling.
+      const root = await resolveEmailRoot(deps.repo);
+      await deps.repo.writeFile(campaignTemplatePath(campaign.id, root), assembled.html);
 
       // Step 3 — template via the registry (PATCH-not-duplicate, 06 §4).
-      const registryRaw = await deps.repo.readFile(REGISTRY_PATH);
+      const registryPath = registryPathFor(root);
+      const registryRaw = await deps.repo.readFile(registryPath);
       const registry = registryRaw ? parseRegistry(registryRaw) : {};
       const slug = campaignTemplateSlug(campaign.id);
       let templateId = campaign.klaviyo?.templateId ?? registry[slug];
@@ -338,7 +343,7 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
         const created = await deps.klaviyo.createTemplate({ name: `${campaign.id} (Marketing OS)`, html: assembled.html });
         templateId = created.id;
         registry[slug] = templateId;
-        await deps.repo.writeFile(REGISTRY_PATH, serializeRegistry(registry));
+        await deps.repo.writeFile(registryPath, serializeRegistry(registry));
         steps.push(`template:created:${templateId}`);
       }
       campaign.klaviyo = { ...campaign.klaviyo, templateId };
@@ -418,7 +423,8 @@ function scheduleCampaign(deps: EmailActionDeps): Action<ScheduleParams> {
       // the campaign's current state no longer assembles to the same bytes as
       // email.html, the draft is stale — re-draft before scheduling.
       const assembled = await deps.assemble(campaign);
-      const draftedHtml = await deps.repo.readFile(campaignHtmlPath(campaign.id));
+      const root = await resolveEmailRoot(deps.repo);
+      const draftedHtml = await deps.repo.readFile(campaignTemplatePath(campaign.id, root));
       if (draftedHtml === null || sha256(draftedHtml) !== assembled.htmlSha256) {
         throw new Error(
           `campaign "${p.campaignId}" changed since it was drafted — re-run klaviyo.create_campaign_draft so what you approve is what sends`,

@@ -56,6 +56,30 @@ export function campaignAssetsPrefix(id: string): string {
 
 export const REGISTRY_PATH = "email/registry.json";
 
+/** Email root: a store with a pre-existing, Klaviyo-connected `emails/` design
+ * system (e.g. Arthaus) uses `emails/`; a store the agent scaffolded from
+ * scratch uses `email/`. Auto-detected from the presence of `emails/partials/`. */
+export type EmailRoot = "email" | "emails";
+
+export async function resolveEmailRoot(repo: { list(prefix: string): Promise<string[]> }): Promise<EmailRoot> {
+  const emailsPartials = await repo.list("emails/partials/");
+  return emailsPartials.length > 0 ? "emails" : "email";
+}
+
+/** Where a drafted campaign's Klaviyo-pushable template is authored. In an
+ * `emails/` store this is the store's real Klaviyo templates dir (triggered/sent
+ * through the existing push tooling); in a scaffolded store it sits under the
+ * agent's own tree. Slug = `campaign-<id>` (06 §4). */
+export function campaignTemplatePath(id: string, root: EmailRoot): string {
+  if (!ID_RE.test(id)) throw new Error(`campaignTemplatePath: invalid campaign id "${id}"`);
+  return root === "emails" ? `emails/templates/campaign-${id}.html` : `email/campaigns/${id}/email.html`;
+}
+
+/** The slug → Klaviyo template-id registry for the store's root. */
+export function registryPathFor(root: EmailRoot): string {
+  return root === "emails" ? "emails/klaviyo-registry.json" : REGISTRY_PATH;
+}
+
 /** Parse email/registry.json (slug → Klaviyo template id). Tolerates an
  * absent file at the caller (readFile returns null); this parses content. */
 export function parseRegistry(raw: string): import("./types").EmailTemplateRegistry {

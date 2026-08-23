@@ -165,3 +165,93 @@ describe("surface renderer", () => {
     expect(html).toContain('alt="" role="presentation"');
   });
 });
+
+describe("Arthaus design-system blocks", () => {
+  it("eyebrow — uppercase bronze kicker, escapes copy", () => {
+    const html = renderBlock({ kind: "eyebrow", text: "New & now" }, theme);
+    expect(html).toContain("text-transform:uppercase");
+    expect(html).toContain("letter-spacing:0.08em");
+    expect(html).toContain("New &amp; now");
+  });
+
+  it("image — linked, escaped src/alt, fluid", () => {
+    const html = renderBlock(
+      { kind: "image", src: "https://cdn.example.com/a.jpg?q=1&w=2", alt: 'A "work"', href: "https://ex.com/p" },
+      theme,
+    );
+    expect(html).toContain('src="https://cdn.example.com/a.jpg?q=1&amp;w=2"');
+    expect(html).toContain('alt="A &quot;work&quot;"');
+    expect(html).toContain("<a href=");
+    expect(html).toContain("max-width:600px");
+  });
+
+  it("image — decorative renders empty alt + presentation role", () => {
+    const html = renderBlock({ kind: "image", src: "https://cdn.example.com/d.png", decorative: true }, theme);
+    expect(html).toContain('alt="" role="presentation"');
+  });
+
+  it("callout — bronze left border; emphasis uses the heading (serif) stack + italic", () => {
+    const plain = renderBlock({ kind: "callout", text: "Quiet confidence." }, theme);
+    expect(plain).toContain("border-left:3px solid");
+    const emph = renderBlock({ kind: "callout", text: "A statement.", emphasis: true }, theme);
+    expect(emph).toContain("font-style:italic");
+  });
+
+  it("ctaBand — eyebrow + headline + bulletproof VML button", () => {
+    const html = renderBlock(
+      { kind: "ctaBand", eyebrow: "Ready", heading: "Find something real", buttonText: "Explore", buttonHref: "https://ex.com" },
+      theme,
+    );
+    expect(html).toContain("Ready");
+    expect(html).toContain("Find something real");
+    expect(html).toContain("v:roundrect"); // Outlook fallback
+    expect(html).toContain('href="https://ex.com"');
+    expect(html).toContain("Explore");
+  });
+
+  it("featuredCard — image with alt=title, price, arrowed link", () => {
+    const html = renderBlock(
+      { kind: "featuredCard", imageUrl: "https://cdn.example.com/s.jpg", title: "The Set", href: "https://ex.com/set", description: "Cohesive.", price: "$168" },
+      theme,
+    );
+    expect(html).toContain('alt="The Set"');
+    expect(html).toContain("$168");
+    expect(html).toContain("Cohesive.");
+    expect(html).toContain('href="https://ex.com/set"');
+  });
+
+  it("list — numbered emits ordinals; check emits checkmarks; feature has bordered rows", () => {
+    const numbered = renderBlock({ kind: "list", style: "numbered", items: [{ title: "One" }, { title: "Two" }] }, theme);
+    expect(numbered).toContain(">1<");
+    expect(numbered).toContain(">2<");
+    expect(numbered).toContain("One");
+    const check = renderBlock({ kind: "list", style: "check", items: [{ title: "Guaranteed" }] }, theme);
+    expect(check).toContain("&#10003;");
+    const feature = renderBlock({ kind: "list", style: "feature", items: [{ title: "Framed", text: "Free" }] }, theme);
+    expect(feature).toContain("border-bottom:1px solid");
+  });
+
+  it("swatches — circular chips carry the hex + name", () => {
+    const html = renderBlock({ kind: "swatches", colors: [{ hex: "#B07D4F", name: "Bronze" }] }, theme);
+    expect(html).toContain("background-color:#B07D4F");
+    expect(html).toContain("border-radius:50%");
+    expect(html).toContain("Bronze");
+  });
+
+  it("chips — rounded pills, escaped", () => {
+    const html = renderBlock({ kind: "chips", items: ["Calm & warm"] }, theme);
+    expect(html).toContain("border-radius:999px");
+    expect(html).toContain("Calm &amp; warm");
+  });
+
+  it("trustBadges — checkmarked, middot-joined", () => {
+    const html = renderBlock({ kind: "trustBadges", items: ["Free shipping", "100-day"] }, theme);
+    expect(html).toContain("&#10003; Free shipping");
+    expect(html).toContain("&middot;");
+  });
+
+  it("divider — a visible hairline rule", () => {
+    const html = renderBlock({ kind: "divider" }, theme);
+    expect(html).toContain("height:1px");
+  });
+});

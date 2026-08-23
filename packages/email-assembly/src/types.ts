@@ -163,6 +163,54 @@ export const emailBlockSchema = z.discriminatedUnion("kind", [
     products: z.array(productItemSchema).min(1).max(4),
   }),
   z.object({ kind: z.literal("spacer"), height: z.number().int().positive().max(200) }),
+  // --- Arthaus design-system vocabulary (introspected from marketplace/emails) ---
+  /** Bronze uppercase micro-label — the signature Arthaus kicker above a section. */
+  z.object({ kind: z.literal("eyebrow"), text: z.string().min(1) }),
+  /** A full-width hosted image (not a board export). alt required unless decorative. */
+  z.object({
+    kind: z.literal("image"),
+    src: z.string().min(1),
+    alt: z.string().optional(),
+    href: z.string().optional(),
+    decorative: z.boolean().optional(),
+  }),
+  /** Bronze left-border pull-quote; `emphasis` renders it as a serif italic. */
+  z.object({ kind: z.literal("callout"), text: z.string().min(1), emphasis: z.boolean().optional() }),
+  /** Full-bleed charcoal CTA band: optional eyebrow + headline + accent button. */
+  z.object({
+    kind: z.literal("ctaBand"),
+    heading: z.string().min(1),
+    buttonText: z.string().min(1),
+    buttonHref: z.string().min(1),
+    eyebrow: z.string().optional(),
+  }),
+  /** Horizontal image+text feature card (a featured set or a single feature). */
+  z.object({
+    kind: z.literal("featuredCard"),
+    imageUrl: z.string().min(1),
+    title: z.string().min(1),
+    href: z.string().min(1),
+    description: z.string().optional(),
+    price: z.string().optional(),
+    eyebrow: z.string().optional(),
+  }),
+  /** Numbered / checkmark / bordered-feature list of short rows. */
+  z.object({
+    kind: z.literal("list"),
+    style: z.enum(["numbered", "check", "feature"]),
+    items: z.array(z.object({ title: z.string().min(1), text: z.string().optional() })).min(1).max(8),
+  }),
+  /** Palette swatch row — circular color chips (decorative). */
+  z.object({
+    kind: z.literal("swatches"),
+    colors: z.array(z.object({ hex: z.string().regex(/^#[0-9a-fA-F]{3,8}$/), name: z.string().optional() })).min(1).max(8),
+  }),
+  /** Pill/chip row — inline rounded tags. */
+  z.object({ kind: z.literal("chips"), items: z.array(z.string().min(1)).min(1).max(12) }),
+  /** Inline trust-badge row (e.g. "Free shipping · 100-day guarantee"). */
+  z.object({ kind: z.literal("trustBadges"), items: z.array(z.string().min(1)).min(1).max(6) }),
+  /** A visible hairline rule (distinct from the invisible spacer). */
+  z.object({ kind: z.literal("divider") }),
 ]);
 
 export type EmailBlock = z.infer<typeof emailBlockSchema>;

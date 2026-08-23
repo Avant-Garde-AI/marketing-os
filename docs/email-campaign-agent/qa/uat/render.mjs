@@ -49,7 +49,49 @@ const DEFAULT_FRAME = (slots) => [
 
 const META = (c) => ({ subject: c.subject, previewText: c.previewText, skeletonVersion: "uat" });
 
+const palette = (ctx.event?.Palette ?? []).map((p) => ({ hex: p.Hex, name: p.Name }));
+const styleKeywords = ctx.event?.StyleKeywords ?? ["Organic", "Botanical", "Calm"];
+
 const scaffoldCampaigns = [
+  {
+    // Kitchen-sink: exercises the full Arthaus block vocabulary in one email so
+    // we can eyeball every new renderer on-brand.
+    name: "design-showcase", title: "Design-system showcase — every block",
+    subject: "The full Arthaus block vocabulary", previewText: "Eyebrow, callout, list, set card, palette, CTA band, trust badges.",
+    slots: ["masthead", "story", "features", "set", "palette", "band", "footnote"],
+    sections: [
+      { slot: "masthead", type: "html", block: [
+        { kind: "eyebrow", text: "New this week" },
+        { kind: "image", src: heroImg, alt: "A contemplative new work in warm natural light" },
+        { kind: "heading", text: "The Quiet Hours", level: 1 },
+        { kind: "paragraph", text: "Twelve new works chosen for the contemplative home — pieces that hold a room without demanding it." } ] },
+      { slot: "story", type: "html", block: [
+        { kind: "callout", text: "Art should feel like a natural extension of your home — not a decision you second-guess.", emphasis: true },
+        { kind: "divider" } ] },
+      { slot: "features", type: "html", block: [
+        { kind: "eyebrow", text: "How it works" },
+        { kind: "heading", text: "Ready to hang, made for homes", level: 2 },
+        { kind: "list", style: "numbered", items: [
+          { title: "Choose your piece", text: "Browse by room, palette, or artist." },
+          { title: "We frame it", text: "Gallery-grade framing, shipped free." },
+          { title: "Hang in minutes", text: "Arrives ready, with a hanging kit." } ] },
+        { kind: "list", style: "check", items: [
+          { title: "100-day guarantee" }, { title: "Museum-grade materials" }, { title: "Art from artists, fairly paid" } ] } ] },
+      { slot: "set", type: "html", block: [
+        { kind: "eyebrow", text: "Gallery wall set" },
+        { kind: "featuredCard", imageUrl: products[0]?.imageUrl ?? heroImg, title: products[0]?.name ?? "The Warm Earth Set", href: products[0]?.href ?? "https://myarthaus.com/collections/sets", description: "Three pieces that share a warm amber undertone — cohesive even across styles.", price: products[0]?.price ?? "$168", eyebrow: undefined } ] },
+      { slot: "palette", type: "html", block: [
+        { kind: "eyebrow", text: "The palette" },
+        { kind: "heading", text: "Warm earth tones", level: 3 },
+        ...(palette.length ? [{ kind: "swatches", colors: palette }] : []),
+        { kind: "chips", items: styleKeywords } ] },
+      { slot: "band", type: "html", block: [
+        { kind: "ctaBand", eyebrow: "Your walls are ready", heading: "Find something real for your home.", buttonText: "Explore the collection", buttonHref: "https://myarthaus.com/collections/all" } ] },
+      { slot: "footnote", type: "html", block: [
+        { kind: "trustBadges", items: ["Free framed shipping", "100-day guarantee", "Gallery quality"] },
+        { kind: "paragraph", text: "Questions about sizing or framing? Reply to this email — a real person reads it." } ] },
+    ],
+  },
   {
     name: "editorial-scaffold", title: "Editorial — new collection (scaffold path)",
     subject: "The quiet hours collection", previewText: "Art for the contemplative home — twelve new works in natural light.",

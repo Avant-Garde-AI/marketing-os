@@ -1,13 +1,12 @@
 ---
 audiences:
+  # Rotation audiences ONLY. The 1-profile preview-test segment (HzdbZb) is a
+  # pre-send QA step, NOT a campaign audience — listing it here would round-robin
+  # real campaigns onto a test segment. See "Preview before every send" below.
   - key: newsletter
     klaviyoRef: { type: list, id: HRSdjT }
     description: Arthaus Newsletter subscribers — the primary campaign audience (browsers and buyers).
     cadenceCap: 4
-  - key: preview-test
-    klaviyoRef: { type: segment, id: HzdbZb }
-    description: One-profile internal preview segment — every campaign sends here first for a live QA look before the real audience.
-    cadenceCap: 12
 archetypes:
   # artist-drop leads the rotation — Arthaus is actively adding artists, and each
   # new artist is a campaign moment. ~1/3 of sends.
@@ -104,5 +103,9 @@ No urgency clichés, no discount shouting, no "museum quality" without evidence,
 no generic superlatives that fit any artwork. Every campaign serves the brand
 AND a commercial intent; a slot with no honest why is left a gap and named.
 Writes stay gated: draft → human approval → Klaviyo, each send approved
-individually. Every campaign previews to `preview-test` (1 profile) before the
-real audience.
+individually.
+
+**Preview before every send.** Every campaign goes to the 1-profile
+`preview-test` segment (Klaviyo segment `HzdbZb`) for a live inbox look before
+the real audience — a QA step on the way to sending, never a campaign audience
+in the rotation.

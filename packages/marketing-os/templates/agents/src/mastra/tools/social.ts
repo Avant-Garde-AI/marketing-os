@@ -107,5 +107,10 @@ export const socialTools = {
   social_plan_propose: toMastraTool(defs.social_plan_propose),
   social_calendar_read: toMastraTool(defs.social_calendar_read),
   social_post_read: toMastraTool(defs.social_post_read),
+  // Domain reference (spec 24 §6). Bound to the repo-backed corpus by
+  // createSocialTools' default, so a store enables it purely by committing
+  // social/reference/genome.md — no wiring. Stores without one are
+  // unaffected: the tool answers available:false and compose stays brand-only.
+  social_genome_read: toMastraTool(defs.social_genome_read),
   social_link_design: socialLinkDesign,
 };

@@ -97,7 +97,16 @@ async function loadGraph(g, n = 4) {
 const graph = await loadGraph(GRAPH_BY_ARCHETYPE[slot.archetype] ?? GRAPH_BY_ARCHETYPE.editorial, 4);
 if (!graph.pieces.length) throw new Error(`no pieces from the graph for ${slot.archetype}`);
 const catalog = graph.pieces;
-const heroImg = catalog[0].imageUrl;
+
+// Hero image: PREFER a lifestyle mockup (the art in-situ, leaning/framed — the
+// shots Arthaus invests in) over a flat artwork scan. The graph returns one
+// image per artwork; Shopify-Files mockups are named `mockup-…--{frame}--{orientation}`,
+// flat scans live on picasso.arthaus.cloud/cache/artworks. Room-forward beats
+// a flat crop for a hero (brand.md: lead with the space).
+const isLifestyleMockup = (url) => /\/mockup-/i.test(url ?? "");
+const heroPiece = catalog.find((p) => isLifestyleMockup(p.imageUrl)) ?? catalog[0];
+const heroImg = heroPiece.imageUrl;
+const heroKind = isLifestyleMockup(heroImg) ? "lifestyle mockup" : "flat artwork scan (no mockup surfaced)";
 const catText = catalog.map((c, i) => `${i + 1}. "${c.title}"${c.vendor ? " — " + c.vendor : ""}`).join("\n");
 const facetText = catalog.map((p) => `  · "${p.title}" — palette: ${p.palette.join(", ") || "—"}; subject: ${p.subject.slice(0, 4).join(", ") || "—"}`).join("\n");
 
@@ -223,6 +232,7 @@ writeFileSync(join(OUT, "campaign-review.html"), `<!doctype html><meta charset="
     <dt>Subject</dt><dd class="subject">${esc(gen.subject)}</dd>
     <dt>Preview text</dt><dd><i>${esc(gen.previewText)}</i></dd>
     <dt>Art grounding</dt><dd>${esc(graph.label)} — ${catalog.map((c) => esc(c.title)).join(" · ")}</dd>
+    <dt>Hero image</dt><dd>${esc(heroKind)} — "${esc(heroPiece.title)}"</dd>
     <dt>Blocks</dt><dd>${blockList}</dd>
     <dt>Lands at</dt><dd><code>emails/templates/campaign-${esc(MONTH)}-${esc(slot.archetype)}.html</code></dd>
    </dl>
@@ -243,6 +253,7 @@ console.log(`calendar ${MONTH}: ${plan.slots.map((s) => `${s.slot}:${s.archetype
 console.log(`campaign: ${slot.archetype} @ ${slot.slot} → "${gen.subject}"`);
 console.log(`  preview: ${gen.previewText}`);
 console.log(`  grounding: ${graph.label} — ${catalog.map((c) => c.title).join(", ")}`);
+console.log(`  hero: ${heroKind} — "${heroPiece.title}"`);
 console.log(`  blocks: ${sections.map((s) => `${s.slot}:${s.type === "surface" ? "img" : s.block.map((b) => b.kind).join("+")}`).join("  ")}`);
 if (notes.length) console.log(`  notes: ${notes.join(" | ")}`);
 console.log(`  assembly: ${report.ok ? "OK" : "warnings"} · ${html.length}b · tokens ${usage.promptTokenCount}→${usage.candidatesTokenCount}`);

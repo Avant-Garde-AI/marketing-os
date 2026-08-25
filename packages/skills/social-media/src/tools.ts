@@ -22,6 +22,14 @@ import type {
   StrategyPillar,
 } from "./types";
 import {
+  GENOME_PATH,
+  rankArchetypes,
+  repoReferenceCorpus,
+  resolveArchetype,
+  type GenomeQuery,
+  type ReferenceCorpus,
+} from "./reference";
+import {
   STRATEGY_PATH,
   calendarPath,
   parseCalendar,
@@ -348,13 +356,85 @@ const postReadOutput = z.object({
 // Tool factory — the runtime binds the tenant's repo, tests bind a map
 // ---------------------------------------------------------------------------
 
+const genomeReadInput = z.object({
+  board: z
+    .object({
+      width: z.number().int().positive().describe("Board width in px, e.g. 1080"),
+      height: z.number().int().positive().describe("Board height in px, e.g. 1350"),
+    })
+    .describe("The board you are about to compose — archetypes resolve to THESE dimensions"),
+  channel: z.string().min(1).optional().describe("Channel, e.g. instagram"),
+  pillar: z.string().min(1).optional().describe("Content pillar / intent from the plan slot"),
+  minEvidence: z
+    .number()
+    .int()
+    .nonnegative()
+    .optional()
+    .describe("Drop archetypes distilled from fewer than N exemplars"),
+});
+
+const genomeReadOutput = z.object({
+  available: z.boolean().describe("False when the store has no domain reference — compose brand-only"),
+  note: z.string().optional(),
+  domain: z.string().optional(),
+  distilledAt: z.string().optional(),
+  ageDays: z.number().optional().describe("How stale the distillation is"),
+  archetypes: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        description: z.string(),
+        evidence: z.object({ n: z.number(), signal: z.number().optional() }),
+        slots: z.array(
+          z.object({
+            role: z.string(),
+            kind: z.enum(["image", "text", "band"]),
+            x: z.number(),
+            y: z.number(),
+            width: z.number(),
+            height: z.number(),
+          }),
+        ),
+      }),
+    )
+    .optional()
+    .describe("Strongest first, geometry already resolved to the requested board in px"),
+  register: z
+    .object({
+      treatment: z.string(),
+      typographicPosture: z.string().optional(),
+      doNot: z.array(z.string()).optional(),
+    })
+    .optional(),
+  copyFormulas: z
+    .array(z.object({ id: z.string(), structure: z.string(), example: z.string().optional() }))
+    .optional(),
+});
+
 export interface SocialTools {
   social_plan_propose: SkillToolDefinition<typeof planProposeInput, typeof planProposeOutput>;
   social_calendar_read: SkillToolDefinition<typeof calendarReadInput, typeof calendarReadOutput>;
   social_post_read: SkillToolDefinition<typeof postReadInput, typeof postReadOutput>;
+  social_genome_read: SkillToolDefinition<typeof genomeReadInput, typeof genomeReadOutput>;
 }
 
-export function createSocialTools(repo: SocialRepo): SocialTools {
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * @param repo    the tenant's store repo
+ * @param corpus  domain-reference binding; defaults to the committed
+ *                `social/reference/genome.md` (repoReferenceCorpus). Pass
+ *                `emptyReferenceCorpus` — or nothing, in a store with no
+ *                genome — for brand-only composition.
+ * @param now     injected clock for genome staleness; defaults to Date.now.
+ *                Injected rather than read so tests stay deterministic.
+ */
+export function createSocialTools(
+  repo: SocialRepo,
+  corpus: ReferenceCorpus = repoReferenceCorpus(repo),
+  now: () => number = Date.now,
+): SocialTools {
   async function loadStrategy(): Promise<SocialStrategy | null> {
     const raw = await repo.readFile(STRATEGY_PATH);
     return raw === null ? null : parseStrategy(raw);
@@ -416,6 +496,63 @@ export function createSocialTools(repo: SocialRepo): SocialTools {
           throw new Error(`social_post_read: post "${id}" not found (${postPath(id)})`);
         }
         return parsePost(raw);
+      },
+    },
+
+    social_genome_read: {
+      id: "social_genome_read",
+      description:
+        "Read the store's DOMAIN REFERENCE (the 'social genome') before composing a post: the layout archetypes, editorial register and copy formulas distilled from what this store's market actually does. " +
+        "Archetype geometry comes back already resolved to the board you pass, in pixels — hand a chosen archetype's slots straight to compose_design_surface as your layout skeleton, filling each slot by its role. " +
+        "HIERARCHY, always: the store's brand (brand.md / DESIGN.md) DOMINATES and decides palette, type, voice and subject; the genome only INFORMS structure and domain fluency. Never let a market convention override a brand rule — a post that reads like the competition is a failure even if it 'performs'. " +
+        "Prefer a well-evidenced archetype (higher n) and say which one you used and why. When available is false, compose brand-only exactly as you would otherwise — a missing genome is normal, never an error.",
+      inputSchema: genomeReadInput,
+      outputSchema: genomeReadOutput,
+      execute: async ({ board, channel, pillar, minEvidence }) => {
+        const query: GenomeQuery = {
+          ...(channel ? { channel } : {}),
+          ...(pillar ? { pillar } : {}),
+        };
+        const genome = await corpus.genome(query);
+        if (!genome) {
+          return {
+            available: false,
+            note:
+              "No domain reference for this store — compose from brand.md alone (this is a normal, supported state). " +
+              `A store adds one by committing ${GENOME_PATH}.`,
+          };
+        }
+        const ranked = rankArchetypes(
+          genome,
+          minEvidence !== undefined ? { minEvidence } : {},
+        );
+        if (ranked.length === 0) {
+          return {
+            available: false,
+            note: `The genome has no archetype meeting minEvidence=${minEvidence} — compose brand-only, or retry with a lower threshold.`,
+            domain: genome.domain,
+            distilledAt: genome.distilledAt,
+          };
+        }
+        const ageDays = Math.max(
+          0,
+          Math.floor((now() - Date.parse(genome.distilledAt)) / MS_PER_DAY),
+        );
+        return {
+          available: true,
+          domain: genome.domain,
+          distilledAt: genome.distilledAt,
+          ageDays,
+          archetypes: ranked.map((a) => ({
+            id: a.id,
+            name: a.name,
+            description: a.description,
+            evidence: a.evidence,
+            slots: resolveArchetype(a, board),
+          })),
+          ...(genome.register ? { register: genome.register } : {}),
+          ...(genome.copyFormulas ? { copyFormulas: genome.copyFormulas } : {}),
+        };
       },
     },
   };

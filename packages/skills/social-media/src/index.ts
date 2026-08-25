@@ -36,6 +36,26 @@ export type {
   GapAnalysis,
   PillarBalance,
 } from "./tools";
+export {
+  GENOME_PATH,
+  CORPUS_DIR,
+  SEEDS_PATH,
+  genomeFrontMatterSchema,
+  parseGenome,
+  serializeGenome,
+  resolveArchetype,
+  rankArchetypes,
+  findArchetype,
+  repoReferenceCorpus,
+  emptyReferenceCorpus,
+} from "./reference";
+export type {
+  ReferenceCorpus,
+  GenomeQuery,
+  ResolvedSlot,
+  Board,
+  RankOptions,
+} from "./reference";
 export { createSocialActions, publishMaterial, approvalHash, verifyScheduleConsent } from "./actions";
 export type {
   SocialActionDeps,

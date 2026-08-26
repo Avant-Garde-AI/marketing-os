@@ -12,6 +12,10 @@ import { HOSTED, getTenant, runWithTenant, type TenantContext } from "@/lib/tena
 import { runExploreSchema, runDescribeField } from "@/src/mastra/semantics/introspect";
 import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
+import { resolveImagery, listRooms } from "@/lib/imagery/resolve";
+import { createEmailTools } from "@/lib/email/tools";
+import { emailRepo } from "@/lib/email/repo";
+import { createKlaviyoClient } from "@/lib/email/klaviyo-client";
 import {
   STATIC_RESOURCES,
   RESOURCE_TEMPLATES,
@@ -85,6 +89,28 @@ interface ToolDef {
   description: string;
   inputSchema: Record<string, unknown>;
   run: (args: any) => Promise<unknown>;
+}
+
+/**
+ * Invoke one email-pack read tool.
+ *
+ * The pack's tools close over the tenant's repo and Klaviyo client, so they are
+ * constructed per call rather than at module load — this route already runs
+ * inside runWithTenant, and a module-level instance would bind whichever tenant
+ * happened to warm the lambda.
+ *
+ * The pack's enablement gate still applies underneath: a store without the
+ * email pack enabled (or without Klaviyo connected) gets the pack's own error,
+ * which is more useful than hiding the tool from tools/list.
+ */
+async function emailTool(name: string, args: unknown): Promise<unknown> {
+  const defs = createEmailTools(emailRepo, createKlaviyoClient()) as unknown as Record<
+    string,
+    { execute: (i: unknown) => Promise<unknown> } | undefined
+  >;
+  const def = defs[name];
+  if (!def) throw new Error(`Unknown email tool: ${name}`);
+  return def.execute(args);
 }
 
 const TOOLS: ToolDef[] = [
@@ -163,6 +189,103 @@ const TOOLS: ToolDef[] = [
         dateRanges: a.dateRanges ?? [{ startDate: "30daysAgo", endDate: "today" }],
         limit: a.limit ?? 50,
       }),
+  },
+
+  // -------------------------------------------------------------------------
+  // Imagery — the store's mockup pipeline, exposed declaratively.
+  //
+  // A caller asks for a ROLE, not a URL. The resolver composites the artwork
+  // into the store's room-template library and applies the house rules (oak
+  // first, never white, no room scenes for square art, treatment by role), then
+  // returns the winner plus the runners-up so a vision pass or a human can
+  // override. Uses no image generation, so it is unaffected by the Gemini
+  // spend cap.
+  //
+  // The URLs are SIGNED and expire — fine for a preview, but anything that will
+  // be sent must be uploaded to the ESP first. `expiresInMinutes` says so in
+  // the payload rather than only in the docs.
+  // -------------------------------------------------------------------------
+  {
+    name: "imagery_resolve",
+    description:
+      "Resolve a lifestyle/product shot for one artwork. Give the artwork's public image URL, a stable key, and the ROLE it plays (hero-editorial and hero-room get the work in a styled room; hero-artist and hero-product get the leaning studio shot). Returns the chosen image plus ranked alternatives, each with the reason it ranked there, and the provenance string to record on the campaign. Signed URLs expire — upload to the ESP before sending.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        artworkUrl: { type: "string", description: "Public https URL of the artwork image to composite." },
+        artworkKey: { type: "string", description: "Stable key (e.g. the Shopify handle) — seeds template selection so the same piece resolves consistently across campaigns." },
+        role: {
+          type: "string",
+          enum: ["hero-editorial", "hero-room", "hero-artist", "hero-product", "thumbnail"],
+          description: "What the image is for; picks the treatment.",
+        },
+        orientation: { type: "string", enum: ["portrait", "landscape", "square"], description: "Artwork orientation. 'square' suppresses room scenes — the library has no square rooms." },
+        rooms: { type: "array", items: { type: "string" }, description: "Optional preferred room ids (see imagery_rooms), e.g. a seasonal mood." },
+        title: { type: "string" },
+      },
+      required: ["artworkUrl", "artworkKey", "role"],
+    },
+    run: (a) => resolveImagery(a),
+  },
+  {
+    name: "imagery_rooms",
+    description:
+      "List the room settings imagery_resolve can actually composite into (built templates only, with their mood and room type). Use this to pick a seasonal or tonal room rather than guessing an id.",
+    inputSchema: { type: "object", properties: {} },
+    run: () => listRooms(),
+  },
+
+  // -------------------------------------------------------------------------
+  // Email campaign reads (the pack's read surface; writes stay Actions).
+  //
+  // Built per-request because the tools close over the tenant's repo and
+  // Klaviyo client, and this route already runs inside runWithTenant.
+  // -------------------------------------------------------------------------
+  {
+    name: "email_plan_propose",
+    description:
+      "Propose a month's email campaign calendar from the store's email strategy: send slots by cadence and preferred days, archetypes rotated by weight, audiences under their cadence caps, every slot carrying its rationale. Deterministic and read-only — approving a plan is an Action.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        month: { type: "string", description: "YYYY-MM" },
+        campaignsOverride: { type: "number" },
+        context: { type: "object", description: "Optional { topMovers, seasonal, readback } woven into rationales." },
+      },
+      required: ["month"],
+    },
+    run: (a) => emailTool("email_plan_propose", a),
+  },
+  {
+    name: "email_calendar_read",
+    description: "Read the store's email calendar for a month: every slot, its archetype, audience, status and linked campaign, plus gap analysis against the strategy.",
+    inputSchema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM" } }, required: ["month"] },
+    run: (a) => emailTool("email_calendar_read", a),
+  },
+  {
+    name: "email_campaign_read",
+    description: "Read one campaign's full state: subject candidates, preview text, audience, sections, Klaviyo ids and status.",
+    inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+    run: (a) => emailTool("email_campaign_read", a),
+  },
+  {
+    name: "klaviyo_audiences_read",
+    description: "Live Klaviyo lists and segments with profile counts, for choosing and sizing a campaign audience.",
+    inputSchema: { type: "object", properties: {} },
+    run: (a) => emailTool("klaviyo_audiences_read", a ?? {}),
+  },
+  {
+    name: "klaviyo_performance_read",
+    description: "Campaign performance from Klaviyo over a window. Always report the attribution basis it returns alongside the numbers.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        since: { type: "string", description: "ISO date" },
+        until: { type: "string", description: "ISO date" },
+        campaignIds: { type: "array", items: { type: "string" } },
+      },
+    },
+    run: (a) => emailTool("klaviyo_performance_read", a ?? {}),
   },
 ];
 

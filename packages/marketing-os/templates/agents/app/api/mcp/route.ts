@@ -16,6 +16,9 @@ import { resolveImagery, listRooms } from "@/lib/imagery/resolve";
 import { createEmailTools } from "@/lib/email/tools";
 import { emailRepo } from "@/lib/email/repo";
 import { createKlaviyoClient } from "@/lib/email/klaviyo-client";
+import { emailTools } from "@/src/mastra/tools/email";
+import { emailAuthoringTools } from "@/src/mastra/tools/email-authoring";
+import { actionTools } from "@/src/mastra/tools/actions";
 import {
   STATIC_RESOURCES,
   RESOURCE_TEMPLATES,
@@ -111,6 +114,18 @@ async function emailTool(name: string, args: unknown): Promise<unknown> {
   const def = defs[name];
   if (!def) throw new Error(`Unknown email tool: ${name}`);
   return def.execute(args);
+}
+
+/** The runtime's Mastra email tools (email_render_preview lives here, not in the pack). */
+function emailToolMap(): Record<string, { execute: (i: never) => Promise<unknown> }> {
+  return emailTools as unknown as Record<string, { execute: (i: never) => Promise<unknown> }>;
+}
+
+/** Invoke a Mastra tool from the MCP dispatch (their execute takes the raw input). */
+async function runMastra(tool: unknown, args: unknown): Promise<unknown> {
+  const t = tool as { execute: (i: never) => Promise<unknown> } | undefined;
+  if (!t?.execute) throw new Error("tool is not available on this deployment");
+  return t.execute(args as never);
 }
 
 const TOOLS: ToolDef[] = [
@@ -286,6 +301,72 @@ const TOOLS: ToolDef[] = [
       },
     },
     run: (a) => emailTool("klaviyo_performance_read", a ?? {}),
+  },
+
+  // -------------------------------------------------------------------------
+  // Campaign authoring + staging.
+  //
+  // Completes the chain an MCP client (a Claude Code session, say) needs to
+  // drive a campaign end to end: plan → author content → preview → stage for
+  // approval. The final publish step is deliberately absent — see the note on
+  // propose_email_draft.
+  // -------------------------------------------------------------------------
+  {
+    name: "email_campaign_upsert",
+    description:
+      "Create or update a campaign's CONTENT in the store repo: subject, preview text, audience, and the ordered sections of the email. Writes only the repo artifact — nothing is created in Klaviyo and nothing sends. Pass only the fields you want to change; omitted fields are preserved. Refuses to edit a campaign already drafted or scheduled, so an approved send and its artifact cannot drift apart.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "Campaign id, e.g. 2026-09-01-artist-mirimo." },
+        archetype: { type: "string", description: "Required when creating." },
+        subject: { type: "string" },
+        subjectCandidates: { type: "array", items: { type: "string" } },
+        previewText: { type: "string" },
+        audienceIncluded: {
+          type: "array",
+          items: { type: "object", properties: { type: { type: "string", enum: ["list", "segment"] }, id: { type: "string" }, label: { type: "string" } }, required: ["type", "id"] },
+        },
+        audienceExcluded: { type: "array", items: { type: "object" } },
+        sections: {
+          type: "array",
+          description: "The email body in order. An html section carries `blocks` (heading, paragraph, button, productRow, eyebrow, callout, ctaBand, featuredCard, list, swatches, chips, trustBadges, divider, image, graphCallout); a surface section carries `alt` plus an imageUrl (e.g. from imagery_resolve).",
+          items: { type: "object" },
+        },
+        skeletonRef: { type: "string" },
+        copyFormulaRef: { type: "string" },
+        body: { type: "string", description: "Markdown rationale kept with the artifact." },
+        scheduledAt: { type: "string", description: "Intended send time (ISO). Recording it does NOT schedule anything." },
+      },
+      required: ["id"],
+    },
+    run: (a) => runMastra(emailAuthoringTools.email_campaign_upsert, a),
+  },
+  {
+    name: "email_render_preview",
+    description:
+      "Assemble a campaign's current state into real email HTML and return a preview URL a human can open, plus the invariant report (errors/warnings). Read-only; nothing touches Klaviyo. Run this before staging so problems surface early.",
+    inputSchema: { type: "object", properties: { campaignId: { type: "string" } }, required: ["campaignId"] },
+    run: (a) => runMastra(emailToolMap().email_render_preview, a),
+  },
+  {
+    name: "propose_email_draft",
+    description:
+      "Stage an approved campaign to Klaviyo FOR APPROVAL: runs the action's read-only preview, creates a governed proposal, and posts the approval card to Slack. Nothing is created in Klaviyo and nothing sends until a store admin approves that card — approval requires a verified human identity, which an API token does not carry, so it deliberately cannot be done from here. Returns the proposal id and the summary the approver will see.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaignId: { type: "string" },
+        channel: { type: "string", description: "Slack channel id for the card (defaults to the store's digest channel)." },
+      },
+      required: ["campaignId"],
+    },
+    run: (a) =>
+      runMastra(actionTools.propose_action, {
+        kind: "klaviyo.create_campaign_draft",
+        params: { campaignId: a.campaignId },
+        ...(a.channel ? { channel: a.channel } : {}),
+      }),
   },
 ];
 

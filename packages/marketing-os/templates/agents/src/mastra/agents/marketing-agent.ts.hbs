@@ -19,6 +19,7 @@ import { imageryTools } from "../tools/imagery";
 import { socialTools } from "../tools/social";
 import { actionTools } from "../tools/actions";
 import { emailTools } from "../tools/email";
+import { emailAuthoringTools } from "../tools/email-authoring";
 import { getEmailEnablement } from "../../../lib/email/enablement";
 import { instructions as emailInstructions } from "../../../lib/email/instructions";
 import { instructions as socialInstructions } from "../../../lib/social/instructions";
@@ -211,11 +212,11 @@ export const marketingAgent = new Agent({
   tools: HOSTED
     ? async () => ({
         ...baseMarketingTools,
-        ...((await getEmailEnablement()).enabled ? emailTools : {}),
+        ...((await getEmailEnablement()).enabled ? { ...emailTools, ...emailAuthoringTools } : {}),
         ...(await getExternalMcpTools()),
       })
     : {
         ...baseMarketingTools,
-        ...(process.env.EMAIL_PACK_ENABLED === "1" ? emailTools : {}),
+        ...(process.env.EMAIL_PACK_ENABLED === "1" ? { ...emailTools, ...emailAuthoringTools } : {}),
       },
 });

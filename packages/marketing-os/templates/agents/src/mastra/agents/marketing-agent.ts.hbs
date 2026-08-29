@@ -15,6 +15,7 @@ import { reviewOfferExperiment } from "../tools/offer-review";
 import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
 import { brandSoulTools } from "../tools/brand-soul";
 import { designSurfaceTools } from "../tools/design-surfaces";
+import { imageryTools } from "../tools/imagery";
 import { socialTools } from "../tools/social";
 import { actionTools } from "../tools/actions";
 import { emailTools } from "../tools/email";
@@ -77,6 +78,8 @@ const baseMarketingTools = {
   ...semanticTools,
   ...brandSoulTools,
   ...designSurfaceTools,
+  // Imagery resolution (reads: generates candidates, publishes nothing).
+  ...imageryTools,
   ...socialTools,
   // spec 20 A1: the agent's ONLY write interface — proposes a governed Action
   // for human approval. Execute paths are structurally unreachable from here

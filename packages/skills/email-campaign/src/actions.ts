@@ -31,7 +31,7 @@ import type {
   KlaviyoClient,
 } from "./types";
 import {
-  STRATEGY_PATH,
+  strategyPathFor,
   calendarPath,
   campaignPath,
   campaignTemplatePath,
@@ -95,8 +95,9 @@ async function saveCampaign(repo: EmailRepo, campaign: EmailCampaign): Promise<v
 }
 
 async function loadStrategy(repo: EmailRepo): Promise<EmailStrategy> {
-  const raw = await repo.readFile(STRATEGY_PATH);
-  if (raw === null) throw new Error(`${STRATEGY_PATH} not found — co-create the strategy first`);
+  const root = await resolveEmailRoot(repo);
+  const raw = await repo.readFile(strategyPathFor(root));
+  if (raw === null) throw new Error(`${strategyPathFor(root)} not found — co-create the strategy first`);
   return parseStrategy(raw);
 }
 

@@ -21,7 +21,8 @@ import type {
   SkillToolDefinition,
 } from "./types";
 import {
-  STRATEGY_PATH,
+  strategyPathFor,
+  resolveEmailRoot,
   calendarPath,
   campaignPath,
   parseCalendar,
@@ -287,7 +288,8 @@ const MAX_TIMEFRAME_MS = 366 * 24 * 60 * 60 * 1000;
 
 export function createEmailTools(repo: EmailRepo, klaviyo: KlaviyoClient): EmailTools {
   async function loadStrategy(): Promise<EmailStrategy | null> {
-    const raw = await repo.readFile(STRATEGY_PATH);
+    const root = await resolveEmailRoot(repo);
+    const raw = await repo.readFile(strategyPathFor(root));
     return raw === null ? null : parseStrategy(raw);
   }
 
@@ -302,7 +304,7 @@ export function createEmailTools(repo: EmailRepo, klaviyo: KlaviyoClient): Email
         const strategy = await loadStrategy();
         if (!strategy) {
           throw new Error(
-            `email_plan_propose: ${STRATEGY_PATH} not found — co-create the email strategy first (it derives from brand.md §5 tone table's email register + §11 Channel Guidelines)`,
+            `email_plan_propose: ${strategyPathFor(await resolveEmailRoot(repo))} not found — co-create the email strategy first (it derives from brand.md §5 tone table's email register + §11 Channel Guidelines)`,
           );
         }
         return proposeEmailPlan(strategy, input);

@@ -77,6 +77,14 @@ export function registryPathFor(root: EmailRoot): string {
   return root === "emails" ? "emails/klaviyo-registry.json" : REGISTRY_PATH;
 }
 
+/** The standing strategy, under the store's own email root. A store whose
+ * design system lives in `emails/` keeps its strategy there too — splitting the
+ * agent's planning inputs from its deliverables across two directories is the
+ * kind of inconsistency nobody remembers a month later. */
+export function strategyPathFor(root: EmailRoot): string {
+  return root === "emails" ? "emails/strategy.md" : STRATEGY_PATH;
+}
+
 /** Parse email/registry.json (slug → Klaviyo template id). Tolerates an
  * absent file at the caller (readFile returns null); this parses content. */
 export function parseRegistry(raw: string): import("./types").EmailTemplateRegistry {

@@ -1,12 +1,13 @@
 /**
- * Assembled-email preview (02 §7, WS4-R3's iframe source) — OUR renderer,
- * not Klaviyo's, so previews work before anything exists in Klaviyo.
+ * Assembled-email preview (02 §7) — OUR renderer, not Klaviyo's, so previews
+ * work before anything exists in Klaviyo. This is the RAW document: exactly
+ * what the ESP will receive, nothing around it. The reviewer-facing surface
+ * with context and notes is /review/email/[id]; this route is what its frame
+ * points at, and what "open full size" opens.
  *
- * Access model: campaign ids are guessable (unlike design-surface UUIDs), so
- * this route requires an HMAC token derived from (shop, campaignId) — the
- * preview URLs minted by email_render_preview / the Actions carry it. The
- * response is the real assembled HTML in a locked-down document (CSP header:
- * images only, no scripts) suitable for the console's sandboxed iframe.
+ * Access model: campaign ids are guessable, so the URL carries an HMAC over
+ * (scope, shop, id, expiry) — see lib/email/review-links.ts. The token is
+ * minted by the tools and by the console page; it expires.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,20 +15,32 @@ import { runWithTenant } from "../../../../../lib/tenant-context";
 import { emailRepo } from "../../../../../lib/email/repo";
 import { campaignPath, parseCampaign } from "../../../../../lib/email/artifacts";
 import { assembleCampaign } from "../../../../../lib/email/assemble";
-import { emailPreviewToken } from "../../../../../lib/email/preview-url";
+import { verifyLink } from "../../../../../lib/email/review-links";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const shop = req.nextUrl.searchParams.get("shop") ?? process.env.SHOPIFY_STORE_URL ?? "";
+  const q = req.nextUrl.searchParams;
+  const shop = q.get("shop") ?? process.env.SHOPIFY_STORE_URL ?? "";
   if (!shop) return NextResponse.json({ error: "shop required" }, { status: 400 });
 
-  // Token check — skipped only when no secret is configured (dev).
-  const expected = emailPreviewToken(shop, id);
-  if (expected && req.nextUrl.searchParams.get("t") !== expected) {
-    return NextResponse.json({ error: "invalid preview token" }, { status: 403 });
+  const verdict = verifyLink("preview", shop, id, q.get("t"), q.get("e"));
+  if (verdict !== "ok") {
+    // Distinguish the two: an expired link is a normal, expected end-of-life
+    // that a reviewer can fix by asking for a fresh one. A flat 403 for both
+    // reads as a bug and generates a support round-trip.
+    return NextResponse.json(
+      {
+        error: verdict === "expired" ? "preview link expired" : "invalid preview token",
+        hint:
+          verdict === "expired"
+            ? "Ask for a fresh review link — these expire so they can't outlive the campaign."
+            : undefined,
+      },
+      { status: verdict === "expired" ? 410 : 403 },
+    );
   }
 
   try {
@@ -44,7 +57,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        // Belt-and-braces with the console's iframe sandbox: images/styles
+        // Belt-and-braces with the embedding iframe's sandbox: images/styles
         // only (assembled email carries inline CSS + remote images).
         "Content-Security-Policy":
           "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src https:",

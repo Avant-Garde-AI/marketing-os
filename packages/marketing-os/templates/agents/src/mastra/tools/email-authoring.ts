@@ -29,6 +29,8 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { emailRepo } from "../../../lib/email/repo";
+import { syncCampaignIndex } from "../../../lib/email/index-sync";
+import { getTenant } from "../../../lib/tenant-context";
 import { campaignPath, parseCampaign, serializeCampaign, parseStrategy, strategyPathFor, resolveEmailRoot } from "../../../lib/email/artifacts";
 import type { EmailCampaign } from "../../../lib/email/types";
 
@@ -140,6 +142,16 @@ export const emailCampaignUpsert = createTool({
     // work by writing a section.
 
     await emailRepo.writeFile(path, serializeCampaign(next));
+
+    // Write THROUGH to the index. Files stay truth (spec 22 D1) and the email
+    // cron still rebuilds the whole projection from them, but without this the
+    // campaign is invisible everywhere the console and calendar look — they
+    // read mos_email_campaigns / mos_calendar_items, not the artifact store.
+    // A campaign that renders perfectly at its preview URL and appears nowhere
+    // in the UI is the worst kind of half-built: it looks like it worked.
+    // Failures inside syncCampaignIndex are already swallowed and logged there,
+    // because a broken index must never fail an authoring write.
+    await syncCampaignIndex(getTenant().shop, next);
 
     const missing: string[] = [];
     // The draft Action refuses anything not yet approved (draftReadiness), so

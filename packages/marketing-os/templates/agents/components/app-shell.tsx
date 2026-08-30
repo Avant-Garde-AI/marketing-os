@@ -78,7 +78,17 @@ export function AppShell({
 
   // Login is the one full-editorial surface — no shell.
   // Bare surfaces: login and the public Brand Portal render without the rail.
-  if (pathname.startsWith("/login") || pathname.startsWith("/brand/")) return <>{children}</>;
+  // Chromeless surfaces: the console's nav belongs to logged-in operators.
+  // /brand/ is the public Brand Portal; /review/ is the token-linked campaign
+  // review room and contact sheet, opened by teammates who may have no console
+  // account at all — a sidebar of pages they can't reach is just noise.
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/brand/") ||
+    pathname.startsWith("/review/")
+  ) {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex min-h-screen">

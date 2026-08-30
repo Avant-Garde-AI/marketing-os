@@ -3,6 +3,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitives";
 import { loadCampaignDetail, type SectionView } from "@/lib/email/console-data";
+import { getTenant } from "@/lib/tenant-context";
+import { emailPreviewLink, emailReviewLink } from "@/lib/email/review-links";
 
 /**
  * Email campaign detail (WS4-R3 / 02 §7): the campaign as the human reviews
@@ -15,13 +17,6 @@ import { loadCampaignDetail, type SectionView } from "@/lib/email/console-data";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-/** Public base of this deployment — the env pattern the design-surface and
- * brand-soul tools use to mint hosted render links. */
-const PUBLIC_URL = (
-  process.env.MOS_AGENTS_PUBLIC_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-).replace(/\/$/, "");
 
 function statusVariant(status: string): "filled" | "outline" | "attention" {
   if (status === "sent" || status === "measured") return "filled";
@@ -102,11 +97,17 @@ export default async function EmailCampaignPage({
   const excluded = artifact?.audience.excluded ?? [];
   const candidates = (artifact?.subjectCandidates ?? []).filter((c) => c !== subject);
 
-  // Assembled-HTML preview, served by the hosted preview route (02 §7 — this
-  // deployment's guarded route, like /api/design-surfaces/export/[fileId];
-  // built in the hosted-runtime workstream). Ours, not Klaviyo's render
-  // endpoint, so previews work pre-draft.
-  const previewSrc = `${PUBLIC_URL}/api/email/preview/${encodeURIComponent(id)}`;
+  // Assembled-HTML preview, served by this deployment's guarded route (02 §7).
+  // Ours, not Klaviyo's render endpoint, so previews work pre-draft.
+  //
+  // The URL MUST be minted through review-links: the route verifies an HMAC
+  // over (scope, shop, id, expiry), and this page previously built the path by
+  // hand with no shop and no token — which 403'd every iframe in production
+  // while working fine in local dev, where the scheme is off. Mint, don't
+  // concatenate.
+  const { shop } = getTenant();
+  const preview = emailPreviewLink(shop, id);
+  const review = emailReviewLink(shop, id);
 
   function sectionThumb(s: SectionView): { src: string; local: boolean } | null {
     // Klaviyo-hosted image once the draft Action uploaded it; else a live
@@ -339,13 +340,13 @@ export default async function EmailCampaignPage({
           <SectionCard
             title="Preview — assembled email"
             action={
-              <a href={previewSrc} target="_blank" rel="noreferrer" className="arrow-link text-[14px]">
+              <a href={preview.url} target="_blank" rel="noreferrer" className="arrow-link text-[14px]">
                 Open full size
               </a>
             }
           >
             <iframe
-              src={previewSrc}
+              src={preview.url}
               sandbox=""
               referrerPolicy="no-referrer"
               title={`Assembled preview — campaign ${id}`}
@@ -355,6 +356,21 @@ export default async function EmailCampaignPage({
               Rendered by this deployment&apos;s preview route from the committed campaign
               artifacts — what Klaviyo will receive, before Klaviyo has it.
             </p>
+            <div className="mt-4 border-t border-hairline pt-4">
+              <div className="mb-1.5 text-[10px] font-medium uppercase tracking-[0.14em] text-ink-3">
+                Share for review
+              </div>
+              <p className="mb-2 text-[13px] leading-relaxed text-ink-2">
+                Opens the campaign with its rationale, audience and a notes thread — no
+                console account needed. Expires {review.expiresAt}.
+              </p>
+              {/* select-all rather than an onFocus handler: this is a server
+                  component, and `user-select: all` selects the whole URL on a
+                  single click without shipping a client bundle for it. */}
+              <div className="w-full select-all break-all border border-hairline bg-paper px-3 py-2 font-mono text-[11.5px] text-ink-2">
+                {review.url}
+              </div>
+            </div>
           </SectionCard>
 
           {/* Status trail + the Action gate's ledger */}

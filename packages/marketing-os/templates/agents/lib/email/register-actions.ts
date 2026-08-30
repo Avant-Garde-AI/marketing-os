@@ -11,7 +11,7 @@ import { createEmailActions, type EmailActionDeps } from "./actions";
 import { assembleCampaign } from "./assemble";
 import { createKlaviyoClient } from "./klaviyo-client";
 import { emailRepo } from "./repo";
-import { emailPreviewUrl } from "./preview-url";
+import { emailPreviewLink } from "./review-links";
 import { registerAction } from "../actions/registry";
 import { getTenant } from "../tenant-context";
 
@@ -35,7 +35,7 @@ function deps(): EmailActionDeps {
       if (!res.ok) throw new Error(`asset fetch failed (${res.status}) for ${path}`);
       return new Uint8Array(await res.arrayBuffer());
     },
-    previewUrl: (campaignId: string) => emailPreviewUrl(getTenant().shop, campaignId),
+    previewUrl: (campaignId: string) => emailPreviewLink(getTenant().shop, campaignId).url,
     defaultSkeletonRef: "default",
   };
 }

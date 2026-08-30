@@ -17,15 +17,20 @@ export async function middleware(request: NextRequest) {
   // Penpot file/page UUIDs, same access model as brand-image — Slack blocks
   // and the console fetch them directly.
   // Action execute (spec 20 A1): ACTIONS_GATE_SECRET verified in-route —
-  // only the platform gate holds it. Email preview (02 §7): HMAC-tokened
-  // per (shop, campaign) since campaign ids are guessable; verified in-route.
+  // only the platform gate holds it. Email preview + the /review/ room and
+  // contact sheet (spec 25): HMAC-tokened per (scope, shop, id, expiry) since
+  // campaign ids are guessable; verified in-route/in-page. These links EXPIRE —
+  // /api/email/review-notes is the one WRITE among them, and it can only
+  // append a note, never change campaign state.
   if (
     request.nextUrl.pathname.startsWith("/brand/") ||
     request.nextUrl.pathname.startsWith("/api/brand-image/") ||
     request.nextUrl.pathname.startsWith("/api/cron/") ||
     request.nextUrl.pathname.startsWith("/api/design-surfaces/export/") ||
     request.nextUrl.pathname.startsWith("/api/actions/execute") ||
-    request.nextUrl.pathname.startsWith("/api/email/preview/")
+    request.nextUrl.pathname.startsWith("/api/email/preview/") ||
+    request.nextUrl.pathname.startsWith("/api/email/review-notes") ||
+    request.nextUrl.pathname.startsWith("/review/")
   ) {
     return response;
   }

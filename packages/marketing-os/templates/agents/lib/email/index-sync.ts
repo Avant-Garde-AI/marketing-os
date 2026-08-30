@@ -10,6 +10,7 @@
 
 import { Pool } from "pg";
 import { upsertCalendarItem } from "../calendar";
+import { heroImageUrl } from "./hero";
 import type { EmailCampaign } from "./types";
 import { campaignPath } from "./artifacts";
 
@@ -106,6 +107,11 @@ export async function syncCampaignIndex(
       status: campaign.status,
       title: campaign.subject ?? campaign.id,
       intent: campaign.archetype,
+      // The calendar's thumbnail is the email's own hero — the shot the agent
+      // already resolved, so this costs nothing and the grid becomes scannable
+      // by image instead of by subject line. Null while a campaign is still
+      // all copy; the calendar renders a text card for those.
+      thumbnailUrl: heroImageUrl(campaign.sections) ?? undefined,
     },
     tenantId,
   );

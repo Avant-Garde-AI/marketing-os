@@ -393,6 +393,67 @@ function renderTrustBadges(items: string[], theme: EmailTheme): string {
   );
 }
 
+/**
+ * Editorial art-graph callout: a named connection from the store's knowledge
+ * graph, why it holds, and the works it links.
+ *
+ * The image band is a FIXED-HEIGHT cell (`height` attribute + `valign="middle"`,
+ * with `max-height` for clients that honour CSS). Artwork arrives at wildly
+ * different aspect ratios — a portrait next to two cropped landscapes — and
+ * without a fixed band the captions land at different heights and the row reads
+ * as broken rather than curated. Outlook honours the td height; clients that
+ * ignore max-height still get a consistent band because the width is capped.
+ */
+const CALLOUT_BAND_PX = 190;
+
+function renderGraphCallout(
+  b: Extract<EmailBlock, { kind: "graphCallout" }>,
+  theme: EmailTheme,
+): string {
+  const colWidth = Math.floor(PRODUCT_ROW_WIDTH / b.pieces.length);
+  const cardWidth = colWidth - 8;
+  const imgWidth = cardWidth - 24;
+  const cells = b.pieces
+    .map(
+      (p) =>
+        `<div class="eab-col" style="display:inline-block;width:100%;max-width:${cardWidth}px;vertical-align:top;">` +
+        `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">` +
+        `<tr><td align="center" height="${CALLOUT_BAND_PX}" valign="middle" style="height:${CALLOUT_BAND_PX}px;padding:0 12px;">` +
+        `<a href="${escapeAttr(p.href)}"><img src="${escapeAttr(p.imageUrl)}" alt="${escapeAttr(p.artist ? `${p.title} by ${p.artist}` : p.title)}" ` +
+        `style="display:block;margin:0 auto;max-width:${imgWidth}px;max-height:${CALLOUT_BAND_PX}px;width:auto;height:auto;border:0;"></a>` +
+        `</td></tr>` +
+        `<tr><td align="center" style="padding:10px 12px 0 12px;">` +
+        `<a href="${escapeAttr(p.href)}" class="eab-text" style="display:block;font-family:${theme.bodyFontStack};` +
+        `font-size:14px;font-weight:600;color:${theme.textColor};text-decoration:none;">${escapeHtml(p.title)}</a>` +
+        (p.artist
+          ? `<span class="eab-meta" style="display:block;padding-top:3px;font-family:${theme.bodyFontStack};` +
+            `font-size:12px;color:${theme.textColor};opacity:.72;">${escapeHtml(p.artist)}</span>`
+          : "") +
+        `</td></tr></table></div>`,
+    )
+    .join(`<!--[if mso]></td><td width="${colWidth}" valign="top"><![endif]-->`);
+
+  const note = b.note
+    ? `<tr><td align="left" style="padding:0 ${theme.gutterPx}px 14px ${theme.gutterPx}px;` +
+      `font-family:${theme.headingFontStack};font-style:italic;font-size:15px;line-height:23px;` +
+      `mso-line-height-rule:exactly;color:${theme.textColor};">${escapeHtml(b.note)}</td></tr>`
+    : "";
+
+  return (
+    `${BLOCK_OPEN}` +
+    `<tr><td align="left" style="padding:0 ${theme.gutterPx}px 6px ${theme.gutterPx}px;` +
+    `font-family:${theme.bodyFontStack};font-size:11px;font-weight:600;letter-spacing:0.08em;` +
+    `text-transform:uppercase;color:${theme.accentColor};">${escapeHtml(b.label)}</td></tr>` +
+    note +
+    `<tr><td align="center" style="padding:0 ${theme.gutterPx}px 20px ${theme.gutterPx}px;font-size:0;">` +
+    `<!--[if mso]><table role="presentation" width="${PRODUCT_ROW_WIDTH}" border="0" cellpadding="0" cellspacing="0"><tr>` +
+    `<td width="${colWidth}" valign="top"><![endif]-->` +
+    cells +
+    `<!--[if mso]></td></tr></table><![endif]-->` +
+    `</td></tr></table>`
+  );
+}
+
 /** A visible hairline rule (distinct from the invisible spacer). */
 function renderDivider(theme: EmailTheme): string {
   return (
@@ -435,6 +496,8 @@ export function renderBlock(block: EmailBlock, theme: EmailTheme): string {
       return renderTrustBadges(block.items, theme);
     case "divider":
       return renderDivider(theme);
+    case "graphCallout":
+      return renderGraphCallout(block, theme);
   }
 }
 

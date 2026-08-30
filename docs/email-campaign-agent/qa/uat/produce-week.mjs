@@ -52,12 +52,12 @@ const SCHEDULE_ALL = [
 const SCHEDULE = ONLY ? SCHEDULE_ALL.filter(s=>s.artist===ONLY) : SCHEDULE_ALL;
 const AUDIENCE = [{ type: "list", id: "HRSdjT", label: "Arthaus Newsletter" }];
 
-async function picasso(name, args) {
+async function picasso(name, args, timeoutMs = 40000) {
   const res = await fetch(PICASSO_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
-    signal: AbortSignal.timeout(40000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const raw = await res.text();
   const line = raw.split("\n").find((l) => l.startsWith("data:")) ?? raw;
@@ -102,7 +102,61 @@ const responseSchema = {
   required: ["subject", "previewText", "sections"], propertyOrdering: ["subject", "previewText", "sections"],
 };
 
-const SLOTS = ["hero", "intro", "works", "closing"];
+const SLOTS = ["hero", "intro", "quote", "works", "palette", "editorial", "closing"];
+
+/**
+ * The editorial callouts — the art knowledge graph made visible.
+ *
+ * ONE concept_walk from the artist's lead piece returns DIMENSIONS: named
+ * connections the graph actually holds ("In a Similar Light", "More from
+ * MIRIMO", a concept like "Brown"), each with its own editorial blurb and the
+ * works it links to. Each dimension becomes one callout.
+ *
+ * Built in CODE, not by the model: these are graph facts (which works connect,
+ * and why) and the blurb is the graph's own copy. The model writes the campaign
+ * voice; it does not get to invent relationships between artworks.
+ *
+ * concept_walk is slow (~45s) — one call per campaign, never per piece.
+ */
+async function editorialCallouts(seedHandle, want = 3) {
+  const r = await picasso("concept_walk", { seed_handles: [seedHandle], dimensions: want + 1 }, 90000);
+  const out = [];
+  for (const d of r.dimensions ?? []) {
+    const pieces = (d.results ?? [])
+      .filter((p) => p.title && p.image && p.url)
+      // Prefer a lifestyle mockup over a flat scan when the graph has one.
+      .sort((a, b) => (/\/mockup-/.test(b.image) ? 1 : 0) - (/\/mockup-/.test(a.image) ? 1 : 0))
+      .slice(0, 2)
+      .map((p) => ({ imageUrl: p.image, title: p.title.trim(), href: p.url, ...(p.artist ? { artist: p.artist } : {}) }));
+    if (pieces.length < 1) continue;
+    out.push({ kind: "graphCallout", label: d.label || d.key || "Related", ...(d.blurb ? { note: d.blurb } : {}), pieces });
+    if (out.length >= want) break;
+  }
+  return out;
+}
+
+/**
+ * The materials sidebar — an art-magazine device, built from real facets.
+ *
+ * The graph holds each work's palette and subject terms ("electric blue",
+ * "brown", "textile", "modernism"). Aggregated across the featured works they
+ * are the artist's material vocabulary. Rendered as chips: the terms are the
+ * graph's own, so nothing is invented — and deliberately NOT swatches, because
+ * the graph gives colour NAMES, not hexes, and painting an approximate hex
+ * would be a fabricated fact dressed as precision.
+ */
+function paletteSidebar(catalogue) {
+  const colours = [...new Set(catalogue.flatMap((p) => p.palette))].slice(0, 6);
+  const subjects = [...new Set(catalogue.flatMap((p) => p.subject))]
+    .filter((t) => !colours.includes(t))
+    .slice(0, 4);
+  const terms = [...colours, ...subjects];
+  if (terms.length < 2) return [];
+  return [
+    { kind: "eyebrow", text: "The palette" },
+    { kind: "chips", items: terms.map((t) => t.replace(/\b\w/g, (c) => c.toUpperCase())) },
+  ];
+}
 
 async function generate(artist, catalogue) {
   const facetText = catalogue.map((p) => `  · "${p.title}" — palette: ${p.palette.join(", ") || "—"}; subject: ${p.subject.slice(0, 4).join(", ") || "—"}`).join("\n");
@@ -110,7 +164,7 @@ async function generate(artist, catalogue) {
   const brief = `Archetype: artist-drop — ${artist} is newly spotlighted on Arthaus. This is the template reused for every new artist.
 Audience: Arthaus Newsletter subscribers.
 Intent: introduce ${artist} as a person and an aesthetic (artist intimacy, never a CV), then show their work. Ground every art claim in the real facets below — name the actual colours and subjects.
-Slots & blocks: hero (heroImage of the lead piece) · intro (eyebrow "New to Arthaus" + heading L1 [the artist's name — put it in text, NEVER alt] + paragraph on their voice/aesthetic) · works (eyebrow + heading L2 + productRow of up to 3 of their pieces) · closing (ctaBand with heading + buttonText "See the collection" + trustBadges).
+Slots & blocks: hero (heroImage of the lead piece) · intro (eyebrow "New to Arthaus" + heading L1 [the artist's name — put it in text, NEVER alt] + paragraph on their voice/aesthetic) · works (eyebrow + heading L2 + productRow of up to 3 of their pieces) · quote (ONE callout with emphasis:true — a single striking editorial line about this artist's work, the kind a magazine pulls out and sets large; no quotation marks, and not a sentence repeated from the intro) · palette (ONE paragraph of 1-2 sentences on the artist's material vocabulary — the colours and subjects they keep returning to, named from the facets; the chip row itself is added for you) · editorial (ONE eyebrow + ONE short heading L2 introducing how this artist's work connects across the collection — the art-graph callouts themselves are added for you, do NOT invent works here) · closing (ctaBand with heading + buttonText "See the collection" + trustBadges).
 
 Art-knowledge-graph context (LIVE from the store's Picasso graph — artist "${artist}"):
 ${facetText}
@@ -136,7 +190,7 @@ ${catText}`;
 
 const isMockup = (u) => /\/mockup-/i.test(u ?? "");
 
-function assemble(gen, catalogue, heroImg) {
+function assemble(gen, catalogue, heroImg, callouts = [], sidebar = []) {
   const findCat = (t) => { const q = String(t).trim().toLowerCase(); return catalogue.find((c) => c.title.toLowerCase() === q) ?? catalogue.find((c) => c.title.toLowerCase().includes(q) || q.includes(c.title.toLowerCase())); };
   const bySlot = new Map(); const sections = []; const notes = [];
   for (const s of gen.sections ?? []) {
@@ -157,6 +211,10 @@ function assemble(gen, catalogue, heroImg) {
     if (["heading", "paragraph", "eyebrow", "callout", "button"].includes(b.kind) && !b.text) { notes.push(`empty ${b.kind} in "${s.slot}"`); continue; }
     if (!bySlot.has(s.slot)) bySlot.set(s.slot, []); bySlot.get(s.slot).push(b);
   }
+  // Graph-built sections: the model writes voice, the graph supplies the facts.
+  // The sidebar's eyebrow+chips lead, the model's paragraph sits beneath them.
+  if (sidebar.length) bySlot.set("palette", [...sidebar, ...(bySlot.get("palette") ?? [])]);
+  if (callouts.length) bySlot.set("editorial", [...(bySlot.get("editorial") ?? []), ...callouts]);
   for (const [slot, blocks] of bySlot) sections.push({ slot, type: "html", block: blocks });
 
   const FRAME = ["<!--PARTIAL:head-->", "<body>",
@@ -186,8 +244,14 @@ for (const { date, artist } of SCHEDULE) {
     const catalogue = await artistCatalogue(artist, 4);
     if (!catalogue.length) throw new Error("no catalogue from the graph");
     const heroPiece = catalogue.find((p) => isMockup(p.imageUrl)) ?? catalogue[0];
+    let callouts = [];
+    try {
+      callouts = await editorialCallouts(heroPiece.handle, 3);
+      console.log(`  graph callouts: ${callouts.map((c) => c.label).join(" | ") || "none"}`);
+    } catch (e) { console.log(`  (concept_walk failed: ${String(e.message).slice(0, 70)})`); }
     const { gen, usage } = await generate(artist, catalogue);
-    const { html, report, sections, notes } = assemble(gen, catalogue, heroPiece.imageUrl);
+    const sidebar = paletteSidebar(catalogue);
+    const { html, report, sections, notes } = assemble(gen, catalogue, heroPiece.imageUrl, callouts, sidebar);
 
     const repoPath = `emails/templates/campaign-${id}.html`;
     writeFileSync(join(STORE, repoPath), html);

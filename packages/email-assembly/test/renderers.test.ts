@@ -255,3 +255,47 @@ describe("Arthaus design-system blocks", () => {
     expect(html).toContain("height:1px");
   });
 });
+
+describe("graphCallout — the art-graph editorial module", () => {
+  const block = {
+    kind: "graphCallout" as const,
+    label: "In a Similar Light",
+    note: "Works that echo this one's palette, line & composition.",
+    pieces: [
+      { imageUrl: "https://cdn.example.com/a.jpg", title: "Alien 1", artist: "MIRIMO", href: "https://ex.com/a" },
+      { imageUrl: "https://cdn.example.com/b.jpg", title: "Pine & Ash", href: "https://ex.com/b" },
+    ],
+  };
+  const html = renderBlock(block, theme);
+
+  it("renders the dimension label as the bronze uppercase kicker", () => {
+    expect(html).toContain("In a Similar Light");
+    expect(html).toContain("text-transform:uppercase");
+    expect(html).toContain("letter-spacing:0.08em");
+  });
+
+  it("renders the note in the brand serif italic, escaped", () => {
+    expect(html).toContain("font-style:italic");
+    expect(html).toContain("palette, line &amp; composition");
+  });
+
+  it("gives every piece a FIXED-HEIGHT band so captions align across aspect ratios", () => {
+    const bands = [...html.matchAll(/height="190"/g)];
+    expect(bands.length).toBe(block.pieces.length);
+    expect(html).toContain("max-height:190px");
+  });
+
+  it("links each piece and credits the artist when known", () => {
+    expect(html).toContain('href="https://ex.com/a"');
+    expect(html).toContain("Alien 1");
+    expect(html).toContain("MIRIMO");
+    expect(html).toContain('alt="Alien 1 by MIRIMO"');
+    // No artist → alt falls back to the title alone.
+    expect(html).toContain('alt="Pine &amp; Ash"');
+  });
+
+  it("keeps the MSO ghost table so Outlook holds the columns", () => {
+    expect(html).toContain("<!--[if mso]>");
+    expect(html).toContain("</td></tr></table><![endif]-->");
+  });
+});

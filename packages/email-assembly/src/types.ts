@@ -211,6 +211,30 @@ export const emailBlockSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("trustBadges"), items: z.array(z.string().min(1)).min(1).max(6) }),
   /** A visible hairline rule (distinct from the invisible spacer). */
   z.object({ kind: z.literal("divider") }),
+  /**
+   * An editorial callout built from one dimension of the store's art knowledge
+   * graph: a named connection ("In a Similar Light"), the reason it holds, and
+   * the works it links to. This is what turns a product roundup into an
+   * informative editorial read — the graph made visible rather than implied.
+   */
+  z.object({
+    kind: z.literal("graphCallout"),
+    /** The dimension's name — rendered as the bronze kicker. */
+    label: z.string().min(1),
+    /** Why these connect. One sentence; the graph's blurb or a brand-voiced edit. */
+    note: z.string().optional(),
+    pieces: z
+      .array(
+        z.object({
+          imageUrl: z.string().min(1),
+          title: z.string().min(1),
+          artist: z.string().optional(),
+          href: z.string().min(1),
+        }),
+      )
+      .min(1)
+      .max(3),
+  }),
 ]);
 
 export type EmailBlock = z.infer<typeof emailBlockSchema>;

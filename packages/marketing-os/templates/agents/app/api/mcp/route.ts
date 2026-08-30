@@ -343,6 +343,26 @@ const TOOLS: ToolDef[] = [
     run: (a) => runMastra(emailAuthoringTools.email_campaign_upsert, a),
   },
   {
+    name: "email_strategy_read",
+    description:
+      "Read the store's current email strategy verbatim, so it can be revised rather than rewritten. Returns exists:false when the store has none yet.",
+    inputSchema: { type: "object", properties: {} },
+    run: () => runMastra(emailAuthoringTools.email_strategy_read, {}),
+  },
+  {
+    name: "email_strategy_upsert",
+    description:
+      "Write the store's standing email strategy: audiences, the weighted archetype rotation, cadence and send days, seasonal arcs and guardrails. Pass the COMPLETE markdown document (YAML front matter + prose body). It is validated with the planner's own parser before saving — a malformed strategy is rejected, not stored. Every calendar email_plan_propose produces derives from this, so co-create it with the owner from brand.md rather than inventing it.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        content: { type: "string", description: "Full strategy.md: front matter (audiences[], archetypes[] with weights, campaignsPerMonth, sendDays[], sendTime) then the body." },
+      },
+      required: ["content"],
+    },
+    run: (a) => runMastra(emailAuthoringTools.email_strategy_upsert, a),
+  },
+  {
     name: "email_render_preview",
     description:
       "Assemble a campaign's current state into real email HTML and return a preview URL a human can open, plus the invariant report (errors/warnings). Read-only; nothing touches Klaviyo. Run this before staging so problems surface early.",

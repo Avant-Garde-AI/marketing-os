@@ -29,7 +29,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { emailRepo } from "../../../lib/email/repo";
-import { campaignPath, parseCampaign, serializeCampaign } from "../../../lib/email/artifacts";
+import { campaignPath, parseCampaign, serializeCampaign, parseStrategy, strategyPathFor, resolveEmailRoot } from "../../../lib/email/artifacts";
 import type { EmailCampaign } from "../../../lib/email/types";
 
 const audienceRefSchema = z.object({
@@ -166,4 +166,83 @@ export const emailCampaignUpsert = createTool({
   },
 });
 
-export const emailAuthoringTools = { email_campaign_upsert: emailCampaignUpsert };
+
+
+/**
+ * Strategy authoring.
+ *
+ * The pack's own instructions tell the agent to "co-create email/strategy.md
+ * with the owner from brand.md" — but there was no tool to write one, so the
+ * standing strategy could only ever be seeded by hand. Every planning call
+ * depends on it (`email_plan_propose` derives the whole calendar from it), so
+ * a store with no strategy had no path to one from inside the product.
+ *
+ * VALIDATE-BEFORE-WRITE is the point: the content is parsed with the same
+ * parser the planner uses, and a document that would not parse is rejected
+ * with the parser's own error rather than saved. A malformed strategy is worse
+ * than no strategy — it fails later, further from the cause.
+ *
+ * Repo artifact only: no external state, nothing sends. Like campaign content,
+ * it is human-reviewable in the store repo and every campaign it produces
+ * still goes through the Action gate.
+ */
+export const emailStrategyUpsert = createTool({
+  id: "email_strategy_upsert",
+  description:
+    "Write the store's standing email strategy (strategy.md): the audiences, the weighted archetype rotation, cadence and send days, seasonal arcs and guardrails. Pass the COMPLETE markdown document — YAML front matter plus the prose body — and it is validated with the planner's own parser before saving, so a malformed strategy is rejected rather than stored. Read the current one with email_strategy_read first if you are revising. Every calendar email_plan_propose produces derives from this, so it should be co-created with the owner from brand.md, not invented.",
+  inputSchema: z.object({
+    content: z
+      .string()
+      .min(1)
+      .describe(
+        "The full strategy.md: YAML front matter (audiences[], archetypes[] with weights, campaignsPerMonth, sendDays[], sendTime HH:MM, optional seasonalArcs/guardrails) then --- then the markdown body.",
+      ),
+  }),
+  execute: async ({ content }: { content: string }) => {
+    // Parse FIRST. The planner will use exactly this parser, so anything it
+    // rejects must never reach the store.
+    let parsed;
+    try {
+      parsed = parseStrategy(content);
+    } catch (e) {
+      throw new Error(
+        `strategy rejected — it would not parse, so it was NOT saved: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+
+    const root = await resolveEmailRoot(emailRepo);
+    const path = strategyPathFor(root);
+    const previous = await emailRepo.readFile(path);
+    await emailRepo.writeFile(path, content);
+
+    return {
+      repoPath: path,
+      created: previous === null,
+      audiences: parsed.audiences.map((a) => ({ key: a.key, cadenceCap: a.cadenceCap })),
+      archetypes: parsed.archetypes.map((a) => ({ name: a.name, weight: a.weight })),
+      campaignsPerMonth: parsed.campaignsPerMonth,
+      sendDays: parsed.sendDays,
+      sendTime: parsed.sendTime,
+      next: "Call email_plan_propose { month } to see the calendar this produces.",
+    };
+  },
+});
+
+export const emailStrategyRead = createTool({
+  id: "email_strategy_read",
+  description:
+    "Read the store's current email strategy document verbatim, so it can be revised rather than rewritten from scratch. Returns null content when the store has no strategy yet.",
+  inputSchema: z.object({}),
+  execute: async () => {
+    const root = await resolveEmailRoot(emailRepo);
+    const path = strategyPathFor(root);
+    const content = await emailRepo.readFile(path);
+    return { repoPath: path, exists: content !== null, content };
+  },
+});
+
+export const emailAuthoringTools = {
+  email_campaign_upsert: emailCampaignUpsert,
+  email_strategy_upsert: emailStrategyUpsert,
+  email_strategy_read: emailStrategyRead,
+};

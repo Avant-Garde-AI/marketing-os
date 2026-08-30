@@ -363,6 +363,17 @@ const TOOLS: ToolDef[] = [
     run: (a) => runMastra(emailAuthoringTools.email_strategy_upsert, a),
   },
   {
+    name: "email_partials_upsert",
+    description:
+      "Seed or update the store's email design-system partials (head, header, footer, divider, button, product-card) — the shared fragments every campaign frame composes from. Required before any email can be assembled or previewed. Pass a map of partial name → HTML.",
+    inputSchema: {
+      type: "object",
+      properties: { partials: { type: "object", description: "name → HTML, matching the <!--PARTIAL:name--> markers." } },
+      required: ["partials"],
+    },
+    run: (a) => runMastra(emailAuthoringTools.email_partials_upsert, a),
+  },
+  {
     name: "email_render_preview",
     description:
       "Assemble a campaign's current state into real email HTML and return a preview URL a human can open, plus the invariant report (errors/warnings). Read-only; nothing touches Klaviyo. Run this before staging so problems surface early.",

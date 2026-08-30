@@ -241,8 +241,60 @@ export const emailStrategyRead = createTool({
   },
 });
 
+
+/**
+ * Design-system seeding.
+ *
+ * The frame an email is assembled on comes from the store's partials (head,
+ * header, footer, divider, product-card…). Those live in the store's git repo,
+ * but the artifact store the runtime reads is DB-backed (see lib/email/repo.ts
+ * — the git lane is deferred), so a store whose design system has never been
+ * seeded cannot assemble anything: `email_render_preview` fails with "no
+ * partials", and so does every draft Action.
+ *
+ * This is the bridge until the git write path lands. It is deliberately
+ * scoped to partials rather than being a general file-write: the assembly
+ * frame is the one thing that must exist before anything else works, and a
+ * general "write any path" tool over the artifact store is a much wider
+ * surface than this problem needs.
+ */
+export const emailPartialsUpsert = createTool({
+  id: "email_partials_upsert",
+  description:
+    "Seed or update the store's email design-system partials — the shared HTML fragments (head, header, footer, divider, button, product-card) that every campaign's frame is composed from. Required before any email can be assembled or previewed. Pass a map of partial name → HTML. Klaviyo template tags are preserved verbatim; the composer only substitutes <!--PARTIAL:name--> markers.",
+  inputSchema: z.object({
+    partials: z
+      .record(z.string(), z.string())
+      .describe('Map of name → HTML, e.g. { "head": "<!DOCTYPE html>…", "header": "<table>…" }. Names match the <!--PARTIAL:name--> markers.'),
+  }),
+  execute: async ({ partials }: { partials: Record<string, string> }) => {
+    const names = Object.keys(partials);
+    if (!names.length) throw new Error("no partials supplied");
+    const root = await resolveEmailRoot(emailRepo);
+    const written: string[] = [];
+    for (const [name, html] of Object.entries(partials)) {
+      if (!/^[\w-]+$/.test(name)) throw new Error(`invalid partial name "${name}" — use letters, digits, dashes`);
+      const path = `${root}/partials/${name}.html`;
+      await emailRepo.writeFile(path, html);
+      written.push(path);
+    }
+    // The frame needs these three at minimum; say so rather than letting
+    // assembly fail later with a less obvious message.
+    const required = ["head", "header", "footer"];
+    const present = new Set(names);
+    const missing = required.filter((r) => !present.has(r));
+    return {
+      written,
+      root,
+      complete: missing.length === 0,
+      ...(missing.length ? { stillMissing: missing, note: `The default frame composes head + header + footer; without ${missing.join(", ")} assembly will still fail.` } : {}),
+    };
+  },
+});
+
 export const emailAuthoringTools = {
   email_campaign_upsert: emailCampaignUpsert,
   email_strategy_upsert: emailStrategyUpsert,
   email_strategy_read: emailStrategyRead,
+  email_partials_upsert: emailPartialsUpsert,
 };

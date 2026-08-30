@@ -153,11 +153,19 @@ export async function assembleCampaign(campaign: EmailCampaign): Promise<Assembl
   skeletonSrc.html = skeletonSrc.html.replace(/<!--TITLE-->/g, titleText);
 
   const sections: EmailSection[] = [];
+  // "Uploaded" means hosted by the ESP, not merely having SOME url. An imagery
+  // resolver hands back a signed GCS url — real, renderable, and NOT yet on a
+  // Klaviyo host — so treating any url as uploaded flips assembly into strict
+  // mode and the host allowlist then rejects the very image we just resolved.
+  // The draft Action re-uploads before anything sends; until then the section
+  // is pending, and the preview should render rather than error.
+  const isEspHosted = (u: string): boolean =>
+    /(^https:\/\/[^/]*\.klaviyo(mail)?\.com\/)|(^https:\/\/d3k81ch9hvuctc\.cloudfront\.net\/)/i.test(u);
   let allUploaded = true;
   for (const s of campaign.sections) {
     if (s.type === "surface") {
       const url = s.imageUrl ?? exportRouteUrl(s);
-      if (!s.imageUrl) allUploaded = false;
+      if (!s.imageUrl || !isEspHosted(s.imageUrl)) allUploaded = false;
       if (!url) {
         throw new Error(
           `surface section "${s.slot}" has neither imageUrl nor surfaceId — compose/export its board first`,

@@ -22,6 +22,13 @@
  * it. The reverse order would leave the index claiming an artifact that was
  * never committed — the index lying about truth is the worse failure, and the
  * harder one to notice.
+ *
+ * FAILURE POSTURE DIFFERS BY MODE. In "git", a failed commit fails the write:
+ * there is nowhere else for truth to live, so reporting success would be a lie.
+ * In "mirror", a failed commit falls back to the database with a loud log —
+ * mirror exists to be a safe place to sit during a migration, and a mode more
+ * fragile than the "db" it replaces is one nobody would keep enabled. Only when
+ * BOTH sides refuse does the caller see an error.
  */
 
 import type { StoreRepo } from "../skill-kit";
@@ -125,15 +132,46 @@ export async function resolveStoreRepo(
     },
 
     async writeFile(path, content) {
-      await git.writeFile(path, content); // truth first
+      // Git first — it is truth. But a git failure must NOT take authoring down
+      // in mirror mode: the whole point of mirror is a transition that is safe
+      // to sit in, and a mode strictly more fragile than "db" is one nobody
+      // would leave enabled. The database is still a real store here, and the
+      // backfill script reconciles anything git missed.
+      //
+      // Found the hard way: flipping a store to mirror with a stale
+      // GITHUB_TOKEN made every campaign save fail outright. In "git" mode that
+      // is correct — there is nowhere else for truth to live. In "mirror" it is
+      // just an outage with a fallback sitting right there.
+      let gitOk = true;
+      try {
+        await git.writeFile(path, content);
+      } catch (e) {
+        gitOk = false;
+        console.error(
+          `[store-repo] git write FAILED for ${path} — falling back to the database. ` +
+            `This artifact is not in the repo; re-run the backfill once git is reachable:`,
+          e instanceof Error ? e.message : e,
+        );
+      }
+
       try {
         await dbRepo.writeFile(path, content);
       } catch (e) {
-        // Truth landed; the index is stale at worst and the cron sweep fixes
-        // it. Do not fail the caller's turn over a mirror.
-        console.error(
-          `[store-repo] mirrored DB write failed for ${path} (git commit succeeded):`,
-          e instanceof Error ? e.message : e,
+        if (gitOk) {
+          // Truth landed; the index is stale at worst and the cron sweep fixes
+          // it. Do not fail the caller's turn over a mirror.
+          console.error(
+            `[store-repo] mirrored DB write failed for ${path} (git commit succeeded):`,
+            e instanceof Error ? e.message : e,
+          );
+          return;
+        }
+        // Neither side took it. Now the caller must hear about it, because
+        // reporting a save that went nowhere is the one outcome worse than
+        // failing.
+        throw new Error(
+          `Could not save ${path} to git or the database — nothing was written. ` +
+            `Cause: ${e instanceof Error ? e.message : e}`,
         );
       }
     },

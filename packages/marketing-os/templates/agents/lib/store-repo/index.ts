@@ -26,6 +26,7 @@
 
 import type { StoreRepo } from "../skill-kit";
 import { createGitHubStoreRepo } from "./github";
+import { appAuthConfigured, installationTokenFor } from "./app-auth";
 
 export type StoreRepoMode = "db" | "mirror" | "git";
 
@@ -46,14 +47,38 @@ export interface GitBinding {
  *
  * `repo` is per-tenant on the hosted platform (Tenant.githubRepo) and falls
  * back to GITHUB_REPO for a self-hosted console, which serves exactly one
- * store. The token is env-based today; the hosted platform will want a GitHub
- * App installation token per tenant, which is why this is a function and not a
- * constant.
+ * store.
+ *
+ * The token prefers a GitHub App installation token, minted per repo and
+ * expiring hourly, and falls back to GITHUB_TOKEN. That fallback is the
+ * self-hosted case: one console, one store, one credential. It is NOT
+ * appropriate on the hosted platform, where a shared PAT would make every
+ * tenant's artifacts writable with the same secret.
  */
-export function gitBindingFor(tenantRepo?: string | null): GitBinding | null {
+export async function gitBindingFor(tenantRepo?: string | null): Promise<GitBinding | null> {
   const repo = tenantRepo ?? process.env.GITHUB_REPO ?? null;
-  const token = process.env.GITHUB_TOKEN ?? null;
-  if (!repo || !token) return null;
+  if (!repo) return null;
+
+  // Prefer the GitHub App: it mints a token scoped to THIS repo that expires in
+  // an hour, so one tenant's credential cannot reach another tenant's store.
+  // A shared PAT is proportionate only for a self-hosted console, which serves
+  // exactly one store — hence the fallback rather than a hard requirement.
+  let token: string | null = null;
+  if (appAuthConfigured()) {
+    try {
+      token = await installationTokenFor(repo);
+    } catch (e) {
+      // Surface it: falling back to a PAT here would quietly write with the
+      // wrong credential, or with none.
+      console.error(
+        `[store-repo] GitHub App auth failed for ${repo}:`,
+        e instanceof Error ? e.message : e,
+      );
+    }
+  }
+  token ??= process.env.GITHUB_TOKEN ?? null;
+  if (!token) return null;
+
   return {
     repo,
     token,
@@ -71,15 +96,19 @@ export function gitBindingFor(tenantRepo?: string | null): GitBinding | null {
  * because silently writing to a different store than the operator asked for is
  * how artifacts go missing.
  */
-export function withStoreRepoMode(dbRepo: StoreRepo, tenantRepo?: string | null): StoreRepo {
+export async function resolveStoreRepo(
+  dbRepo: StoreRepo,
+  tenantRepo?: string | null,
+): Promise<StoreRepo> {
   const mode = storeRepoMode();
   if (mode === "db") return dbRepo;
 
-  const binding = gitBindingFor(tenantRepo);
+  const binding = await gitBindingFor(tenantRepo);
   if (!binding) {
     console.warn(
       `[store-repo] STORE_REPO_MODE="${mode}" but no git binding ` +
-        `(need GITHUB_REPO or Tenant.githubRepo, plus GITHUB_TOKEN) — falling back to the database.`,
+        `(need GITHUB_REPO or Tenant.githubRepo, plus a GitHub App installation ` +
+        `or GITHUB_TOKEN) — falling back to the database.`,
     );
     return dbRepo;
   }

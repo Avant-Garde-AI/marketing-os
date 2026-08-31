@@ -19,6 +19,7 @@
 
 import { Pool } from "pg";
 import { getTenant } from "../tenant-context";
+import { resolveStoreRepo } from "../store-repo";
 import type { SocialRepo } from "./types";
 
 let _pool: Pool | null = null;
@@ -107,8 +108,30 @@ export async function listSocialFiles(shop: string, prefix: string): Promise<str
  * (hosted: runWithTenant; client-owned: the env-configured store), the same
  * pattern the design-surface tools use.
  */
-export const socialRepo: SocialRepo = {
+const dbBackedSocialRepo: SocialRepo = {
   readFile: (path) => readSocialFile(getTenant().shop, path),
   writeFile: (path, content) => writeSocialFile(getTenant().shop, path, content),
   list: (prefix) => listSocialFiles(getTenant().shop, prefix),
+};
+
+/**
+ * The lane is chosen per call, not at module load: STORE_REPO_MODE and the
+ * tenant's repo are request-scoped on the hosted platform, and a binding frozen
+ * at import would pin every tenant to whichever one warmed the lambda.
+ * resolveStoreRepo() returns dbBackedSocialRepo unchanged in the default "db"
+ * mode, so this costs nothing until a store opts in.
+ *
+ * READ THROUGH THIS, not the free functions below. readSocialFile/
+ * listSocialFiles talk to the database directly and know nothing about the
+ * lane — once a store's artifacts live in git, anything still calling them
+ * sees an empty store and, because they degrade rather than throw, says so
+ * silently. (That is exactly how the console came to read email campaigns from
+ * the social artifact table for months.) The free functions remain for the
+ * backfill script and for callers that must address a shop explicitly.
+ */
+export const socialRepo: SocialRepo = {
+  readFile: async (path) => (await resolveStoreRepo(dbBackedSocialRepo, getTenant().githubRepo)).readFile(path),
+  writeFile: async (path, content) =>
+    (await resolveStoreRepo(dbBackedSocialRepo, getTenant().githubRepo)).writeFile(path, content),
+  list: async (prefix) => (await resolveStoreRepo(dbBackedSocialRepo, getTenant().githubRepo)).list(prefix),
 };

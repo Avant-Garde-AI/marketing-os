@@ -8,7 +8,10 @@
  */
 
 import { calendarPath, parseCalendar, parsePost, postPath } from "./artifacts";
-import { listSocialFiles, readSocialFile } from "./repo";
+// Through socialRepo, NOT the free functions: those query mos_social_artifacts
+// directly and are blind to STORE_REPO_MODE, so a store whose artifacts have
+// moved to git would render empty here without an error anywhere.
+import { socialRepo } from "./repo";
 import type { DesignSurfaceRef, SocialCalendar, SocialPost } from "./types";
 
 const CALENDAR_PATH_RE = /^social\/calendar\/(\d{4}-(?:0[1-9]|1[0-2]))\.md$/;
@@ -19,7 +22,7 @@ function errMsg(e: unknown): string {
 
 /** Months with a calendar artifact, newest first (["2026-08", "2026-07", …]). */
 export async function listCalendarMonths(shop: string): Promise<string[]> {
-  const paths = await listSocialFiles(shop, "social/calendar/");
+  const paths = await socialRepo.list("social/calendar/");
   return paths
     .map((p) => CALENDAR_PATH_RE.exec(p)?.[1])
     .filter((m): m is string => Boolean(m))
@@ -30,7 +33,7 @@ export async function listCalendarMonths(shop: string): Promise<string[]> {
 /** A month's parsed calendar, or null (absent or unparseable — logged, not thrown). */
 export async function loadCalendar(shop: string, month: string): Promise<SocialCalendar | null> {
   try {
-    const raw = await readSocialFile(shop, calendarPath(month));
+    const raw = await socialRepo.readFile(calendarPath(month));
     return raw === null ? null : parseCalendar(raw);
   } catch (e) {
     console.error(`[social] calendar ${month} unreadable:`, errMsg(e));
@@ -61,7 +64,7 @@ function toStudioPath(ds: DesignSurfaceRef | undefined): string | null {
 /** A post spec by id, or null (absent, bad id, or unparseable — logged). */
 export async function loadPost(shop: string, id: string): Promise<PostDetail | null> {
   try {
-    const raw = await readSocialFile(shop, postPath(id));
+    const raw = await socialRepo.readFile(postPath(id));
     if (raw === null) return null;
     const post = parsePost(raw);
     return { post, studioPath: toStudioPath(post.designSurface) };

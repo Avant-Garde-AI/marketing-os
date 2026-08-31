@@ -51,10 +51,39 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
+/**
+ * Tenant guard. `mos_social_artifacts` is keyed on (shop, path), so a blank
+ * shop is not "no tenant" — it is a REAL key that every tenant missing its
+ * context would share. Artifacts would silently collide in one bucket, and
+ * because reads use the same blank key the round-trip still looks correct
+ * from inside the process that wrote it. That is the exact shape of the bugs
+ * spec 26 §5 catalogues: consistent, quiet, and wrong.
+ *
+ * So writes THROW — a write that cannot name its tenant has nowhere safe to
+ * go — and reads return empty while saying so loudly, because a blank shop on
+ * a read means the caller lost its context, not that the store is empty.
+ */
+function assertShop(shop: string, op: string): void {
+  if (!shop || !shop.trim()) {
+    throw new Error(
+      `[social] refusing to ${op} social artifacts with no tenant (shop is empty). ` +
+        `In hosted mode wrap the call in runWithTenant; client-owned deployments must set SHOPIFY_STORE_URL. ` +
+        `A blank shop is a shared key, not an absent one — writing to it would collide every tenant's artifacts.`,
+    );
+  }
+}
+
 /** Read one artifact (repo-relative path, e.g. "social/strategy.md"). */
 export async function readSocialFile(shop: string, path: string): Promise<string | null> {
   const p = pool();
   if (!p) return null;
+  if (!shop || !shop.trim()) {
+    console.error(
+      `[social] read of "${path}" with no tenant (shop is empty) — returning empty. ` +
+        `This is a LOST CONTEXT, not an empty store: wrap the call in runWithTenant (hosted) or set SHOPIFY_STORE_URL.`,
+    );
+    return null;
+  }
   try {
     await ensureTable(p);
     const r = await p.query(
@@ -70,6 +99,7 @@ export async function readSocialFile(shop: string, path: string): Promise<string
 
 /** Upsert one artifact. Unused by the SM0 read tools; the seam SM1+ writes through. */
 export async function writeSocialFile(shop: string, path: string, content: string): Promise<void> {
+  assertShop(shop, "write");
   const p = pool();
   if (!p) {
     throw new Error(
@@ -89,6 +119,13 @@ export async function writeSocialFile(shop: string, path: string, content: strin
 export async function listSocialFiles(shop: string, prefix: string): Promise<string[]> {
   const p = pool();
   if (!p) return [];
+  if (!shop || !shop.trim()) {
+    console.error(
+      `[social] list of "${prefix}" with no tenant (shop is empty) — returning empty. ` +
+        `LOST CONTEXT, not an empty store (see readSocialFile).`,
+    );
+    return [];
+  }
   try {
     await ensureTable(p);
     const r = await p.query(

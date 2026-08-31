@@ -12,6 +12,7 @@ import { calendarPath, parseCalendar, parsePost, postPath } from "./artifacts";
 // directly and are blind to STORE_REPO_MODE, so a store whose artifacts have
 // moved to git would render empty here without an error anywhere.
 import { socialRepo } from "./repo";
+import { groupKey, groupPosts } from "./projection";
 import type { DesignSurfaceRef, SocialCalendar, SocialPost } from "./types";
 
 const CALENDAR_PATH_RE = /^social\/calendar\/(\d{4}-(?:0[1-9]|1[0-2]))\.md$/;
@@ -72,4 +73,55 @@ export async function loadPost(shop: string, id: string): Promise<PostDetail | n
     console.error(`[social] post ${id} unreadable:`, errMsg(e));
     return null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Post groups (spec 26 D3) — the review unit
+// ---------------------------------------------------------------------------
+
+/**
+ * Every variant in a post group, in the pack's deterministic order.
+ *
+ * Reads the ARTIFACTS, not the index: the review room shows what would
+ * actually ship, and files are truth (spec 22 D1). An index disagreeing with
+ * the files must never decide what a reviewer sees.
+ *
+ * Unreadable variants are SKIPPED WITH A LOG rather than failing the group —
+ * one malformed post must not black out a review — but the count is reported
+ * so the room can say so instead of quietly showing less (spec 26 §5: empty is
+ * indistinguishable from broken).
+ */
+export async function loadPostGroup(
+  shop: string,
+  key: string,
+): Promise<{ posts: PostDetail[]; unreadable: number }> {
+  let paths: string[];
+  try {
+    paths = await socialRepo.list("social/posts/");
+  } catch (e) {
+    console.error(`[social] group "${key}": cannot list posts:`, errMsg(e));
+    return { posts: [], unreadable: 0 };
+  }
+
+  const details: PostDetail[] = [];
+  let unreadable = 0;
+  for (const path of paths.filter((p) => p.endsWith("/post.md"))) {
+    let post: SocialPost;
+    try {
+      const raw = await socialRepo.readFile(path);
+      if (raw === null) continue;
+      post = parsePost(raw);
+    } catch (e) {
+      unreadable++;
+      console.error(`[social] group "${key}": ${path} unparseable:`, errMsg(e));
+      continue;
+    }
+    if (groupKey(post) === key) {
+      details.push({ post, studioPath: toStudioPath(post.designSurface) });
+    }
+  }
+
+  const ordered = groupPosts(details.map((d) => d.post))[0]?.posts ?? [];
+  const byId = new Map(details.map((d) => [d.post.id, d]));
+  return { posts: ordered.map((p) => byId.get(p.id)!).filter(Boolean), unreadable };
 }

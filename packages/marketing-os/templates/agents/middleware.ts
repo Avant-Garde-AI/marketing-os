@@ -30,6 +30,10 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/actions/execute") ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
     request.nextUrl.pathname.startsWith("/api/email/review-notes") ||
+    // Social's note write, same shape as email's: reachable without a console
+    // session, and verified in-route by its own token (spec 26 ⟨BUILD⟩ 5).
+    // `/review/` below already covers the social room + sheet pages.
+    request.nextUrl.pathname.startsWith("/api/social/review-notes") ||
     request.nextUrl.pathname.startsWith("/review/")
   ) {
     return response;

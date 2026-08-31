@@ -113,12 +113,13 @@ export async function syncPostIndex(shop: string, post: SocialPost): Promise<Soc
   try {
     await p.query(
       `INSERT INTO pack_social.posts
-         (tenant_id, id, channel, calendar_month, status, scheduled_at, target_link, copy,
+         (tenant_id, id, channel, group_key, calendar_month, status, scheduled_at, target_link, copy,
           surface_file_id, surface_page_id, surface_revn, approval_hash, approval_at,
           platform_id, platform_permalink, published_at, failure, repo_path)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
        ON CONFLICT (tenant_id, id) DO UPDATE SET
          channel = EXCLUDED.channel,
+         group_key = EXCLUDED.group_key,
          calendar_month = EXCLUDED.calendar_month,
          status = EXCLUDED.status,
          scheduled_at = EXCLUDED.scheduled_at,
@@ -141,6 +142,7 @@ export async function syncPostIndex(shop: string, post: SocialPost): Promise<Soc
         tenantId,
         row.id,
         row.channel,
+        row.groupKey,
         row.calendarMonth,
         row.status,
         row.scheduledAt,

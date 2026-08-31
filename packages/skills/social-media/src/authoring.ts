@@ -44,6 +44,8 @@ export interface SocialPostUpsertInput {
   id: string;
   /** Required to CREATE; optional on update. */
   channel?: string;
+  /** Post group (spec 26 D3) — variants of one idea share it. */
+  groupId?: string;
   copy?: string;
   targetLink?: string;
   scheduledAt?: string;
@@ -112,6 +114,7 @@ export function nextPost(
     : {
         id: input.id,
         channel: input.channel!,
+        ...(input.groupId ? { groupId: input.groupId } : {}),
         copy: input.copy!,
         targetLink: input.targetLink!,
         assetRefs: [],
@@ -124,6 +127,7 @@ export function nextPost(
 
   const next: SocialPost = { ...base };
   if (input.channel !== undefined) next.channel = input.channel;
+  if (input.groupId !== undefined) next.groupId = input.groupId;
   if (input.copy !== undefined) next.copy = input.copy;
   if (input.targetLink !== undefined) next.targetLink = input.targetLink;
   if (input.copyFormulaRef !== undefined) next.copyFormulaRef = input.copyFormulaRef;

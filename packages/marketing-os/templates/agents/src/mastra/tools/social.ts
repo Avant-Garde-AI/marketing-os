@@ -28,6 +28,7 @@ import {
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
 import { upsertPost } from "../../../lib/social/authoring";
+import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
 import { syncPostIndex } from "../../../lib/social/index-sync";
 import { getTenant } from "../../../lib/tenant-context";
 import type { SkillToolDefinition } from "../../../lib/social/types";
@@ -122,6 +123,13 @@ const socialPostUpsert = createTool({
   inputSchema: z.object({
     id: z.string().min(1).describe("Post id — prefer the calendar slot's `{YYYY-MM-DD}-{slug}` form"),
     channel: z.string().min(1).optional().describe("Required to create, e.g. 'instagram'"),
+    groupId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Post GROUP (spec 26 D3). Give every variant of one creative idea the same groupId — the review room shows a group side by side, which is how register drift between platforms gets caught. Omit for a standalone post.",
+      ),
     copy: z.string().optional().describe("The caption text (required to create)"),
     targetLink: z.string().optional().describe("Product/collection/editorial URL (required to create)"),
     scheduledAt: z.string().optional().describe("ISO datetime with offset"),
@@ -146,6 +154,7 @@ const socialPostUpsert = createTool({
   execute: async (input: {
     id: string;
     channel?: string;
+    groupId?: string;
     copy?: string;
     targetLink?: string;
     scheduledAt?: string;
@@ -173,7 +182,67 @@ const socialPostUpsert = createTool({
   },
 });
 
+const socialScaffold = createTool({
+  id: "social_scaffold",
+  description:
+    "Create the store's social/ tree when it does not exist yet — the authoring guide (social/README.md), a starter strategy, and the domain-reference lane (seeds, a starter genome, a gitignored corpus folder). " +
+    "Run this the FIRST time a store does social, or when social_plan_propose reports that social/strategy.md is missing: it turns that dead end into a starting point. " +
+    "IDEMPOTENT AND NON-DESTRUCTIVE — it never overwrites a file that already exists, so re-running it only fills gaps, and existing work is always safe. The response lists what was created versus skipped. " +
+    "What it writes is a SCAFFOLD, not a finished setup: the strategy is full of TODOs naming which brand.md section each decision comes from, and the starter genome's archetypes declare evidence.n = 0 because no corpus produced them. After running it, walk the owner through finishing strategy.md from brand.md — that conversation is the point, not the file.",
+  inputSchema: z.object({
+    channels: z
+      .array(z.string().min(1))
+      .optional()
+      .describe("Channels this store publishes to, e.g. ['instagram','threads']. Defaults to instagram."),
+    domain: z
+      .string()
+      .optional()
+      .describe("Opaque domain key for the genome, e.g. 'framed-art-retail'"),
+  }),
+  outputSchema: z.object({
+    ok: z.literal(true),
+    created: z.array(z.string()).describe("Paths written"),
+    skipped: z.array(z.string()).describe("Paths left untouched because they already existed"),
+    nextSteps: z.array(z.string()),
+  }),
+  execute: async (input: { channels?: string[]; domain?: string }) => {
+    const files = scaffoldSocialSystem({
+      storeName: getTenant().storeSlug,
+      storeUrl: `https://${getTenant().shop}`,
+      ...(input.channels ? { channels: input.channels } : {}),
+      ...(input.domain ? { domain: input.domain } : {}),
+      // The generator reads no clock; the runtime supplies the stamp.
+      stampedAt: new Date().toISOString(),
+    });
+
+    const created: string[] = [];
+    const skipped: string[] = [];
+    for (const [path, content] of Object.entries(files)) {
+      // Never overwrite. A store's real strategy must survive a re-run, and
+      // "scaffold clobbered my work" is unrecoverable through a chat tool.
+      if ((await socialRepo.readFile(path)) !== null) {
+        skipped.push(path);
+        continue;
+      }
+      await socialRepo.writeFile(path, content);
+      created.push(path);
+    }
+
+    return {
+      ok: true as const,
+      created,
+      skipped,
+      nextSteps: [
+        "Read social/README.md — it is the authoring guide for this store.",
+        "Finish social/strategy.md with the owner: every TODO names the brand.md section its answer comes from.",
+        "social/reference/genome.md is a platform default (evidence.n = 0). Replace it by running the acquisition lane in social/reference/README.md.",
+      ],
+    };
+  },
+});
+
 export const socialTools = {
+  social_scaffold: socialScaffold,
   social_post_upsert: socialPostUpsert,
   social_plan_propose: toMastraTool(defs.social_plan_propose),
   social_calendar_read: toMastraTool(defs.social_calendar_read),

@@ -1,7 +1,7 @@
 /**
  * VENDORED from packages/skills/social-media (the CANONICAL source, spec 24
- * SM0/SM2 — its test suite lives there). Keep this file faithful below this
- * header; fix bugs upstream first, then re-vendor.
+ * SM0/SM2 + spec 26 — its test suite lives there). Keep this file faithful
+ * below this header; fix bugs upstream first, then re-vendor.
  */
 /**
  * Social Media Agent (spec 24) — SM0 type definitions.
@@ -162,6 +162,22 @@ export interface PostPlatformResult {
 export interface SocialPost {
   id: string;
   channel: string;
+  /**
+   * The post GROUP this variant belongs to (spec 26 D3).
+   *
+   * One creative idea usually ships as several posts — an Instagram square, a
+   * story, a Threads variant. Reviewing those apart is how a brand's register
+   * drifts between platforms without anyone noticing, so the review room's
+   * unit is the GROUP, not the post.
+   *
+   * A convention rather than a group artifact, deliberately: variants simply
+   * share a `groupId`, the calendar and review room group on one field, and a
+   * post WITHOUT one is its own group of one (`groupKey` resolves it to the
+   * post id). No second artifact type to drift from the posts it references —
+   * and if a first-class group artifact is ever wanted, this is the key it
+   * would be built on.
+   */
+  groupId?: string;
   /** ISO datetime the post is scheduled for (absent until scheduled). */
   scheduledAt?: string;
   /** The caption text. */

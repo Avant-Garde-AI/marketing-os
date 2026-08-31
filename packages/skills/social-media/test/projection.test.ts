@@ -6,6 +6,8 @@ import {
   postIndexRow,
   postMonth,
   postThumbnailUrl,
+  groupKey,
+  groupPosts,
 } from "../src/projection";
 import { nextPost, schedulingGaps, upsertPost } from "../src/authoring";
 import { parsePost, postPath, serializePost } from "../src/artifacts";
@@ -249,5 +251,47 @@ describe("upsertPost round-trip (AC 1)", () => {
     expect(created).toBe(false);
     expect(updated.copy).toBe("Second");
     expect(updated.targetLink).toBe("https://myarthaus.com/a"); // preserved
+  });
+});
+
+describe("post groups (spec 26 D3)", () => {
+  it("a post with no groupId is its own group of one", () => {
+    expect(groupKey(post())).toBe("2026-09-14-atelier-hours");
+  });
+
+  it("variants sharing a groupId group together", () => {
+    const ig = post({ id: "a-ig", channel: "instagram", groupId: "autumn-drop" });
+    const th = post({ id: "a-th", channel: "threads", groupId: "autumn-drop" });
+    const solo = post({ id: "b-solo", channel: "instagram" });
+    const groups = groupPosts([th, solo, ig]);
+    expect(groups.map((g) => g.key).sort()).toEqual(["autumn-drop", "b-solo"]);
+    const autumn = groups.find((g) => g.key === "autumn-drop")!;
+    expect(autumn.posts.map((p) => p.channel)).toEqual(["instagram", "threads"]);
+  });
+
+  it("orders groups by earliest scheduled variant, unscheduled last", () => {
+    const later = post({ id: "later", groupId: "g-later", scheduledAt: "2026-10-05T10:00:00+00:00" });
+    const sooner = post({ id: "sooner", groupId: "g-sooner", scheduledAt: "2026-10-01T10:00:00+00:00" });
+    const never = post({ id: "never", groupId: "g-never" });
+    expect(groupPosts([never, later, sooner]).map((g) => g.key)).toEqual([
+      "g-sooner",
+      "g-later",
+      "g-never",
+    ]);
+  });
+
+  it("is deterministic", () => {
+    const ps = [post({ id: "x", groupId: "g" }), post({ id: "y", groupId: "g" })];
+    expect(JSON.stringify(groupPosts(ps))).toBe(JSON.stringify(groupPosts(ps.slice().reverse())));
+  });
+
+  it("groupId survives the artifact round-trip", () => {
+    const p = post({ groupId: "autumn-drop" });
+    expect(parsePost(serializePost(p)).groupId).toBe("autumn-drop");
+  });
+
+  it("index row carries the group key", () => {
+    expect(postIndexRow(post({ groupId: "g1" })).groupKey).toBe("g1");
+    expect(postIndexRow(post()).groupKey).toBe("2026-09-14-atelier-hours");
   });
 });

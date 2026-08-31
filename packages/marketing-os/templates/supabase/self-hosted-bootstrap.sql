@@ -503,6 +503,7 @@ CREATE TABLE IF NOT EXISTS pack_social.posts (
   tenant_id      TEXT        NOT NULL REFERENCES public."Tenant"(id) ON DELETE CASCADE,
   id             TEXT        NOT NULL,
   channel        TEXT        NOT NULL,
+  group_key      TEXT        NOT NULL,
   calendar_month TEXT        NOT NULL,
   status         TEXT        NOT NULL,
   scheduled_at   TIMESTAMPTZ,
@@ -523,6 +524,8 @@ CREATE TABLE IF NOT EXISTS pack_social.posts (
   PRIMARY KEY (tenant_id, id)
 );
 
+CREATE INDEX IF NOT EXISTS idx_pack_social_posts_group
+  ON pack_social.posts (tenant_id, group_key);
 CREATE INDEX IF NOT EXISTS idx_pack_social_posts_month
   ON pack_social.posts (tenant_id, calendar_month, scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_pack_social_posts_scheduled

@@ -1,7 +1,7 @@
 /**
  * VENDORED from packages/skills/social-media (the CANONICAL source, spec 24
- * SM0/SM2 — its test suite lives there). Keep this file faithful below this
- * header; fix bugs upstream first, then re-vendor.
+ * SM0/SM2 + spec 26 — its test suite lives there). Keep this file faithful
+ * below this header; fix bugs upstream first, then re-vendor.
  */
 /**
  * Domain reference — the social genome contract (spec 24 §6).

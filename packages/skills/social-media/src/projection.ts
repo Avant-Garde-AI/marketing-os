@@ -85,6 +85,43 @@ export function postThumbnailUrl(post: SocialPost, publicUrl: string): string | 
   return `${base}/api/design-surfaces/export/${post.designSurface.fileId}?${qs.toString()}`;
 }
 
+/**
+ * The key a post is grouped under for review (spec 26 D3). An explicit
+ * `groupId` when the post is one variant of a multi-platform idea; otherwise
+ * the post's own id — a lone post is a group of one, so every consumer can
+ * group unconditionally without special-casing.
+ */
+export function groupKey(post: SocialPost): string {
+  return post.groupId ?? post.id;
+}
+
+/**
+ * Partition posts into review groups, deterministically.
+ *
+ * Groups are ordered by their earliest scheduled variant (unscheduled last,
+ * then by key) and variants within a group by channel then id — so the review
+ * room lays the same idea's platforms out in a stable order every time, and a
+ * reviewer comparing two visits sees the same arrangement.
+ */
+export function groupPosts(posts: SocialPost[]): { key: string; posts: SocialPost[] }[] {
+  const byKey = new Map<string, SocialPost[]>();
+  for (const p of posts) {
+    const k = groupKey(p);
+    const bucket = byKey.get(k);
+    if (bucket) bucket.push(p);
+    else byKey.set(k, [p]);
+  }
+  const groups = [...byKey.entries()].map(([key, ps]) => ({
+    key,
+    posts: ps
+      .slice()
+      .sort((a, b) => a.channel.localeCompare(b.channel) || a.id.localeCompare(b.id)),
+  }));
+  const earliest = (g: { posts: SocialPost[] }): string =>
+    g.posts.map((p) => p.scheduledAt ?? "￿").sort()[0] ?? "￿";
+  return groups.sort((a, b) => earliest(a).localeCompare(earliest(b)) || a.key.localeCompare(b.key));
+}
+
 /** Console-relative detail route for a post — `lib/calendar/routes.ts` already
  * maps `social → /social/posts/{id}` (spec 26 §2). Exposed so the projection
  * and any surface agree on one construction. */
@@ -134,6 +171,8 @@ export function postCalendarProjection(
 export interface SocialPostIndexRow {
   id: string;
   channel: string;
+  /** Review-group key (spec 26 D3); a lone post groups under its own id. */
+  groupKey: string;
   calendarMonth: string;
   status: string;
   scheduledAt: string | null;
@@ -158,6 +197,7 @@ export function postIndexRow(post: SocialPost): SocialPostIndexRow {
   return {
     id: post.id,
     channel: post.channel,
+    groupKey: groupKey(post),
     calendarMonth: postMonth(post),
     status: post.status,
     scheduledAt: post.scheduledAt ?? null,

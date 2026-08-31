@@ -18,23 +18,17 @@
 import { getTenant } from "../tenant-context";
 import { safeQuery, tenantIdForShop } from "../platform-db";
 
-/** Hard ceiling on a note. Generous for prose, small enough that a public
- *  endpoint can't be used to park data in the tenant's database. */
-export const MAX_NOTE_LENGTH = 4000;
-export const MAX_AUTHOR_LENGTH = 80;
-
-export interface ReviewNote {
-  id: string;
-  campaignId: string;
-  slot: string | null;
-  /** SELF-DECLARED. Not an authenticated identity. */
-  author: string;
-  body: string;
-  /** 'link' = arrived through a shared review link; 'console' = authenticated. */
-  source: string;
-  resolvedAt: string | null;
-  createdAt: string;
-}
+// The note shape + limits live in review-note-shape.ts, which imports nothing:
+// this module pulls in `pg` through platform-db, and the review room's note
+// thread is a client component that needs the same contract.
+export {
+  MAX_NOTE_LENGTH,
+  MAX_AUTHOR_LENGTH,
+  type ReviewNote,
+} from "./review-note-shape";
+// Re-exporting does NOT bind these locally — addNote() truncates with them.
+import { MAX_AUTHOR_LENGTH, MAX_NOTE_LENGTH } from "./review-note-shape";
+import type { ReviewNote } from "./review-note-shape";
 
 interface NoteRow {
   id: string;

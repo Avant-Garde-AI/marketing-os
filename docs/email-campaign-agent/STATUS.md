@@ -1,6 +1,50 @@
 # Email Campaign Agent — Build Status
 
-> 2026-07-17, first build session. Branch **`feat/email-agent`** in three
+> **Current: 2026-08-31.** Merged to `main`, deployed, and verified in
+> production against Arthaus (`www.arthaus.cloud`). Five September campaigns are
+> built, previewable, and committed to the store repo. Nothing has been staged
+> to Klaviyo and nothing has sent — approval remains a Slack Action.
+>
+> The 2026-07-17 scoreboard below is retained as the build record. Read this
+> section for where things actually stand.
+
+## Where it stands (2026-08-31)
+
+| Capability | State |
+|---|---|
+| Campaign authoring over MCP (24 tools) | ✅ live — plan, author, image, assemble, preview |
+| Live LLM generation (Vertex, Gemini Pro) | ✅ live; **tier-3 scene generation blocked on the AI Studio spend cap** |
+| Picasso art-graph research | ✅ live — editorial + seasonal themes were graph-derived |
+| Imagery resolver (tier 2, room/leaning composites) | ✅ live |
+| Assembled preview route | ✅ live, HMAC-tokened, **expiring** |
+| Review room + month contact sheet | ✅ live (`07-REVIEW-LINKS-AND-ARTIFACT-LANE.md`) |
+| Review notes → back into an agent session | ✅ live, round-trip verified |
+| Artifacts in the store repo | ✅ live — `STORE_REPO_MODE=mirror`, GitHub App auth |
+| Self-hosted schema bootstrap | ✅ applied to Arthaus |
+| Calendar thumbnails (hero image) | ✅ live |
+| Slack approval gate | ✅ unchanged — the only path to send |
+
+### Known gaps
+
+1. **`productRow` caption misalignment** — visible in delivered campaigns. The
+   fixed-height band that fixed `graphCallout` has not been applied.
+2. **No real prices** — product cards render "View piece" placeholders instead
+   of Shopify prices.
+3. **Tier-3 scene generation** — every AI Studio key is spend-capped; only the
+   account owner can raise it. Tiers 1–2 are unaffected.
+4. **The 6 design-system partials are DB-only** — they commit on next write.
+5. **`readEmailFile` returns `null` on a DB error**, indistinguishable from
+   "not found" — the §4 failure mode of `07`, still live in this pack.
+6. **Four older sample campaigns** (`2026-09-*-artist-*`, distinct ids) sit in
+   the *platform* DB, not the console's, with flat scans and white-frame
+   mockups. Effectively orphaned.
+7. **`GITHUB_TOKEN` cannot be retired** — `brand-design.ts`,
+   `dispatch-to-github.ts`, `pr-status.ts` and `lib/github.ts` still read it
+   directly.
+
+## Build record — 2026-07-17
+
+> First build session. Branch **`feat/email-agent`** in three
 > worktrees: this repo, marketing-os-app, marketing-os-hosted-agents (each at
 > `.claude/worktrees/email-agent`). Everything below is committed on those
 > branches; nothing is deployed, no migration is applied, nothing has touched

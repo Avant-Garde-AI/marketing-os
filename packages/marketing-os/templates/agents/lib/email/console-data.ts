@@ -23,7 +23,13 @@
 import { parse as parseYaml } from "yaml";
 import { getTenant } from "../tenant-context";
 import { safeQuery, tenantIdForShop } from "../platform-db";
-import { readSocialFile } from "../social/repo"; // the tenant's generic artifact store (shop, path) — social-named, store-wide
+// Read campaigns through emailRepo — the SAME seam the preview route and the
+// pack's tools use. This module previously read them through readSocialFile,
+// but that queries mos_social_artifacts while lib/email/repo.ts keeps email in
+// its own mos_email_artifacts table: the lookup could never hit, so every
+// campaign detail rendered "not found" while its preview URL served the email
+// perfectly. One artifact store per pack, one read path per pack.
+import { emailRepo } from "./repo";
 
 const ID_RE = /^[A-Za-z0-9._-]+$/;
 
@@ -317,7 +323,7 @@ export function parseCampaignArtifact(raw: string): CampaignArtifact | null {
 async function loadCampaignArtifact(shop: string, id: string): Promise<CampaignArtifact | null> {
   if (!ID_RE.test(id)) return null;
   try {
-    const raw = await readSocialFile(shop, `email/campaigns/${id}/campaign.md`);
+    const raw = await emailRepo.readFile(`email/campaigns/${id}/campaign.md`);
     return raw === null ? null : parseCampaignArtifact(raw);
   } catch (e) {
     console.error(`[email] campaign.md ${id} unreadable:`, errMsg(e));

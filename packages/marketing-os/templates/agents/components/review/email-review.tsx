@@ -11,7 +11,9 @@
  */
 
 import { useState } from "react";
-import { MAX_AUTHOR_LENGTH, MAX_NOTE_LENGTH, type ReviewNote } from "@/lib/email/review-notes";
+// From review-note-shape, NOT review-notes: the latter imports platform-db →
+// pg → node:net, and webpack walks that graph even for a type-only import.
+import { MAX_AUTHOR_LENGTH, MAX_NOTE_LENGTH, type ReviewNote } from "@/lib/email/review-note-shape";
 
 // 600px is the email column; 640 gives it a little air. 375 is the iPhone
 // viewport most mobile opens land in.

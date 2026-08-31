@@ -59,6 +59,22 @@ export interface SocialActionDeps {
    * bindings without a design-surface lane still typecheck.
    */
   surfaceRevision?: (post: SocialPost) => Promise<number | null>;
+  /**
+   * Called after every post write, so the runtime can write THROUGH to its
+   * index (spec 26 §2 ⟨BUILD⟩ 1). Every lifecycle write here changes
+   * something the shared calendar shows — status on schedule/cancel, the
+   * permalink and published time on publish — so an index that only tracked
+   * the authoring write would go stale the moment a post was scheduled: the
+   * same "saved but invisible" failure the projection exists to prevent
+   * (spec 26 §5, failure mode 2).
+   *
+   * Optional and null-degrading, like `surfaceRevision`: an unbound hook (or
+   * a binding without a database) simply means the artifact is truth and the
+   * index catches up on the next rebuild. MUST NOT THROW — the runtime's
+   * implementation swallows and logs, because a broken index may never fail
+   * a publish.
+   */
+  onPostSaved?: (post: SocialPost) => Promise<void>;
 }
 
 function sha256(s: string): string {
@@ -75,8 +91,13 @@ async function loadPost(repo: SocialRepo, id: string): Promise<SocialPost> {
   return parsePost(raw);
 }
 
-async function savePost(repo: SocialRepo, post: SocialPost): Promise<void> {
+async function savePost(
+  repo: SocialRepo,
+  post: SocialPost,
+  onSaved?: (post: SocialPost) => Promise<void>,
+): Promise<void> {
   await repo.writeFile(postPath(post.id), serializePost(post));
+  await onSaved?.(post);
 }
 
 /**
@@ -234,7 +255,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
         at: new Date().toISOString(),
         ...(surfaceRevn != null ? { surfaceRevn } : {}),
       };
-      await savePost(deps.repo, scheduled);
+      await savePost(deps.repo, scheduled, deps.onPostSaved);
       return {
         ok: true,
         summary: `Scheduled — publishes to ${post.channel} at ${p.scheduledAt} (consent recorded; edits re-arm the card)`,
@@ -301,7 +322,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
           platform: { id: platformId, permalink, publishedAt: new Date().toISOString() },
         };
         delete published.failure;
-        await savePost(deps.repo, published);
+        await savePost(deps.repo, published, deps.onPostSaved);
         return {
           ok: true,
           summary: `Published to ${post.channel}${permalink ? ` — ${permalink}` : ` (id ${platformId})`}`,
@@ -312,7 +333,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
         // Record the failure on the artifact FIRST (files are truth), then
         // surface it — the gate audits the error, the cron flags it.
         const failed: SocialPost = { ...post, status: "failed", failure: message };
-        await savePost(deps.repo, failed);
+        await savePost(deps.repo, failed, deps.onPostSaved);
         throw new Error(`publish to ${post.channel} failed: ${message}`);
       }
     },
@@ -368,7 +389,7 @@ function cancelPost(deps: SocialActionDeps): Action<CancelPostParams> {
       const updated: SocialPost = { ...post, status: p.discard ? "cancelled" : "asset_ready" };
       delete updated.scheduledAt;
       delete updated.approval;
-      await savePost(deps.repo, updated);
+      await savePost(deps.repo, updated, deps.onPostSaved);
       return {
         ok: true,
         summary: p.discard ? "Cancelled — post retired" : "Cancelled — post back to asset_ready",

@@ -29,6 +29,10 @@
 --   mos_design_surfaces    — Design Studio boards bound to campaigns/posts.
 --   mos_skill_enablements  — the per-tenant pack registry.
 --   provider_connections   — Klaviyo/Google/Meta connection state.
+--   pack_social.posts      — the social pack's own index (spec 26 §3). First
+--                            PACK-OWNED schema: pack-private state lives in
+--                            pack_social, the shared view stays in
+--                            mos_calendar_items.
 --
 --   NOT created here: mos_email_artifacts and mos_social_artifacts. Those
 --   self-create on first write, and while the git lane is deferred they hold
@@ -480,6 +484,58 @@ BEGIN
          FOR EACH ROW EXECUTE FUNCTION public.update_updated_at()', t, t);
   END LOOP;
 END $$;
+
+-- ============================================================================
+-- PACK SCHEMAS — pack_social (spec 26 §3)
+-- ============================================================================
+-- Pack-owned state lives in the pack's own schema, not behind another `mos_`
+-- prefix in public: clean ownership, trivial teardown, collision-free for a
+-- third-party ecosystem. Mirrors migrations/009_pack_social.sql — keep the two
+-- in step.
+--
+-- Without this, a self-hosted console runs social exactly as far as the
+-- artifacts (posts save, the agent answers) and then shows nothing anywhere
+-- the index is read — the same silent half-state this file exists to prevent.
+
+CREATE SCHEMA IF NOT EXISTS pack_social;
+
+CREATE TABLE IF NOT EXISTS pack_social.posts (
+  tenant_id      TEXT        NOT NULL REFERENCES public."Tenant"(id) ON DELETE CASCADE,
+  id             TEXT        NOT NULL,
+  channel        TEXT        NOT NULL,
+  calendar_month TEXT        NOT NULL,
+  status         TEXT        NOT NULL,
+  scheduled_at   TIMESTAMPTZ,
+  target_link    TEXT,
+  copy           TEXT,
+  surface_file_id TEXT,
+  surface_page_id TEXT,
+  surface_revn    INTEGER,
+  approval_hash   TEXT,
+  approval_at     TIMESTAMPTZ,
+  platform_id     TEXT,
+  platform_permalink TEXT,
+  published_at    TIMESTAMPTZ,
+  failure         TEXT,
+  repo_path      TEXT        NOT NULL,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pack_social_posts_month
+  ON pack_social.posts (tenant_id, calendar_month, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_pack_social_posts_scheduled
+  ON pack_social.posts (tenant_id, scheduled_at) WHERE status = 'scheduled';
+
+ALTER TABLE pack_social.posts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON pack_social.posts FROM authenticated, anon;
+REVOKE ALL ON SCHEMA pack_social FROM authenticated, anon;
+
+DROP TRIGGER IF EXISTS trg_pack_social_posts_updated ON pack_social.posts;
+CREATE TRIGGER trg_pack_social_posts_updated
+  BEFORE UPDATE ON pack_social.posts
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 
 -- ============================================================================
 -- SEED YOUR ACCOUNT + TENANT ROWS

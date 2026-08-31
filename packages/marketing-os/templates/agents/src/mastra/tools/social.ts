@@ -27,6 +27,9 @@ import {
   serializePost,
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
+import { upsertPost } from "../../../lib/social/authoring";
+import { syncPostIndex } from "../../../lib/social/index-sync";
+import { getTenant } from "../../../lib/tenant-context";
 import type { SkillToolDefinition } from "../../../lib/social/types";
 // Importing this module also registers the pack's three publish Actions with
 // the propose_action registry (SM2 — same pattern as tools/email.ts).
@@ -95,6 +98,10 @@ const socialLinkDesign = createTool({
       ...(input.pageId !== undefined ? { pageId: input.pageId } : {}),
     });
     await socialRepo.writeFile(path, serializePost(linked));
+    // Binding a creative changes the post's calendar thumbnail, so the index
+    // must follow the write or the grid keeps rendering a text card for a post
+    // that now has art (spec 26 failure mode 2).
+    await syncPostIndex(getTenant().shop, linked);
     return {
       ok: true as const,
       postId: input.postId,
@@ -103,7 +110,71 @@ const socialLinkDesign = createTool({
   },
 });
 
+const socialPostUpsert = createTool({
+  id: "social_post_upsert",
+  description:
+    "CREATE or UPDATE a planned post's artifact (social/posts/{id}/post.md) — the authoring write for social. " +
+    "Use it to turn a calendar slot into a real post (pass channel, copy and targetLink to create), and to revise copy, link, schedule or provenance afterwards. " +
+    "Writing content NEVER changes a post's lifecycle status: a new post is 'proposed', and only the Actions advance it — you cannot approve your own work by writing a caption. " +
+    "Editing what would actually ship (copy, channel, link, assets, time) on an already-approved post VOIDS that approval and drops it back to asset_ready, so the approval card re-arms — that is expected, and the response says when it happened. " +
+    "Published and cancelled posts are frozen; work on a new id instead. " +
+    "Returns what still blocks scheduling. The post is indexed for the console and calendar as part of this write.",
+  inputSchema: z.object({
+    id: z.string().min(1).describe("Post id — prefer the calendar slot's `{YYYY-MM-DD}-{slug}` form"),
+    channel: z.string().min(1).optional().describe("Required to create, e.g. 'instagram'"),
+    copy: z.string().optional().describe("The caption text (required to create)"),
+    targetLink: z.string().optional().describe("Product/collection/editorial URL (required to create)"),
+    scheduledAt: z.string().optional().describe("ISO datetime with offset"),
+    copyFormulaRef: z.string().optional().describe("brand.md copy formula this instantiates"),
+    assetRefs: z.array(z.string()).optional().describe("Repo-relative asset paths"),
+    provenance: z
+      .array(z.object({ claim: z.string().min(1), origin: z.enum(["owner", "agent", "data"]) }))
+      .optional()
+      .describe("Every data claim carries its origin"),
+    body: z.string().optional().describe("Markdown rationale — why this post, in this slot"),
+  }),
+  outputSchema: z.object({
+    ok: z.literal(true),
+    id: z.string(),
+    status: z.string(),
+    created: z.boolean(),
+    consentCleared: z.boolean().describe("True when this edit voided an existing approval (D2)"),
+    missing: z.array(z.string()).describe("What still blocks scheduling"),
+    indexed: z.boolean().describe("False when the console/calendar index could not be reached"),
+    indexNote: z.string().optional(),
+  }),
+  execute: async (input: {
+    id: string;
+    channel?: string;
+    copy?: string;
+    targetLink?: string;
+    scheduledAt?: string;
+    copyFormulaRef?: string;
+    assetRefs?: string[];
+    provenance?: { claim: string; origin: "owner" | "agent" | "data" }[];
+    body?: string;
+  }) => {
+    const result = await upsertPost(socialRepo, input);
+    // Write THROUGH to the index at the authoring write (spec 26 failure mode
+    // 2). Never allowed to fail the write — files are truth — but the outcome
+    // is reported rather than swallowed, so "saved but invisible" is
+    // diagnosable instead of silent.
+    const outcome = await syncPostIndex(getTenant().shop, result.post);
+    return {
+      ok: true as const,
+      id: result.post.id,
+      status: result.post.status,
+      created: result.created,
+      consentCleared: result.consentCleared,
+      missing: result.missing,
+      indexed: outcome.ok,
+      ...(outcome.ok ? {} : { indexNote: outcome.message }),
+    };
+  },
+});
+
 export const socialTools = {
+  social_post_upsert: socialPostUpsert,
   social_plan_propose: toMastraTool(defs.social_plan_propose),
   social_calendar_read: toMastraTool(defs.social_calendar_read),
   social_post_read: toMastraTool(defs.social_post_read),

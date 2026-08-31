@@ -20,6 +20,7 @@
 
 import { Pool } from "pg";
 import { getTenant } from "../tenant-context";
+import { withStoreRepoMode } from "../store-repo";
 import type { EmailRepo } from "./types";
 
 let _pool: Pool | null = null;
@@ -108,8 +109,22 @@ export async function listEmailFiles(shop: string, prefix: string): Promise<stri
  * (hosted: runWithTenant; client-owned: the env-configured store), the same
  * pattern the social + design-surface tools use.
  */
-export const emailRepo: EmailRepo = {
+const dbBackedEmailRepo: EmailRepo = {
   readFile: (path) => readEmailFile(getTenant().shop, path),
   writeFile: (path, content) => writeEmailFile(getTenant().shop, path, content),
   list: (prefix) => listEmailFiles(getTenant().shop, prefix),
+};
+
+/**
+ * The lane is chosen per call, not at module load: STORE_REPO_MODE and the
+ * tenant's repo are request-scoped on the hosted platform, and a binding
+ * frozen at import would pin every tenant to whichever one warmed the lambda.
+ * withStoreRepoMode() returns dbBackedEmailRepo unchanged in the default "db"
+ * mode, so this costs nothing until a store opts in.
+ */
+export const emailRepo: EmailRepo = {
+  readFile: (path) => withStoreRepoMode(dbBackedEmailRepo, getTenant().githubRepo).readFile(path),
+  writeFile: (path, content) =>
+    withStoreRepoMode(dbBackedEmailRepo, getTenant().githubRepo).writeFile(path, content),
+  list: (prefix) => withStoreRepoMode(dbBackedEmailRepo, getTenant().githubRepo).list(prefix),
 };

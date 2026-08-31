@@ -19,6 +19,13 @@ export interface TenantContext {
   shop: string;
   /** e.g. arthaus-website — also keys the tenant's Postgres schema */
   storeSlug: string;
+  /**
+   * "owner/name" of the store's GitHub repo, when the platform knows it
+   * (Tenant.githubRepo). The artifact lane reads this to commit into the right
+   * repo; unset falls back to GITHUB_REPO, which is correct for a self-hosted
+   * console since it serves exactly one store.
+   */
+  githubRepo?: string | null;
 }
 
 const als = new AsyncLocalStorage<TenantContext>();

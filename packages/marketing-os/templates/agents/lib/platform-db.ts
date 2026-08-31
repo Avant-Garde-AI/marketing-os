@@ -54,12 +54,42 @@ export async function safeQuery<Row>(
 // platform's Tenant table by shop — cached, degrade to null.
 
 const tenantIdCache = new Map<string, string>();
+/** Context tenant ids already checked against THIS database. */
+const contextIdVerified = new Set<string>();
 
 export async function tenantIdForShop(
   shop: string,
   contextTenantId?: string
 ): Promise<string | null> {
-  if (contextTenantId) return contextTenantId;
+  // A context tenant id is only usable if it names a row in THIS database.
+  //
+  // It used to be trusted outright, which is correct on the hosted platform —
+  // the runtime and the projections share one database, so the id in the
+  // request context is the id in the table. It is NOT correct for a
+  // self-hosted deployment: there the id arrives from the platform's connector
+  // -token verification (a different database entirely) while the local
+  // "Tenant" row has its own uuid. Reads carrying a context id then queried a
+  // tenant that does not exist locally and returned [] — with no error, since
+  // every caller degrades rather than throws. Writes were unaffected, because
+  // lib/email/index-sync.ts resolves by shop and ignores context. The result
+  // was data that saved correctly and read back empty.
+  //
+  // So: verify once per id, then fall back to the shop lookup. One cheap query
+  // buys back the invariant that a read and a write agree on who the tenant is.
+  if (contextTenantId) {
+    if (contextIdVerified.has(contextTenantId)) return contextTenantId;
+    const hit = await safeQuery<{ id: string }>(
+      "tenant context check",
+      `SELECT id FROM "Tenant" WHERE id = $1`,
+      [contextTenantId]
+    );
+    if (hit?.[0]) {
+      contextIdVerified.add(contextTenantId);
+      return contextTenantId;
+    }
+    // Not ours — a platform id in a self-hosted database. Resolve by shop.
+  }
+
   if (!shop) return null;
   const cached = tenantIdCache.get(shop);
   if (cached) return cached;

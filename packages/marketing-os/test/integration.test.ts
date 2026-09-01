@@ -105,7 +105,9 @@ describe("CLI Integration Tests", () => {
       "agents/package.json",
       "agents/next.config.ts",
       "agents/tsconfig.json",
-      "agents/tailwind.config.ts",
+      // No tailwind.config.ts: the template is Tailwind v4, which is CSS-first
+      // — every token lives in app/globals.css and the v3 config file is gone
+      // by design, not by omission.
       "agents/postcss.config.mjs",
       "agents/vercel.json",
       "agents/.env.example",
@@ -477,19 +479,32 @@ NEXT_PUBLIC_STORE_URL=test-store.myshopify.com
   }, 5000);
 
   it("should not create duplicate files or overwrite theme files", async () => {
-    // Verify agents directory doesn't contain theme files
+    // The Shopify theme must never be copied into agents/. Assert that on the
+    // theme's MARKER FILES rather than on bare directory names: the console
+    // legitimately owns an agents/config/ of its own (surfaces.json, spec 23),
+    // so a name-only check reports a collision that isn't one. A theme is
+    // identified by settings_schema.json and theme.liquid, not by the word
+    // "config".
     const agentsDir = path.join(testProjectDir, "agents");
 
-    const shouldNotExistInAgents = [
-      "config",
-      "layout",
-      "templates",
-      "sections",
-      "assets",
-      "locales",
+    const themeMarkers = [
+      "config/settings_schema.json",
+      "config/settings_data.json",
+      "layout/theme.liquid",
+      "locales/en.default.json",
     ];
 
-    for (const dir of shouldNotExistInAgents) {
+    for (const marker of themeMarkers) {
+      const markerPath = path.join(agentsDir, marker);
+      const exists = await fs.pathExists(markerPath);
+      expect(
+        exists,
+        `Shopify theme file should not be in agents/: ${marker}`
+      ).toBe(false);
+    }
+
+    // The theme's liquid directories must not appear under agents/ at all.
+    for (const dir of ["sections", "snippets"]) {
       const dirPath = path.join(agentsDir, dir);
       const exists = await fs.pathExists(dirPath);
       expect(

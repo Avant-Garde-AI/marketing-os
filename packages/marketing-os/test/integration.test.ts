@@ -135,11 +135,11 @@ describe("CLI Integration Tests", () => {
       "agents/lib/supabase/server.ts",
 
       // Agents - components
-      "agents/components/nav.tsx",
-      "agents/components/header.tsx",
-      "agents/components/skill-card.tsx",
-      "agents/components/pr-card.tsx",
-      "agents/components/metric-card.tsx",
+      // The flat nav/header/*-card set was replaced by the app shell and a
+      // shared primitives module in the console retrofit (spec 13); the
+      // feature components moved into per-surface folders below.
+      "agents/components/app-shell.tsx",
+      "agents/components/primitives.tsx",
       "agents/components/chat/marketing-chat.tsx",
 
       // Agents - UI components
@@ -183,11 +183,19 @@ describe("CLI Integration Tests", () => {
       ".github/workflows/marketing-os-review.yml",
     ];
 
+    // Collect every miss before asserting. Failing on the first one turns
+    // template drift into a one-per-CI-run drip: the tailwind config, the
+    // component rename and the theme check were three separate red builds
+    // that were really one stale list.
+    const missing: string[] = [];
     for (const file of expectedFiles) {
       const filePath = path.join(testProjectDir, file);
-      const exists = await fs.pathExists(filePath);
-      expect(exists, `Expected file to exist: ${file}`).toBe(true);
+      if (!(await fs.pathExists(filePath))) missing.push(file);
     }
+    expect(
+      missing,
+      `Expected template files are missing:\n  ${missing.join("\n  ")}`
+    ).toEqual([]);
   }, 10000);
 
   it("should verify Handlebars variables were interpolated", async () => {
@@ -197,7 +205,7 @@ describe("CLI Integration Tests", () => {
       "agents/app/layout.tsx",
       "agents/src/mastra/index.ts",
       "agents/src/mastra/agents/marketing-agent.ts",
-      "agents/components/header.tsx",
+      "agents/components/app-shell.tsx",
       "agents/.env.example",
       ".github/workflows/marketing-os-agent.yml",
       "CLAUDE.md",

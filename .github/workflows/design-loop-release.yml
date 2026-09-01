@@ -32,7 +32,11 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # Node 22, not 20: @avant-garde/design-surfaces runs vitest under the
+          # vmThreads pool (the only pool the Penpot zip writer survives), and
+          # vmThreads SIGSEGVs on Node 20 — the whole suite exited 139 before a
+          # single test ran. Reproducible locally: passes on 22, crashes on 20.
+          node-version: 22
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 

@@ -105,7 +105,9 @@ describe("CLI Integration Tests", () => {
       "agents/package.json",
       "agents/next.config.ts",
       "agents/tsconfig.json",
-      "agents/tailwind.config.ts",
+      // No tailwind.config.ts: the template is Tailwind v4, which is CSS-first
+      // — every token lives in app/globals.css and the v3 config file is gone
+      // by design, not by omission.
       "agents/postcss.config.mjs",
       "agents/vercel.json",
       "agents/.env.example",
@@ -133,11 +135,11 @@ describe("CLI Integration Tests", () => {
       "agents/lib/supabase/server.ts",
 
       // Agents - components
-      "agents/components/nav.tsx",
-      "agents/components/header.tsx",
-      "agents/components/skill-card.tsx",
-      "agents/components/pr-card.tsx",
-      "agents/components/metric-card.tsx",
+      // The flat nav/header/*-card set was replaced by the app shell and a
+      // shared primitives module in the console retrofit (spec 13); the
+      // feature components moved into per-surface folders below.
+      "agents/components/app-shell.tsx",
+      "agents/components/primitives.tsx",
       "agents/components/chat/marketing-chat.tsx",
 
       // Agents - UI components
@@ -181,11 +183,19 @@ describe("CLI Integration Tests", () => {
       ".github/workflows/marketing-os-review.yml",
     ];
 
+    // Collect every miss before asserting. Failing on the first one turns
+    // template drift into a one-per-CI-run drip: the tailwind config, the
+    // component rename and the theme check were three separate red builds
+    // that were really one stale list.
+    const missing: string[] = [];
     for (const file of expectedFiles) {
       const filePath = path.join(testProjectDir, file);
-      const exists = await fs.pathExists(filePath);
-      expect(exists, `Expected file to exist: ${file}`).toBe(true);
+      if (!(await fs.pathExists(filePath))) missing.push(file);
     }
+    expect(
+      missing,
+      `Expected template files are missing:\n  ${missing.join("\n  ")}`
+    ).toEqual([]);
   }, 10000);
 
   it("should verify Handlebars variables were interpolated", async () => {
@@ -195,7 +205,7 @@ describe("CLI Integration Tests", () => {
       "agents/app/layout.tsx",
       "agents/src/mastra/index.ts",
       "agents/src/mastra/agents/marketing-agent.ts",
-      "agents/components/header.tsx",
+      "agents/components/app-shell.tsx",
       "agents/.env.example",
       ".github/workflows/marketing-os-agent.yml",
       "CLAUDE.md",
@@ -477,19 +487,32 @@ NEXT_PUBLIC_STORE_URL=test-store.myshopify.com
   }, 5000);
 
   it("should not create duplicate files or overwrite theme files", async () => {
-    // Verify agents directory doesn't contain theme files
+    // The Shopify theme must never be copied into agents/. Assert that on the
+    // theme's MARKER FILES rather than on bare directory names: the console
+    // legitimately owns an agents/config/ of its own (surfaces.json, spec 23),
+    // so a name-only check reports a collision that isn't one. A theme is
+    // identified by settings_schema.json and theme.liquid, not by the word
+    // "config".
     const agentsDir = path.join(testProjectDir, "agents");
 
-    const shouldNotExistInAgents = [
-      "config",
-      "layout",
-      "templates",
-      "sections",
-      "assets",
-      "locales",
+    const themeMarkers = [
+      "config/settings_schema.json",
+      "config/settings_data.json",
+      "layout/theme.liquid",
+      "locales/en.default.json",
     ];
 
-    for (const dir of shouldNotExistInAgents) {
+    for (const marker of themeMarkers) {
+      const markerPath = path.join(agentsDir, marker);
+      const exists = await fs.pathExists(markerPath);
+      expect(
+        exists,
+        `Shopify theme file should not be in agents/: ${marker}`
+      ).toBe(false);
+    }
+
+    // The theme's liquid directories must not appear under agents/ at all.
+    for (const dir of ["sections", "snippets"]) {
       const dirPath = path.join(agentsDir, dir);
       const exists = await fs.pathExists(dirPath);
       expect(

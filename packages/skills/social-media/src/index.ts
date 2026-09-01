@@ -56,6 +56,21 @@ export type {
   Board,
   RankOptions,
 } from "./reference";
+export {
+  groupKey,
+  groupPosts,
+  postMonth,
+  postThumbnailUrl,
+  postDetailPath,
+  postCalendarProjection,
+  postIndexRow,
+  UNSCHEDULED_MONTH,
+} from "./projection";
+export type { SocialCalendarProjection, SocialPostIndexRow } from "./projection";
+export { upsertPost, nextPost, schedulingGaps } from "./authoring";
+export { scaffoldSocialSystem } from "./scaffold";
+export type { ScaffoldSocialOptions } from "./scaffold";
+export type { SocialPostUpsertInput, SocialPostUpsertResult } from "./authoring";
 export { createSocialActions, publishMaterial, approvalHash, verifyScheduleConsent } from "./actions";
 export type {
   SocialActionDeps,

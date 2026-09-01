@@ -223,15 +223,45 @@ export default async function EmailReviewPage({ params, searchParams }: Params) 
             <h2 className="mb-3 text-[10px] uppercase tracking-[0.14em] text-ink-3">
               Who receives it
             </h2>
-            <ul className="space-y-1.5">
+            <ul className="space-y-2.5">
               {artifact!.audience.included.map((a, i) => (
                 <li key={i} className="flex items-baseline gap-3 text-[14px]">
-                  <span className="flex-1">{a.name ?? a.key ?? a.id}</span>
-                  <span className="tnum text-[13px] text-ink-2">
-                    {a.estimatedSize != null ? `~${a.estimatedSize.toLocaleString()}` : "—"}
+                  <span className="min-w-0 flex-1">
+                    {/* A bare id is unreviewable — say so rather than printing
+                        the code and letting the reader assume it means
+                        something. */}
+                    {a.name ? (
+                      <span>{a.name}</span>
+                    ) : (
+                      <span className="text-ink-2">
+                        Unresolved {a.type} <span className="font-mono text-[12.5px]">{a.id}</span>
+                      </span>
+                    )}
+                    <span className="ml-2 text-[11.5px] uppercase tracking-[0.12em] text-ink-3">
+                      {a.type}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="tnum block text-[13px] text-ink-2">
+                      {a.estimatedSize != null ? `~${a.estimatedSize.toLocaleString()}` : "size unknown"}
+                    </span>
+                    {a.sizeAsOf && (
+                      <span className="block text-[11px] text-ink-3">as of {a.sizeAsOf}</span>
+                    )}
                   </span>
                 </li>
               ))}
+              {(() => {
+                const sized = artifact!.audience.included.filter((a) => a.estimatedSize != null);
+                if (sized.length < 2) return null;
+                const total = sized.reduce((n, a) => n + (a.estimatedSize ?? 0), 0);
+                return (
+                  <li className="border-t border-hairline pt-2 text-[13px] text-ink-2">
+                    <span className="tnum">~{total.toLocaleString()}</span> across {sized.length} audiences
+                    <span className="text-ink-3"> — before overlap and exclusions</span>
+                  </li>
+                );
+              })()}
               {artifact!.audience.excluded.length > 0 && (
                 <li className="border-t border-hairline pt-2 text-[13px] text-ink-3">
                   Excluding:{" "}

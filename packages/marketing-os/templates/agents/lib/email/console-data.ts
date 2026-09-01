@@ -25,10 +25,11 @@ import { getTenant } from "../tenant-context";
 import { safeQuery, tenantIdForShop } from "../platform-db";
 // Read campaigns through emailRepo — the SAME seam the preview route and the
 // pack's tools use. This module previously read them through readSocialFile,
-// but that queries mos_social_artifacts while lib/email/repo.ts keeps email in
-// its own mos_email_artifacts table: the lookup could never hit, so every
-// campaign detail rendered "not found" while its preview URL served the email
-// perfectly. One artifact store per pack, one read path per pack.
+// which queries mos_social_artifacts while lib/email/repo.ts keeps email in its
+// own mos_email_artifacts table: the lookup could never hit, so every campaign
+// detail page and review room rendered "not found" while the preview URL for
+// the same id served the email perfectly. One artifact store per pack, one read
+// path per pack.
 import { emailRepo } from "./repo";
 
 const ID_RE = /^[A-Za-z0-9._-]+$/;
@@ -60,6 +61,8 @@ export interface EmailCampaignRow {
 }
 
 export interface AudienceRef {
+  /** YYYY-MM-DD the size was read; absent for unresolved refs. */
+  sizeAsOf?: string;
   key?: string;
   type?: string;
   id?: string;
@@ -246,9 +249,37 @@ function asStringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 }
 
+/**
+ * Audience refs, NORMALISED to primitives.
+ *
+ * This parser's job is to make an artifact safe to render, and "is an object"
+ * is not the same as "is renderable". YAML types are richer than JSON: an
+ * unquoted `sizeAsOf: 2026-09-01` parses to a Date, and React throws
+ * "Objects are not valid as a React child" on it — which took out every
+ * server-rendered section of the review room while the client components
+ * carried on, so the page looked half-built rather than broken.
+ *
+ * Coerce here rather than defending at each render site: there is one parser
+ * and many places that render what it returns.
+ */
 function asAudienceRefs(v: unknown): AudienceRef[] {
   if (!Array.isArray(v)) return [];
-  return v.filter((x): x is AudienceRef => Boolean(x) && typeof x === "object");
+  return v
+    .filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === "object")
+    .map((x) => {
+      const ref: AudienceRef = {
+        type: x.type === "segment" ? "segment" : "list",
+        id: String(x.id ?? ""),
+      };
+      if (typeof x.key === "string") ref.key = x.key;
+      if (typeof x.name === "string") ref.name = x.name;
+      if (typeof x.estimatedSize === "number" && Number.isFinite(x.estimatedSize)) {
+        ref.estimatedSize = x.estimatedSize;
+      }
+      if (x.sizeAsOf instanceof Date) ref.sizeAsOf = x.sizeAsOf.toISOString().slice(0, 10);
+      else if (typeof x.sizeAsOf === "string") ref.sizeAsOf = x.sizeAsOf;
+      return ref;
+    });
 }
 
 function asProvenance(v: unknown): ProvenanceClaim[] {

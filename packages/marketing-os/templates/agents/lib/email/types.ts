@@ -187,6 +187,9 @@ export interface CampaignAudienceRef {
   id: string;
   name?: string;
   estimatedSize?: number;
+  /** YYYY-MM-DD the size was read. A count with no date invites a reader to
+   *  trust a number that may be months old. */
+  sizeAsOf?: string;
 }
 
 export interface CampaignAudience {

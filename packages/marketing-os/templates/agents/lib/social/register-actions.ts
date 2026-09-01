@@ -15,6 +15,8 @@ import { socialRepo } from "./repo";
 import { adapterFor } from "./channels";
 import { registerAction } from "../actions/registry";
 import { getDesignSurfaceAdapter, isDesignSurfacesConfigured } from "../design-surfaces/config";
+import { syncPostIndex } from "./index-sync";
+import { getTenant } from "../tenant-context";
 import type { SocialPost } from "./types";
 
 /**
@@ -60,12 +62,29 @@ export async function socialSurfaceRevision(post: SocialPost): Promise<number | 
 }
 
 /** One deps construction for every executor (propose preview, gate execute, cron). */
+/**
+ * Write THROUGH to the index on every lifecycle write (spec 26 §2 ⟨BUILD⟩ 1).
+ * Swallows everything: a broken index must never fail a publish — files are
+ * truth, and syncPostIndex already logs the cause under `[social-index]`.
+ */
+async function onPostSaved(post: SocialPost): Promise<void> {
+  try {
+    await syncPostIndex(getTenant().shop, post);
+  } catch (e) {
+    console.error(
+      `[social] index sync threw for post "${post.id}" (write already committed):`,
+      e instanceof Error ? e.message : e,
+    );
+  }
+}
+
 export function socialActionDeps(): SocialActionDeps {
   return {
     repo: socialRepo,
     adapterFor: (channel) => adapterFor(channel),
     assetUrl: socialAssetUrl,
     surfaceRevision: socialSurfaceRevision,
+    onPostSaved,
   };
 }
 

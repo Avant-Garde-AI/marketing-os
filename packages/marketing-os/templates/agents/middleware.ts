@@ -26,10 +26,24 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/brand/") ||
     request.nextUrl.pathname.startsWith("/api/brand-image/") ||
     request.nextUrl.pathname.startsWith("/api/cron/") ||
+    // Schema migrations. Carries its own shared-secret auth (fails closed) for
+    // the same reason the cron routes do: it is called by a deploy step or an
+    // operator, never by a browser session, so a session redirect here just
+    // turns a legitimate call into a 307 nobody can debug.
+    request.nextUrl.pathname.startsWith("/api/admin/migrate") ||
     request.nextUrl.pathname.startsWith("/api/design-surfaces/export/") ||
     request.nextUrl.pathname.startsWith("/api/actions/execute") ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
+    // Campaign imagery, addressed by content hash and HMAC-tokened like the
+    // preview. These URLs are embedded in assembled email HTML, so they must be
+    // reachable without a console session or every review link shows broken
+    // images — which is exactly the bug that put this route here.
+    request.nextUrl.pathname.startsWith("/api/email/asset/") ||
     request.nextUrl.pathname.startsWith("/api/email/review-notes") ||
+    // Social's note write, same shape as email's: reachable without a console
+    // session, and verified in-route by its own token (spec 26 ⟨BUILD⟩ 5).
+    // `/review/` below already covers the social room + sheet pages.
+    request.nextUrl.pathname.startsWith("/api/social/review-notes") ||
     request.nextUrl.pathname.startsWith("/review/")
   ) {
     return response;

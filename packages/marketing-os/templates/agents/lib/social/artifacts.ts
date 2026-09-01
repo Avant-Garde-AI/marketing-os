@@ -1,8 +1,9 @@
 /**
  * VENDORED from packages/skills/social-media (the CANONICAL source, spec 24
- * SM0 — its test suite lives there). Keep this file faithful below this
- * header; fix bugs upstream first, then re-vendor.
- *
+ * SM0/SM2 + spec 26 — its test suite lives there). Keep this file faithful
+ * below this header; fix bugs upstream first, then re-vendor.
+ */
+/**
  * Parse + serialize the three `social/` repo artifacts (spec 24 §1).
  *
  * Same physical format as brand.md: YAML front matter + markdown body, parsed
@@ -12,7 +13,11 @@
  * `parse(serialize(x))` deep-equals `x` for all three artifact types.
  */
 
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import {
+  frontMatterDocument as document,
+  splitFrontMatter,
+  validateFrontMatter as validate,
+} from "../skill-kit";
 import { z } from "zod";
 import type {
   CalendarSlot,
@@ -22,44 +27,6 @@ import type {
   SocialStrategy,
 } from "./types";
 import { POST_STATUSES } from "./types";
-
-// ---------------------------------------------------------------------------
-// Shared front-matter plumbing (mirrors brand-md/src/parse.ts)
-// ---------------------------------------------------------------------------
-
-const FRONT_MATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-
-function splitFrontMatter(raw: string, docName: string): { frontMatter: unknown; body: string } {
-  const m = raw.match(FRONT_MATTER_RE);
-  if (!m) throw new Error(`${docName}: missing YAML front matter (--- ... ---)`);
-  let frontMatter: unknown;
-  try {
-    frontMatter = parseYaml(m[1] ?? "");
-  } catch (e) {
-    throw new Error(`${docName}: invalid front matter YAML: ${e instanceof Error ? e.message : e}`);
-  }
-  if (!frontMatter || typeof frontMatter !== "object") {
-    throw new Error(`${docName}: front matter is not a mapping`);
-  }
-  return { frontMatter, body: raw.slice(m[0].length) };
-}
-
-function document(frontMatter: Record<string, unknown>, body: string): string {
-  const yamlSrc = stringifyYaml(frontMatter).trimEnd();
-  const trimmedBody = body.trim();
-  return `---\n${yamlSrc}\n---\n\n${trimmedBody}${trimmedBody ? "\n" : ""}`;
-}
-
-function validate<T>(schema: z.ZodType<T>, value: unknown, docName: string): T {
-  const result = schema.safeParse(value);
-  if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-      .join("; ");
-    throw new Error(`${docName}: invalid front matter — ${issues}`);
-  }
-  return result.data;
-}
 
 // ---------------------------------------------------------------------------
 // Canonical repo paths
@@ -249,6 +216,11 @@ export function serializeCalendar(calendar: SocialCalendar): string {
 const postFrontMatterSchema = z.object({
   id: z.string().min(1),
   channel: z.string().min(1),
+  groupId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Post group this variant belongs to (spec 26 D3) — variants share it"),
   scheduledAt: z
     .string()
     .datetime({ offset: true })
@@ -312,6 +284,7 @@ export function parsePost(raw: string): SocialPost {
     status: fm.status,
     body: body.trim(),
   };
+  if (fm.groupId !== undefined) post.groupId = fm.groupId;
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
   if (fm.designSurface !== undefined) post.designSurface = fm.designSurface;
@@ -323,6 +296,7 @@ export function parsePost(raw: string): SocialPost {
 
 export function serializePost(post: SocialPost): string {
   const fm: Record<string, unknown> = { id: post.id, channel: post.channel };
+  if (post.groupId !== undefined) fm.groupId = post.groupId;
   if (post.scheduledAt !== undefined) fm.scheduledAt = post.scheduledAt;
   fm.copy = post.copy;
   if (post.copyFormulaRef !== undefined) fm.copyFormulaRef = post.copyFormulaRef;

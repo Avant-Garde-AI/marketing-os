@@ -147,12 +147,79 @@ function score(slide: ComposeSlide, req: ImageryRequest): { score: number; ratio
   return { score: treatmentPenalty + framePenalty + roomBonus, rationale: parts.join(", ") };
 }
 
+
+/** Artwork CDN that serves RAW, unframed art keyed by `{id}-{handle}`. */
+const RAW_ARTWORK_CDN = "https://picasso.arthaus.cloud/cache/artworks";
+
+/**
+ * Is this URL already a rendered mockup rather than raw artwork?
+ *
+ * Some catalogue products carry a styled leaning shot as their product image.
+ * Compositing one into a room frame produces a framed photograph OF a framed
+ * print — a picture of a picture, which reads as a mistake to anyone who sees
+ * it and did, in a shipped campaign.
+ */
+export function isRenderedMockup(url: string): boolean {
+  return /\/mockup-|--(black|oak|white|natural)--|-leaning-leaning-/i.test(url);
+}
+
+/**
+ * Recover the raw artwork behind a rendered mockup.
+ *
+ * Mockup filenames embed the artwork they were made from —
+ * `mockup-29405-botanical-life-leaning-leaning--black--portrait-…` — so the raw
+ * image is reachable at `{id}-{handle}` on the artwork CDN. Returns null when
+ * the name doesn't carry that shape; guessing a URL is worse than declining.
+ */
+export function rawArtworkUrlFrom(url: string): string | null {
+  const m = url.match(/\/mockup-(\d+)-([a-z0-9-]+?)-(?:leaning|room|scene)\b/i);
+  if (!m) return null;
+  return `${RAW_ARTWORK_CDN}/${m[1]}-${m[2]}.webp`;
+}
+
+/** Does a candidate raw-artwork URL actually serve an image? */
+async function servesImage(url: string): Promise<boolean> {
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    return res.ok && (res.headers.get("content-type") ?? "").startsWith("image/");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Resolve imagery for one request. Never throws for "nothing good found" — an
  * empty `chosen` with warnings is a legitimate answer the caller can degrade on.
  */
 export async function resolveImagery(req: ImageryRequest): Promise<ImageryResult> {
   const warnings: string[] = [];
+
+  // Never composite a mockup. A product image is not guaranteed to be raw art —
+  // some carry a styled leaning shot — and framing one yields a picture of a
+  // picture. Recover the raw artwork where the filename allows it; otherwise
+  // decline, because no hero is better than an obviously wrong one.
+  if (isRenderedMockup(req.artworkUrl)) {
+    const raw = rawArtworkUrlFrom(req.artworkUrl);
+    if (raw && (await servesImage(raw))) {
+      warnings.push(
+        `source was a rendered mockup; composited the raw artwork instead (${raw.split("/").pop()})`,
+      );
+      req = { ...req, artworkUrl: raw };
+    } else {
+      return {
+        chosen: null,
+        candidates: [],
+        source: "none",
+        expiresInMinutes: null,
+        provenance: "declined: source image is a rendered mockup",
+        warnings: [
+          ...warnings,
+          "the supplied image is already a framed/leaning mockup and no raw artwork could be recovered from its name. Compositing it would produce a framed photo of a framed print. Pass the raw artwork URL.",
+        ],
+      };
+    }
+  }
+
   if (req.orientation === "square") {
     warnings.push("square artwork: room scenes suppressed (the template library has no square rooms; a room composite would silently centre-crop)");
   }

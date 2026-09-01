@@ -211,6 +211,11 @@ export function serializeCalendar(calendar: SocialCalendar): string {
 const postFrontMatterSchema = z.object({
   id: z.string().min(1),
   channel: z.string().min(1),
+  groupId: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Post group this variant belongs to (spec 26 D3) — variants share it"),
   scheduledAt: z
     .string()
     .datetime({ offset: true })
@@ -274,6 +279,7 @@ export function parsePost(raw: string): SocialPost {
     status: fm.status,
     body: body.trim(),
   };
+  if (fm.groupId !== undefined) post.groupId = fm.groupId;
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
   if (fm.designSurface !== undefined) post.designSurface = fm.designSurface;
@@ -285,6 +291,7 @@ export function parsePost(raw: string): SocialPost {
 
 export function serializePost(post: SocialPost): string {
   const fm: Record<string, unknown> = { id: post.id, channel: post.channel };
+  if (post.groupId !== undefined) fm.groupId = post.groupId;
   if (post.scheduledAt !== undefined) fm.scheduledAt = post.scheduledAt;
   fm.copy = post.copy;
   if (post.copyFormulaRef !== undefined) fm.copyFormulaRef = post.copyFormulaRef;

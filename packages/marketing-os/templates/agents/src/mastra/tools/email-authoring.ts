@@ -30,6 +30,9 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { emailRepo } from "../../../lib/email/repo";
 import { syncCampaignIndex } from "../../../lib/email/index-sync";
+import { isEphemeralUrl, persistAsset } from "../../../lib/store-repo/assets";
+import { emailAssetLink } from "../../../lib/email/review-links";
+import { resolveAudienceRefs } from "../../../lib/email/audience";
 import { getTenant } from "../../../lib/tenant-context";
 import { campaignPath, parseCampaign, serializeCampaign, parseStrategy, strategyPathFor, resolveEmailRoot } from "../../../lib/email/artifacts";
 import type { EmailCampaign } from "../../../lib/email/types";
@@ -141,6 +144,36 @@ export const emailCampaignUpsert = createTool({
     // Authoring content must not promote it, or an agent could approve its own
     // work by writing a section.
 
+    const imageryWarnings: string[] = [];
+
+    // An artifact may not carry an EXPIRING url. imagery_resolve returns signed
+    // GCS links good for 24h; a review link lives 30 days, so from day two every
+    // reviewer opened a page of broken images. Copy the bytes now, while the
+    // signature is still valid, and point the artifact at a URL that survives.
+    const shop = getTenant().shop;
+    for (const section of next.sections) {
+      const url = (section as { imageUrl?: string }).imageUrl;
+      if (!url || !isEphemeralUrl(url)) continue;
+      const stored = await persistAsset(emailRepo, next.id, section.slot, url);
+      if (stored) {
+        (section as { imageUrl?: string }).imageUrl = emailAssetLink(shop, next.id, stored.name).url;
+      } else {
+        // Keep the working-but-expiring url rather than dropping the image, and
+        // say so — a campaign whose hero failed to copy is still worth saving.
+        imageryWarnings.push(
+          `${section.slot}: could not copy imagery to durable storage; the artifact still holds an expiring URL that will break within 24h.`,
+        );
+      }
+    }
+
+    // Resolve audiences to something a human can review. Stored on the artifact
+    // rather than looked up at render time because the artifact lives in git and
+    // should be legible in a diff without Klaviyo access — and because a size is
+    // a fact about a moment, so it travels with the date it was true.
+    if (next.audience.included.length > 0 || (next.audience.excluded?.length ?? 0) > 0) {
+      next.audience = await resolveAudienceRefs(next.audience);
+    }
+
     await emailRepo.writeFile(path, serializeCampaign(next));
 
     // Write THROUGH to the index. Files stay truth (spec 22 D1) and the email
@@ -170,6 +203,7 @@ export const emailCampaignUpsert = createTool({
       sectionCount: next.sections.length,
       readyToStage: missing.length === 0,
       missingForStaging: missing,
+      ...(imageryWarnings.length > 0 ? { imageryWarnings } : {}),
       next:
         missing.length === 0
           ? "Call email_render_preview to see it, then propose_action { kind: 'klaviyo.create_campaign_draft' } to stage it for approval."

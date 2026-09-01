@@ -29,7 +29,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 
 /** What a link is allowed to address. Scope is signed, so a preview token
  *  cannot be replayed against the review room or the month sheet. */
-export type LinkScope = "preview" | "review" | "sheet";
+export type LinkScope = "preview" | "review" | "sheet" | "asset";
 
 /** Default life of a shared link. Long enough to survive a planning cycle and
  *  a holiday; short enough that a leaked link dies before the campaign does. */
@@ -98,6 +98,29 @@ export function emailPreviewLink(shop: string, campaignId: string, ttlDays = DEF
  *  This is the link to hand a teammate. */
 export function emailReviewLink(shop: string, campaignId: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
   return mint("review", shop, campaignId, `/review/email/${encodeURIComponent(campaignId)}`, ttlDays);
+}
+
+/**
+ * A stored campaign asset (see lib/store-repo/assets.ts). Scoped separately so
+ * an asset token cannot be replayed against the room, and given a long life on
+ * purpose: these URLs are embedded in assembled email HTML, and an image that
+ * expires before the page around it is the exact bug this whole lane exists to
+ * fix. The bytes are a marketing mockup of the store's own artwork behind an
+ * unguessable content hash — the token is tidiness, not a secret.
+ */
+export function emailAssetLink(
+  shop: string,
+  campaignId: string,
+  name: string,
+  ttlDays = 365,
+): MintedLink {
+  return mint(
+    "asset",
+    shop,
+    `${campaignId}/${name}`,
+    `/api/email/asset/${encodeURIComponent(campaignId)}/${encodeURIComponent(name)}`,
+    ttlDays,
+  );
 }
 
 /** A month of campaigns on one page — the link to hand a team after a planning

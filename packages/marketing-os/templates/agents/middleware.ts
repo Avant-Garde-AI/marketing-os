@@ -26,6 +26,11 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/brand/") ||
     request.nextUrl.pathname.startsWith("/api/brand-image/") ||
     request.nextUrl.pathname.startsWith("/api/cron/") ||
+    // Schema migrations. Carries its own shared-secret auth (fails closed) for
+    // the same reason the cron routes do: it is called by a deploy step or an
+    // operator, never by a browser session, so a session redirect here just
+    // turns a legitimate call into a 307 nobody can debug.
+    request.nextUrl.pathname.startsWith("/api/admin/migrate") ||
     request.nextUrl.pathname.startsWith("/api/design-surfaces/export/") ||
     request.nextUrl.pathname.startsWith("/api/actions/execute") ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||

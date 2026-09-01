@@ -17,7 +17,7 @@ cannot yet do is turn that into a post about a *particular artwork*.
 |---|---|
 | Retail corpus | 393 ads, **261 `designed_ad`** (66% yield), with images |
 | Artist corpus | 504-artist field cohort, 15 posts each, **with images**; plus a 40-artist roster pilot (no images) |
-| Layout extraction | S0–S6 **in flight** (87/261 at time of writing); canonicalization driver merged (creative-agent #1) |
+| Layout extraction | S0–S6 **re-running against Vertex** (the first full pass was mock — see P1); canonicalization driver merged (creative-agent #1) |
 | The contract | genome schema, `resolveArchetype`, `social_genome_read`, fit-check |
 | The loop | author → compose → review room → Slack approval → cron publish, all live |
 | Arthaus content | 1,001 artists with generated `headline` / `known_for` / `long_description`; artworks; room scenes |
@@ -49,23 +49,50 @@ to a genome archetype — `zone_archetype` (role → median `[x,y,w,h]`) becomes
 value it used. A canonical drawn from 5 members is a hint, not a convention —
 carry that honesty into the archetype `description`, not just the number.
 
+**Check the provider before believing any of it.** `run.yaml` ships
+`inference.provider: mock`, and the mock is not obviously fake: it completes
+261 ads without a single failure, and canonicalization happily returns three
+clusters at 94% coverage. Those clusters are synthetic. The tell is in the
+artifact — `provenance.provider` on every `template_spec.json`, and the fact
+that a mock spec has exactly one zone (`z0`, type `hero`) where a real one has
+eight to twelve with named roles. **A clean run is not evidence that the run
+was real.** Assert on `provider == "vertex"` before canonicalizing.
+
+**Where the geometry actually is.** A real spec splits what the genome needs
+across two keys, joined on `zone_id`:
+
+- `skeleton.zones[]` — `bbox: [x, y, w, h]`, already normalized 0–1, which is
+  the genome's coordinate system exactly (no conversion, no scaling);
+- `zones_semantic[]` — `zone_type` per `zone_id` (`headline`, `hero_product`,
+  `logo`, `cta_button`, `background_field`, …), which becomes the slot `role`.
+
+`zones_semantic[].bbox` is null and `canvas`/`slots`/`quality` are empty; that
+is expected, not damage. Read geometry from the skeleton.
+
 **Done when:** the genome parses, every archetype resolves in-bounds at
-1080×1080/1350/1920, and `evidence.n` is a real count. The brand-derived
-archetypes stay as a labelled fallback for roles the corpus never showed.
+1080×1080/1350/1920, `evidence.n` is a real count, and the specs behind it say
+`vertex`. The brand-derived archetypes stay as a labelled fallback for roles
+the corpus never showed.
 
 ## 2. P2 — Slot resolution (the crux)
 
 A `role` is a *contract for what belongs there*, and the store must be able to
 satisfy it from its own catalogue.
 
-**Build `resolveSlots(archetype, context)`** in the social pack — pure,
-testable, no I/O — returning a filled `ComposeSpec`. The resolver is a map from
-role → asset source:
+**Built** — `packages/skills/social-media/src/resolve.ts`. `resolveSlots`
+returns filled slots plus **named misses**; `assertComplete` is the loud
+version; `chooseArchetype` picks the strongest archetype the store can actually
+fill (fillability filters `rankArchetypes`' order rather than replacing it);
+`missingRoles` inverts it to show what a store must produce to unlock each
+archetype. Pure — no I/O, no clock, no randomness. What remains here is
+**binding the roles to real Arthaus content**, below.
+
+The resolver is a map from role → asset source:
 
 | Role | Source | Notes |
 |---|---|---|
 | `work` | the artwork image | the actual piece; never a mockup composited into a room (AMS already forbids this) |
-| `room` / `wall` | Arthaus room scenes | AMS `apply-room-scenes.js` / `batch-shoppable-rooms-compose.js` already produce these |
+| `room` / `wall` | Arthaus room scenes — **generated, not scarce** (see below) | AMS `apply-room-scenes.js` / `batch-shoppable-rooms-compose.js` |
 | `band` / `ground` | DESIGN.md tokens | a palette value, never a literal from the genome |
 | `headline` / `caption` / `statement` | §3 | text, composed not chosen |
 | `eyebrow` | collection or pillar name | short, uppercase, brand-tokened |
@@ -79,6 +106,22 @@ role → asset source:
    the store has no room scene for that piece, the resolver returns a clear
    miss and the agent picks a different archetype. Silently substituting a blank
    is how a "designed" post becomes a grey box.
+
+**Room-scene coverage is not the constraint it was assumed to be.** The plan
+opened with "measure coverage before trusting the pillar weights", on the
+assumption that room scenes are a scarce pre-existing asset. They are not:
+AMS composites them on demand with sharp from a 35-template library
+(`lib/content/mockup/rooms.json`) — no model call, ~$0 per artwork — and
+`--target` styles the templates to an artist's own palette so scenes stop
+looking uniformly Arthaus-terracotta. Coverage is therefore ~100% by
+construction, and `room-in-situ` can carry the highest pillar weight in
+`social/strategy.md` as written.
+
+What this converts into is a **selection** problem rather than an availability
+one: each room template carries `mood`, `color_temperature`, `primary_room` and
+a palette, so the resolver should choose the room that suits the work instead of
+taking the first. That is a better problem to have and it is squarely inside
+P2.
 
 **Done when:** given an artwork id and an archetype, `resolveSlots` returns a
 `ComposeSpec` that passes `checkComposeFit` with zero errors, and a missing
@@ -171,9 +214,11 @@ already exists.
 
 ## The risks worth stating
 
-1. **Room-scene coverage.** If most artworks lack a room scene, the
-   highest-weighted pillar (`room-in-situ`) cannot be composed. Measure coverage
-   in P2 before committing to the pillar weights in `social/strategy.md`.
+1. ~~**Room-scene coverage.**~~ **Retired.** Room scenes are generated on
+   demand by AMS from a 35-template library at ~$0 and no model call, so
+   coverage is ~100% and `room-in-situ` is safe to weight highest. What remains
+   is choosing the *right* room (each template carries mood, colour temperature
+   and palette) — a selection problem inside P2, not a supply risk.
 2. **Market-average drift.** Every step here pulls toward what competitors do.
    The `doNot` list and the brand-dominates hierarchy are the counterweight, and
    they only work if they are enforced in the compose prompt, not just written.

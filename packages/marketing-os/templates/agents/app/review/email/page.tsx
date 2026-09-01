@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { runWithTenant } from "@/lib/tenant-context";
 import { listCampaigns, parseCampaignArtifact, type CampaignArtifact } from "@/lib/email/console-data";
-import { readSocialFile } from "@/lib/social/repo";
+import { emailRepo } from "@/lib/email/repo";
 import { countNotes } from "@/lib/email/review-notes";
 import { heroImageUrl } from "@/lib/email/hero";
 import { emailReviewLink, ttlRemaining, verifyLink } from "@/lib/email/review-links";
@@ -115,7 +115,7 @@ export default async function EmailSheetPage({
         // The artifact carries the sections, and the sections carry the hero.
         let artifact: CampaignArtifact | null = null;
         try {
-          const raw = await readSocialFile(shop, `email/campaigns/${c.id}/campaign.md`);
+          const raw = await emailRepo.readFile(`email/campaigns/${c.id}/campaign.md`);
           artifact = raw === null ? null : parseCampaignArtifact(raw);
         } catch {
           artifact = null; // degrade to a text-only card

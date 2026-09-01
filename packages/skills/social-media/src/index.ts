@@ -56,6 +56,16 @@ export type {
   Board,
   RankOptions,
 } from "./reference";
+export { resolveSlots, assertComplete, chooseArchetype, missingRoles } from "./resolve";
+export type {
+  SlotFill,
+  SlotBindings,
+  FilledSlot,
+  SlotMiss,
+  Resolution,
+  ChooseOptions,
+  Choice,
+} from "./resolve";
 export {
   groupKey,
   groupPosts,

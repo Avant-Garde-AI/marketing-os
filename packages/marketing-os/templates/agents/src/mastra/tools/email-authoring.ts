@@ -33,6 +33,8 @@ import { syncCampaignIndex } from "../../../lib/email/index-sync";
 import { isEphemeralUrl, persistAsset } from "../../../lib/store-repo/assets";
 import { emailAssetLink } from "../../../lib/email/review-links";
 import { resolveAudienceRefs } from "../../../lib/email/audience";
+import { loadWallSets, rankWallSets, toWallSetBlock } from "../../../lib/email/wall-sets";
+import { readArtistProfile, toArtistCardBlock } from "../../../lib/email/artist-profile";
 import { getTenant } from "../../../lib/tenant-context";
 import { campaignPath, parseCampaign, serializeCampaign, parseStrategy, strategyPathFor, resolveEmailRoot } from "../../../lib/email/artifacts";
 import type { EmailCampaign } from "../../../lib/email/types";
@@ -151,18 +153,43 @@ export const emailCampaignUpsert = createTool({
     // reviewer opened a page of broken images. Copy the bytes now, while the
     // signature is still valid, and point the artifact at a URL that survives.
     const shop = getTenant().shop;
+
+    /** Persist one ephemeral url and hand back its durable replacement. */
+    const durable = async (url: string, label: string): Promise<string> => {
+      if (!isEphemeralUrl(url)) return url;
+      const stored = await persistAsset(emailRepo, next.id, label, url);
+      if (stored) return emailAssetLink(shop, next.id, stored.name).url;
+      // Keep the working-but-expiring url rather than dropping the image, and
+      // say so — a campaign whose imagery failed to copy is still worth saving.
+      imageryWarnings.push(
+        `${label}: could not copy imagery to durable storage; the artifact still holds an expiring URL that will break within 24h.`,
+      );
+      return url;
+    };
+
+    // Walk EVERY image, not just the section-level hero. Blocks carry images
+    // too — a productRow's leaning shots, a graphCallout's pieces — and an
+    // expiring url is just as broken there. The first version of this only
+    // covered section.imageUrl, which was fine until product imagery stopped
+    // being flat catalogue scans.
     for (const section of next.sections) {
-      const url = (section as { imageUrl?: string }).imageUrl;
-      if (!url || !isEphemeralUrl(url)) continue;
-      const stored = await persistAsset(emailRepo, next.id, section.slot, url);
-      if (stored) {
-        (section as { imageUrl?: string }).imageUrl = emailAssetLink(shop, next.id, stored.name).url;
-      } else {
-        // Keep the working-but-expiring url rather than dropping the image, and
-        // say so — a campaign whose hero failed to copy is still worth saving.
-        imageryWarnings.push(
-          `${section.slot}: could not copy imagery to durable storage; the artifact still holds an expiring URL that will break within 24h.`,
-        );
+      const sec = section as { slot: string; imageUrl?: string; blocks?: Array<Record<string, unknown>> };
+      if (sec.imageUrl) sec.imageUrl = await durable(sec.imageUrl, sec.slot);
+      for (const block of sec.blocks ?? []) {
+        for (const key of ["imageUrl", "src", "url"]) {
+          const v = block[key];
+          if (typeof v === "string") block[key] = await durable(v, `${sec.slot}-${block.kind ?? "block"}`);
+        }
+        // Composite blocks nest their images one level down.
+        const items = (block.products ?? block.pieces ?? block.items) as
+          | Array<Record<string, unknown>>
+          | undefined;
+        for (const item of items ?? []) {
+          for (const key of ["imageUrl", "src", "url"]) {
+            const v = item[key];
+            if (typeof v === "string") item[key] = await durable(v, `${sec.slot}-item`);
+          }
+        }
       }
     }
 
@@ -338,7 +365,102 @@ export const emailPartialsUpsert = createTool({
   },
 });
 
+/**
+ * Curated wall sets, ranked against a campaign. Read-only: it selects among
+ * arrangements a curator already composed and never invents one.
+ */
+const wallSetsRead = createTool({
+  id: "gallery_wall_sets_read",
+  description:
+    "Find gallery wall sets — curated multi-piece arrangements the store sells together — ranked against a campaign's theme and, for an artist drop, the artist featured. Returns each set with its room, rationale, piece count, price, artists, room photography, and a `why` explaining what earned it the rank, plus a ready-to-use `block` you can drop straight into a campaign section. Selects among sets a curator composed; it never invents an arrangement. Read-only.",
+  inputSchema: z.object({
+    concept: z.string().optional().describe("Campaign theme, e.g. 'autumn ochre rust and sage'."),
+    artist: z.string().optional().describe("Prefer sets featuring this artist — the artist-drop case."),
+    limit: z.number().int().min(1).max(5).optional(),
+  }),
+  outputSchema: z.object({
+    sets: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        room: z.string().nullable(),
+        pieceCount: z.number().nullable(),
+        price: z.string().nullable(),
+        artists: z.array(z.string()),
+        why: z.string(),
+        block: z.record(z.unknown()).describe("Drop this into a section's blocks array."),
+      }),
+    ),
+    note: z.string(),
+  }),
+  execute: async (input: { concept?: string; artist?: string; limit?: number }) => {
+    const all = await loadWallSets(getTenant().githubRepo);
+    const ranked = rankWallSets(all, input);
+    return {
+      sets: ranked.map((s) => ({
+        id: s.id,
+        name: s.name,
+        room: s.room_name ?? null,
+        pieceCount: s.piece_count ?? null,
+        price: s.price ?? null,
+        artists: [...new Set((s.artists ?? []).map((a) => a.name).filter(Boolean))],
+        why: s.why,
+        block: toWallSetBlock(s),
+      })),
+      note:
+        all.length === 0
+          ? "No sets could be read — this is 'could not reach the file', not 'the store has none'. Check the store repo and the App installation before concluding there is nothing to show."
+          : `${all.length} sets available; ${ranked.length} matched. A set with no thematic overlap is omitted rather than shown as filler.`,
+    };
+  },
+});
+
+const artistProfileRead = createTool({
+  id: "artist_profile_read",
+  description:
+    "Read an artist as the store's own artist collection page presents them — portrait, location, the italic pull-quote, works count, and how many curated collections they appear in — and get a ready-to-use `artistCard` block for a campaign. Use this on every artist drop: an artist email that opens on a room shot with no artist is a product email wearing an editorial hat. Fields the store has not filled in come back in `missing`, so a thin card is legible as a content gap rather than a bug. Read-only.",
+  inputSchema: z.object({
+    artist: z.string().min(1).describe("Artist name or collection handle, e.g. 'Kaethe Butcher' or 'kaethe-butcher'."),
+  }),
+  outputSchema: z.object({
+    found: z.boolean(),
+    name: z.string().nullable(),
+    url: z.string().nullable(),
+    location: z.string().nullable(),
+    worksCount: z.number().nullable(),
+    collectionsCount: z.number().nullable(),
+    missing: z.array(z.string()),
+    block: z.record(z.unknown()).nullable(),
+    note: z.string(),
+  }),
+  execute: async ({ artist }: { artist: string }) => {
+    const p = await readArtistProfile(artist);
+    if (!p) {
+      return {
+        found: false, name: null, url: null, location: null,
+        worksCount: null, collectionsCount: null, missing: [], block: null,
+        note: `No artist collection matched "${artist}". This means Shopify has no such collection — it does NOT mean Shopify was unreachable, which raises instead.`,
+      };
+    }
+    return {
+      found: true,
+      name: p.name,
+      url: p.url,
+      location: p.location ?? null,
+      worksCount: p.worksCount ?? null,
+      collectionsCount: p.collectionsCount ?? null,
+      missing: p.missing,
+      block: toArtistCardBlock(p),
+      note: p.missing.length
+        ? `Store has not filled in: ${p.missing.join(", ")}. The card renders without them; do not invent replacements.`
+        : "Complete profile.",
+    };
+  },
+});
+
 export const emailAuthoringTools = {
+  artist_profile_read: artistProfileRead,
+  gallery_wall_sets_read: wallSetsRead,
   email_campaign_upsert: emailCampaignUpsert,
   email_strategy_upsert: emailStrategyUpsert,
   email_strategy_read: emailStrategyRead,

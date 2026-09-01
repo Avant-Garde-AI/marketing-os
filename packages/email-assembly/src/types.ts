@@ -146,22 +146,82 @@ export const productItemSchema = z.object({
   imageUrl: z.string().min(1).optional(),
   /** Alt for the product image; defaults to `name` so the alt invariant holds. */
   alt: z.string().optional(),
+  /** Artist, shown under the title. The single most useful fact on an art card. */
+  artist: z.string().optional(),
+  /**
+   * One line of editorial about THIS piece — why it earns its place, not a
+   * restatement of the title. Kept short deliberately: a product row is scanned,
+   * not read, and a paragraph here turns three cards into a wall of text.
+   */
+  blurb: z.string().max(180).optional(),
 });
 
 export type ProductItem = z.infer<typeof productItemSchema>;
 
 export const emailBlockSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("paragraph"), text: z.string().min(1) }),
+  z.object({
+    kind: z.literal("paragraph"),
+    text: z.string().min(1),
+    /** Centred composition — the register the Arthaus editorial mocks use. */
+    align: z.enum(["left", "center"]).optional(),
+    /** Serif italic. The brand's editorial voice for a standfirst or a pull line. */
+    emphasis: z.boolean().optional(),
+  }),
   z.object({
     kind: z.literal("heading"),
     text: z.string().min(1),
     level: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+    align: z.enum(["left", "center"]).optional(),
   }),
   z.object({ kind: z.literal("button"), text: z.string().min(1), href: z.string().min(1) }),
   z.object({
     kind: z.literal("productRow"),
     products: z.array(productItemSchema).min(1).max(4),
   }),
+  /**
+   * The short bronze dash the Arthaus mocks set under a headline. Distinct from
+   * `divider`, which is a full-width hairline separating sections: this is a
+   * typographic flourish that belongs TO the heading above it.
+   */
+  /**
+   * A gallery wall set — a curated multi-piece arrangement sold together.
+   * Composed as one editorial unit (room shot, name, why it hangs together,
+   * piece count and price) rather than three product cards, because the set IS
+   * the product: shown as separate cards a reader has to reassemble the idea.
+   */
+  z.object({
+    kind: z.literal("wallSet"),
+    name: z.string().min(1),
+    href: z.string().min(1),
+    imageUrl: z.string().min(1),
+    /** e.g. "Line Story" — the room the set was composed for. */
+    room: z.string().optional(),
+    /** One sentence on why these pieces belong together. */
+    rationale: z.string().max(300).optional(),
+    pieceCount: z.number().int().positive().optional(),
+    price: z.string().optional(),
+    /** Artist names, deduplicated by the caller. */
+    artists: z.array(z.string()).optional(),
+    ctaText: z.string().optional(),
+  }),
+  /**
+   * The artist, as the store's own artist page presents them: portrait, name,
+   * bronze rule, location, an italic pull-quote, and the works / collections
+   * counts. An artist drop that opens on a room shot with no artist is a
+   * product email wearing an editorial hat.
+   */
+  z.object({
+    kind: z.literal("artistCard"),
+    name: z.string().min(1),
+    href: z.string().min(1),
+    portraitUrl: z.string().optional(),
+    location: z.string().optional(),
+    quote: z.string().max(280).optional(),
+    worksCount: z.number().int().positive().optional(),
+    collectionsCount: z.number().int().positive().optional(),
+    ctaText: z.string().optional(),
+  }),
+  z.object({ kind: z.literal("rule"), align: z.enum(["left", "center"]).optional() }),
   z.object({ kind: z.literal("spacer"), height: z.number().int().positive().max(200) }),
   // --- Arthaus design-system vocabulary (introspected from marketplace/emails) ---
   /** Bronze uppercase micro-label — the signature Arthaus kicker above a section. */

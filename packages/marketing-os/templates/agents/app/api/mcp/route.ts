@@ -374,6 +374,31 @@ const TOOLS: ToolDef[] = [
     run: (a) => runMastra(emailAuthoringTools.email_partials_upsert, a),
   },
   {
+    name: "artist_profile_read",
+    description:
+      "Read an artist as the store's own artist collection page presents them — portrait, location, italic pull-quote, works count, and how many curated collections they appear in — and get a ready-to-use artistCard block. Use on every artist drop: an artist email that opens on a room shot with no artist is a product email wearing an editorial hat. Fields the store has not filled in come back in `missing`; do not invent replacements. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: { artist: { type: "string", description: "Artist name or collection handle." } },
+      required: ["artist"],
+    },
+    run: (a) => runMastra(emailAuthoringTools.artist_profile_read, a),
+  },
+  {
+    name: "gallery_wall_sets_read",
+    description:
+      "Find gallery wall sets — curated multi-piece arrangements the store sells together — ranked against a campaign theme and, for an artist drop, the featured artist. Returns each set with room, rationale, piece count, price, artists, room photography, a `why` explaining the rank, and a ready-to-use `block` for a campaign section. Selects among curator-composed sets; never invents one. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        concept: { type: "string", description: "Campaign theme, e.g. 'autumn ochre rust and sage'." },
+        artist: { type: "string", description: "Prefer sets featuring this artist." },
+        limit: { type: "number" },
+      },
+    },
+    run: (a) => runMastra(emailAuthoringTools.gallery_wall_sets_read, a),
+  },
+  {
     name: "email_render_preview",
     description:
       "Assemble a campaign's current state into real email HTML and return links a human can open, plus the invariant report (errors/warnings). previewUrl is the raw email; reviewUrl is the SHAREABLE review room — the email with its subject, send date, rationale, audience and a notes thread, openable by someone with no console account. Hand over reviewUrl, not previewUrl. Both links EXPIRE; quote expiresAt whenever you paste one. Read-only; nothing touches Klaviyo.",

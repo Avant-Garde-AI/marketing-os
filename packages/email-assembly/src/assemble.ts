@@ -116,7 +116,7 @@ export function assembleEmail(input: AssembleEmailInput): AssembledEmail {
       section.type === "surface"
         ? renderSurface(section, theme)
         : (Array.isArray(section.block) ? section.block : [section.block])
-            .map((block) => renderBlock(block, theme))
+            .map((block, i) => renderBlock(block, theme, i === 0))
             .join("\n");
     const list = bySlot.get(section.slot);
     if (list) list.push(rendered);

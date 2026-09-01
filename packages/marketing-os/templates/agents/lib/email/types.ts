@@ -41,6 +41,17 @@ export interface StrategyAudience {
   /** Stable roster key, e.g. "engaged-30d", "full-list". */
   key: string;
   klaviyoRef: { type: "list" | "segment"; id: string };
+  /**
+   * Additional Klaviyo audiences that a campaign on this key sends to AS WELL.
+   *
+   * The roster is a ROTATION — the planner picks one key per slot — so listing
+   * three audiences as three keys would spread campaigns across them one at a
+   * time, which is the opposite of "send to all of them". A single key that
+   * carries several refs is how you say "this is one audience, assembled from
+   * more than one Klaviyo object". Klaviyo dedupes a profile that appears in
+   * several, so overlap costs reach, not sends.
+   */
+  alsoInclude?: Array<{ type: "list" | "segment"; id: string; name?: string }>;
   description: string;
   /** Max campaigns per month that may target this audience (guardrail). */
   cadenceCap: number;

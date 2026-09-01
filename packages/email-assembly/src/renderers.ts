@@ -72,14 +72,43 @@ const BLOCK_OPEN =
 // Block renderers.
 // ---------------------------------------------------------------------------
 
-function renderParagraph(text: string, theme: EmailTheme): string {
+function renderParagraph(
+  text: string,
+  theme: EmailTheme,
+  align: "left" | "center" = "left",
+  emphasis = false,
+): string {
   const lhPx = Math.round(theme.bodyFontSize * theme.bodyLineHeight);
+  // Emphasis is the brand's editorial voice: serif italic, slightly larger, a
+  // touch more leading. It reads as a standfirst rather than body copy.
+  const font = emphasis ? theme.headingFontStack : theme.bodyFontStack;
+  const size = emphasis ? theme.bodyFontSize + 1 : theme.bodyFontSize;
+  const lh = emphasis ? Math.round(size * (theme.bodyLineHeight + 0.15)) : lhPx;
   return (
-    `${BLOCK_OPEN}<tr><td class="eab-text" align="left" ` +
-    `style="padding:0 ${theme.gutterPx}px 16px ${theme.gutterPx}px;` +
-    `font-family:${theme.bodyFontStack};font-size:${theme.bodyFontSize}px;` +
-    `line-height:${lhPx}px;mso-line-height-rule:exactly;color:${theme.textColor};">` +
+    `${BLOCK_OPEN}<tr><td class="eab-text" align="${align}" ` +
+    `style="padding:0 ${theme.gutterPx}px 16px ${theme.gutterPx}px;text-align:${align};` +
+    `font-family:${font};font-size:${size}px;` +
+    (emphasis ? "font-style:italic;" : "") +
+    `line-height:${lh}px;mso-line-height-rule:exactly;color:${theme.textColor};">` +
     `${escapeHtml(text)}</td></tr></table>`
+  );
+}
+
+/**
+ * The short bronze dash the Arthaus mocks set beneath a headline — a
+ * typographic flourish belonging to the heading above, not a section divider.
+ * Rendered as a fixed-width table cell because a styled <hr> is unreliable
+ * across Outlook and Gmail.
+ */
+function renderRule(theme: EmailTheme, align: "left" | "center" = "center"): string {
+  return (
+    `${BLOCK_OPEN}<tr><td align="${align}" ` +
+    `style="padding:2px ${theme.gutterPx}px 18px ${theme.gutterPx}px;">` +
+    `<table role="presentation" border="0" cellpadding="0" cellspacing="0" ` +
+    `align="${align}" style="margin:${align === "center" ? "0 auto" : "0"};">` +
+    `<tr><td width="48" height="2" style="width:48px;height:2px;font-size:0;line-height:0;` +
+    `background-color:${theme.accentColor};">&nbsp;</td></tr></table>` +
+    `</td></tr></table>`
   );
 }
 
@@ -90,14 +119,14 @@ function headingSize(theme: EmailTheme, level: 1 | 2 | 3): number {
   return Math.round(theme.headingFontSize * 0.625);
 }
 
-function renderHeading(text: string, level: 1 | 2 | 3, theme: EmailTheme): string {
+function renderHeading(text: string, level: 1 | 2 | 3, theme: EmailTheme, align: "left" | "center" = "left"): string {
   const size = headingSize(theme, level);
   const lhPx = Math.round(size * 1.2);
   // A real h-tag for screen-reader document structure, fully reset inline so
   // no client default (margins, blue Outlook.com headings) leaks through.
   return (
-    `${BLOCK_OPEN}<tr><td class="eab-heading" align="left" ` +
-    `style="padding:0 ${theme.gutterPx}px 12px ${theme.gutterPx}px;">` +
+    `${BLOCK_OPEN}<tr><td class="eab-heading" align="${align}" ` +
+    `style="padding:0 ${theme.gutterPx}px 12px ${theme.gutterPx}px;text-align:${align};">` +
     `<h${level} style="margin:0;font-family:${theme.headingFontStack};` +
     `font-size:${size}px;line-height:${lhPx}px;mso-line-height-rule:exactly;` +
     `font-weight:${theme.headingWeight};color:${theme.textColor};">` +
@@ -141,27 +170,61 @@ function renderButton(text: string, href: string, theme: EmailTheme): string {
 /** Content width inside the 600px column after the standard 24px gutters. */
 const PRODUCT_ROW_WIDTH = 552;
 
+const PRODUCT_IMAGE_BAND_PX = 200;
+
+/**
+ * Catalogue titles carry SEO tails — "Ocean Love | Sea Beach Sand Waves
+ * Photography | Blush Nature Scenic Travel Island Digital". Set in a 268px
+ * column that wraps to eight lines and buries the card. The work's real name is
+ * the part before the first pipe; the rest is keywords, not a title.
+ */
+function displayName(name: string): string {
+  const head = name.split("|")[0]!.trim();
+  const base = head.length >= 3 ? head : name.trim();
+  return base.length > 46 ? `${base.slice(0, 44).trimEnd()}…` : base;
+}
+
 function renderProductCell(product: ProductItem, cardWidth: number, theme: EmailTheme): string {
   const imgWidth = cardWidth - 24;
   const hrefAttr = escapeAttr(product.href);
   // Alt falls back to the product name so the alt invariant holds by
   // construction — a product shot's message IS the product (04 §5d).
   const alt = escapeAttr(product.alt ?? product.name);
+  // Fixed-height band, matching graphCallout. Artwork arrives in every aspect
+  // ratio; letting each image set its own height staggers the captions below and
+  // reads as a layout bug rather than as varied work.
   const img = product.imageUrl
-    ? `<a href="${hrefAttr}"><img src="${escapeAttr(product.imageUrl)}" alt="${alt}" ` +
-      `width="${imgWidth}" style="display:block;width:100%;max-width:${imgWidth}px;height:auto;border:0;"></a>`
+    ? `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">` +
+      `<tr><td align="center" height="${PRODUCT_IMAGE_BAND_PX}" valign="middle" ` +
+      `style="height:${PRODUCT_IMAGE_BAND_PX}px;">` +
+      `<a href="${hrefAttr}"><img src="${escapeAttr(product.imageUrl)}" alt="${alt}" ` +
+      `style="display:block;max-width:${imgWidth}px;max-height:${PRODUCT_IMAGE_BAND_PX}px;` +
+      `width:auto;height:auto;border:0;"></a>` +
+      `</td></tr></table>`
     : "";
   return (
     `<div class="eab-col" style="display:inline-block;width:100%;max-width:${cardWidth}px;vertical-align:top;">` +
     `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0">` +
     `<tr><td align="center" style="padding:8px 12px 16px 12px;">` +
     img +
-    `<a href="${hrefAttr}" class="eab-text" style="display:block;padding-top:12px;` +
-    `font-family:${theme.bodyFontStack};font-size:${theme.bodyFontSize}px;font-weight:600;` +
-    `color:${theme.textColor};text-decoration:none;">${escapeHtml(product.name)}</a>` +
-    `<span class="eab-meta" style="display:block;padding-top:4px;` +
-    `font-family:${theme.bodyFontStack};font-size:14px;color:${theme.textColor};">` +
+    `<a href="${hrefAttr}" class="eab-text" style="display:block;padding-top:14px;` +
+    `font-family:${theme.headingFontStack};font-size:${theme.bodyFontSize + 1}px;font-weight:500;` +
+    `line-height:${Math.round((theme.bodyFontSize + 1) * 1.3)}px;mso-line-height-rule:exactly;` +
+    `color:${theme.textColor};text-decoration:none;">${escapeHtml(displayName(product.name))}</a>` +
+    (product.artist
+      ? `<span class="eab-meta" style="display:block;padding-top:3px;` +
+        `font-family:${theme.bodyFontStack};font-size:12.5px;letter-spacing:0.02em;` +
+        `color:${theme.textColor};opacity:.62;">${escapeHtml(product.artist)}</span>`
+      : "") +
+    `<span class="eab-meta" style="display:block;padding-top:6px;` +
+    `font-family:${theme.bodyFontStack};font-size:13px;color:${theme.accentColor};">` +
     `${escapeHtml(product.price)}</span>` +
+    (product.blurb
+      ? `<span class="eab-meta" style="display:block;padding-top:6px;` +
+        `font-family:${theme.bodyFontStack};font-size:13px;line-height:19px;` +
+        `mso-line-height-rule:exactly;color:${theme.textColor};opacity:.72;">` +
+        `${escapeHtml(product.blurb)}</span>`
+      : "") +
     `</td></tr></table></div>`
   );
 }
@@ -178,6 +241,118 @@ function renderProductRow(products: ProductItem[], theme: EmailTheme): string {
     cells +
     `<!--[if mso]></td></tr></table><![endif]-->` +
     `</td></tr></table>`
+  );
+}
+
+/**
+ * A gallery wall set. Full-bleed room shot, then the set's identity beneath it
+ * on the raised surface — the layout the Arthaus wall pages already use, so a
+ * reader arriving from the email meets the same object.
+ */
+function renderWallSet(
+  b: Extract<EmailBlock, { kind: "wallSet" }>,
+  theme: EmailTheme,
+): string {
+  const href = escapeAttr(b.href);
+  const meta = [
+    b.pieceCount ? `${b.pieceCount} pieces` : null,
+    b.price ?? null,
+  ].filter(Boolean).join(" · ");
+  const artists = (b.artists ?? []).slice(0, 3).join(", ");
+  return (
+    `${BLOCK_OPEN}<tr><td style="padding:0 ${theme.gutterPx}px 8px ${theme.gutterPx}px;">` +
+    `<table role="presentation" width="100%" border="0" cellpadding="0" cellspacing="0" ` +
+    `style="background-color:${theme.backgroundColor};">` +
+    `<tr><td><a href="${href}"><img src="${escapeAttr(b.imageUrl)}" alt="${escapeAttr(b.name)}" ` +
+    `width="504" style="display:block;width:100%;max-width:504px;height:auto;border:0;"></a></td></tr>` +
+    `<tr><td align="center" style="padding:18px 20px 22px 20px;">` +
+    (b.room
+      ? `<span style="display:block;font-family:${theme.bodyFontStack};font-size:11px;` +
+        `font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${theme.accentColor};">` +
+        `${escapeHtml(b.room)}</span>`
+      : "") +
+    `<a href="${href}" style="display:block;padding-top:6px;font-family:${theme.headingFontStack};` +
+    `font-size:${theme.headingFontSize - 6}px;line-height:${theme.headingFontSize - 2}px;` +
+    `mso-line-height-rule:exactly;color:${theme.textColor};text-decoration:none;">` +
+    `${escapeHtml(b.name)}</a>` +
+    (artists
+      ? `<span style="display:block;padding-top:6px;font-family:${theme.bodyFontStack};` +
+        `font-size:12.5px;color:${theme.textColor};opacity:.62;">${escapeHtml(artists)}</span>`
+      : "") +
+    (b.rationale
+      ? `<span style="display:block;padding-top:10px;font-family:${theme.headingFontStack};` +
+        `font-style:italic;font-size:${theme.bodyFontSize}px;` +
+        `line-height:${Math.round(theme.bodyFontSize * 1.55)}px;mso-line-height-rule:exactly;` +
+        `color:${theme.textColor};">${escapeHtml(b.rationale)}</span>`
+      : "") +
+    (meta
+      ? `<span style="display:block;padding-top:12px;font-family:${theme.bodyFontStack};` +
+        `font-size:13px;letter-spacing:0.04em;color:${theme.accentColor};">${escapeHtml(meta)}</span>`
+      : "") +
+    `</td></tr></table></td></tr></table>` +
+    renderButton(b.ctaText ?? `Shop the ${b.name} wall`, b.href, theme)
+  );
+}
+
+/**
+ * The artist card — the same composition the store's artist page uses, so a
+ * reader arriving from the email meets the same person laid out the same way.
+ * Portrait is a circle via a fixed-size cell (border-radius is unreliable on
+ * images in Outlook, so the crop is the shape and the radius is a progressive
+ * nicety).
+ */
+function renderArtistCard(
+  b: Extract<EmailBlock, { kind: "artistCard" }>,
+  theme: EmailTheme,
+): string {
+  const href = escapeAttr(b.href);
+  const stats = [
+    b.worksCount ? { n: String(b.worksCount), l: "Works" } : null,
+    b.collectionsCount ? { n: String(b.collectionsCount), l: "Collections" } : null,
+    b.location ? { n: b.location.split(",")[0]!.trim(), l: "Studio" } : null,
+  ].filter(Boolean) as Array<{ n: string; l: string }>;
+
+  const statCells = stats
+    .map(
+      (s) =>
+        `<td align="center" style="padding:0 14px;">` +
+        `<span style="display:block;font-family:${theme.headingFontStack};font-size:19px;` +
+        `color:${theme.textColor};">${escapeHtml(s.n)}</span>` +
+        `<span style="display:block;padding-top:2px;font-family:${theme.bodyFontStack};` +
+        `font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;` +
+        `color:${theme.textColor};opacity:.55;">${escapeHtml(s.l)}</span></td>`,
+    )
+    .join("");
+
+  return (
+    `${BLOCK_OPEN}<tr><td align="center" style="padding:4px ${theme.gutterPx}px 20px ${theme.gutterPx}px;">` +
+    (b.portraitUrl
+      ? `<a href="${href}"><img src="${escapeAttr(b.portraitUrl)}" alt="${escapeAttr(b.name)}" ` +
+        `width="76" height="76" style="display:block;width:76px;height:76px;border-radius:38px;` +
+        `object-fit:cover;border:0;margin:0 auto;"></a>`
+      : "") +
+    `<span style="display:block;padding-top:12px;font-family:${theme.bodyFontStack};font-size:10px;` +
+    `font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:${theme.accentColor};">Artist</span>` +
+    `<a href="${href}" style="display:block;padding-top:6px;font-family:${theme.headingFontStack};` +
+    `font-size:${theme.headingFontSize - 4}px;line-height:${theme.headingFontSize}px;` +
+    `mso-line-height-rule:exactly;color:${theme.textColor};text-decoration:none;">` +
+    `${escapeHtml(b.name)}</a>` +
+    `<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" ` +
+    `style="margin:14px auto 0;"><tr><td width="48" height="2" ` +
+    `style="width:48px;height:2px;font-size:0;line-height:0;background-color:${theme.accentColor};">` +
+    `&nbsp;</td></tr></table>` +
+    (b.quote
+      ? `<span style="display:block;padding:16px 8px 0;font-family:${theme.headingFontStack};` +
+        `font-style:italic;font-size:${theme.bodyFontSize + 1}px;` +
+        `line-height:${Math.round((theme.bodyFontSize + 1) * 1.6)}px;mso-line-height-rule:exactly;` +
+        `color:${theme.textColor};">${escapeHtml(b.quote)}</span>`
+      : "") +
+    (statCells
+      ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" align="center" ` +
+        `style="margin:20px auto 0;"><tr>${statCells}</tr></table>`
+      : "") +
+    `</td></tr></table>` +
+    renderButton(b.ctaText ?? `Browse ${b.name}`, b.href, theme)
   );
 }
 
@@ -464,12 +639,30 @@ function renderDivider(theme: EmailTheme): string {
 }
 
 /** Render one block from the fixed vocabulary. */
-export function renderBlock(block: EmailBlock, theme: EmailTheme): string {
+/** Vertical air above the first block of a text section — see renderBlock. */
+export const SECTION_LEAD_PX = 32;
+
+export function renderBlock(block: EmailBlock, theme: EmailTheme, lead = false): string {
+  const html = renderBlockInner(block, theme);
+  if (!lead) return html;
+  // Prepend a spacer rather than threading top-padding through fifteen
+  // renderers: one table row, no per-block signature churn, and it degrades to
+  // nothing in clients that ignore height (they simply see the old spacing).
+  return renderSpacer(SECTION_LEAD_PX) + "\n" + html;
+}
+
+function renderBlockInner(block: EmailBlock, theme: EmailTheme): string {
   switch (block.kind) {
     case "paragraph":
-      return renderParagraph(block.text, theme);
+      return renderParagraph(block.text, theme, block.align ?? "left", block.emphasis === true);
     case "heading":
-      return renderHeading(block.text, block.level ?? 2, theme);
+      return renderHeading(block.text, block.level ?? 2, theme, block.align ?? "left");
+    case "rule":
+      return renderRule(theme, block.align ?? "center");
+    case "wallSet":
+      return renderWallSet(block, theme);
+    case "artistCard":
+      return renderArtistCard(block, theme);
     case "button":
       return renderButton(block.text, block.href, theme);
     case "productRow":

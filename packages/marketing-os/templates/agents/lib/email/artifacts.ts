@@ -138,6 +138,9 @@ const strategyFrontMatterSchema = z.object({
           type: z.enum(["list", "segment"]),
           id: z.string().min(1),
         }),
+        alsoInclude: z
+          .array(z.object({ type: z.enum(["list", "segment"]), id: z.string(), name: z.string().optional() }))
+          .optional(),
         description: z.string().min(1),
         cadenceCap: z.number().int().positive().describe("Max campaigns/month targeting this audience"),
       }),

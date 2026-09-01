@@ -176,8 +176,20 @@ function approvePlan(deps: EmailActionDeps): Action<ApprovePlanParams> {
         const id = slotCampaignId(p.month, slot.slot, slot.archetype, n);
 
         const roster = slot.audience ? strategy.audiences.find((a) => a.key === slot.audience) : undefined;
+        // One roster key can name several Klaviyo audiences (see
+        // StrategyAudience.alsoInclude): the planner rotates KEYS, so a store
+        // whose "full list" is spread across a newsletter list, an imported
+        // list and a customers segment expresses that as one key, not three.
         const included: CampaignAudienceRef[] = roster
-          ? [{ key: roster.key, type: roster.klaviyoRef.type, id: roster.klaviyoRef.id, name: roster.description }]
+          ? [
+              { key: roster.key, type: roster.klaviyoRef.type, id: roster.klaviyoRef.id, name: roster.description },
+              ...(roster.alsoInclude ?? []).map((r) => ({
+                key: roster.key,
+                type: r.type,
+                id: r.id,
+                ...(r.name ? { name: r.name } : {}),
+              })),
+            ]
           : [];
 
         const existing = await deps.repo.readFile(campaignPath(id));

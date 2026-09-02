@@ -50,6 +50,13 @@ services:
       - caddy_config:/config
     networks:
       - penpot
+    # Caddy serves the per-tenant /js/config.js override (see Caddyfile), which
+    # has to carry the same flag set as the frontend — so it needs the same
+    # PENPOT_FLAGS value. `{$PENPOT_FLAGS}` in a Caddyfile reads CADDY's own
+    # environment, not the host's, so without this line the override would
+    # silently serve an empty flag list and disable access tokens and login.
+    environment:
+      << : *penpot-flags
     depends_on:
       - penpot-frontend
 

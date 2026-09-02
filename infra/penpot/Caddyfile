@@ -16,6 +16,33 @@ design.avant-garde.ai {
 # console origins. One block per tenant console domain.
 design.arthaus.cloud {
 	encode gzip
+
+	# The alias needs its OWN config.js, and without this it is broken outright.
+	#
+	# PENPOT_PUBLIC_URI is a single global baked into the frontend image's
+	# config.js at container start. Both hostnames proxy to that one container,
+	# so a browser on design.arthaus.cloud was told to call
+	# https://design.avant-garde.ai/api/... — a cross-ORIGIN request that
+	# Penpot sends no CORS headers for. Every API call died as "Failed to
+	# fetch" and the app rendered a black page. curl showed 200 the whole time,
+	# because curl does not enforce CORS; only a browser sees it.
+	#
+	# Serving a per-host config.js keeps the tenant entirely same-origin, which
+	# is what this alias existed for in the first place.
+	#
+	# DRIFT WARNING: penpotFlags is duplicated from PENPOT_FLAGS in .env
+	# (deploy.sh owns that value). It is interpolated from the environment
+	# rather than hardcoded so `deploy.sh lock` keeps working, but if Penpot
+	# ever adds a config.js key beyond flags + public URI, this block has to
+	# learn about it. Check after a Penpot upgrade.
+	# One line on purpose: `respond` takes a single argument, and a JS comment
+	# would swallow everything after it on that line.
+	handle /js/config.js {
+		header Content-Type "application/javascript"
+		header Cache-Control "no-store"
+		respond `var penpotFlags = "{$PENPOT_FLAGS}"; var penpotPublicURI = "https://design.arthaus.cloud";` 200
+	}
+
 	reverse_proxy penpot-frontend:8080
 	header {
 		-X-Frame-Options

@@ -7,7 +7,18 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import fs from "fs-extra";
 import path from "path";
 import os from "os";
-import { execSync } from "child_process";
+import { execSync, execFile } from "child_process";
+import { promisify } from "util";
+
+/**
+ * The two heavyweight steps below (npm install, next build) block for 30-70s.
+ * Run synchronously they starve the worker's event loop, so vitest's RPC
+ * heartbeat goes unanswered and the run dies with
+ * `[vitest-worker]: Timeout calling "onTaskUpdate"` — 11 passing tests reported
+ * as a failed suite, intermittently. Awaiting them keeps the loop responsive.
+ * The short git calls stay synchronous; they are milliseconds.
+ */
+const execFileAsync = promisify(execFile);
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -403,9 +414,8 @@ describe("CLI Integration Tests", () => {
     const agentsDir = path.join(testProjectDir, "agents");
 
     try {
-      execSync("npm install", {
+      await execFileAsync("npm", ["install"], {
         cwd: agentsDir,
-        stdio: "pipe",
         timeout: 120000, // 2 minute timeout
       });
 
@@ -449,9 +459,8 @@ NEXT_PUBLIC_STORE_URL=test-store.myshopify.com
       await fs.writeFile(path.join(agentsDir, ".env"), envContent);
 
       // Run build
-      execSync("npm run build", {
+      await execFileAsync("npm", ["run", "build"], {
         cwd: agentsDir,
-        stdio: "pipe",
         timeout: 180000, // 3 minute timeout
       });
 

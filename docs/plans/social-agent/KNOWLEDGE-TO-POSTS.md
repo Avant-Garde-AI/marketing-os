@@ -144,6 +144,32 @@ formula came from the corpus, the *words* must still come from brand.md and the
 artwork. A post that could belong to Minted is a failed post even if it converts
 (brand.md §Competitive Differentiation).
 
+**Built** — `social/bindings/caption.mjs` (Arthaus PR #57), as two functions
+rather than a generator. Writing a caption worth publishing is a model's job; a
+template that slots a work title into a sentence produces precisely the
+market-average copy this section warns about. So `captionBrief` assembles the
+inputs (formula structure and example, the work's facts, the register, and the
+`doNot` list **verbatim**) and gets out of the way, while `checkCaption`
+enforces what is mechanical.
+
+Enforceable, each traced to the brand line it comes from: price-led copy,
+urgency devices, artist-CV formality, and opening a *discovery* post on the
+artist's name. The last is conditional — `intent: "artist-feature"` disables it,
+because a feature legitimately opens on the artist, and naming them in sentence
+two is the formula working.
+
+**The limit is stated in the module, not glossed.** "Twee or cutesy", "dense
+grids", "e-commerce chrome" are matters of taste and of *image*; no regex sees
+them. `checked` names exactly what was verified so a clean result reads as
+"nothing mechanical is wrong" and never as "this is on brand" — the review room
+still decides that. The linter is also deliberately not over-eager: "we never
+compete on price" and "priceless" both pass, because a linter that cries wolf
+gets switched off and then protects nothing.
+
+Sanity check worth repeating after any rule change: all four of the genome's own
+formula `example`s pass the genome's own rules. Exemplars that failed would mean
+the rules were wrong, not the examples.
+
 **Done when:** a caption names the work and artist per the brand's formula,
 carries `copyFormulaRef`, and never leads with the artist in a discovery post
 (the Nest Curator arrives through the room, not the name).
@@ -154,6 +180,24 @@ No new plumbing. `social_plan_propose` → `social_post_upsert` (with `groupId`
 for multi-platform variants) → `resolveSlots` → `compose_design_surface` →
 `social_link_design` → `social_review_share` → notes → `social.schedule_post` →
 Slack approval → cron.
+
+**The review surfaces are already at parity with email — the gap is content,
+not plumbing.** Worth stating plainly, because the email agent's month-sheet
+handoff is the model here and it is easy to assume social needs building:
+
+| surface | email | social |
+|---|---|---|
+| console index | `app/email/page.tsx` | `app/social/page.tsx` |
+| console detail | `app/email/campaigns/[id]` | `app/social/posts/[id]` |
+| month contact sheet | `app/review/email/page.tsx` | `app/review/social/page.tsx` |
+| review room | `app/review/email/[id]` | `app/review/social/[id]` |
+| tokened share link, notes, resolve | ✓ | ✓ |
+
+Spec 26 built all of it, plus `postCalendarProjection`, post grouping and
+thumbnails. `social_post_upsert`, `social_link_design`, `social_review_share`
+and `social_review_notes(_resolve)` all exist. Nothing structural is missing —
+**no month of posts has ever been planned**, so the sheet has nothing to show.
+One planning run produces the same handoff link email gives you.
 
 **Do:** one week of Arthaus posts, end to end, reviewed by a human in the room.
 Then publish **one** — the first thing this system has ever actually posted.

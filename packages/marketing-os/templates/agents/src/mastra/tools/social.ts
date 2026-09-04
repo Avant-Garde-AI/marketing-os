@@ -27,7 +27,7 @@ import {
   serializePost,
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
-import { upsertPost } from "../../../lib/social/authoring";
+import { upsertCalendar, upsertPost } from "../../../lib/social/authoring";
 import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
 import { syncPostIndex } from "../../../lib/social/index-sync";
 import { socialReviewLink, socialSheetLink } from "../../../lib/social/review-links";
@@ -111,6 +111,35 @@ const socialLinkDesign = createTool({
       postId: input.postId,
       studioPath: studioPath(input.teamId, input.fileId, input.pageId),
     };
+  },
+});
+
+const socialCalendarUpsert = createTool({
+  id: "social_calendar_upsert",
+  description:
+    "PERSIST a proposed month plan to social/calendar/{month}.md — the write half of planning. " +
+    "social_plan_propose only DRAFTS: it returns calendarMarkdown and writes nothing, so without this call the plan lives in the conversation, the console still shows 'Nothing planned yet', and social_calendar_read reports no calendar. " +
+    "Pass the proposal's calendarMarkdown through verbatim; it is already in the artifact's format. " +
+    "An approved month is protected — re-planning over it fails unless you pass replaceApproved, because someone signed off on that month and losing it quietly is worse than an error. Re-proposing over a still-proposed month is normal iteration.",
+  inputSchema: z.object({
+    month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).describe("YYYY-MM"),
+    calendarMarkdown: z.string().min(1).describe("PlanProposal.calendarMarkdown, verbatim"),
+    replaceApproved: z
+      .boolean()
+      .optional()
+      .describe("Discard an existing APPROVED calendar for this month. Default false."),
+  }),
+  outputSchema: z.object({
+    ok: z.literal(true),
+    path: z.string(),
+    month: z.string(),
+    slotCount: z.number(),
+    status: z.string(),
+    created: z.boolean(),
+  }),
+  execute: async (input: { month: string; calendarMarkdown: string; replaceApproved?: boolean }) => {
+    const result = await upsertCalendar(socialRepo, input);
+    return { ok: true as const, ...result };
   },
 });
 
@@ -339,6 +368,7 @@ export const socialTools = {
   social_review_share: socialReviewShare,
   social_review_notes: socialReviewNotes,
   social_review_notes_resolve: socialReviewNotesResolve,
+  social_calendar_upsert: socialCalendarUpsert,
   social_post_upsert: socialPostUpsert,
   social_plan_propose: toMastraTool(defs.social_plan_propose),
   social_calendar_read: toMastraTool(defs.social_calendar_read),

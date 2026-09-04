@@ -32,7 +32,7 @@
  */
 
 import type { SocialPost, SocialRepo } from "./types";
-import { parsePost, postPath, serializePost } from "./artifacts";
+import { calendarPath, parseCalendar, parsePost, postPath, serializePost } from "./artifacts";
 
 /**
  * Statuses whose artifact must not be edited in place. `published` has already
@@ -175,4 +175,83 @@ export async function upsertPost(
   const { post, created, consentCleared } = nextPost(existing, input);
   await repo.writeFile(path, serializePost(post));
   return { post, created, consentCleared, missing: schedulingGaps(post) };
+}
+
+// ---------------------------------------------------------------------------
+// social/calendar/{month}.md — persisting a proposed plan
+// ---------------------------------------------------------------------------
+
+/**
+ * Write a month's calendar.
+ *
+ * `proposePlan` builds a plan and even serializes it (`calendarMarkdown`), but
+ * nothing ever wrote it: `calendarPath()` appeared only in read paths, so the
+ * pack could propose a calendar and read a calendar and never persist one. The
+ * agent would report "the calendar is planned" perfectly truthfully and the
+ * console would still say "Nothing planned yet" — the proposal lived only in
+ * the conversation. This is the missing half.
+ *
+ * APPROVAL IS NOT SILENTLY DISCARDED. Re-planning over an `approved` calendar
+ * throws unless the caller says `replaceApproved`. A month someone signed off
+ * on is a decision, and overwriting it because a new planning turn happened to
+ * run is the kind of quiet loss nobody notices until the wrong post ships.
+ * Re-proposing over a `proposed` calendar is fine — that is just iterating.
+ */
+export interface SocialCalendarUpsertInput {
+  month: string;
+  /** The serialized calendar — `PlanProposal.calendarMarkdown` verbatim. */
+  calendarMarkdown: string;
+  /** Overwrite a calendar that has already been approved. Default false. */
+  replaceApproved?: boolean;
+}
+
+export interface SocialCalendarUpsertResult {
+  path: string;
+  month: string;
+  slotCount: number;
+  status: string;
+  created: boolean;
+}
+
+export async function upsertCalendar(
+  repo: SocialRepo,
+  input: SocialCalendarUpsertInput,
+): Promise<SocialCalendarUpsertResult> {
+  const path = calendarPath(input.month); // throws on a malformed month
+  const raw = (input.calendarMarkdown ?? "").trim();
+  if (!raw) {
+    throw new Error(
+      `social_calendar_upsert: calendarMarkdown is empty — pass PlanProposal.calendarMarkdown from social_plan_propose`,
+    );
+  }
+
+  // Parse before writing: a calendar that cannot be read back is worse than no
+  // calendar, because the console renders an empty state either way and only
+  // one of them looks like a bug.
+  const parsed = parseCalendar(raw);
+  if (parsed.month !== input.month) {
+    throw new Error(
+      `social_calendar_upsert: month mismatch — argument says "${input.month}", the markdown says "${parsed.month}"`,
+    );
+  }
+
+  const existingRaw = await repo.readFile(path);
+  if (existingRaw !== null && !input.replaceApproved) {
+    const existing = parseCalendar(existingRaw);
+    if (existing.status === "approved") {
+      throw new Error(
+        `social_calendar_upsert: ${input.month} is already approved (${existing.slots.length} slots). ` +
+          `Pass replaceApproved: true to discard that approval deliberately.`,
+      );
+    }
+  }
+
+  await repo.writeFile(path, raw);
+  return {
+    path,
+    month: parsed.month,
+    slotCount: parsed.slots.length,
+    status: parsed.status,
+    created: existingRaw === null,
+  };
 }

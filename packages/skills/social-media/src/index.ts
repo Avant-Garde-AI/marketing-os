@@ -77,10 +77,15 @@ export {
   UNSCHEDULED_MONTH,
 } from "./projection";
 export type { SocialCalendarProjection, SocialPostIndexRow } from "./projection";
-export { upsertPost, nextPost, schedulingGaps } from "./authoring";
+export { upsertPost, nextPost, schedulingGaps, upsertCalendar } from "./authoring";
 export { scaffoldSocialSystem } from "./scaffold";
 export type { ScaffoldSocialOptions } from "./scaffold";
-export type { SocialPostUpsertInput, SocialPostUpsertResult } from "./authoring";
+export type {
+  SocialPostUpsertInput,
+  SocialPostUpsertResult,
+  SocialCalendarUpsertInput,
+  SocialCalendarUpsertResult,
+} from "./authoring";
 export { createSocialActions, publishMaterial, approvalHash, verifyScheduleConsent } from "./actions";
 export type {
   SocialActionDeps,

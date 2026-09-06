@@ -212,12 +212,34 @@ export const composeDesignSurface = createTool({
     boundToType: z.string().describe("Type of the domain object this design belongs to, e.g. 'post', 'offer'"),
     boundToId: z.string().describe("Id of that domain object (use a slug if none exists yet)"),
     title: z.string().describe("Design file title shown in the Design Studio"),
-    board: z.object({
-      width: z.number().describe("Board width in px, e.g. 1080"),
-      height: z.number().describe("Board height in px, e.g. 1080"),
-      backgroundColor: z.string().optional().describe("Board background as hex"),
-    }),
-    elements: z.array(elementSchema).describe("Elements placed on the board, in paint order (later = on top)"),
+    board: z
+      .object({
+        width: z.number().describe("Board width in px, e.g. 1080"),
+        height: z.number().describe("Board height in px, e.g. 1080"),
+        backgroundColor: z.string().optional().describe("Board background as hex"),
+      })
+      .optional()
+      .describe("Single-board form. Provide this + elements, OR boards — never both."),
+    elements: z
+      .array(elementSchema)
+      .optional()
+      .describe("Elements of the single-board form, in paint order (later = on top)"),
+    boards: z
+      .array(
+        z.object({
+          name: z.string().describe("Frame name — for a carousel use the slide order, e.g. '1', '2'"),
+          width: z.number(),
+          height: z.number(),
+          backgroundColor: z.string().optional(),
+          elements: z.array(elementSchema).describe("Board-RELATIVE coordinates: (0,0) is this board's top-left"),
+        }),
+      )
+      .optional()
+      .describe(
+        "Multi-board form — an Instagram CAROUSEL (one board per slide), a story set, or format variants. " +
+          "Each board carries its own elements in ITS OWN coordinate space, so a slide is laid out as if it were alone. " +
+          "Use this whenever a post is more than one frame; a carousel is not three separate designs.",
+      ),
   }),
   outputSchema: z.object({
     ok: z.boolean(),
@@ -237,8 +259,15 @@ export const composeDesignSurface = createTool({
     boundToType: string;
     boundToId: string;
     title: string;
-    board: { width: number; height: number; backgroundColor?: string };
-    elements: ElementInput[];
+    board?: { width: number; height: number; backgroundColor?: string };
+    elements?: ElementInput[];
+    boards?: {
+      name: string;
+      width: number;
+      height: number;
+      backgroundColor?: string;
+      elements: ElementInput[];
+    }[];
   }) => {
     if (!isDesignSurfacesConfigured()) return { ok: false, note: NOT_CONFIGURED_NOTE };
     const { shop } = getTenant();
@@ -246,35 +275,59 @@ export const composeDesignSurface = createTool({
       const home = await getTenantTeam(shop);
       const brand = await loadBrandTokens(shop);
 
+      const toElements = async (els: ElementInput[]) => {
+        const out: ComposeElement[] = [];
+        for (const [i, el] of els.entries()) {
+          try {
+            out.push(await toComposeElement(el, i));
+          } catch (e) {
+            // Name the element that failed. "fetch failed" with no index is
+            // unactionable when a board has eight of them.
+            throw new Error(`element ${i + 1} (${el.type}): ${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
+        return out;
+      };
+
+      // Exactly one form. Accepting both would leave the caller guessing which
+      // one won, and silently dropping half a carousel is the worst way to find
+      // out.
+      const hasSingle = !!inputData.board;
+      const hasMulti = !!inputData.boards?.length;
+      if (hasSingle && hasMulti) {
+        return { ok: false, note: "Pass either board+elements OR boards, not both." };
+      }
+      if (!hasSingle && !hasMulti) {
+        return { ok: false, note: "Pass board+elements (single frame) or boards (carousel/story set)." };
+      }
+
       const spec: ComposeSpec = {
         fileName: inputData.title,
-        board: {
-          name: inputData.title,
-          width: inputData.board.width,
-          height: inputData.board.height,
-          ...(inputData.board.backgroundColor
-            ? { background: { fillColor: inputData.board.backgroundColor, fillOpacity: 1 } }
-            : {}),
-        },
-        // Sequential, not Promise.all: image elements each pull bytes over the
-        // network, and a board with several large renders would otherwise open
-        // that many sockets at once for no gain — the fetches are not the slow
-        // part of composing.
-        elements: await (async () => {
-          const out: ComposeElement[] = [];
-          for (const [i, el] of inputData.elements.entries()) {
-            try {
-              out.push(await toComposeElement(el, i));
-            } catch (e) {
-              // Name the element that failed. "fetch failed" with no index is
-              // unactionable when a board has eight of them.
-              throw new Error(
-                `element ${i + 1} (${el.type}): ${e instanceof Error ? e.message : String(e)}`,
-              );
+        ...(hasMulti
+          ? {
+              boards: await Promise.all(
+                inputData.boards!.map(async (b) => ({
+                  name: b.name,
+                  width: b.width,
+                  height: b.height,
+                  ...(b.backgroundColor
+                    ? { background: { fillColor: b.backgroundColor, fillOpacity: 1 } }
+                    : {}),
+                  elements: await toElements(b.elements),
+                })),
+              ),
             }
-          }
-          return out;
-        })(),
+          : {
+              board: {
+                name: inputData.title,
+                width: inputData.board!.width,
+                height: inputData.board!.height,
+                ...(inputData.board!.backgroundColor
+                  ? { background: { fillColor: inputData.board!.backgroundColor, fillOpacity: 1 } }
+                  : {}),
+              },
+              elements: await toElements(inputData.elements ?? []),
+            }),
         ...(brand.tokens ? { tokens: brand.tokens } : {}),
         ...(brand.libraryColors ? { libraryColors: brand.libraryColors } : {}),
       };

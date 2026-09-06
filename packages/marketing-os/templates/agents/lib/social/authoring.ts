@@ -32,7 +32,14 @@
  */
 
 import type { SocialPost, SocialRepo } from "./types";
-import { calendarPath, parseCalendar, parsePost, postPath, serializePost } from "./artifacts";
+import {
+  calendarPath,
+  parseCalendar,
+  parsePost,
+  postPath,
+  serializeCalendar,
+  serializePost,
+} from "./artifacts";
 
 /**
  * Statuses whose artifact must not be edited in place. `published` has already
@@ -254,4 +261,74 @@ export async function upsertCalendar(
     status: parsed.status,
     created: existingRaw === null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Binding a post back to its calendar slot
+// ---------------------------------------------------------------------------
+
+export interface LinkPostResult {
+  linked: boolean;
+  month: string | null;
+  slot: string | null;
+  /** Why nothing was linked, when linked is false. Never thrown — see below. */
+  note?: string;
+}
+
+/**
+ * Attach a post to the calendar slot it fulfils.
+ *
+ * `CalendarSlot.postId` starts null and nothing ever set it. The month sheet
+ * walks the calendar and resolves each slot to its post, so with the link
+ * missing it renders "the month's calendar has no posts attached to its slots"
+ * — while the posts sit right there, written and correct. The artifacts were
+ * complete and unrelated to each other.
+ *
+ * Matching is by DATE + CHANNEL, taking the first slot still unfilled. Post ids
+ * conventionally start `YYYY-MM-DD`, and `scheduledAt` is preferred when set
+ * because a rescheduled post belongs to the day it will actually run.
+ *
+ * NEVER THROWS. A post that cannot find a slot is a normal state — ad-hoc posts
+ * exist, and a month may not be planned yet. Failing the authoring write
+ * because the calendar is missing would make the calendar a prerequisite for
+ * writing a post, which inverts the dependency.
+ */
+export async function linkPostToCalendarSlot(
+  repo: SocialRepo,
+  post: { id: string; channel?: string; scheduledAt?: string | null; status?: string },
+): Promise<LinkPostResult> {
+  const date = (post.scheduledAt ?? "").slice(0, 10) || post.id.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { linked: false, month: null, slot: null, note: `no date in "${post.id}" and no scheduledAt` };
+  }
+  const month = date.slice(0, 7);
+
+  let raw: string | null;
+  try {
+    raw = await repo.readFile(calendarPath(month));
+  } catch {
+    return { linked: false, month, slot: date, note: `could not read the ${month} calendar` };
+  }
+  if (raw === null) {
+    return { linked: false, month, slot: date, note: `no calendar for ${month} — nothing to attach to` };
+  }
+
+  const calendar = parseCalendar(raw);
+  const already = calendar.slots.find((s) => s.postId === post.id);
+  if (already) return { linked: true, month, slot: already.slot };
+
+  const target = calendar.slots.find(
+    (s) => s.slot === date && (!post.channel || s.channel === post.channel) && !s.postId,
+  );
+  if (!target) {
+    return {
+      linked: false, month, slot: date,
+      note: `no free ${post.channel ?? "any"} slot on ${date} in the ${month} calendar`,
+    };
+  }
+
+  target.postId = post.id;
+  if (post.status) target.status = post.status;
+  await repo.writeFile(calendarPath(month), serializeCalendar(calendar));
+  return { linked: true, month, slot: target.slot };
 }

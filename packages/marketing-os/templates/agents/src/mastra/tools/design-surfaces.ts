@@ -91,8 +91,53 @@ async function loadBrandTokens(shop: string): Promise<BrandTokens> {
 
 // ── Element mapping (simplified tool shape → vendored ComposeSpec) ────────
 
+const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"] as const;
+
+/**
+ * Fetch an image the STORE owns, for placement on a board.
+ *
+ * The compose lane needs bytes, not a URL — Penpot uploads the media into the
+ * file. So this is the one place the tool reaches out to the network, and it is
+ * deliberately narrow: https only, a size cap, and an allow-list of raster
+ * types. It exists to place a store's own artwork, product shot or room scene;
+ * it is not a general fetcher, and nothing about the reference corpus can reach
+ * it, because a corpus asset never has a store URL to pass.
+ */
+async function fetchImageBytes(
+  url: string,
+): Promise<{ data: Uint8Array; mediaType: (typeof ALLOWED_IMAGE_TYPES)[number] }> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error(`imageUrl is not a URL: ${url}`);
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error(`imageUrl must be https (got ${parsed.protocol})`);
+  }
+  const res = await fetch(url, { redirect: "follow" });
+  if (!res.ok) throw new Error(`imageUrl fetch failed (${res.status}) for ${url}`);
+
+  const declared = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
+  const mediaType = ALLOWED_IMAGE_TYPES.find((t) => t === declared);
+  if (!mediaType) {
+    throw new Error(
+      `imageUrl must be one of ${ALLOWED_IMAGE_TYPES.join(", ")} — ${url} served "${declared || "nothing"}"`,
+    );
+  }
+  const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.byteLength > MAX_IMAGE_BYTES) {
+    throw new Error(
+      `image is ${(buf.byteLength / 1e6).toFixed(1)}MB, over the ${MAX_IMAGE_BYTES / 1e6}MB cap — use a smaller render`,
+    );
+  }
+  if (buf.byteLength === 0) throw new Error(`imageUrl returned an empty body: ${url}`);
+  return { data: buf, mediaType };
+}
+
 const elementSchema = z.object({
-  type: z.enum(["text", "rect"]),
+  type: z.enum(["text", "rect", "image"]),
   x: z.number(),
   y: z.number(),
   width: z.number(),
@@ -105,12 +150,24 @@ const elementSchema = z.object({
   lineHeight: z.number().optional().describe("Unitless line height, e.g. 1.4 (text only)"),
   color: z.string().optional().describe("Text color as hex, e.g. '#1a1a1a' (text only)"),
   backgroundColor: z.string().optional().describe("Fill color as hex (rect only)"),
+  imageUrl: z
+    .string()
+    .optional()
+    .describe(
+      "https URL of an image the STORE owns — artwork, product shot, room scene (type 'image' only). " +
+        "Fetched server-side and embedded in the file; png/jpeg/webp/gif, 12MB max.",
+    ),
 });
 
 type ElementInput = z.infer<typeof elementSchema>;
 
-function toComposeElement(el: ElementInput, i: number): ComposeElement {
+async function toComposeElement(el: ElementInput, i: number): Promise<ComposeElement> {
   const base = { x: el.x, y: el.y, width: el.width, height: el.height };
+  if (el.type === "image") {
+    if (!el.imageUrl) throw new Error(`element ${i + 1} is type 'image' but has no imageUrl`);
+    const { data, mediaType } = await fetchImageBytes(el.imageUrl);
+    return { type: "image", name: `image-${i + 1}`, ...base, data, mediaType };
+  }
   if (el.type === "text") {
     return {
       type: "text",
@@ -142,7 +199,8 @@ export const composeDesignSurface = createTool({
   description:
     "CREATE an editable draft design in the store's Design Studio (an on-brand design canvas) and return an edit link. " +
     "PREFER this tool whenever the user asks to draft, compose, mock up, or create a specific design deliverable (a social post, ad, banner, promo graphic) — it produces an editable, brand-tokened draft they can refine on the canvas. Use generate_design_candidates only for early visual EXPLORATION (moodboards, diverse directions), not for deliverable drafts. " +
-    "Composes a single board (e.g. an Instagram post at 1080x1080) from text and rectangle elements you lay out; the store's DESIGN.md brand tokens (palette, typography) are embedded automatically so the draft opens with the brand system attached. " +
+    "Composes a single board (e.g. an Instagram post at 1080x1080) from text, rectangle and IMAGE elements you lay out; the store's DESIGN.md brand tokens (palette, typography) are embedded automatically so the draft opens with the brand system attached. "
+    + "For an image element pass type 'image' and imageUrl — an https URL of an image the STORE owns (artwork, product shot, room scene). It is fetched server-side and embedded in the file. A social post about a piece of art needs one of these; a board of only text and rectangles has no artwork in it. " +
     "Layouts are fit-checked before composing: every element must sit fully inside the board, and text must have room to render (text overflows its declared box rather than clipping, so leave height for wrapping — roughly lines × fontSize × 1.2). A layout that overflows is rejected with exact findings; fix the coordinates and retry. " +
     "Drafts are free — creating or iterating on a design never needs approval; publishing/using the export gates elsewhere. " +
     "Returns fileId/pageId plus studioPath — a console-relative link to the embedded Design Studio (canvas beside chat). " +
@@ -198,7 +256,25 @@ export const composeDesignSurface = createTool({
             ? { background: { fillColor: inputData.board.backgroundColor, fillOpacity: 1 } }
             : {}),
         },
-        elements: inputData.elements.map(toComposeElement),
+        // Sequential, not Promise.all: image elements each pull bytes over the
+        // network, and a board with several large renders would otherwise open
+        // that many sockets at once for no gain — the fetches are not the slow
+        // part of composing.
+        elements: await (async () => {
+          const out: ComposeElement[] = [];
+          for (const [i, el] of inputData.elements.entries()) {
+            try {
+              out.push(await toComposeElement(el, i));
+            } catch (e) {
+              // Name the element that failed. "fetch failed" with no index is
+              // unactionable when a board has eight of them.
+              throw new Error(
+                `element ${i + 1} (${el.type}): ${e instanceof Error ? e.message : String(e)}`,
+              );
+            }
+          }
+          return out;
+        })(),
         ...(brand.tokens ? { tokens: brand.tokens } : {}),
         ...(brand.libraryColors ? { libraryColors: brand.libraryColors } : {}),
       };

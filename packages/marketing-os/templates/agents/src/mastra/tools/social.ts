@@ -27,7 +27,7 @@ import {
   serializePost,
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
-import { upsertCalendar, upsertPost } from "../../../lib/social/authoring";
+import { linkPostToCalendarSlot, upsertCalendar, upsertPost } from "../../../lib/social/authoring";
 import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
 import { syncPostIndex } from "../../../lib/social/index-sync";
 import { socialReviewLink, socialSheetLink } from "../../../lib/social/review-links";
@@ -182,6 +182,8 @@ const socialPostUpsert = createTool({
     missing: z.array(z.string()).describe("What still blocks scheduling"),
     indexed: z.boolean().describe("False when the console/calendar index could not be reached"),
     indexNote: z.string().optional(),
+    slotLinked: z.boolean().describe("True when the post was attached to a calendar slot"),
+    slotNote: z.string().optional().describe("Why no slot was attached — often normal (ad-hoc post)"),
   }),
   execute: async (input: {
     id: string;
@@ -196,6 +198,16 @@ const socialPostUpsert = createTool({
     body?: string;
   }) => {
     const result = await upsertPost(socialRepo, input);
+    // Attach the post to the calendar slot it fulfils. Without this the month
+    // sheet renders "the calendar has no posts attached to its slots" while the
+    // posts sit right there — two complete artifacts with nothing joining them.
+    // Never fails the write: an ad-hoc post with no slot is a normal state.
+    let slotLink: Awaited<ReturnType<typeof linkPostToCalendarSlot>> | null = null;
+    try {
+      slotLink = await linkPostToCalendarSlot(socialRepo, result.post);
+    } catch (e) {
+      console.error("[social] calendar slot link failed:", e instanceof Error ? e.message : e);
+    }
     // Write THROUGH to the index at the authoring write (spec 26 failure mode
     // 2). Never allowed to fail the write — files are truth — but the outcome
     // is reported rather than swallowed, so "saved but invisible" is
@@ -210,6 +222,8 @@ const socialPostUpsert = createTool({
       missing: result.missing,
       indexed: outcome.ok,
       ...(outcome.ok ? {} : { indexNote: outcome.message }),
+      slotLinked: slotLink?.linked ?? false,
+      ...(slotLink?.note ? { slotNote: slotLink.note } : {}),
     };
   },
 });

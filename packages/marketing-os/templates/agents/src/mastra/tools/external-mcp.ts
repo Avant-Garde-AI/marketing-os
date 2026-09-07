@@ -75,6 +75,40 @@ function parseSse(text: string): unknown {
   return parsed;
 }
 
+/**
+ * Extra headers a FIRST-PARTY server should receive.
+ *
+ * Some servers a tenant connects are ours — the Picasso concierge is an Arthaus service,
+ * not a third party. Those services defend themselves with heuristics aimed at scrapers
+ * ("did a browser load a page first?", "is this a datacenter IP?"), and an agent answers
+ * no to both, permanently. Measured on the concierge: with no session header every call
+ * scored untrusted and bought thinking_budget=0, and a non-browser user-agent was 403'd
+ * outright — which surfaced here as "the server is not connected" and sent two
+ * investigations the wrong way.
+ *
+ * A shared service key says "this is us" in one header.
+ *
+ * Scoped by HOST, deliberately. A connection URL comes from tenant configuration, and
+ * attaching a first-party credential to whatever host that happens to name is how a shared
+ * secret leaks. Exact host or a true subdomain only — never a substring, or
+ * "evil-arthaus.com" would satisfy "arthaus.com".
+ */
+function firstPartyHeaders(serverUrl: string): Record<string, string> {
+  const key = process.env.ARTHAUS_SERVICE_KEY;
+  const raw = process.env.ARTHAUS_SERVICE_HOSTS ?? "";
+  if (!key || !raw.trim()) return {};
+  const hosts = raw.split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+  let host: string;
+  try {
+    host = new URL(serverUrl).host.toLowerCase();
+  } catch {
+    return {};
+  }
+  return hosts.some((h) => host === h || host.endsWith(`.${h}`))
+    ? { "X-Arthaus-Service-Key": key }
+    : {};
+}
+
 async function mcpPost(
   serverUrl: string,
   body: unknown,
@@ -91,6 +125,7 @@ async function mcpPost(
         "Content-Type": "application/json",
         Accept: "application/json, text/event-stream",
         "MCP-Protocol-Version": PROTOCOL_VERSION,
+        ...firstPartyHeaders(serverUrl),
         ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
       },
       body: JSON.stringify(body),

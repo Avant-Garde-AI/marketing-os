@@ -84,6 +84,8 @@ export {
   upsertCalendar,
   linkPostToCalendarSlot,
 } from "./authoring";
+export { checkPostClaims, claimRefusal } from "./claims";
+export type { BoundFacts, ClaimProblem, ClaimReport } from "./claims";
 export { scaffoldSocialSystem } from "./scaffold";
 export type { ScaffoldSocialOptions } from "./scaffold";
 export type {

@@ -10,7 +10,21 @@ import { mastra } from "@/src/mastra";
  * render registered generative-UI components — charts, proposal cards — from
  * tool outputs instead of throwing that structure away.
  */
-export const maxDuration = 120;
+/**
+ * 300s, not 120.
+ *
+ * An authoring turn is not one model call. Planning a month, reading the
+ * genome, asking an external art graph, fetching artwork bytes and composing a
+ * board are five round trips, and the external-MCP tool budget alone is 45s
+ * (TOOL_TIMEOUT_MS) because the Picasso graph does traversal plus synthesis.
+ * Two of those and a 120s turn is over before the write.
+ *
+ * The symptom is not an error anyone can act on: the tool call is reported as
+ * "that lookup didn't complete", the model carries on without the answer, and
+ * it concludes the server is disconnected — which is how an available art graph
+ * came to be described as unavailable, twice.
+ */
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const params = await req.json();

@@ -27,6 +27,7 @@
  */
 
 import type { SocialPost, SocialRepo } from "./types";
+import { checkPostClaims, claimRefusal, type BoundFacts } from "./claims";
 import {
   calendarPath,
   parseCalendar,
@@ -64,6 +65,8 @@ export interface SocialPostUpsertInput {
 }
 
 export interface SocialPostUpsertResult {
+  /** Non-blocking claim findings — surfaced, never swallowed. */
+  claimWarnings?: string[];
   post: SocialPost;
   created: boolean;
   /** Set when a post-approval edit voided consent (spec 24 D2). */
@@ -170,13 +173,35 @@ export function nextPost(
 export async function upsertPost(
   repo: SocialRepo,
   input: SocialPostUpsertInput,
+  /**
+   * What this post is actually about. When supplied, copy that credits an
+   * entity outside it — or links off the store's own hosts — REFUSES the write
+   * rather than saving and warning. A fabricated attribution that reaches the
+   * artifact will be reviewed, scheduled and published by machinery designed to
+   * trust it; the only place to stop it is before it is written.
+   *
+   * Omitted, the guard still refuses copy that credits somebody with nothing
+   * bound to check against — which is the state the agent is in when a lookup
+   * tool is unavailable, and precisely when it invents.
+   */
+  bound?: BoundFacts,
 ): Promise<SocialPostUpsertResult> {
   const path = postPath(input.id);
   const raw = await repo.readFile(path);
   const existing = raw === null ? null : parsePost(raw);
   const { post, created, consentCleared } = nextPost(existing, input);
+
+  const claims = checkPostClaims(post, bound ?? {});
+  if (!claims.ok) throw new Error(claimRefusal(claims));
+
   await repo.writeFile(path, serializePost(post));
-  return { post, created, consentCleared, missing: schedulingGaps(post) };
+  return {
+    post,
+    created,
+    consentCleared,
+    missing: schedulingGaps(post),
+    claimWarnings: claims.problems.filter((p) => p.severity === "warning").map((p) => p.detail),
+  };
 }
 
 // ---------------------------------------------------------------------------

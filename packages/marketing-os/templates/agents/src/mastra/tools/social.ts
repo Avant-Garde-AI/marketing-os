@@ -167,6 +167,20 @@ const socialPostUpsert = createTool({
     scheduledAt: z.string().optional().describe("ISO datetime with offset"),
     copyFormulaRef: z.string().optional().describe("brand.md copy formula this instantiates"),
     assetRefs: z.array(z.string()).optional().describe("Repo-relative asset paths"),
+    boundFacts: z
+      .object({
+        entities: z
+          .array(z.string())
+          .optional()
+          .describe("Every name the copy may credit — artist, work, collection. Read them from the artwork record; do not type them from memory."),
+        allowedLinkHosts: z.array(z.string()).optional().describe("Hosts a link may point at, e.g. ['myarthaus.com']"),
+        handle: z.string().optional().describe("Product slug the target link should contain"),
+      })
+      .optional()
+      .describe(
+        "What this post is ACTUALLY about. Copy that credits anyone outside `entities`, or links off these hosts, is REFUSED — the post is not saved. " +
+          "Crediting someone with no boundFacts at all is refused too: that is the state you are in when an artwork lookup is unavailable, and it is exactly when a name gets invented. Bind the facts or do not name anyone.",
+      ),
     provenance: z
       .array(z.object({ claim: z.string().min(1), origin: z.enum(["owner", "agent", "data"]) }))
       .optional()
@@ -183,6 +197,7 @@ const socialPostUpsert = createTool({
     indexed: z.boolean().describe("False when the console/calendar index could not be reached"),
     indexNote: z.string().optional(),
     slotLinked: z.boolean().describe("True when the post was attached to a calendar slot"),
+    claimWarnings: z.array(z.string()).optional().describe("Non-blocking claim findings, e.g. a link that is a store host but not this work"),
     slotNote: z.string().optional().describe("Why no slot was attached — often normal (ad-hoc post)"),
   }),
   execute: async (input: {
@@ -196,8 +211,10 @@ const socialPostUpsert = createTool({
     assetRefs?: string[];
     provenance?: { claim: string; origin: "owner" | "agent" | "data" }[];
     body?: string;
+    boundFacts?: { entities?: string[]; allowedLinkHosts?: string[]; handle?: string };
   }) => {
-    const result = await upsertPost(socialRepo, input);
+    const { boundFacts, ...postInput } = input;
+    const result = await upsertPost(socialRepo, postInput, boundFacts);
     // Attach the post to the calendar slot it fulfils. Without this the month
     // sheet renders "the calendar has no posts attached to its slots" while the
     // posts sit right there — two complete artifacts with nothing joining them.
@@ -223,6 +240,7 @@ const socialPostUpsert = createTool({
       indexed: outcome.ok,
       ...(outcome.ok ? {} : { indexNote: outcome.message }),
       slotLinked: slotLink?.linked ?? false,
+      ...(result.claimWarnings?.length ? { claimWarnings: result.claimWarnings } : {}),
       ...(slotLink?.note ? { slotNote: slotLink.note } : {}),
     };
   },

@@ -93,3 +93,30 @@ describe("upsertPost refuses a fabricated post", () => {
     expect(r.created).toBe(true);
   });
 });
+
+describe("social handles", () => {
+  const B = { entities: ["83 Oranges"], allowedHandles: ["83oranges"], allowedLinkHosts: ["myarthaus.com"] };
+
+  it("allows a bound @mention", () => {
+    expect(checkPostClaims({ copy: "Work by 83 Oranges. @83oranges", targetLink: "/p/x" }, B).ok).toBe(true);
+  });
+
+  it("blocks an invented @mention — it resolves to a real stranger's account", () => {
+    const r = checkPostClaims({ copy: "Work by 83 Oranges. @celeste.vocs.studio", targetLink: "/p/x" }, B);
+    expect(r.ok).toBe(false);
+    expect(r.problems.some((p) => p.id === "unbound-handle")).toBe(true);
+  });
+
+  it("blocks tagging anyone when no handles are bound", () => {
+    const r = checkPostClaims({ copy: "See @someone" }, {});
+    expect(r.problems.some((p) => p.id === "unbound-handle-claim")).toBe(true);
+  });
+
+  it("tolerates a leading @ in the bound list", () => {
+    expect(checkPostClaims({ copy: "@83oranges" }, { allowedHandles: ["@83oranges"] }).ok).toBe(true);
+  });
+
+  it("does not mistake an email for a mention", () => {
+    expect(checkPostClaims({ copy: "Reach us at hello@myarthaus.com" }, { allowedHandles: ["83oranges"] }).ok).toBe(true);
+  });
+});

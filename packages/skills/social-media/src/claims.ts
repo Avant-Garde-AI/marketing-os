@@ -32,10 +32,26 @@ export interface BoundFacts {
   allowedLinkHosts?: string[];
   /** Slug the target link should contain, when the post is about one thing. */
   handle?: string;
+  /**
+   * Social handles the copy may @-mention, without the leading "@".
+   *
+   * A mention is not decoration: on every network it resolves to a REAL
+   * account. Tagging the wrong one credits a stranger for someone's work and
+   * notifies them about it, so an unbound @mention is a heavier mistake than an
+   * unbound name in prose, not a lighter one.
+   */
+  allowedHandles?: string[];
 }
 
 export interface ClaimProblem {
-  id: "unbound-entity" | "unbound-entity-claim" | "foreign-link" | "bad-link" | "link-not-the-subject";
+  id:
+    | "unbound-entity"
+    | "unbound-entity-claim"
+    | "foreign-link"
+    | "bad-link"
+    | "link-not-the-subject"
+    | "unbound-handle"
+    | "unbound-handle-claim";
   detail: string;
   severity: "blocking" | "warning";
 }
@@ -97,6 +113,27 @@ export function checkPostClaims(
     }
   }
 
+  // @mentions. Matched before links so a handle is never mistaken for one.
+  const handles = (bound.allowedHandles ?? []).map((h) => h.replace(/^@/, "").toLowerCase());
+  for (const m of copy.matchAll(/(?:^|[\s(])@([A-Za-z0-9._]{1,30})\b/g)) {
+    const tag = m[1]!.toLowerCase();
+    if (handles.length === 0) {
+      problems.push({
+        id: "unbound-handle-claim",
+        detail: `copy tags @${m[1]} but the post has no bound handles to check it against`,
+        severity: "blocking",
+      });
+      continue;
+    }
+    if (!handles.includes(tag)) {
+      problems.push({
+        id: "unbound-handle",
+        detail: `copy tags @${m[1]}, which is not among this post's bound handles (${handles.map((h) => "@" + h).join(", ")})`,
+        severity: "blocking",
+      });
+    }
+  }
+
   const hosts = (bound.allowedLinkHosts ?? []).map((h) => h.toLowerCase());
   const links = [post.targetLink ?? "", ...(copy.match(/https?:\/\/\S+/g) ?? [])].filter(Boolean);
   for (const l of links) {
@@ -132,7 +169,15 @@ export function checkPostClaims(
   return {
     ok: !problems.some((p) => p.severity === "blocking"),
     problems,
-    checked: ["unbound-entity", "unbound-entity-claim", "foreign-link", "bad-link", "link-not-the-subject"],
+    checked: [
+      "unbound-entity",
+      "unbound-entity-claim",
+      "unbound-handle",
+      "unbound-handle-claim",
+      "foreign-link",
+      "bad-link",
+      "link-not-the-subject",
+    ],
   };
 }
 

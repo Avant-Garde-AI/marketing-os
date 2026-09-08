@@ -17,6 +17,17 @@ import { z } from "zod";
 import { getAction, knownActionKinds } from "../../../lib/actions/registry";
 import { proposeToGate } from "../../../lib/actions/gate-client";
 
+// The registry is populated by import side effects, and this tool is the only
+// reader. Until now it imported neither registrar and relied on the email/social
+// TOOL modules having been pulled in first — but those are merged per request
+// and only when their pack is enabled, so whether an action was "registered"
+// depended on module load order rather than on anything true about the store.
+// The visible symptom was an action that exists, is deployed, and reports
+// itself unknown. Importing the registrars here makes the reader responsible
+// for its own data.
+import "../../../lib/email/register-actions";
+import "../../../lib/social/register-actions";
+
 export const proposeActionTool = createTool({
   id: "propose_action",
   description:

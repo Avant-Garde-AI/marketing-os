@@ -1,30 +1,61 @@
 # Email Campaign Agent — Build Status
 
-> **Current: 2026-08-31.** Merged to `main`, deployed, and verified in
-> production against Arthaus (`www.arthaus.cloud`). Five September campaigns are
-> built, previewable, and committed to the store repo. Nothing has been staged
-> to Klaviyo and nothing has sent — approval remains a Slack Action.
+> **Current: 2026-09-08.** The path runs end to end and has sent. Arthaus's
+> Labor Day promotion reached 1,612 US contacts; the Shelly Bremmer artist drop
+> is scheduled to auto-send to 4,703. Five more campaigns are approved and await
+> drafting.
 >
-> The 2026-07-17 scoreboard below is retained as the build record. Read this
-> section for where things actually stand.
+> This is the first section to read. The 2026-08-31 capability table has been
+> folded into the section below, since every line of it still holds; the
+> 2026-07-17 build record is retained verbatim.
 
-## Where it stands (2026-08-31)
+## Where it stands (2026-09-08)
 
-| Capability | State |
+### Proven end to end
+
+Plan → author → review → select headline → approve → draft → schedule → send,
+with every write through the Slack Action gate. Two campaigns have completed it:
+one sent manually from Klaviyo, one scheduled unattended.
+
+| Campaign | Audience | State |
+|---|---|---|
+| Labor Day promotion | full-reach-us (1,612) | **Sent** — 2 opens, 6 clicks at +1h |
+| Shelly Bremmer | full-reach (4,703) | **Scheduled** |
+| Botanical, Autumn, 83 Oranges, Benjamin Mckay, Kaethe Butcher | full-reach | approved; draft + schedule outstanding |
+
+### Shipped since 2026-08-31
+
+| Capability | Note |
 |---|---|
-| Campaign authoring over MCP (24 tools) | ✅ live — plan, author, image, assemble, preview |
-| Live LLM generation (Vertex, Gemini Pro) | ✅ live; **tier-3 scene generation blocked on the AI Studio spend cap** |
-| Picasso art-graph research | ✅ live — editorial + seasonal themes were graph-derived |
-| Imagery resolver (tier 2, room/leaning composites) | ✅ live |
-| Assembled preview route | ✅ live, HMAC-tokened, **expiring** |
-| Review room + month contact sheet | ✅ live (`07-REVIEW-LINKS-AND-ARTIFACT-LANE.md`) |
-| Review notes → back into an agent session | ✅ live, round-trip verified |
-| Artifacts in the store repo | ✅ live — `STORE_REPO_MODE=mirror`, GitHub App auth |
-| Self-hosted schema bootstrap | ✅ applied to Arthaus |
-| Calendar thumbnails (hero image) | ✅ live |
-| Slack approval gate | ✅ unchanged — the only path to send |
+| `headlineOptions` — three per campaign | Selected in the review room; a campaign is not finished with one unreviewed phrasing |
+| `email.approve_campaign` | A directly-authored campaign had **no route to the ESP** — `approve_plan` only walked a calendar |
+| `shopify.create_discount_code` | Gated Action, high risk; required end date, percentage capped at 50 |
+| Discount verification | A campaign promising a code the store lacks is refused, at approve *and* at draft |
+| Audience by roster key | The planner assigns keys, never Klaviyo ids — requiring an id made the agent invent one |
+| Block validation at write time | Returns the Zod path; the agent guessed `items` for `products` twice unchallenged |
+| Product images + prices from the store | Resolved by handle; the agent knows the handle, never the CDN path |
+| White-frame mockup correction | Auto-swaps to black/walnut/oak; warns when the library has none |
+| Klaviyo image re-hosting | Every campaign image, not just board exports |
+| Month-level review sheet + copy button | One signed link for a whole month |
+| Promotion archetype (weight 0) | Exists for authoring; the planner never schedules a sale on its own |
 
-### Known gaps
+### Known gaps — new (2026-09-08)
+
+1. **No analytics sync.** `klaviyo_performance_read` is a live read-through —
+   nothing persists, so sent-campaign metrics are not in the console or the
+   semantic layer. Needs a table plus a cron over `campaign-values-reports`.
+   The token is confirmed to have report access.
+2. **No reference sweep.** Nothing revalidates the ids in `strategy.md`
+   against Klaviyo. A `preview-test` segment named there had ceased to exist,
+   so the rule guaranteeing a human sees every email pointed at nothing.
+3. **Image reachability is not checked at write time.** A single typo'd host
+   (`cdn..shopify.com`) failed a draft twice behind undici's bare
+   `fetch failed`. The 59-image sweep that found it was run by hand.
+4. **Artifacts do not learn that a campaign sent.** Labor Day reads `drafted`
+   while Klaviyo says `Sent`. Nothing writes back from the ESP.
+
+
+### Known gaps — carried over (2026-08-31)
 
 1. **`productRow` caption misalignment** — visible in delivered campaigns. The
    fixed-height band that fixed `graphCallout` has not been applied.

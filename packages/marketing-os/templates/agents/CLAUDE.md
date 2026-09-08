@@ -181,6 +181,10 @@ definitions come one segment per request. And Klaviyo evaluates a segment only
   `lib/email/leaning-mockups.ts` swaps it for black/walnut/oak automatically and
   warns when the library has no alternative. ~24% of leaning mockups are white
   and about a quarter of artworks have no other colourway.
+- **`leaning-studio` is an acceptable fallback** when an artwork has no framed
+  leaning mockup (decided 2026-09-08). Several of Kaethe Butcher's key pieces —
+  `a-hug-in-the-garden`, `into-the-sun` — exist only as studio shots. Prefer a
+  framed colourway when one exists; use studio rather than dropping the piece.
 - **Mockups are Shopify *files*, not product media.** They never appear on a
   product's `media` connection, and the frame colour lives only in the filename.
   Shopify's file search is fuzzy — `alien-1-leaning` also returns

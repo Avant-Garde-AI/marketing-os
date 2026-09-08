@@ -20,6 +20,9 @@ import { ChatPanel } from "@/components/chat/chat-panel";
  * an "Open in new tab" escape hatch.
  */
 
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
 export const dynamic = "force-dynamic";
 
 const STUDIO_SUGGESTIONS = [
@@ -51,6 +54,25 @@ export default async function StudioPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
+
+  // Hand the browser a Penpot session before the canvas loads, so the embed
+  // never shows a login form (spec 23 §3). One redirect, once per session: the
+  // route sets a cookie on the shared parent domain and bounces straight back.
+  //
+  // `handoff` is the loop guard. If minting fails — unconfigured, Penpot down,
+  // console and studio not same-site — the route redirects back anyway, and
+  // without this marker we would bounce between the two forever. One attempt,
+  // then fall through to whatever the canvas shows on its own.
+  const alreadyTried = params.handoff === "1";
+  const hasStudioSession = (await cookies()).has("auth-token");
+  if (!hasStudioSession && !alreadyTried) {
+    const back = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (typeof v === "string") back.set(k, v);
+    }
+    back.set("handoff", "1");
+    redirect(`/api/design-surfaces/studio-session?next=${encodeURIComponent(`/studio?${back}`)}`);
+  }
   const teamId = firstParam(params["team-id"]);
   const fileId = firstParam(params["file-id"]);
   const pageId = firstParam(params["page-id"]);

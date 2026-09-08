@@ -121,7 +121,13 @@ const params = z.object({
         if (v.every((x) => x !== null && typeof x === "object" && !Array.isArray(x))) {
           return [v];
         }
-        return v;
+        // Extra nesting can also be per-group rather than global — the live
+        // failure was [[[a]], [[b]]], two groups each wrapped one time too
+        // many. Inside a group every element must be a condition, so an array
+        // there is unambiguously noise: flatten it.
+        return v.map((g) =>
+          Array.isArray(g) && g.length > 0 && g.every((x) => Array.isArray(x)) ? g.flat() : g,
+        );
       },
       z.array(z.array(predicateSchema).min(1)).min(1).max(6),
     )

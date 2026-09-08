@@ -188,30 +188,57 @@ export function createSegmentAction(): RuntimeAction<Params> {
       if (artists.length > 0) {
         try {
           const shopify = getShopifyClient();
-          const res = await shopify.graphql<{
-            shop?: { productVendors?: { edges?: Array<{ node?: string }> } };
-          }>(`{ shop { productVendors(first: 250) { edges { node } } } }`);
-          // `graphql()` returns the JSON:API envelope, so the payload is under
-          // `.data` — reading `res.shop` directly yields undefined, which would
-          // make this check silently pass on every name.
-          const vendors = (res.data?.shop?.productVendors?.edges ?? [])
-            .map((e) => e.node)
-            .filter((v): v is string => typeof v === "string");
-          if (vendors.length === 0) {
-            warnings.push(
-              `Shopify returned no vendor list, so "${artists.join('", "')}" could not be checked — ` +
-                `the spelling is unverified rather than confirmed.`,
+          // Paginate. `first: 250` alone silently truncates, and this store has
+          // more artists than that — which made a real vendor read as absent and
+          // produced a "would select NOBODY" warning next to a segment that
+          // matched 1,562 people. A false alarm on an approval card is worse
+          // than no check, because it teaches people to click through warnings.
+          const vendors: string[] = [];
+          type VendorPage = {
+            shop?: {
+              productVendors?: {
+                edges?: Array<{ node?: string; cursor?: string }>;
+                pageInfo?: { hasNextPage?: boolean; endCursor?: string };
+              };
+            };
+          };
+          let after: string | null = null;
+          let complete = false;
+          for (let page = 0; page < 20; page++) {
+            const res: { data?: VendorPage } = await shopify.graphql<VendorPage>(
+              `query Vendors($after: String) {
+                 shop { productVendors(first: 250, after: $after) {
+                   edges { node cursor }
+                   pageInfo { hasNextPage endCursor }
+                 } }
+               }`,
+              { after },
             );
-          } else {
-            for (const artist of new Set(artists)) {
-              if (vendors.includes(artist)) continue;
-              const near = vendors.find((v) => v.toLowerCase() === artist.toLowerCase());
+            const conn = res.data?.shop?.productVendors;
+            for (const e of conn?.edges ?? []) if (typeof e.node === "string") vendors.push(e.node);
+            if (!conn?.pageInfo?.hasNextPage) { complete = true; break; }
+            after = conn.pageInfo.endCursor ?? null;
+            if (!after) break;
+          }
+
+          for (const artist of new Set(artists)) {
+            if (vendors.includes(artist)) continue;
+            const near = vendors.find((v) => v.toLowerCase() === artist.toLowerCase());
+            if (near) {
               warnings.push(
-                near
-                  ? `No Shopify vendor is spelled "${artist}" — the store spells it "${near}". ` +
-                    `This match is case-sensitive, so as written it would select NOBODY.`
-                  : `No Shopify vendor named "${artist}". As written this audience would select NOBODY. ` +
-                    `Check the spelling against the store's vendor list.`,
+                `No Shopify vendor is spelled "${artist}" — the store spells it "${near}". ` +
+                  `This match is case-sensitive, so as written it would select NOBODY.`,
+              );
+            } else if (complete) {
+              // Only assertable once the whole list has been read.
+              warnings.push(
+                `No Shopify vendor named "${artist}" (checked all ${vendors.length}). ` +
+                  `As written this audience would select NOBODY.`,
+              );
+            } else {
+              warnings.push(
+                `Could not read the store's full vendor list, so the spelling of "${artist}" ` +
+                  `is unverified — not confirmed wrong, just unchecked.`,
               );
             }
           }

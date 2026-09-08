@@ -41,6 +41,32 @@ export interface SocialCalendarProjection {
 export const UNSCHEDULED_MONTH = "unscheduled";
 
 const ID_MONTH_RE = /^(\d{4}-(?:0[1-9]|1[0-2]))/;
+const ID_DAY_RE = /^(\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))/;
+
+/**
+ * The day a post sits on, for the cross-channel calendar.
+ *
+ * `scheduledAt` is a PUBLISH TIME and most posts do not have one yet — it is
+ * set when someone schedules, not when the post is written. But the calendar
+ * places by day and shows no time at all (calendar-view.tsx: it slices the
+ * first ten characters and renders a card), so treating "no publish time" as
+ * "no day" dropped every unscheduled post into the backlog lane even though its
+ * calendar slot knew exactly which day it was for. Five October posts, three in
+ * the backlog, on a month that was fully planned.
+ *
+ * So: the publish time when there is one, else the day the id encodes — the
+ * same `YYYY-MM-DD-slug` convention postMonth and linkPostToCalendarSlot
+ * already rely on.
+ *
+ * This is the PROJECTION only. The artifact keeps no scheduledAt, because
+ * nobody has scheduled it, and the publish lane reads the artifact rather than
+ * this. A read model may say "which day" without the record claiming a time.
+ */
+function plannedDay(post: SocialPost): string | null {
+  if (post.scheduledAt) return post.scheduledAt;
+  const day = post.id.match(ID_DAY_RE)?.[1];
+  return day ? `${day}T00:00:00Z` : null;
+}
 
 /**
  * The month a post belongs to: its schedule when set, else its id prefix
@@ -154,7 +180,10 @@ export function postCalendarProjection(
     packId: "social-media",
     itemId: post.id,
     month: postMonth(post),
-    ...(post.scheduledAt ? { scheduledAt: post.scheduledAt } : {}),
+    ...(() => {
+      const day = plannedDay(post);
+      return day ? { scheduledAt: day } : {};
+    })(),
     status: post.status,
     // The channel the post publishes to IS its intent line on a cross-channel
     // calendar — "instagram" next to an email's archetype is the distinction

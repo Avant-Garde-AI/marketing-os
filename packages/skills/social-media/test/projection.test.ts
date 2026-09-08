@@ -112,8 +112,13 @@ describe("postCalendarProjection", () => {
     );
   });
 
-  it("omits scheduledAt when unscheduled (backlog lane)", () => {
-    expect(postCalendarProjection(post(), PUBLIC_URL).scheduledAt).toBeUndefined();
+  it("places an unscheduled post on the day its id encodes", () => {
+    // Was: "omits scheduledAt when unscheduled (backlog lane)". That treated
+    // "no publish time" as "no day", which put every written-but-unscheduled
+    // post in the backlog even when its calendar slot knew the date — a fully
+    // planned October rendered as an empty grid. The backlog is for posts with
+    // no date ANYWHERE, which the next test still pins.
+    expect(postCalendarProjection(post(), PUBLIC_URL).scheduledAt).toBe("2026-09-14T00:00:00Z");
   });
 
   it("detail path matches the platform's social route mapping", () => {
@@ -293,5 +298,42 @@ describe("post groups (spec 26 D3)", () => {
   it("index row carries the group key", () => {
     expect(postIndexRow(post({ groupId: "g1" })).groupKey).toBe("g1");
     expect(postIndexRow(post()).groupKey).toBe("2026-09-14-atelier-hours");
+  });
+});
+
+describe("calendar placement for posts nobody has scheduled yet", () => {
+  const base = {
+    channel: "instagram",
+    copy: "A wall that finally feels finished.",
+    assetRefs: [],
+    provenance: [],
+    status: "proposed",
+    body: "",
+  } as unknown as SocialPost;
+
+  it("places an unscheduled post on the day its id encodes", () => {
+    // Otherwise a fully planned month renders as an empty grid plus a backlog
+    // lane, which is what October actually looked like.
+    const p = postCalendarProjection({ ...base, id: "2026-10-01-road-to-heaven" }, "https://x.test");
+    expect(p.scheduledAt).toBe("2026-10-01T00:00:00Z");
+    expect(p.month).toBe("2026-10");
+  });
+
+  it("a real publish time always wins", () => {
+    const p = postCalendarProjection(
+      { ...base, id: "2026-10-01-road-to-heaven", scheduledAt: "2026-10-04T17:00:00Z" } as SocialPost,
+      "https://x.test",
+    );
+    expect(p.scheduledAt).toBe("2026-10-04T17:00:00Z");
+  });
+
+  it("a post with no date anywhere stays in the backlog", () => {
+    const p = postCalendarProjection({ ...base, id: "evergreen-studio-note" }, "https://x.test");
+    expect(p.scheduledAt).toBeUndefined();
+  });
+
+  it("does not invent a day from a malformed date", () => {
+    const p = postCalendarProjection({ ...base, id: "2026-13-45-nonsense" }, "https://x.test");
+    expect(p.scheduledAt).toBeUndefined();
   });
 });

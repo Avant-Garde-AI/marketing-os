@@ -1,31 +1,37 @@
 import Link from "next/link";
 import { PageHeader, Chip, EmptyState } from "@/components/primitives";
+import { CopyLink } from "@/components/copy-link";
 import { getTenant } from "@/lib/tenant-context";
 import { listCalendarMonths, loadCalendar } from "@/lib/social/console-data";
-import type { CalendarSlot } from "@/lib/social/types";
+import { socialSheetLink } from "@/lib/social/review-links";
+import { parsePost, postPath } from "@/lib/social/artifacts";
+import { socialRepo } from "@/lib/social/repo";
+import type { SocialPost } from "@/lib/social/types";
 
 /**
- * Social — the calendar view (spec 24 §6, SM0 read-only; spec 13 style:
- * editorial at the edges, a dense month grid in the middle).
+ * Social — the worklist.
  *
- * NOTE (WS4-R2): /calendar — the cross-channel calendar over the
- * mos_calendar_items projection — supersedes this page as THE calendar. This
- * page stays as the social pack's channel-specific surface (pillar framing,
- * plan-a-month flow) and its post detail routes remain the "social" channel's
- * click-through target in lib/calendar/routes.ts.
+ * This page used to render its own month grid, which made two calendars for
+ * one business: /calendar already reads mos_calendar_items across every
+ * channel, and social has written into it since SM2. Two grids of the same
+ * month is not redundancy, it is a question about which one is right — and the
+ * cross-channel one is, because a month of social only makes sense next to the
+ * email going out around it.
  *
- * The month renders from social/calendar/{YYYY-MM}.md (?month=YYYY-MM,
- * defaulting to the latest calendar present). Slots land on their days as
- * cards with channel / pillar / status; a slot with a post links into the
- * post detail (copy, provenance, and its canvas). Planning happens in chat;
- * approval and publishing arrive with SM2 — this page only reads.
+ * So this mirrors /email instead: the staged work as a list, each item with its
+ * status and a door into its detail, plus one shareable link per month. Email
+ * arrived at that shape by use, and social's workflow is the same shape —
+ * things get staged, someone reads them, someone approves.
+ *
+ * Files are truth: the calendar names the slots, the post artifacts say what
+ * would actually ship, and this reads both rather than a projection that could
+ * drift from either.
  */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const PLAN_PROMPT =
   "Plan next month's social calendar from our strategy and show me the proposal.";
@@ -39,130 +45,70 @@ function monthLabel(month: string): string {
   });
 }
 
-function shiftMonth(month: string, delta: number): string {
-  const [y, m] = month.split("-").map(Number);
-  const d = new Date(Date.UTC(y!, m! - 1 + delta, 1));
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+/** The day a post is FOR — scheduled if it has a time, else the slot it fills. */
+function dayLabel(scheduledAt: string | null | undefined, fallbackSlot: string | null): string {
+  const iso = (scheduledAt ?? "").slice(0, 10) || fallbackSlot || "";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
 }
 
-/** Post lifecycle → chip register: shipped = filled, in motion = gold, else quiet. */
+/** First line of the copy — what someone scanning the month actually needs. */
+function headline(post: SocialPost): string {
+  const first = (post.copy ?? "").split("\n").map((l) => l.trim()).find(Boolean);
+  return first || `Post ${post.id}`;
+}
+
+/** Same three-state reading as email: done, in motion, still a draft. */
 function statusVariant(status: string): "filled" | "outline" | "attention" {
-  if (status === "published" || status === "measured") return "filled";
-  if (status === "approved" || status === "asset_ready" || status === "scheduled")
-    return "attention";
+  if (status === "published") return "filled";
+  if (status === "approved" || status === "scheduled" || status === "asset_ready") return "attention";
   return "outline";
 }
 
-function SlotCard({ slot }: { slot: CalendarSlot }) {
-  const body = (
-    <div
-      className={
-        "mt-1.5 border border-hairline bg-raised p-2 transition-shadow duration-[160ms]" +
-        (slot.postId ? " hover:bar-active hover:shadow-card" : "")
-      }
-    >
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-ink">
-          {slot.channel}
-        </span>
-        <span
-          className={
-            "text-[10px] " +
-            (statusVariant(slot.status) === "filled"
-              ? "bg-inverse px-1.5 py-px font-medium text-paper"
-              : statusVariant(slot.status) === "attention"
-                ? "border-b border-gold text-ink"
-                : "text-ink-3")
-          }
-        >
-          {slot.status.replace(/_/g, " ")}
-        </span>
-      </div>
-      <div className="mt-0.5 truncate text-[11.5px] text-ink-2" title={slot.intent}>
-        {slot.pillar}
-      </div>
-    </div>
-  );
-  return slot.postId ? (
-    <Link href={`/social/posts/${encodeURIComponent(slot.postId)}`} className="block">
-      {body}
-    </Link>
-  ) : (
-    body
-  );
+interface Row {
+  post: SocialPost;
+  slot: string | null;
+  pillar: string | null;
 }
 
 export default async function SocialPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
-  const requested = Array.isArray(params.month) ? params.month[0] : params.month;
-
+  const sp = await searchParams;
   const { shop } = getTenant();
-  const months = await listCalendarMonths(shop);
-  const month =
-    requested && MONTH_RE.test(requested) ? requested : (months[0] ?? null);
+  const months = (await listCalendarMonths(shop)).filter((m) => MONTH_RE.test(m)).sort().reverse();
 
-  // ── Nothing planned anywhere: the editorial invitation ───────────────────
-  if (!month) {
-    return (
-      <div className="px-8 py-10">
-        <div className="mx-auto max-w-[1200px]">
-          <PageHeader
-            eyebrow="Social"
-            title={
-              <>
-                The calendar, <span className="italic">derived.</span>
-              </>
-            }
-            sub="Every planned post with its channel, its pillar, and its why — traced to the Brand Soul, approved by you."
-          />
-          <div className="animate-enter-2 border border-hairline bg-raised">
-            <EmptyState
-              headline={
-                <>
-                  Nothing planned yet. Ask your marketing agent to plan{" "}
-                  <span className="italic">a month of social.</span>
-                </>
-              }
-              sub="The agent lays out slots from your social strategy — cadence per channel, pillars rotated by weight — and every slot carries its rationale."
-              action={
-                <Link
-                  href={`/chat?prompt=${encodeURIComponent(PLAN_PROMPT)}`}
-                  className="arrow-link text-[15px]"
-                >
-                  Plan a month
-                </Link>
-              }
-            />
-          </div>
-        </div>
-      </div>
-    );
+  const requested = Array.isArray(sp.month) ? sp.month[0] : sp.month;
+  const show = requested && MONTH_RE.test(requested) ? [requested] : months;
+
+  const byMonth = new Map<string, Row[]>();
+  for (const month of show) {
+    const calendar = await loadCalendar(shop, month);
+    const rows: Row[] = [];
+    for (const s of calendar?.slots ?? []) {
+      if (!s.postId) continue;
+      try {
+        const raw = await socialRepo.readFile(postPath(s.postId));
+        if (raw === null) continue;
+        rows.push({ post: parsePost(raw), slot: s.slot, pillar: s.pillar ?? null });
+      } catch {
+        // A post that will not parse is a real problem, but it is the detail
+        // page's problem to explain. Dropping it from the list beats failing
+        // the whole month over one bad artifact.
+      }
+    }
+    rows.sort((a, b) => (a.slot ?? "").localeCompare(b.slot ?? ""));
+    if (rows.length) byMonth.set(month, rows);
   }
 
-  const calendar = await loadCalendar(shop, month);
-
-  // Month geometry (Monday-start grid).
-  const [y, m] = month.split("-").map(Number);
-  const daysInMonth = new Date(Date.UTC(y!, m!, 0)).getUTCDate();
-  const leadingBlanks = (new Date(Date.UTC(y!, m! - 1, 1)).getUTCDay() + 6) % 7;
-  const cells: (number | null)[] = [
-    ...Array.from({ length: leadingBlanks }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-  while (cells.length % 7 !== 0) cells.push(null);
-
-  const slotsByDate = new Map<string, CalendarSlot[]>();
-  for (const slot of calendar?.slots ?? []) {
-    const list = slotsByDate.get(slot.slot) ?? [];
-    list.push(slot);
-    slotsByDate.set(slot.slot, list);
-  }
-
-  const channels = [...new Set((calendar?.slots ?? []).map((s) => s.channel))];
+  const staged = [...byMonth.keys()];
 
   return (
     <div className="px-8 py-10">
@@ -171,116 +117,80 @@ export default async function SocialPage({
           eyebrow="Social"
           title={
             <>
-              The calendar, <span className="italic">derived.</span>
+              Posts, <span className="italic">accounted for.</span>
             </>
           }
-          sub="Every planned post with its channel, its pillar, and its why — traced to the Brand Soul, approved by you."
+          sub="Every staged post with its pillar, its channel, and its record — planned in chat, reviewed by you, published on approval."
         />
 
-        {/* Month masthead */}
-        <div className="animate-enter-2 mb-4 flex flex-wrap items-baseline justify-between gap-3">
-          <div className="flex items-baseline gap-4">
-            <h2 className="font-display text-[22px]">{monthLabel(month)}</h2>
-            {calendar && <Chip variant="outline">{calendar.status}</Chip>}
-            {calendar && (
-              <span className="tnum text-[13px] text-ink-3">
-                {calendar.slots.length} slots
-                {channels.length > 0 ? ` · ${channels.join(", ")}` : ""}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-5 text-[14px]">
-            <Link
-              href={`/social?month=${shiftMonth(month, -1)}`}
-              className="text-ink-2 transition-colors duration-[160ms] hover:text-gold"
-            >
-              ← {monthLabel(shiftMonth(month, -1))}
-            </Link>
-            <Link
-              href={`/social?month=${shiftMonth(month, 1)}`}
-              className="text-ink-2 transition-colors duration-[160ms] hover:text-gold"
-            >
-              {monthLabel(shiftMonth(month, 1))} →
-            </Link>
-          </div>
-        </div>
-
-        {calendar ? (
-          <>
-            {/* The grid */}
-            <div className="animate-enter-2 border-l border-t border-hairline bg-raised">
-              <div className="grid grid-cols-7">
-                {WEEKDAYS.map((d) => (
-                  <div
-                    key={d}
-                    className="border-b border-r border-hairline px-2.5 py-2 text-[10px] font-medium uppercase tracking-[0.14em] text-ink-3"
-                  >
-                    {d}
-                  </div>
-                ))}
-                {cells.map((day, i) => {
-                  const date =
-                    day === null
-                      ? null
-                      : `${month}-${String(day).padStart(2, "0")}`;
-                  const slots = date ? (slotsByDate.get(date) ?? []) : [];
-                  return (
-                    <div
-                      key={i}
-                      className={
-                        "min-h-[104px] border-b border-r border-hairline p-2 " +
-                        (day === null ? "bg-page" : "")
-                      }
-                    >
-                      {day !== null && (
-                        <>
-                          <div className="tnum text-[11px] text-ink-3">{day}</div>
-                          {slots.map((slot, j) => (
-                            <SlotCard key={`${slot.channel}-${j}`} slot={slot} />
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {calendar.notes && (
-              <p className="animate-enter-3 mt-5 max-w-2xl text-sm leading-relaxed text-ink-2">
-                {calendar.notes}
-              </p>
-            )}
-            <p className="animate-enter-3 mt-2 text-[11.5px] text-ink-3">
-              Read-only for now — approving, scheduling, and publishing arrive with the
-              action framework. Refine the plan in chat. Every channel together lives on{" "}
-              <Link href="/calendar" className="arrow-link">
-                the calendar
-              </Link>
-              .
-            </p>
-          </>
-        ) : (
-          /* Months exist elsewhere, just not here */
+        {staged.length === 0 ? (
           <div className="animate-enter-2 border border-hairline bg-raised">
             <EmptyState
               headline={
                 <>
-                  Nothing planned for {monthLabel(month)}
-                  <span className="italic"> — yet.</span>
+                  Nothing staged yet. Ask your marketing agent to plan{" "}
+                  <span className="italic">a month of social.</span>
                 </>
               }
+              sub="The agent lays out slots from your social strategy — cadence per channel, pillars rotated by weight — then writes the posts that fill them."
               action={
-                <Link
-                  href={`/chat?prompt=${encodeURIComponent(
-                    `Plan the ${monthLabel(month)} social calendar from our strategy and show me the proposal.`
-                  )}`}
-                  className="arrow-link text-[15px]"
-                >
-                  Plan {monthLabel(month)}
+                <Link href={`/chat?prompt=${encodeURIComponent(PLAN_PROMPT)}`} className="arrow-link text-[15px]">
+                  Plan a month
                 </Link>
               }
             />
+          </div>
+        ) : (
+          <div className="animate-enter-2 space-y-8">
+            {staged.map((month) => (
+              <section key={month}>
+                <div className="mb-3 flex items-baseline gap-4">
+                  <h2 className="font-display text-[20px]">{monthLabel(month)}</h2>
+                  <Link href={`/calendar?month=${month}`} className="arrow-link text-[13px]">
+                    On the calendar
+                  </Link>
+                  <a
+                    href={socialSheetLink(shop, month).url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="arrow-link text-[13px]"
+                  >
+                    Open the review sheet
+                  </a>
+                </div>
+                {/* One link for the whole month. Per-post links are the right
+                    shape for discussing one post and the wrong one for
+                    circulating a month — that was the lesson from email. */}
+                <div className="mb-3">
+                  <CopyLink
+                    url={socialSheetLink(shop, month).url}
+                    label={`Share ${monthLabel(month)} for review`}
+                  />
+                </div>
+                <ul className="divide-y divide-hairline border border-hairline bg-raised">
+                  {byMonth.get(month)!.map(({ post, slot, pillar }) => (
+                    <li key={post.id}>
+                      <Link
+                        href={`/social/posts/${encodeURIComponent(post.id)}`}
+                        className="group flex items-baseline gap-4 px-5 py-3.5 transition-colors duration-[160ms] hover:bg-gold-quiet/60"
+                      >
+                        <span className="tnum w-20 shrink-0 text-xs text-ink-3">
+                          {dayLabel(post.scheduledAt, slot)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[15px] leading-snug">{headline(post)}</span>
+                          <span className="mt-0.5 block text-[12px] text-ink-3">
+                            {post.channel}
+                            {pillar ? ` · ${pillar}` : ""}
+                          </span>
+                        </span>
+                        <Chip variant={statusVariant(post.status)}>{post.status}</Chip>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
           </div>
         )}
       </div>

@@ -96,12 +96,40 @@ const params = z.object({
     .max(64)
     .describe("Roster key campaigns will use to reference this audience, e.g. kaethe-fans."),
   anyOfGroups: z
-    .array(z.array(predicateSchema).min(1))
-    .min(1)
-    .max(6)
+    .preprocess(
+      // A list of lists is the honest shape — OR inside, AND across — but it is
+      // also the shape models reliably get wrong. Live attempts produced both a
+      // bare list of conditions (one group, meant correctly) and a triple-nested
+      // list, and each cost a round trip with a schema error the model then
+      // guessed at again.
+      //
+      // Both mistakes have exactly one sensible reading, so take it. What is NOT
+      // guessed at is the meaning of a correct two-group input — that still means
+      // AND, and nothing here collapses it.
+      (raw) => {
+        if (!Array.isArray(raw)) return raw;
+        // Unwrap accidental extra nesting: [[[a, b]]] -> [[a, b]]
+        let v: unknown[] = raw;
+        while (
+          v.length === 1 &&
+          Array.isArray(v[0]) &&
+          (v[0] as unknown[]).every((x) => Array.isArray(x))
+        ) {
+          v = v[0] as unknown[];
+        }
+        // A bare list of conditions means one group: [a, b] -> [[a, b]]
+        if (v.every((x) => x !== null && typeof x === "object" && !Array.isArray(x))) {
+          return [v];
+        }
+        return v;
+      },
+      z.array(z.array(predicateSchema).min(1)).min(1).max(6),
+    )
     .describe(
-      "Groups of conditions. Within a group ANY may match (OR); every group must match (AND). " +
-        "Two conditions in one group is a union; two groups of one is an intersection.",
+      "Groups of conditions, as a list of lists. Within a group ANY may match (OR); " +
+        "every group must match (AND). Two conditions in one group is a union; two " +
+        "groups of one condition each is an intersection. A bare list of conditions " +
+        "is accepted and read as a single group.",
     ),
 });
 
@@ -117,7 +145,10 @@ export function createSegmentAction(): RuntimeAction<Params> {
     // an approval at all is that it decides who a later send reaches.
     risk: "medium",
     scopes: ["klaviyo:write_segments"],
-    paramsSchema: params,
+    // RuntimeAction wants input and output types to match; the preprocess above
+    // deliberately accepts a looser input than it produces, which is the whole
+    // point of it. The parsed value is Params either way.
+    paramsSchema: params as unknown as z.ZodType<Params>,
 
     async preview(p) {
       const spec = specOf(p);

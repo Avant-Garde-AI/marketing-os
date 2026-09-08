@@ -67,6 +67,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: message }, { status: 404 });
+    // "No such campaign" and "this campaign will not assemble" are different
+    // problems with different owners, and returning 404 for both told a
+    // reviewer staring at an empty frame that the campaign did not exist —
+    // when in fact it existed, was committed, and had one malformed block.
+    // 404 only for genuinely absent; 422 for present-but-unrenderable.
+    const absent = /not found/.test(message);
+    if (!absent) console.error(`[email/preview] "${id}" failed to assemble:`, message);
+    return NextResponse.json({ error: message }, { status: absent ? 404 : 422 });
   }
 }

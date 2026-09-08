@@ -116,6 +116,46 @@ async function agentOverride(): Promise<string> {
   }
 }
 
+/**
+ * Today, stated plainly, in the store's own timezone.
+ *
+ * A model's sense of "now" comes from its training data, so an agent asked to
+ * plan "late September" reaches for the most recent September it has ever seen.
+ * The first end-to-end console run wrote a campaign id of
+ * `2024-09-17-artist-drop-kaethe-butcher`, scheduled it for 2024, and stamped
+ * the UTM with 2024 — two years stale, and wrong in three places that a human
+ * has to notice separately.
+ *
+ * This is cheap to prevent and expensive to catch later: the id becomes the
+ * directory name in git, the UTM lands in analytics, and the send date drives
+ * the calendar. So the date goes in the instructions on every turn, with the
+ * weekday, because send-day rules ("Tuesdays and Thursdays") are unusable
+ * without it.
+ */
+function todayLine(): string {
+  const tz = process.env.STORE_TIMEZONE || "America/New_York";
+  let stamp: string;
+  try {
+    stamp = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }).format(new Date());
+  } catch {
+    // A bad STORE_TIMEZONE must not cost the agent its calendar entirely.
+    stamp = new Date().toISOString().slice(0, 10);
+  }
+  const iso = new Date().toISOString().slice(0, 10);
+  return (
+    `Today is ${stamp} (${iso}, ${tz}).\n` +
+    `Every date you write — campaign ids, scheduledAt, UTM campaign names, calendar months — ` +
+    `must be derived from that date. Never infer the year from anything else, and never carry ` +
+    `a year over from an example. "Next month" and "late September" are relative to today.\n\n`
+  );
+}
+
 const BASE_INSTRUCTIONS = `You are the Marketing OS agent for a Shopify store.
 
 Your capabilities:
@@ -175,7 +215,31 @@ Rules:
 export const marketingAgent = new Agent({
   id: "marketing-agent",
   name: "Marketing Agent",
-  model: "anthropic/claude-sonnet-4-6",
+  // Gemini, per spec 16's D-decision: chat surfaces (console + Slack) run on
+  // Gemini/GCP and Claude is reserved for Claude Code git-edits. The as-built
+  // had stayed on Anthropic long after that call, which meant one lapsed
+  // Anthropic balance took the whole console chat down — a coupling the
+  // decision existed to remove.
+  //
+  // Pro rather than Flash: this agent runs a multi-tool loop (graph reads,
+  // imagery, campaign authoring) where instruction-following across several
+  // sequential calls is the whole job. Flash already handles the one-shot
+  // thread-title classification above, which is the shape it suits.
+  model: "google/gemini-2.5-pro",
+
+  // Step budget. Mastra defaults a chat turn to 5 steps, and an editorial
+  // authoring turn does not fit: the first end-to-end console run spent step 1
+  // proposing a plan, step 2 reading the artist profile, her works and the
+  // gallery wall sets, and steps 3-5 pulling graph facets — then the stream
+  // emitted `finish` with every fact in hand and nothing written. The cutoff
+  // looked like the agent losing interest rather than hitting a wall, which is
+  // the worst kind of limit.
+  //
+  // 20 matches Mastra's own upper default and leaves room for the full
+  // plan -> gather -> write -> summarise arc plus a retry. The real ceiling is
+  // the route's maxDuration, not this number; a turn that needs more than 20
+  // steps is a workflow, not a chat message.
+  defaultOptions: { maxSteps: 20 },
   ...(memory ? { memory } : {}),
   // Instruction merge order: base, then the social skill pack's instructions
   // (spec 24 SM0 — static, same merge point as the Brand Soul context), then
@@ -188,6 +252,7 @@ export const marketingAgent = new Agent({
     ? async () => {
         const email = (await getEmailEnablement()).enabled ? emailInstructions + "\n\n" : "";
         return (
+          todayLine() +
           BASE_INSTRUCTIONS +
           "\n\n" +
           email +
@@ -198,25 +263,35 @@ export const marketingAgent = new Agent({
         );
       }
     : async () =>
+        todayLine() +
         BASE_INSTRUCTIONS +
         "\n\n" +
         (process.env.EMAIL_PACK_ENABLED === "1" ? emailInstructions + "\n\n" : "") +
         socialInstructions +
+        // Self-hosted deployments have external MCP connections too — Arthaus
+        // has had the Picasso art graph attached and active since July. Gating
+        // spec 18 on hosted mode meant this agent was TOLD about graph tools by
+        // the email pack's instructions and then handed none of them: it called
+        // faceted_discovery, got ToolNotFoundError, and fell back to guessing
+        // at the analytics schema.
+        (await getExternalMcpInstructions()) +
         (await brandContext()) +
         (await agentOverride()),
-  // Hosted: merge the tenant's enabled external MCP tools (spec 18) and the
-  // enablement-gated email pack (05 H1.2: pack enabled AND Klaviyo connected)
-  // on top of the native tools per request. A down/rate-limited source
-  // contributes no tools and never fails the turn. Client-owned: the email
-  // pack is env-driven (EMAIL_PACK_ENABLED=1 — the deployment IS the tenant).
+  // Both arms merge the tenant's enabled external MCP tools (spec 18) on top of
+  // the native tools per request. What differs is how the email pack is gated:
+  // hosted checks enablement (05 H1.2: pack enabled AND Klaviyo connected),
+  // client-owned reads env (EMAIL_PACK_ENABLED=1 — the deployment IS the tenant).
   tools: HOSTED
     ? async () => ({
         ...baseMarketingTools,
         ...((await getEmailEnablement()).enabled ? { ...emailTools, ...emailAuthoringTools } : {}),
         ...(await getExternalMcpTools()),
       })
-    : {
+    : async () => ({
         ...baseMarketingTools,
         ...(process.env.EMAIL_PACK_ENABLED === "1" ? { ...emailTools, ...emailAuthoringTools } : {}),
-      },
+        // Same reason as the instructions above. A source that is down or
+        // rate-limited contributes no tools and never fails the turn.
+        ...(await getExternalMcpTools()),
+      }),
 });

@@ -13,6 +13,7 @@ import { createKlaviyoClient } from "./klaviyo-client";
 import { emailRepo } from "./repo";
 import { emailPreviewLink } from "./review-links";
 import { registerAction } from "../actions/registry";
+import { createDiscountCode } from "../shopify/discount-actions";
 import { getTenant } from "../tenant-context";
 
 function deps(): EmailActionDeps {
@@ -47,9 +48,15 @@ export function registerEmailActions(): void {
   if (registered) return;
   registered = true;
   registerAction("email.approve_plan", () => createEmailActions(deps()).approvePlan);
+  registerAction("email.approve_campaign", () => createEmailActions(deps()).approveCampaign);
   registerAction("klaviyo.create_campaign_draft", () => createEmailActions(deps()).createCampaignDraft);
   registerAction("klaviyo.schedule_campaign", () => createEmailActions(deps()).scheduleCampaign);
   registerAction("klaviyo.cancel_send", () => createEmailActions(deps()).cancelSend);
+
+  // Not an email action, but it registers here for now because this is the only
+  // place the runtime wires actions up. A discount is a commerce write with its
+  // own approval — it is never implied by approving the campaign that names it.
+  registerAction("shopify.create_discount_code", () => createDiscountCode());
 }
 
 registerEmailActions();

@@ -141,7 +141,13 @@ export interface ExtractOptions {
  */
 export const productItemSchema = z.object({
   name: z.string().min(1),
-  price: z.string().min(1),
+  /**
+   * Optional on purpose. A store selling across currencies cannot show one
+   * price honestly in a broadcast email — the number would be right for some
+   * readers and wrong for the rest — so the card carries the work and the
+   * storefront quotes the price in the reader's own currency.
+   */
+  price: z.string().min(1).optional(),
   href: z.string().min(1),
   imageUrl: z.string().min(1).optional(),
   /** Alt for the product image; defaults to `name` so the alt invariant holds. */

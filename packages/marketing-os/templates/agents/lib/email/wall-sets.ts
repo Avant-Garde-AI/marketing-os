@@ -16,6 +16,7 @@
  */
 
 import { gitBindingFor } from "../store-repo";
+import { readPrices } from "./product-prices";
 
 export interface WallSetPiece {
   handle: string;
@@ -142,8 +143,43 @@ export function rankWallSets(sets: WallSet[], q: WallSetQuery): Array<WallSet & 
   return scored.slice(0, q.limit ?? 3).map(({ score: _score, ...rest }) => rest);
 }
 
+/**
+ * Total a set from its pieces' CURRENT prices.
+ *
+ * The file's own `price` is a pre-formatted string with a currency symbol baked
+ * in ("$208.97") — and the store quotes GBP, so shipping it put a dollar total
+ * beside pound product cards in the same email. A price the store does not
+ * charge is worse than no price, so this recomputes from Shopify and returns
+ * undefined when it cannot price every piece.
+ */
+export async function priceWallSet(s: WallSet): Promise<string | undefined> {
+  const handles = (s.pieces ?? []).map((p) => p.handle).filter(Boolean);
+  if (handles.length === 0) return undefined;
+  const prices = await readPrices(handles);
+  let total = 0;
+  let currency = "GBP";
+  for (const h of handles) {
+    const hit = prices.get(h);
+    // Partial totals are lies. If one piece cannot be priced, the set has no
+    // price this email can honestly show.
+    if (!hit?.amount) return undefined;
+    total += hit.amount;
+    if (hit.currency) currency = hit.currency;
+  }
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: Number.isInteger(total) ? 0 : 2,
+      maximumFractionDigits: 2,
+    }).format(total);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Shape a set into the email-assembly `wallSet` block. */
-export function toWallSetBlock(s: WallSet): Record<string, unknown> {
+export function toWallSetBlock(s: WallSet, price?: string): Record<string, unknown> {
   const artists = [...new Set((s.artists ?? []).map((a) => a.name).filter(Boolean))];
   return {
     kind: "wallSet",
@@ -155,7 +191,8 @@ export function toWallSetBlock(s: WallSet): Record<string, unknown> {
     ...(s.room_name ? { room: s.room_name } : {}),
     ...(s.rationale ? { rationale: s.rationale.slice(0, 300) } : {}),
     ...(s.piece_count ? { pieceCount: s.piece_count } : {}),
-    ...(s.price ? { price: s.price } : {}),
+    // Only a freshly computed total — never the file's baked-in string.
+    ...(price ? { price } : {}),
     ...(artists.length ? { artists } : {}),
   };
 }

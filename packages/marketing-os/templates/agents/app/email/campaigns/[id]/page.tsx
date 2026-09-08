@@ -5,6 +5,7 @@ import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitiv
 import { loadCampaignDetail, type SectionView } from "@/lib/email/console-data";
 import { getTenant } from "@/lib/tenant-context";
 import { emailPreviewLink, emailReviewLink } from "@/lib/email/review-links";
+import { CopyLink } from "@/components/copy-link";
 
 /**
  * Email campaign detail (WS4-R3 / 02 §7): the campaign as the human reviews
@@ -364,12 +365,7 @@ export default async function EmailCampaignPage({
                 Opens the campaign with its rationale, audience and a notes thread — no
                 console account needed. Expires {review.expiresAt}.
               </p>
-              {/* select-all rather than an onFocus handler: this is a server
-                  component, and `user-select: all` selects the whole URL on a
-                  single click without shipping a client bundle for it. */}
-              <div className="w-full select-all break-all border border-hairline bg-paper px-3 py-2 font-mono text-[11.5px] text-ink-2">
-                {review.url}
-              </div>
+              <CopyLink url={review.url} />
             </div>
           </SectionCard>
 

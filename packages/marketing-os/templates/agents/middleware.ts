@@ -19,9 +19,11 @@ export async function middleware(request: NextRequest) {
   // Action execute (spec 20 A1): ACTIONS_GATE_SECRET verified in-route —
   // only the platform gate holds it. Email preview + the /review/ room and
   // contact sheet (spec 25): HMAC-tokened per (scope, shop, id, expiry) since
-  // campaign ids are guessable; verified in-route/in-page. These links EXPIRE —
-  // /api/email/review-notes is the one WRITE among them, and it can only
-  // append a note, never change campaign state.
+  // campaign ids are guessable; verified in-route/in-page. These links EXPIRE.
+  // Two of them WRITE: /api/email/review-notes appends a note, and
+  // /api/email/headline swaps the subject/preview pair for one the campaign
+  // already offers. Neither can approve, schedule, send, or touch the
+  // audience, and neither works once a campaign has been drafted.
   if (
     request.nextUrl.pathname.startsWith("/brand/") ||
     request.nextUrl.pathname.startsWith("/api/brand-image/") ||
@@ -40,6 +42,13 @@ export async function middleware(request: NextRequest) {
     // images — which is exactly the bug that put this route here.
     request.nextUrl.pathname.startsWith("/api/email/asset/") ||
     request.nextUrl.pathname.startsWith("/api/email/review-notes") ||
+    // Headline selection, the second WRITE reachable by a review token.
+    // Narrower than it sounds: it swaps the subject and preview text for
+    // one of the options the campaign already carries, and refuses once
+    // the campaign is drafted, so it cannot move a subject out from under
+    // the approval that staged it. Left out of this list it 307s to /login
+    // for exactly the reviewers it exists for.
+    request.nextUrl.pathname.startsWith("/api/email/headline") ||
     // Social's note write, same shape as email's: reachable without a console
     // session, and verified in-route by its own token (spec 26 ⟨BUILD⟩ 5).
     // `/review/` below already covers the social room + sheet pages.

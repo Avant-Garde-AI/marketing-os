@@ -24,6 +24,8 @@
  */
 
 import { createHash } from "node:crypto";
+import { checkDiscounts } from "./discount-refs";
+import { DEFAULT_ALLOWED_IMAGE_HOSTS, hostAllowed } from "../email-assembly/invariants";
 import { z } from "zod";
 import type { Action, ActionPreview, ActionResult } from "../skill-kit";
 import type {
@@ -244,7 +246,126 @@ export function campaignTemplateSlug(campaignId: string): string {
   return `campaign-${campaignId}`;
 }
 
-async function draftReadiness(deps: EmailActionDeps, campaign: EmailCampaign): Promise<AssembledEmail> {
+/**
+ * Re-host every image the campaign references onto Klaviyo, in place.
+ *
+ * The draft step used to upload only design-surface board exports, because when
+ * it was written a campaign's imagery WAS its boards. That stopped being true
+ * the moment campaigns began pulling product shots from Shopify's CDN, artist
+ * portraits from collections and graph tiles from picasso.arthaus.cloud — none
+ * of them Klaviyo hosts, so assembly failed `img-host-untrusted` and the Labor
+ * Day campaign could not be drafted at all.
+ *
+ * Uploading rather than widening the allowlist is the right way round. A sent
+ * email outlives the page that referenced its images: Shopify can rotate a CDN
+ * path, our own asset links are HMAC-signed and expire by design, and either
+ * failure surfaces as a broken image in an inbox weeks later, where nobody is
+ * looking. Klaviyo-hosted copies are immutable, which is what the invariant was
+ * asking for.
+ *
+ * Deduplicated by source URL — the same piece routinely appears in a product
+ * row and again in a graph callout — and the campaign is saved after each
+ * upload so a partial run resumes rather than re-uploading.
+ */
+async function hostImagesOnKlaviyo(
+  deps: EmailActionDeps,
+  campaign: EmailCampaign,
+  save: () => Promise<void>,
+): Promise<string[]> {
+  const setters = new Map<string, Array<(url: string) => void>>();
+  const add = (url: unknown, set: (u: string) => void) => {
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return;
+    let host: string;
+    try {
+      host = new URL(url).host;
+    } catch {
+      return;
+    }
+    if (hostAllowed(host, DEFAULT_ALLOWED_IMAGE_HOSTS)) return;
+    const list = setters.get(url) ?? [];
+    list.push(set);
+    setters.set(url, list);
+  };
+
+  for (const section of campaign.sections) {
+    if (section.type === "surface") {
+      add((section as { imageUrl?: string }).imageUrl, (u) => {
+        (section as { imageUrl?: string }).imageUrl = u;
+      });
+      continue;
+    }
+    for (const block of (section as { blocks?: Array<Record<string, unknown>> }).blocks ?? []) {
+      add(block.imageUrl, (u) => { block.imageUrl = u; });
+      add(block.portraitUrl, (u) => { block.portraitUrl = u; });
+      for (const key of ["products", "pieces", "items"]) {
+        for (const item of (block[key] as Array<Record<string, unknown>>) ?? []) {
+          add(item.imageUrl, (u) => { item.imageUrl = u; });
+        }
+      }
+    }
+  }
+  if (setters.size === 0) return [];
+
+  const done: string[] = [];
+  for (const [url, apply] of setters) {
+    // fetch() throws for DNS and transport failures, and undici's message for
+    // all of them is the bare string "fetch failed" — no URL, no cause. That
+    // reached the approval audit verbatim and cost two approval cycles before
+    // anyone could see that ONE artifact held a typo'd host, `cdn..shopify.com`.
+    // Whatever goes wrong here, the URL goes with it.
+    let res: Response;
+    try {
+      res = await fetch(url);
+    } catch (cause) {
+      throw new Error(
+        `could not reach ${url} to re-host it on Klaviyo ` +
+          `(${cause instanceof Error ? cause.message : String(cause)}). ` +
+          `Check the URL is well-formed and the host is reachable.`,
+        { cause },
+      );
+    }
+    if (!res.ok) {
+      throw new Error(
+        `could not fetch ${url} to re-host it on Klaviyo (HTTP ${res.status}). ` +
+          `A campaign cannot be drafted while one of its images is unreachable.`,
+      );
+    }
+    const type = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
+    const mediaType = type.startsWith("image/") ? (type === "image/jpg" ? "image/jpeg" : type) : "image/jpeg";
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const uploaded = await deps.klaviyo.uploadImage({
+      name: `${campaign.id}-${sha256(url).slice(0, 12)}`,
+      data: bytes,
+      mediaType,
+    });
+    for (const set of apply) set(uploaded.imageUrl);
+    done.push(uploaded.imageUrl);
+  }
+  // Saved ONCE, not per upload. The store repo is git-backed, so every save is
+  // a commit: the first real draft made eight of them in 27 seconds, a fifth of
+  // the route's 120s budget spent on version control rather than work, and it
+  // scales with the number of images.
+  //
+  // The cost is coarser resume — a run that dies mid-loop re-uploads the images
+  // it had already done, making orphan copies in Klaviyo's library. That is
+  // cheap and invisible; burning the request budget is neither.
+  if (done.length > 0) await save();
+  return done;
+}
+
+/**
+ * `imagesWillBeRehosted` is for PREVIEW only. The card is shown before execute
+ * has uploaded anything, so a campaign carrying Shopify or Picasso image URLs
+ * fails `img-host-untrusted` at exactly the moment a human is deciding — for a
+ * problem execute is about to fix on its own. Preview forgives that one code
+ * and nothing else; execute runs strict, after the upload, where the invariant
+ * is telling the truth about what ships.
+ */
+async function draftReadiness(
+  deps: EmailActionDeps,
+  campaign: EmailCampaign,
+  opts?: { imagesWillBeRehosted?: boolean },
+): Promise<AssembledEmail> {
   if (campaign.status !== "approved" && campaign.status !== "drafted") {
     throw new Error(
       `campaign "${campaign.id}" is "${campaign.status}" — only approved campaigns draft (approve the plan first)`,
@@ -254,10 +375,20 @@ async function draftReadiness(deps: EmailActionDeps, campaign: EmailCampaign): P
   if (!campaign.previewText) throw new Error(`campaign "${campaign.id}" has no previewText`);
   if (campaign.sections.length === 0) throw new Error(`campaign "${campaign.id}" has no sections — draft the content first`);
   if (campaign.audience.included.length === 0) throw new Error(`campaign "${campaign.id}" has no audience`);
+  // Checked again here, not only at approval. Approval and drafting are
+  // separated by a human and by time, and a code can be deleted or an approved
+  // campaign edited in between — the last gate before the ESP should not
+  // inherit an older gate's answer.
+  const discounts = await checkDiscounts(campaign);
+  if (discounts.errors.length > 0) throw new Error(discounts.errors.join(" "));
+  for (const w of discounts.warnings) console.warn(`[email/draft] ${campaign.id}: ${w}`);
   const assembled = await deps.assemble(campaign);
-  if (!assembled.report.ok) {
+  const blocking = opts?.imagesWillBeRehosted
+    ? assembled.report.errors.filter((e) => !e.includes("img-host-untrusted"))
+    : assembled.report.errors;
+  if (blocking.length > 0) {
     throw new Error(
-      `assembly invariants failed for "${campaign.id}": ${assembled.report.errors.join("; ")} — fix before drafting (04 §6)`,
+      `assembly invariants failed for "${campaign.id}": ${blocking.join("; ")} — fix before drafting (04 §6)`,
     );
   }
   return assembled;
@@ -286,7 +417,7 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
     risk: "medium",
     async preview(p) {
       const campaign = await loadCampaign(deps.repo, p.campaignId);
-      const assembled = await draftReadiness(deps, campaign);
+      const assembled = await draftReadiness(deps, campaign, { imagesWillBeRehosted: true });
       // Real audience sizes for the card (recipient estimation needs a Klaviyo
       // campaign to exist — that's the SCHEDULE preview's number; here we show
       // live profile counts for the selected lists/segments).
@@ -330,6 +461,12 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
         await saveCampaign(deps.repo, campaign); // record immediately (resume point)
         steps.push(`image:${section.slot}`);
       }
+
+      // Step 1b — every OTHER image the campaign points at (product shots, wall
+      // rooms, artist portraits, graph tiles) onto Klaviyo too. Without this the
+      // assembly invariant below rejects the campaign outright.
+      const hosted = await hostImagesOnKlaviyo(deps, campaign, () => saveCampaign(deps.repo, campaign));
+      if (hosted.length > 0) steps.push(`images:${hosted.length}`);
 
       // Step 2 — assemble the final HTML (now with Klaviyo-hosted image URLs)
       // and persist it: email.html is EXACTLY what lands in Klaviyo.
@@ -552,16 +689,131 @@ function cancelSend(deps: EmailActionDeps): Action<CancelParams> {
 
 // ---------------------------------------------------------------------------
 // The factory (spec 20 §5 `actions` — bound per tenant by the runtime)
+
+// ---------------------------------------------------------------------------
+// email.approve_campaign (medium) — one existing campaign → approved
+// ---------------------------------------------------------------------------
+
+const approveCampaignParams = z.object({
+  campaignId: z.string().min(1),
+});
+export type ApproveCampaignParams = z.infer<typeof approveCampaignParams>;
+
+/**
+ * Approve ONE campaign that already exists.
+ *
+ * `email.approve_plan` was the only route to `approved`, and it walks a month's
+ * calendar and CREATES campaigns from its slots. A campaign authored directly —
+ * which is how every Arthaus September campaign was written, from a chat prompt
+ * rather than from an approved plan — has no calendar slot to be walked, so it
+ * could never be approved, and `createCampaignDraft` refuses anything that is
+ * not approved. The result was a campaign that could be written, rendered,
+ * reviewed and committed, and then had no path to the ESP at all.
+ *
+ * Approving still authorises DRAFTING only. Sending remains its own approval,
+ * as it does through the plan route — this closes a hole in the path, it does
+ * not shorten it.
+ */
+function approveCampaign(deps: EmailActionDeps): Action<ApproveCampaignParams> {
+  return {
+    kind: "email.approve_campaign",
+    title: "Approve a campaign for drafting",
+    paramsSchema: approveCampaignParams,
+    summary: (p) => `Approve campaign ${p.campaignId} (authorizes drafting only — sending approves separately)`,
+    scopes: ["email:write_plan"],
+    risk: "medium",
+    async preview(p) {
+      const campaign = await loadCampaign(deps.repo, p.campaignId);
+      if (campaign.status !== "proposed") {
+        throw new Error(
+          `campaign "${p.campaignId}" is "${campaign.status}", not "proposed" — nothing to approve`,
+        );
+      }
+      const warnings: string[] = [];
+      if (!campaign.subject) warnings.push("No subject line.");
+      if (!campaign.previewText) warnings.push("No preview text.");
+      if (!campaign.sections.length) warnings.push("No sections — this campaign has no body.");
+      if (!campaign.audience.included.length) warnings.push("No audience — it can be drafted but never sent.");
+      const when = campaign.scheduledAt ? new Date(campaign.scheduledAt) : null;
+      if (when && when.getTime() < Date.now()) {
+        warnings.push(
+          `Its send date (${campaign.scheduledAt}) has already passed. Reschedule before staging, or it will draft against a date in the past.`,
+        );
+      }
+      // A campaign that promises a code the store does not have must not be
+      // approvable. Everything softer than that is a warning.
+      const discounts = await checkDiscounts(campaign);
+      if (discounts.errors.length > 0) throw new Error(discounts.errors.join(" "));
+      warnings.push(...discounts.warnings);
+
+      const audience = campaign.audience.included
+        .map((a) => `${a.name ?? a.key ?? a.id}${a.estimatedSize ? ` (~${a.estimatedSize.toLocaleString()})` : ""}`)
+        .join(", ");
+      return {
+        summary: `Approve "${campaign.subject ?? p.campaignId}" for drafting — nothing is created in Klaviyo and nothing sends`,
+        rows: [
+          { label: "Campaign", value: campaign.id },
+          { label: "Archetype", value: campaign.archetype },
+          { label: "Subject", value: campaign.subject ?? "—" },
+          { label: "Audience", value: audience || "—" },
+          { label: "Scheduled", value: campaign.scheduledAt ?? "—" },
+          { label: "Sections", value: String(campaign.sections.length) },
+          ...(campaign.discountCode
+            ? [{
+                label: "Discount code",
+                value: `${campaign.discountCode} — ${discounts.checks[0]?.verdict === "exists" ? "confirmed in Shopify" : "unconfirmed"}`,
+              }]
+            : []),
+        ],
+        ...(warnings.length ? { warnings } : {}),
+        previewHash: hashMaterial({
+          kind: "email.approve_campaign",
+          id: campaign.id,
+          // The whole artifact: approving content that then changes would make
+          // the approval a statement about something that no longer exists.
+          artifact: serializeCampaign(campaign),
+        }),
+      } satisfies ActionPreview;
+    },
+    async execute(p) {
+      const campaign = await loadCampaign(deps.repo, p.campaignId);
+      if (campaign.status === "approved") {
+        // Idempotent: a retried approval is not an error.
+        return { ok: true, summary: `Campaign ${p.campaignId} was already approved`, detail: { id: p.campaignId } };
+      }
+      if (campaign.status !== "proposed") {
+        throw new Error(`campaign "${p.campaignId}" is "${campaign.status}" — only a proposed campaign can be approved`);
+      }
+      const next: EmailCampaign = {
+        ...campaign,
+        status: "approved",
+        provenance: [
+          ...campaign.provenance,
+          { claim: "approved for drafting by an owner through the Action gate", origin: "owner" },
+        ],
+      };
+      await deps.repo.writeFile(campaignPath(next.id), serializeCampaign(next));
+      return {
+        ok: true,
+        summary: `Campaign ${next.id} approved — ready for klaviyo.create_campaign_draft`,
+        detail: { id: next.id, status: "approved" },
+      };
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 
 export function createEmailActions(deps: EmailActionDeps): {
   approvePlan: Action<ApprovePlanParams>;
+  approveCampaign: Action<ApproveCampaignParams>;
   createCampaignDraft: Action<CreateDraftParams>;
   scheduleCampaign: Action<ScheduleParams>;
   cancelSend: Action<CancelParams>;
 } {
   return {
     approvePlan: approvePlan(deps),
+    approveCampaign: approveCampaign(deps),
     createCampaignDraft: createCampaignDraft(deps),
     scheduleCampaign: scheduleCampaign(deps),
     cancelSend: cancelSend(deps),

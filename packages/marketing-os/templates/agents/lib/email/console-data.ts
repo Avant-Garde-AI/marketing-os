@@ -95,6 +95,10 @@ export interface CampaignArtifact {
   subject?: string;
   previewText?: string;
   subjectCandidates: string[];
+  /** Headline/subheadline pairs the campaign was chosen from (spec: the review
+   *  room picks between them rather than inheriting the first phrasing). */
+  headlineOptions?: Array<{ id: string; headline: string; subheadline: string; why?: string }>;
+  selectedHeadlineId?: string;
   copyFormulaRef?: string;
   skeletonRef?: string;
   sections: SectionView[];
@@ -245,6 +249,29 @@ function asString(v: unknown): string | undefined {
   return typeof v === "string" && v ? v : undefined;
 }
 
+/**
+ * Headline options out of raw front matter.
+ *
+ * Same discipline as the other `as*` coercions here: the artifact is a file a
+ * human can hand-edit, so a malformed entry must degrade to "no options" and
+ * let the room say so, never render `undefined` into a radio label.
+ */
+function asHeadlineOptions(v: unknown): { headlineOptions?: Array<{ id: string; headline: string; subheadline: string; why?: string }> } {
+  if (!Array.isArray(v)) return {};
+  const out = v.flatMap((o) => {
+    if (!o || typeof o !== "object") return [];
+    const r = o as Record<string, unknown>;
+    if (typeof r.id !== "string" || typeof r.headline !== "string" || typeof r.subheadline !== "string") return [];
+    return [{
+      id: r.id,
+      headline: r.headline,
+      subheadline: r.subheadline,
+      ...(typeof r.why === "string" ? { why: r.why } : {}),
+    }];
+  });
+  return out.length ? { headlineOptions: out } : {};
+}
+
 function asStringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 }
@@ -325,6 +352,8 @@ export function parseCampaignArtifact(raw: string): CampaignArtifact | null {
   const utm = fm.utm as Record<string, unknown> | undefined;
   const artifact: CampaignArtifact = {
     subjectCandidates: asStringArray(fm.subjectCandidates),
+    ...asHeadlineOptions(fm.headlineOptions),
+    ...(typeof fm.selectedHeadlineId === "string" ? { selectedHeadlineId: fm.selectedHeadlineId } : {}),
     sections: asSections(fm.sections),
     audience: {
       included: asAudienceRefs(audience.included),

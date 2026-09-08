@@ -102,7 +102,19 @@ const runReport = createTool({
       .array(z.object({ startDate: z.string(), endDate: z.string() }))
       .default([{ startDate: "30daysAgo", endDate: "today" }]),
     limit: z.number().min(1).max(250).default(50),
-    orderBys: z.array(z.any()).optional(),
+    // Typed, not z.any(). Gemini requires `items` on every array in a function
+    // declaration and rejects the whole request without it — "properties
+    // [orderBys].items: missing field". Anthropic accepted the untyped version,
+    // so this only surfaced when chat moved to Gemini.
+    orderBys: z
+      .array(
+        z.object({
+          metric: z.object({ metricName: z.string() }).optional(),
+          dimension: z.object({ dimensionName: z.string() }).optional(),
+          desc: z.boolean().optional(),
+        }),
+      )
+      .optional(),
     dimensionFilter: z.any().optional(),
     propertyId: z.string().optional(),
   }),

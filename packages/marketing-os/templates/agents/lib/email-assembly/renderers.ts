@@ -216,9 +216,11 @@ function renderProductCell(product: ProductItem, cardWidth: number, theme: Email
         `font-family:${theme.bodyFontStack};font-size:12.5px;letter-spacing:0.02em;` +
         `color:${theme.textColor};opacity:.62;">${escapeHtml(product.artist)}</span>`
       : "") +
-    `<span class="eab-meta" style="display:block;padding-top:6px;` +
-    `font-family:${theme.bodyFontStack};font-size:13px;color:${theme.accentColor};">` +
-    `${escapeHtml(product.price)}</span>` +
+    (product.price
+      ? `<span class="eab-meta" style="display:block;padding-top:6px;` +
+        `font-family:${theme.bodyFontStack};font-size:13px;color:${theme.accentColor};">` +
+        `${escapeHtml(product.price)}</span>`
+      : "") +
     (product.blurb
       ? `<span class="eab-meta" style="display:block;padding-top:6px;` +
         `font-family:${theme.bodyFontStack};font-size:13px;line-height:19px;` +

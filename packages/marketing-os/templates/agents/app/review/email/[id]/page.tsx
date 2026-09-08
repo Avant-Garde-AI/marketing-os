@@ -3,7 +3,7 @@ import { runWithTenant } from "@/lib/tenant-context";
 import { loadCampaignDetail } from "@/lib/email/console-data";
 import { listNotes } from "@/lib/email/review-notes";
 import { emailPreviewLink, emailSheetLink, ttlRemaining, verifyLink } from "@/lib/email/review-links";
-import { EmailFrame, ReviewNotes } from "@/components/review/email-review";
+import { EmailFrame, ReviewNotes, HeadlinePicker } from "@/components/review/email-review";
 
 /**
  * The review room (spec 25) — one campaign, everything a reviewer needs to
@@ -171,6 +171,32 @@ export default async function EmailReviewPage({ params, searchParams }: Params) 
             </div>
           )
         )}
+
+        {/* Headline — the pair the inbox shows, chosen here rather than assumed. */}
+        <section className="mb-10">
+          <h2 className="mb-3 text-[10px] uppercase tracking-[0.14em] text-ink-3">
+            Subject &amp; preview
+          </h2>
+          {(artifact?.headlineOptions?.length ?? 0) > 0 ? (
+            <HeadlinePicker
+              campaignId={id}
+              shop={shop}
+              token={token ?? ""}
+              exp={exp ?? ""}
+              options={artifact!.headlineOptions!}
+              {...(artifact!.selectedHeadlineId ? { selectedId: artifact!.selectedHeadlineId } : {})}
+              subject={subject}
+              previewText={artifact?.previewText ?? ""}
+              locked={sent || status === "drafted" || status === "scheduled"}
+            />
+          ) : (
+            <p className="text-[13.5px] leading-relaxed text-ink-2">
+              This campaign was written with a single subject line and no alternatives,
+              so there is nothing to choose between. Ask the agent to draft headline
+              options and they will appear here.
+            </p>
+          )}
+        </section>
 
         {/* The email itself */}
         <section className="mb-10">

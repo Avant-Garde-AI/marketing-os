@@ -660,8 +660,21 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
       if (input.fromEmail !== undefined) content["from_email"] = input.fromEmail;
       if (input.fromLabel !== undefined) content["from_label"] = input.fromLabel;
 
-      const trackingOptions: Record<string, unknown> = { is_add_utm: true };
-      if (input.utmParams?.length) trackingOptions["utm_params"] = input.utmParams;
+      // These two DID move: `is_add_utm`/`utm_params` are gone at this revision,
+      // replaced by `add_tracking_params` with `custom_tracking_params` entries
+      // that each declare a `type`. Klaviyo also requires utm_source and
+      // utm_medium once any custom param is supplied, so the campaign UTMs
+      // travel as a set or not at all. Verified against revision 2026-07-15
+      // alongside the `definition` wrapper above — the two changed on different
+      // clocks, which is exactly why guessing one from the other fails.
+      const trackingOptions: Record<string, unknown> = { add_tracking_params: true };
+      if (input.utmParams?.length) {
+        trackingOptions["custom_tracking_params"] = input.utmParams.map((u) => ({
+          type: "static",
+          name: u.name,
+          value: u.value,
+        }));
+      }
 
       const doc = await request({
         method: "POST",
@@ -677,6 +690,11 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
               },
               send_options: { use_smart_sending: input.useSmartSending ?? true },
               tracking_options: trackingOptions,
+              // `definition` WRAPS channel/label/content at the revision this
+              // client pins (2026-07-15). Later revisions flatten them, so a
+              // payload reverse-engineered against a different revision looks
+              // right and is rejected — that mistake cost this campaign two
+              // failed drafts. Probe with KLAVIYO_REVISION or not at all.
               "campaign-messages": {
                 data: [
                   {

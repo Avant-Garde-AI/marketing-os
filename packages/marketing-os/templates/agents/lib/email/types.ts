@@ -82,6 +82,8 @@ export interface QuietPeriod {
 }
 
 export interface EmailStrategy {
+  /** Show prices in campaign bodies (default true). False for multi-currency stores. */
+  showPrices?: boolean;
   audiences: StrategyAudience[];
   archetypes: StrategyArchetype[];
   /** Planned campaigns per month (the scaffold's slot count). */
@@ -256,10 +258,47 @@ export interface CampaignKlaviyoIds {
   sendJobStatus?: string;
 }
 
+/**
+ * One headline candidate: what the inbox shows, as a pair.
+ *
+ * `headline` becomes the subject and `subheadline` the preview text, because
+ * those are the two lines a reader actually sees before deciding. `why` is one
+ * sentence on the angle it takes — without it a reviewer is comparing three
+ * sentences with no idea what distinguishes them, which is how people default
+ * to the first option.
+ */
+export interface HeadlineOption {
+  /** Stable across regeneration, so a selection is not silently reassigned. */
+  id: string;
+  headline: string;
+  subheadline: string;
+  why?: string;
+}
+
 export interface EmailCampaign {
   id: string;
   archetype: string;
   audience: CampaignAudience;
+  /**
+   * Headline options the campaign was chosen FROM, kept with the campaign.
+   *
+   * A subject line and its preview text are the whole of what an inbox shows;
+   * every other decision in a campaign only matters if that pair earns the
+   * open. Yet all seven September campaigns shipped with exactly one subject
+   * and `subjectCandidates: []` — no alternatives written, so nothing to weigh,
+   * so the first phrasing the agent produced became the campaign's voice by
+   * default rather than by choice.
+   *
+   * Options are generated as a set and one is SELECTED, and both halves are
+   * kept: the chosen pair lives in `subject`/`previewText` because that is what
+   * sends, and the set stays here so a reviewer can see what was considered and
+   * change their mind without regenerating.
+   */
+  headlineOptions?: HeadlineOption[];
+  /** Which option is live. Absent when the subject was written by hand. */
+  selectedHeadlineId?: string;
+  /** Legacy flat list, superseded by headlineOptions. Kept so old artifacts
+   *  still parse; nothing writes it. */
   subjectCandidates: string[];
   subject?: string;
   previewText?: string;
@@ -274,6 +313,16 @@ export interface EmailCampaign {
   klaviyo?: CampaignKlaviyoIds;
   provenance: ProvenanceClaim[];
   status: CampaignStatus;
+  /**
+   * The discount code this campaign promises, when it promises one.
+   *
+   * Declared rather than inferred. A promotion campaign states its code in
+   * running prose, and prose is a bad place to check a fact against a commerce
+   * system: any heuristic that finds LABORDAY15 in a sentence also finds
+   * ARTHAUS and IN CONTEXT. Naming it as a field makes the claim exact, so the
+   * approval gate can ask the store whether it is true.
+   */
+  discountCode?: string;
   /** Markdown body: the agent's rationale prose. */
   body: string;
 }

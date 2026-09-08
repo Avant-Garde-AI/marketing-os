@@ -130,6 +130,15 @@ export function skeletonHtmlPath(id: string): string {
 // ---------------------------------------------------------------------------
 
 const strategyFrontMatterSchema = z.object({
+  /**
+   * Show prices in campaign bodies. Default true.
+   *
+   * A store selling across currencies cannot state one price honestly in a
+   * broadcast: the figure is correct for some readers and wrong for the rest,
+   * and a wrong price is a promise the store did not make. Such a store sets
+   * this false and lets the storefront quote in the reader's own currency.
+   */
+  showPrices: z.boolean().optional(),
   audiences: z
     .array(
       z.object({
@@ -151,7 +160,23 @@ const strategyFrontMatterSchema = z.object({
       z.object({
         name: z.string().min(1),
         messagingRef: z.string().min(1).describe("brand.md messaging framework ref"),
-        weight: z.number().positive(),
+        /**
+         * Share of the rotation. Zero is meaningful and allowed: the archetype
+         * exists for authoring but never enters the rotation.
+         *
+         * `promotion` is the case that needed it. A discount is a decision
+         * someone makes about a specific moment — a holiday, an overstock — not
+         * a slot the planner should fill because it came round again. Without a
+         * zero, the only ways to express that were to omit the archetype (and
+         * lose the guardrails and messagingRef that tell an agent HOW to write
+         * an offer) or to give it weight 1 (and have the planner schedule sales
+         * on its own).
+         *
+         * Safe by construction in rotateArchetypes: it picks largest-deficit
+         * first, and a zero-weight archetype's deficit starts at 0 while every
+         * positive weight's starts above it — so it can never win a slot.
+         */
+        weight: z.number().min(0),
       }),
     )
     .min(1),
@@ -196,6 +221,9 @@ export function parseStrategy(raw: string): EmailStrategy {
     sendTime: fm.sendTime,
     body: body.trim(),
   };
+  // Carry the flag through. The schema validated it and then dropped it, so
+  // setting showPrices:false parsed cleanly and changed nothing at all.
+  if (fm.showPrices !== undefined) strategy.showPrices = fm.showPrices;
   if (fm.seasonalArcs) strategy.seasonalArcs = fm.seasonalArcs;
   if (fm.guardrails) strategy.guardrails = fm.guardrails;
   return strategy;
@@ -203,6 +231,7 @@ export function parseStrategy(raw: string): EmailStrategy {
 
 export function serializeStrategy(strategy: EmailStrategy): string {
   const fm: Record<string, unknown> = {
+    ...(strategy.showPrices !== undefined ? { showPrices: strategy.showPrices } : {}),
     audiences: strategy.audiences,
     archetypes: strategy.archetypes,
     campaignsPerMonth: strategy.campaignsPerMonth,
@@ -354,13 +383,34 @@ const campaignFrontMatterSchema = z.object({
   id: z.string().regex(ID_RE),
   archetype: z.string().min(1),
   audience: z.object({
-    included: z.array(audienceRefSchema).min(1),
+    // Not `.min(1)`. A proposed campaign legitimately has no audience yet, and
+    // requiring one HERE — at parse, on the read path — made an artifact with
+    // an empty audience impossible to open, so the upsert that would have
+    // filled it in could not read the file it was about to repair. An
+    // in-progress campaign became permanently unrepairable by the tool whose
+    // job is to progress it.
+    //
+    // The constraint belongs at the gate, not the door: email_campaign_upsert
+    // reports a missing audience in `missing`, and the create_campaign_draft
+    // Action refuses to stage without one. Nothing can send to nobody; a draft
+    // is merely allowed to be unfinished.
+    included: z.array(audienceRefSchema),
     excluded: z.array(audienceRefSchema).optional(),
   }),
   subjectCandidates: z.array(z.string()),
+  headlineOptions: z
+    .array(z.object({
+      id: z.string().min(1),
+      headline: z.string().min(1),
+      subheadline: z.string().min(1),
+      why: z.string().optional(),
+    }))
+    .optional(),
+  selectedHeadlineId: z.string().optional(),
   subject: z.string().optional(),
   previewText: z.string().optional(),
   copyFormulaRef: z.string().optional(),
+  discountCode: z.string().optional(),
   skeletonRef: z.string().min(1),
   sections: z.array(sectionSchema),
   scheduledAt: z.string().datetime({ offset: true }).optional(),
@@ -394,6 +444,8 @@ export function parseCampaign(raw: string): EmailCampaign {
     archetype: fm.archetype,
     audience: fm.audience,
     subjectCandidates: fm.subjectCandidates,
+    ...(fm.headlineOptions ? { headlineOptions: fm.headlineOptions } : {}),
+    ...(fm.selectedHeadlineId ? { selectedHeadlineId: fm.selectedHeadlineId } : {}),
     skeletonRef: fm.skeletonRef,
     sections: fm.sections as CampaignSection[],
     utm: fm.utm,
@@ -404,6 +456,7 @@ export function parseCampaign(raw: string): EmailCampaign {
   if (fm.subject !== undefined) campaign.subject = fm.subject;
   if (fm.previewText !== undefined) campaign.previewText = fm.previewText;
   if (fm.copyFormulaRef !== undefined) campaign.copyFormulaRef = fm.copyFormulaRef;
+  if (fm.discountCode !== undefined) campaign.discountCode = fm.discountCode;
   if (fm.scheduledAt !== undefined) campaign.scheduledAt = fm.scheduledAt;
   if (fm.klaviyo !== undefined) campaign.klaviyo = fm.klaviyo;
   return campaign;
@@ -415,10 +468,13 @@ export function serializeCampaign(campaign: EmailCampaign): string {
     archetype: campaign.archetype,
     audience: campaign.audience,
     subjectCandidates: campaign.subjectCandidates,
+    ...(campaign.headlineOptions?.length ? { headlineOptions: campaign.headlineOptions } : {}),
+    ...(campaign.selectedHeadlineId ? { selectedHeadlineId: campaign.selectedHeadlineId } : {}),
   };
   if (campaign.subject !== undefined) fm.subject = campaign.subject;
   if (campaign.previewText !== undefined) fm.previewText = campaign.previewText;
   if (campaign.copyFormulaRef !== undefined) fm.copyFormulaRef = campaign.copyFormulaRef;
+  if (campaign.discountCode !== undefined) fm.discountCode = campaign.discountCode;
   fm.skeletonRef = campaign.skeletonRef;
   fm.sections = campaign.sections;
   if (campaign.scheduledAt !== undefined) fm.scheduledAt = campaign.scheduledAt;

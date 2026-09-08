@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { PageHeader, Chip, EmptyState } from "@/components/primitives";
 import { listCampaigns, type EmailCampaignRow } from "@/lib/email/console-data";
+import { emailSheetLink } from "@/lib/email/review-links";
+import { getTenant } from "@/lib/tenant-context";
+import { CopyLink } from "@/components/copy-link";
 
 /**
  * Email — the campaign library (WS4-R3, list side). Month-grouped rows from
@@ -51,6 +54,7 @@ export default async function EmailPage() {
     byMonth.set(c.calendarMonth, list);
   }
   const months = [...byMonth.keys()].sort().reverse();
+  const { shop } = getTenant();
 
   return (
     <div className="px-8 py-10">
@@ -97,6 +101,28 @@ export default async function EmailPage() {
                   >
                     On the calendar
                   </Link>
+                  <a
+                    href={emailSheetLink(shop, month).url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="arrow-link text-[13px]"
+                  >
+                    Open the review sheet
+                  </a>
+                </div>
+                {/* The whole month, shareable.
+                    A review link already existed per campaign, on that
+                    campaign's own page — the right shape for one email and the
+                    wrong one for circulating seven, which meant opening seven
+                    pages and copying seven URLs. The sheet is a single link
+                    listing every campaign in the month with its own review
+                    link. Same signed-token posture as the rest: no console
+                    account needed, and it expires. */}
+                <div className="mb-3">
+                  <CopyLink
+                    url={emailSheetLink(shop, month).url}
+                    label={`Share ${monthLabel(month)} for review`}
+                  />
                 </div>
                 <ul className="divide-y divide-hairline border border-hairline bg-raised">
                   {byMonth.get(month)!.map((c) => (

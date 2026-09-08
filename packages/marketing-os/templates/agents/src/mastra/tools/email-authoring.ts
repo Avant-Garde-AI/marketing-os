@@ -32,16 +32,39 @@ import { emailRepo } from "../../../lib/email/repo";
 import { syncCampaignIndex } from "../../../lib/email/index-sync";
 import { isEphemeralUrl, persistAsset } from "../../../lib/store-repo/assets";
 import { emailAssetLink } from "../../../lib/email/review-links";
-import { resolveAudienceRefs } from "../../../lib/email/audience";
-import { loadWallSets, rankWallSets, toWallSetBlock } from "../../../lib/email/wall-sets";
+import { resolveAudienceRefs, reconcileWithStrategy } from "../../../lib/email/audience";
+import { loadWallSets, rankWallSets, toWallSetBlock, priceWallSet } from "../../../lib/email/wall-sets";
 import { readArtistProfile, toArtistCardBlock } from "../../../lib/email/artist-profile";
+import { readPrices, handleFromHref, isPlaceholderPrice } from "../../../lib/email/product-prices";
+import { emailBlockSchema } from "../../../lib/email-assembly/types";
+import { betterFrame, isWhiteLeaningMockup } from "../../../lib/email/leaning-mockups";
 import { getTenant } from "../../../lib/tenant-context";
 import { campaignPath, parseCampaign, serializeCampaign, parseStrategy, strategyPathFor, resolveEmailRoot } from "../../../lib/email/artifacts";
-import type { EmailCampaign } from "../../../lib/email/types";
+import type { EmailCampaign, StrategyAudience, CampaignAudienceRef } from "../../../lib/email/types";
 
+/**
+ * An audience, named the way the planner names one.
+ *
+ * `email_plan_propose` assigns each slot a roster KEY out of strategy.md
+ * ("full-reach"), never a Klaviyo ref — the rotation and the cadence caps are
+ * keyed. So a campaign written from a plan arrives holding a key, and the
+ * six-character Klaviyo id is the one thing the agent cannot know. Requiring
+ * the id here forced it to either invent one or, once inventing was refused,
+ * leave the audience off entirely. Both happened, in that order.
+ *
+ * So `key` alone is enough: the roster is the authority and supplies the type
+ * and id. `type`+`id` still work for an audience outside the roster, resolved
+ * against Klaviyo as before.
+ *
+ * Kept a plain object rather than a `.refine`d one: a refinement turns this
+ * into a ZodEffects, and what reaches Gemini is a function declaration, not
+ * Zod. The "key, or type and id" rule is enforced in execute() where it can
+ * also name the roster.
+ */
 const audienceRefSchema = z.object({
-  type: z.enum(["list", "segment"]),
-  id: z.string().min(1),
+  key: z.string().optional().describe('Roster key from strategy.md, e.g. "full-reach". Preferred — the store resolves it to the real Klaviyo list or segment.'),
+  type: z.enum(["list", "segment"]).optional(),
+  id: z.string().optional().describe("Klaviyo list/segment id. Only for an audience outside the roster — never guess one; call klaviyo_audiences_read."),
   label: z.string().optional(),
 });
 
@@ -78,12 +101,23 @@ export const emailCampaignUpsert = createTool({
     archetype: z.string().optional().describe("Required when creating: editorial, artist-drop, set-feature, room-recommendation, new-arrivals, seasonal…"),
     subject: z.string().optional(),
     subjectCandidates: z.array(z.string()).optional(),
+    headlineOptions: z
+      .array(z.object({
+        id: z.string().min(1).describe('Short stable slug, e.g. "occasion-led".'),
+        headline: z.string().min(1).describe("Becomes the subject line."),
+        subheadline: z.string().min(1).describe("Becomes the preview text."),
+        why: z.string().optional().describe("One sentence on the angle this takes, so a reviewer can tell the three apart."),
+      }))
+      .optional()
+      .describe("Three headline/subheadline pairs to choose from. ALWAYS supply three when writing or revising a campaign: the pair is the whole of what an inbox shows, and one unreviewed phrasing should not become the campaign's voice by default. Set `subject`/`previewText` to your recommended option as well, and selectedHeadlineId to its id."),
+    selectedHeadlineId: z.string().optional().describe("Which of headlineOptions is live. Keep it consistent with subject/previewText."),
     previewText: z.string().optional(),
-    audienceIncluded: z.array(audienceRefSchema).optional().describe("Lists/segments to send to (see klaviyo_audiences_read)."),
+    audienceIncluded: z.array(audienceRefSchema).optional().describe('Who receives it. Prefer the roster key email_plan_propose assigned to the slot — [{"key": "full-reach"}]. The store resolves it to the real Klaviyo list or segment; you do not need the id, and must not guess one.'),
     audienceExcluded: z.array(audienceRefSchema).optional(),
     sections: z.array(sectionSchema).optional().describe("The email body, in order. Replaces the existing sections wholesale when supplied."),
     skeletonRef: z.string().optional(),
     copyFormulaRef: z.string().optional().describe("The brand.md copy formula this instantiates."),
+    discountCode: z.string().optional().describe('The discount code this campaign promises, e.g. "LABORDAY15". Declare it here whenever the copy names one — the approval gate verifies it exists in Shopify and refuses a campaign that promises a code the store cannot honour.'),
     body: z.string().optional().describe("Markdown rationale — why this campaign, why these pieces. Kept with the artifact."),
     scheduledAt: z.string().optional().describe("Intended send time (ISO). Recording it here does NOT schedule anything."),
   }),
@@ -92,12 +126,15 @@ export const emailCampaignUpsert = createTool({
     archetype?: string;
     subject?: string;
     subjectCandidates?: string[];
+    headlineOptions?: Array<{ id: string; headline: string; subheadline: string; why?: string }>;
+    selectedHeadlineId?: string;
     previewText?: string;
-    audienceIncluded?: Array<{ type: "list" | "segment"; id: string; label?: string }>;
-    audienceExcluded?: Array<{ type: "list" | "segment"; id: string; label?: string }>;
+    audienceIncluded?: Array<{ key?: string; type?: "list" | "segment"; id?: string; label?: string }>;
+    audienceExcluded?: Array<{ key?: string; type?: "list" | "segment"; id?: string; label?: string }>;
     sections?: unknown[];
     skeletonRef?: string;
     copyFormulaRef?: string;
+    discountCode?: string;
     body?: string;
     scheduledAt?: string;
   }) => {
@@ -132,14 +169,71 @@ export const emailCampaignUpsert = createTool({
     if (input.archetype !== undefined) next.archetype = input.archetype;
     if (input.subject !== undefined) next.subject = input.subject;
     if (input.subjectCandidates !== undefined) next.subjectCandidates = input.subjectCandidates;
+    if (input.headlineOptions !== undefined) next.headlineOptions = input.headlineOptions;
+    if (input.selectedHeadlineId !== undefined) next.selectedHeadlineId = input.selectedHeadlineId;
+    // Keep the pair and the selection from drifting. If a selection names an
+    // option, that option IS the subject and preview text — otherwise the
+    // review room shows one thing selected and the email sends another.
+    if (next.selectedHeadlineId) {
+      const chosen = (next.headlineOptions ?? []).find((o) => o.id === next.selectedHeadlineId);
+      if (chosen) {
+        next.subject = chosen.headline;
+        next.previewText = chosen.subheadline;
+      }
+    }
     if (input.previewText !== undefined) next.previewText = input.previewText;
     if (input.skeletonRef !== undefined) next.skeletonRef = input.skeletonRef;
     if (input.copyFormulaRef !== undefined) next.copyFormulaRef = input.copyFormulaRef;
+    if (input.discountCode !== undefined) next.discountCode = input.discountCode.trim().toUpperCase();
     if (input.body !== undefined) next.body = input.body;
     if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
-    if (input.audienceIncluded !== undefined) next.audience = { ...next.audience, included: input.audienceIncluded };
-    if (input.audienceExcluded !== undefined) next.audience = { ...next.audience, excluded: input.audienceExcluded };
-    if (input.sections !== undefined) next.sections = input.sections as EmailCampaign["sections"];
+    // Held loosely here: a key-only ref has no id yet, and the roster supplies
+    // one below. Narrowed back to CampaignAudienceRef once reconciled — nothing
+    // between here and there reads id.
+    if (input.audienceIncluded !== undefined) {
+      next.audience = { ...next.audience, included: input.audienceIncluded as CampaignAudienceRef[] };
+    }
+    if (input.audienceExcluded !== undefined) {
+      next.audience = { ...next.audience, excluded: input.audienceExcluded as CampaignAudienceRef[] };
+    }
+    if (input.sections !== undefined) {
+      // Check every block against the renderer's own schema, HERE, before
+      // anything is written.
+      //
+      // The upsert schema listed the block kinds by name and nothing else, so
+      // every field was a guess. The agent guessed `items` for a productRow's
+      // products — twice, in two separate campaigns — and nothing objected:
+      // the artifact was written, committed to git, indexed, and shown in the
+      // console with a subject, a send date and an audience. The only symptom
+      // was an empty preview frame, several minutes and one page load later,
+      // reported as a 404. A validation failure had to travel through git and
+      // a render route to become visible.
+      //
+      // Reporting the Zod path back to the caller is also how the agent learns
+      // the shape it could not have known — cheaper and more current than
+      // enumerating every block's fields in a tool description.
+      const problems: string[] = [];
+      (input.sections as Array<Record<string, unknown>>).forEach((section, si) => {
+        const blocks = section?.blocks;
+        if (!Array.isArray(blocks)) return; // surface sections carry no blocks
+        blocks.forEach((block, bi) => {
+          const check = emailBlockSchema.safeParse(block);
+          if (check.success) return;
+          const where = `sections[${si}] (slot "${section.slot ?? "?"}") block[${bi}] kind "${(block as { kind?: string })?.kind ?? "missing"}"`;
+          problems.push(
+            `${where}: ${check.error.issues.map((i) => `${i.path.join(".") || "(root)"} — ${i.message}`).join("; ")}`,
+          );
+        });
+      });
+      if (problems.length > 0) {
+        throw new Error(
+          `${problems.length} block(s) will not render, so nothing was written:\n` +
+            problems.map((p) => `  - ${p}`).join("\n") +
+            `\nFix the blocks and call again. A productRow takes "products", not "items".`,
+        );
+      }
+      next.sections = input.sections as EmailCampaign["sections"];
+    }
 
     // Status is LIFECYCLE, never content-derived: a campaign becomes `approved`
     // via the email.approve_plan Action and `drafted` via create_campaign_draft.
@@ -167,6 +261,41 @@ export const emailCampaignUpsert = createTool({
       return url;
     };
 
+    /**
+     * The WHITE leaning mockup renders its frame invisible against the wall, so
+     * the artwork reads as floating in a blank panel — a printing fault, not a
+     * product. One shipped in the Labor Day callout beside a walnut and a black
+     * frame and was the only thing anyone noticed about the email.
+     *
+     * CORRECTED rather than merely flagged. The same artwork usually exists in
+     * black, oak or walnut, and a warning that requires someone to go find the
+     * alternative is a warning most people will skip — this campaign set had six
+     * white mockups across three campaigns, and every one of them had been
+     * reviewed by a human already. Swapping is safe because it changes the frame
+     * around the work, never the work.
+     *
+     * When the library genuinely has no other colourway (about a quarter of
+     * artworks), it warns instead and names the piece, because the only fix left
+     * is an editorial one: choose a different work.
+     */
+    const fixWhiteFrame = async (url: string, label: string): Promise<string> => {
+      if (!isWhiteLeaningMockup(url)) return url;
+      const swap = await betterFrame(url);
+      if (swap?.to) {
+        imageryWarnings.push(
+          `${label}: swapped the white leaning mockup for the ${swap.toFrame} one ` +
+            `(the white colourway renders the frame invisible).`,
+        );
+        return swap.to;
+      }
+      imageryWarnings.push(
+        `${label}: this is the WHITE leaning mockup and "${swap?.handle ?? "this artwork"}" has no ` +
+          `black, oak or walnut render in the library. It will look like the piece is floating in a ` +
+          `blank panel. Choose a different artwork for this slot.`,
+      );
+      return url;
+    };
+
     // Walk EVERY image, not just the section-level hero. Blocks carry images
     // too — a productRow's leaning shots, a graphCallout's pieces — and an
     // expiring url is just as broken there. The first version of this only
@@ -174,11 +303,16 @@ export const emailCampaignUpsert = createTool({
     // being flat catalogue scans.
     for (const section of next.sections) {
       const sec = section as { slot: string; imageUrl?: string; blocks?: Array<Record<string, unknown>> };
-      if (sec.imageUrl) sec.imageUrl = await durable(sec.imageUrl, sec.slot);
+      if (sec.imageUrl) {
+        sec.imageUrl = await durable(await fixWhiteFrame(sec.imageUrl, sec.slot), sec.slot);
+      }
       for (const block of sec.blocks ?? []) {
         for (const key of ["imageUrl", "src", "url"]) {
           const v = block[key];
-          if (typeof v === "string") block[key] = await durable(v, `${sec.slot}-${block.kind ?? "block"}`);
+          if (typeof v === "string") {
+            const fixed = await fixWhiteFrame(v, `${sec.slot}/${block.kind ?? "block"}`);
+            block[key] = await durable(fixed, `${sec.slot}-${block.kind ?? "block"}`);
+          }
         }
         // Composite blocks nest their images one level down.
         const items = (block.products ?? block.pieces ?? block.items) as
@@ -187,9 +321,111 @@ export const emailCampaignUpsert = createTool({
         for (const item of items ?? []) {
           for (const key of ["imageUrl", "src", "url"]) {
             const v = item[key];
-            if (typeof v === "string") item[key] = await durable(v, `${sec.slot}-item`);
+            if (typeof v === "string") {
+              const fixed = await fixWhiteFrame(v, `${sec.slot}/${String(item.name ?? item.title ?? "piece")}`);
+              item[key] = await durable(fixed, `${sec.slot}-item`);
+            }
           }
         }
+      }
+    }
+
+    // Real prices. Cards shipped with the literal string "View piece" where
+    // money belongs, which no reviewer can judge. Resolved on write so the
+    // campaign is REVIEWABLE; the draft Action must re-resolve before staging,
+    // because a price is a fact about a moment and an artifact written today
+    // may send in three weeks.
+    // A store may decline prices outright — see EmailStrategy.showPrices. For a
+    // multi-currency catalogue one figure is right for some readers and wrong
+    // for the rest, and a wrong price is a promise the store never made. Such a
+    // store shows the work and lets the storefront quote in the reader's own
+    // currency.
+    // Try BOTH roots. resolveEmailRoot probes `emails/partials/`, and in mirror
+    // mode list() unions git with the DB — so a store whose partials are still
+    // DB-only can answer "emails" while its strategy sits at `email/strategy.md`.
+    // That mismatch made this read return null and the policy silently not
+    // apply, which is the failure shape this codebase keeps producing: a
+    // decision that quietly does nothing.
+    let showPrices = true;
+    // Kept beyond the price policy: the same document carries the audience
+    // roster, and the audience the agent hands in has to be checked against it.
+    let roster: StrategyAudience[] = [];
+    let policyFrom = "default (no strategy found at either root)";
+    for (const path of ["email/strategy.md", "emails/strategy.md"]) {
+      try {
+        const raw = await emailRepo.readFile(path);
+        if (raw === null) continue;
+        const parsed = parseStrategy(raw);
+        showPrices = parsed.showPrices !== false;
+        roster = parsed.audiences ?? [];
+        policyFrom = `${path} (showPrices=${parsed.showPrices ?? "unset"})`;
+        break;
+      } catch (e) {
+        // A strategy that exists but will not parse must not read as "no
+        // policy" — say so rather than falling through to the default.
+        policyFrom = `${path} UNPARSEABLE: ${e instanceof Error ? e.message : e}`;
+      }
+    }
+    console.info(`[email] price policy ← ${policyFrom}`);
+    if (!showPrices) {
+      for (const section of next.sections) {
+        for (const block of (section as { blocks?: Array<Record<string, unknown>> }).blocks ?? []) {
+          if (block.kind === "productRow") {
+            for (const p of (block.products as Array<Record<string, unknown>>) ?? []) delete p.price;
+          }
+          if (block.kind === "wallSet") delete block.price;
+        }
+      }
+      imageryWarnings.push(`prices hidden by store policy (${policyFrom})`);
+    }
+
+    // Every product card the store may know something about. Prices and images
+    // come off the SAME batched productByHandle node, so they are collected
+    // together — but they are wanted under different conditions, which is why
+    // this is one walk and two counters rather than two walks.
+    const cards: Array<{ href: string; p: Record<string, unknown> }> = [];
+    for (const section of next.sections) {
+      for (const block of (section as { blocks?: Array<Record<string, unknown>> }).blocks ?? []) {
+        if (block.kind !== "productRow") continue;
+        for (const p of (block.products as Array<Record<string, unknown>>) ?? []) {
+          if (typeof p.href === "string") cards.push({ href: p.href, p });
+        }
+      }
+    }
+    const wantsPrice = (p: Record<string, unknown>) => isPlaceholderPrice(p.price as string | undefined);
+    const wantsImage = (p: Record<string, unknown>) => typeof p.imageUrl !== "string" || !p.imageUrl;
+    const toResolve = cards.filter(({ p }) => (showPrices && wantsPrice(p)) || wantsImage(p));
+
+    if (toResolve.length > 0) {
+      const facts = await readPrices(toResolve.map((x) => handleFromHref(x.href)));
+      let priced = 0;
+      let pictured = 0;
+      const needPrice = showPrices ? toResolve.filter(({ p }) => wantsPrice(p)).length : 0;
+      const needImage = toResolve.filter(({ p }) => wantsImage(p)).length;
+
+      for (const { href, p } of toResolve) {
+        const hit = facts.get(handleFromHref(href));
+        if (!hit) continue;
+        if (showPrices && wantsPrice(p) && hit.display) { p.price = hit.display; priced++; }
+        // The agent supplies handle, name, href and blurb — everything it can
+        // know about a piece. The picture is the one thing it cannot, and the
+        // card renders without it rather than failing, so an image-less product
+        // row shipped looking finished. The store answers this, from the handle.
+        if (wantsImage(p) && hit.imageUrl) {
+          p.imageUrl = hit.imageUrl;
+          if (!p.alt && hit.imageAlt) p.alt = hit.imageAlt;
+          pictured++;
+        }
+      }
+      if (needPrice > priced) {
+        imageryWarnings.push(
+          `${needPrice - priced} of ${needPrice} products could not be priced from Shopify; those cards keep their placeholder. Prices are never invented.`,
+        );
+      }
+      if (needImage > pictured) {
+        imageryWarnings.push(
+          `${needImage - pictured} of ${needImage} product cards have no image — Shopify returned none for those handles. Check the handles are right; a card with no picture reads as broken.`,
+        );
       }
     }
 
@@ -198,7 +434,49 @@ export const emailCampaignUpsert = createTool({
     // should be legible in a diff without Klaviyo access — and because a size is
     // a fact about a moment, so it travels with the date it was true.
     if (next.audience.included.length > 0 || (next.audience.excluded?.length ?? 0) > 0) {
-      next.audience = await resolveAudienceRefs(next.audience);
+      // Correct against the store's roster BEFORE resolving. A model knows the
+      // audience it wants by name and cannot know the Klaviyo id, so it fills
+      // that field with something plausible; the strategy is the authority on
+      // what the id actually is.
+      const fixed = reconcileWithStrategy(next.audience, roster);
+      for (const c of fixed.corrections) {
+        console.info(`[email/audience] ${c}`);
+        imageryWarnings.push(c);
+      }
+
+      // A ref the roster could not complete has nothing to send to. This is the
+      // schema's "key, or type and id" rule, enforced here because here it can
+      // name the roster instead of restating the rule.
+      const rosterNames = roster.map((a) => `${a.key} (${a.klaviyoRef.type} ${a.klaviyoRef.id})`);
+      const incomplete = [...fixed.audience.included, ...(fixed.audience.excluded ?? [])].filter(
+        (r) => !r.id || !r.type,
+      );
+      if (incomplete.length > 0) {
+        throw new Error(
+          `${incomplete.length} audience reference(s) name neither a roster key the store knows nor a Klaviyo type and id: ` +
+            incomplete.map((r) => JSON.stringify(r)).join(", ") +
+            `. Nothing was written. The store's roster is — ${rosterNames.join("; ") || "empty"} — ` +
+            `and email_plan_propose assigns one of those keys per slot; pass it as {"key": "..."}.`,
+        );
+      }
+
+      const resolved = await resolveAudienceRefs(fixed.audience);
+      next.audience = resolved.audience;
+
+      // An id that survived the roster AND is unknown to a Klaviyo we actually
+      // reached is a fiction, and this artifact is about to be committed and
+      // handed to a reviewer who cannot check it. Refuse. Only when Klaviyo was
+      // reachable — an unreachable Klaviyo makes every id unverifiable, which
+      // is not evidence that any of them is wrong.
+      if (resolved.reachedKlaviyo && resolved.unknown.length > 0) {
+        const known = roster.map((a) => `${a.key} (${a.klaviyoRef.type} ${a.klaviyoRef.id})`);
+        throw new Error(
+          `Klaviyo does not know ${resolved.unknown.length === 1 ? "audience" : "audiences"} ${resolved.unknown.join(", ")}, ` +
+            `and the store's strategy roster does not name ${resolved.unknown.length === 1 ? "it" : "them"} either. ` +
+            `Nothing was written. Use one of the roster audiences by key — ${known.join("; ") || "the roster is empty"} — ` +
+            `or call klaviyo_audiences_read for the real ids. Never invent an audience id.`,
+        );
+      }
     }
 
     await emailRepo.writeFile(path, serializeCampaign(next));
@@ -396,16 +674,17 @@ const wallSetsRead = createTool({
   execute: async (input: { concept?: string; artist?: string; limit?: number }) => {
     const all = await loadWallSets(getTenant().githubRepo);
     const ranked = rankWallSets(all, input);
+    const priced = await Promise.all(ranked.map((s) => priceWallSet(s)));
     return {
-      sets: ranked.map((s) => ({
+      sets: ranked.map((s, i) => ({
         id: s.id,
         name: s.name,
         room: s.room_name ?? null,
         pieceCount: s.piece_count ?? null,
-        price: s.price ?? null,
+        price: priced[i] ?? null,
         artists: [...new Set((s.artists ?? []).map((a) => a.name).filter(Boolean))],
         why: s.why,
-        block: toWallSetBlock(s),
+        block: toWallSetBlock(s, priced[i]),
       })),
       note:
         all.length === 0

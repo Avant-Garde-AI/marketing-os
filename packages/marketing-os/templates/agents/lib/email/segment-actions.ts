@@ -116,7 +116,7 @@ export function createSegmentAction(): RuntimeAction<Params> {
     // Medium, not high: it sends nothing and is deletable. What makes it worth
     // an approval at all is that it decides who a later send reaches.
     risk: "medium",
-    scopes: ["klaviyo:write"],
+    scopes: ["klaviyo:write_segments"],
     paramsSchema: params,
 
     async preview(p) {

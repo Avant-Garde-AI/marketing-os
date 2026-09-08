@@ -11,7 +11,7 @@ import { ChatPanel } from "@/components/chat/chat-panel";
  * satisfies Penpot's cookie + frame-ancestors constraints (spec 23 §1/§3).
  * ?team-id/&file-id/&page-id query params deep-link a specific draft's
  * workspace (the studioPath the design-surface tools mint); without them the
- * canvas opens on the Penpot dashboard root.
+ * canvas opens on the store's own team dashboard.
  *
  * Degradation: no embed alias configured → an editorial explainer with an
  * external link to the raw Design Studio when PENPOT_URL is known (this is a
@@ -22,6 +22,8 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { getTenant } from "@/lib/tenant-context";
+import { getTenantTeam } from "@/lib/design-surfaces/tenancy";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +38,19 @@ function embedBase(): string {
   return (process.env.NEXT_PUBLIC_PENPOT_EMBED_URL ?? "").replace(/\/$/, "");
 }
 
-/** The Penpot workspace hash for a draft, or "" for the dashboard root. */
-function workspaceHash(teamId?: string, fileId?: string, pageId?: string): string {
-  if (!teamId || !fileId) return "";
+/**
+ * Where the canvas opens: a specific draft's workspace when one is deep-linked,
+ * otherwise the store's own team dashboard.
+ *
+ * The team matters. The service account owns every tenant team AND has a
+ * personal one, and the bare dashboard root lands on the personal team — which
+ * is empty and always will be, because nothing composes into it. The store's
+ * drafts were never missing, they were one team switcher away, which looks
+ * exactly like missing.
+ */
+function canvasHash(teamId?: string, fileId?: string, pageId?: string): string {
+  if (!teamId) return "";
+  if (!fileId) return `#/dashboard/recent?team-id=${encodeURIComponent(teamId)}`;
   let hash = `#/workspace?team-id=${encodeURIComponent(teamId)}&file-id=${encodeURIComponent(fileId)}`;
   if (pageId) hash += `&page-id=${encodeURIComponent(pageId)}`;
   return hash;
@@ -73,7 +85,7 @@ export default async function StudioPage({
     back.set("handoff", "1");
     redirect(`/api/design-surfaces/studio-session?next=${encodeURIComponent(`/studio?${back}`)}`);
   }
-  const teamId = firstParam(params["team-id"]);
+  const paramTeamId = firstParam(params["team-id"]);
   const fileId = firstParam(params["file-id"]);
   const pageId = firstParam(params["page-id"]);
 
@@ -120,7 +132,21 @@ export default async function StudioPage({
   }
 
   // ── The workspace: chat beside canvas ────────────────────────────────────
-  const src = `${base}/${workspaceHash(teamId, fileId, pageId)}`;
+  // A deep link already names its team. Otherwise resolve the store's own —
+  // the same call the compose tools make, so it lands on the team the drafts
+  // are actually in. It provisions on first use and is cached per shop, so the
+  // cost here is a cache read. If Penpot is unreachable, fall through to the
+  // dashboard root rather than failing the page: the wrong team still shows a
+  // working canvas, and the "Open in new tab" escape hatch still applies.
+  let teamId = paramTeamId;
+  if (!teamId) {
+    try {
+      teamId = (await getTenantTeam(getTenant().shop)).teamId;
+    } catch {
+      teamId = undefined;
+    }
+  }
+  const src = `${base}/${canvasHash(teamId, fileId, pageId)}`;
   const onDraft = Boolean(teamId && fileId);
 
   return (

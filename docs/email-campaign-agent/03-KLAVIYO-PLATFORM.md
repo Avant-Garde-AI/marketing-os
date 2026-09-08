@@ -67,7 +67,32 @@ Sources: [Images API overview](https://developers.klaviyo.com/en/reference/image
 
 - **Lists:** full CRUD + add/remove profiles (≤1,000/request) + Get Profiles; profile-count via `additional-fields` carries stricter rate limits. Scopes `lists:read`/`lists:write`.
 - **Segments:** read + **Create/Update/Delete** via `definition` of `condition_groups` (AND between groups, OR within; condition types include profile-attribute, profile-metric, profile-marketing-consent, profile-predictive-analytics). Hard limits: **max 5 segments processing at a time, max 100 created/day.**
-- MVP uses read-only (audience selection); segment *creation* is a natural later Action (`klaviyo.create_segment`) — the API supports it.
+- MVP used read-only (audience selection). **`klaviyo.create_segment` is now BUILT** (`lib/email/segment-actions.ts`), writing definitions only through the `lib/email/segments.ts` compiler.
+
+**Condition shapes, probed live 2026-09-08** (recall was wrong three times in five, so these are measured, not remembered):
+
+| intent | shape |
+|---|---|
+| list membership | `profile-group-membership`, one `group_ids` entry per condition; **lists only**, segment ids do not work |
+| country | `properties['$country']` on write; Klaviyo stores it back as `location['country']` |
+| ever did X | `timeframe_filter: {type:"date", operator:"alltime"}` — `null` is **rejected** |
+| did X in a window | `{type:"date", operator:"in-the-last", quantity, unit}` — `type:"relative"` is **rejected** |
+| did X on one campaign | `metric_filters: [{property:"$message", filter:{type:"string",operator:"equals",value:<26-char campaign ID>}}]` — no `type` key on the filter entry |
+
+The campaign-scoped row is the one to be careful with: `property: "Campaign Name"`
+against the human title is **accepted and matches nobody** (0 profiles, where
+`$message` with the ID matched 46 on the same data). It is a silent wrong
+answer, not an error, so the compiler refuses anything that is not a ULID there.
+
+Two operational consequences of the API's own limits (max 5 segments processing
+at once, max 100 created/day):
+
+- **Size cannot be previewed.** Klaviyo evaluates a segment only after it
+  exists, so the approval card shows the *rule* in plain English and explicitly
+  says the size is unknown; the execute polls afterwards and reports the real
+  count. A card that guessed a number would be inventing one.
+- **`additional-fields` is refused on collection endpoints** — counts and
+  definitions are one request per segment.
 
 Sources: [Lists API overview](https://developers.klaviyo.com/en/reference/lists_api_overview) · [Segments API overview](https://developers.klaviyo.com/en/reference/segments_api_overview)
 

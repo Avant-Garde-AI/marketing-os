@@ -21,6 +21,7 @@ import { campaignPath, parseCampaign } from "../../../lib/email/artifacts";
 import type { SkillToolDefinition } from "../../../lib/skill-kit";
 import { emailPreviewLink, emailReviewLink, emailSheetLink } from "../../../lib/email/review-links";
 import { listNotes, listOpenNotes, resolveNotes } from "../../../lib/email/review-notes";
+import { explainDefinition } from "../../../lib/email/segments";
 import { getTenant } from "../../../lib/tenant-context";
 import "../../../lib/email/register-actions";
 
@@ -138,6 +139,48 @@ const emailReviewNotesResolve = createTool({
   }),
 });
 
+/**
+ * What an audience code actually MEANS.
+ *
+ * `klaviyo_audiences_read` gives names and sizes, which is enough to pick one
+ * and not enough to check it. By the time an audience reaches a campaign it is
+ * a code — `Y7THBS` — and every downstream reader takes on faith that it holds
+ * who its name suggests. This is the tool that stops that being faith: it reads
+ * the rule back out of Klaviyo in the same plain English the approval card uses
+ * when one is created.
+ *
+ * Reach for it before reusing an audience somebody else made, and whenever a
+ * count looks surprising — a segment that matches nobody and a segment that
+ * matches the wrong people are both silent failures, and the rule is the only
+ * place either one is visible.
+ */
+const klaviyoAudienceExplain = createTool({
+  id: "klaviyo_audience_explain",
+  description:
+    "Explain what a Klaviyo SEGMENT actually selects: its rule in plain English plus its current profile count. Use before reusing a segment you did not create, before mailing one whose size looks surprising, and whenever a campaign names an audience you cannot vouch for — a name and a count cannot tell you a segment matches the wrong people, only the rule can. Segments only; a list has members rather than a rule. Read-only.",
+  inputSchema: z.object({
+    segmentId: z.string().min(1).describe("Klaviyo segment id, e.g. Y7THBS."),
+  }),
+  outputSchema: z.object({
+    id: z.string(),
+    name: z.string(),
+    profileCount: z.number().nullable(),
+    stillEvaluating: z.boolean(),
+    rule: z.array(z.string()),
+  }),
+  execute: async ({ segmentId }: { segmentId: string }) => {
+    const klaviyo = createKlaviyoClient();
+    const seg = await klaviyo.describeSegment(segmentId);
+    return {
+      id: seg.id,
+      name: seg.name,
+      profileCount: seg.count,
+      stillEvaluating: seg.processing,
+      rule: await explainDefinition(seg.definition),
+    };
+  },
+});
+
 export const emailTools = {
   email_plan_propose: toMastraTool(defs.email_plan_propose),
   email_calendar_read: toMastraTool(defs.email_calendar_read),
@@ -145,6 +188,7 @@ export const emailTools = {
   klaviyo_audiences_read: toMastraTool(defs.klaviyo_audiences_read),
   klaviyo_templates_read: toMastraTool(defs.klaviyo_templates_read),
   klaviyo_performance_read: toMastraTool(defs.klaviyo_performance_read),
+  klaviyo_audience_explain: klaviyoAudienceExplain,
   email_render_preview: emailRenderPreview,
   email_review_sheet: emailReviewSheet,
   email_review_notes: emailReviewNotes,

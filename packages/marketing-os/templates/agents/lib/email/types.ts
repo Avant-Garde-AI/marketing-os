@@ -416,6 +416,27 @@ export interface KlaviyoClient {
   listTemplates(): Promise<KlaviyoTemplateSummary[]>;
   getTemplate(id: string): Promise<KlaviyoTemplate>;
   listUniversalContent(): Promise<KlaviyoUniversalContentBlock[]>;
+  /**
+   * Create a segment from a compiled definition.
+   *
+   * No size is returned and none can be known beforehand — Klaviyo evaluates a
+   * segment only once it exists. Callers wanting a count create, then poll
+   * `segmentCount`.
+   */
+  createSegment(input: {
+    name: string;
+    definition: Record<string, unknown>;
+  }): Promise<{ id: string; name: string }>;
+
+  /** A segment's count and its rule. `processing` while Klaviyo evaluates it. */
+  describeSegment(id: string): Promise<{
+    id: string;
+    name: string;
+    count: number | null;
+    processing: boolean;
+    definition: unknown;
+  }>;
+
   listMetrics(): Promise<KlaviyoMetric[]>;
   campaignValuesReport(query: CampaignValuesQuery): Promise<CampaignValuesRow[]>;
   estimateRecipients(campaignId: string): Promise<{ estimatedCount: number }>;

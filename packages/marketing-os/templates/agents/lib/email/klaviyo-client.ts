@@ -499,6 +499,59 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
       });
     },
 
+    /**
+     * Create a segment from a compiled definition.
+     *
+     * Counts are NOT returned here and cannot be previewed before creation:
+     * Klaviyo evaluates a segment only once it exists, and reports
+     * `is_processing` until it settles. Any caller that wants to show a size
+     * has to create first and poll — which is why the approval card for a
+     * segment describes its RULE rather than promising a number.
+     */
+    async createSegment(input: {
+      name: string;
+      definition: Record<string, unknown>;
+    }): Promise<{ id: string; name: string }> {
+      const doc = await request({
+        method: "POST",
+        path: EP.segments,
+        body: {
+          data: {
+            type: "segment",
+            attributes: { name: input.name, definition: input.definition },
+          },
+        },
+      });
+      const seg = asOne(doc, "created segment");
+      return { id: seg.id, name: String((seg.attributes as { name?: string })?.name ?? input.name) };
+    },
+
+    /**
+     * A segment's count and rule. Both come from the single-resource GET —
+     * `additional-fields` is rejected on the collection endpoint, so there is
+     * no way to read counts for many segments in one call.
+     */
+    async describeSegment(id: string) {
+      const doc = await request({
+        path: `${EP.segments}/${encodeURIComponent(id)}`,
+        query: { "additional-fields[segment]": "profile_count" },
+      });
+      const seg = asOne(doc, "segment");
+      const a = (seg.attributes ?? {}) as {
+        name?: string;
+        profile_count?: number;
+        is_processing?: boolean;
+        definition?: unknown;
+      };
+      return {
+        id: seg.id,
+        name: String(a.name ?? ""),
+        count: a.profile_count ?? null,
+        processing: Boolean(a.is_processing),
+        definition: a.definition ?? null,
+      };
+    },
+
     async listMetrics(): Promise<KlaviyoMetric[]> {
       const rows = await listAll(EP.metrics);
       return rows.map((r) => {

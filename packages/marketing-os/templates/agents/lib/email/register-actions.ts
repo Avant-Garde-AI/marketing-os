@@ -14,6 +14,7 @@ import { emailRepo } from "./repo";
 import { emailPreviewLink } from "./review-links";
 import { registerAction } from "../actions/registry";
 import { createDiscountCode } from "../shopify/discount-actions";
+import { createSegmentAction } from "./segment-actions";
 import { getTenant } from "../tenant-context";
 
 function deps(): EmailActionDeps {
@@ -52,6 +53,10 @@ export function registerEmailActions(): void {
   registerAction("klaviyo.create_campaign_draft", () => createEmailActions(deps()).createCampaignDraft);
   registerAction("klaviyo.schedule_campaign", () => createEmailActions(deps()).scheduleCampaign);
   registerAction("klaviyo.cancel_send", () => createEmailActions(deps()).cancelSend);
+    // Audiences. Gated for the same reason a campaign is: this is the last point
+    // at which WHO receives an email is legible to a human, and a wrong audience
+    // is invisible downstream — it is a code in an artifact by then.
+    registerAction("klaviyo.create_segment", () => createSegmentAction());
 
   // Not an email action, but it registers here for now because this is the only
   // place the runtime wires actions up. A discount is a commerce write with its

@@ -11,6 +11,7 @@ import type { CompiledModel, CompiledView, Provider } from "./types";
 import { ga4, GA4ReconnectRequiredError } from "../../../lib/ga4";
 import { getShopifyClient } from "../../../lib/shopify";
 import { getTenant } from "../../../lib/tenant-context";
+import { getEmailEnablement } from "../../../lib/email/enablement";
 
 export * from "./types";
 export { compileModel } from "./compile";
@@ -88,11 +89,22 @@ export async function getStoreModel(force = false): Promise<CompiledModel> {
     return cached.model;
   }
 
-  const [ga4Connected, store] = await Promise.all([detectGA4(), loadStoreSettings()]);
+  const [ga4Connected, store, email] = await Promise.all([
+    detectGA4(),
+    loadStoreSettings(),
+    // Same gate the email tools use, so "can I ask about email?" and "can I
+    // send email?" cannot disagree.
+    getEmailEnablement().catch(() => ({ enabled: false })),
+  ]);
 
   // Shopify is always connected (the agent runs against an installed store).
   const connectedProviders: Provider[] = ["shopify"];
   if (ga4Connected) connectedProviders.push("ga4");
+  // email_performance reads the stored readback rather than Klaviyo directly,
+  // but the honest availability question is still "is this store's email
+  // connected" — an enabled pack with no sends yet is an empty view, not a
+  // missing one.
+  if (email.enabled) connectedProviders.push("klaviyo");
 
   const discovered = ga4Connected ? await loadDiscovered() : { dimensions: [], metrics: [] };
 

@@ -34,8 +34,19 @@ import type { EmailCampaign } from "../../../../lib/email/types";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-/** Hours after send before readback (opens/clicks/revenue need to mature). */
-const MATURATION_HOURS = 72;
+/**
+ * Hours after send before the FIRST readback.
+ *
+ * This was 72, chosen when a read happened once and froze. Now that the sweep
+ * re-reads until the attribution window closes, an early number is corrected
+ * rather than kept, so the cost of reading sooner is gone and the benefit is
+ * real: nobody wants to wait three days to learn how a send did. Opens and
+ * clicks are largely settled inside a day; revenue keeps accruing, and the
+ * refresh below is what catches it.
+ */
+const MATURATION_HOURS = 24;
+/** Klaviyo's conversion window here is 14 days, so the numbers move until then. */
+const ATTRIBUTION_WINDOW_DAYS = 14;
 const SHOPS_PER_FIRING = 3;
 const CAMPAIGNS_PER_SHOP = 10;
 
@@ -110,10 +121,19 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
 
       // 3 — readback sweep
       let extras: { sentAt?: string; readback?: Record<string, unknown> } | undefined;
-      if (campaign.status === "sent" && campaign.klaviyo?.campaignId && campaign.scheduledAt) {
-        const matured =
-          Date.now() - Date.parse(campaign.scheduledAt) > MATURATION_HOURS * 60 * 60 * 1000;
-        if (matured) {
+      if (
+        (campaign.status === "sent" || campaign.status === "measured") &&
+        campaign.klaviyo?.campaignId &&
+        campaign.scheduledAt
+      ) {
+        const sinceSend = Date.now() - Date.parse(campaign.scheduledAt);
+        const matured = sinceSend > MATURATION_HOURS * 60 * 60 * 1000;
+        // A first read at 72h freezes a number that is still moving: the
+        // conversion window this very request asks for is 14 days wide, so
+        // attributed orders keep landing after a campaign is marked `measured`.
+        // Keep re-reading until that window closes, then stop.
+        const stillAccruing = sinceSend < ATTRIBUTION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+        if (matured && (campaign.status === "sent" || stillAccruing)) {
           try {
             const broker = await getBrokerToken("klaviyo", "email");
             const metricId = (broker.context as { conversion_metric_id?: string }).conversion_metric_id;
@@ -136,10 +156,16 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
                     attributionBasis: "klaviyo campaign-values-report, by send date",
                   },
                 };
-                const measured: EmailCampaign = { ...campaign, status: "measured" };
-                await emailRepo.writeFile(campaignPath(campaign.id), serializeCampaign(measured));
-                campaign = measured;
-                action = "measured";
+                if (campaign.status === "sent") {
+                  const measured: EmailCampaign = { ...campaign, status: "measured" };
+                  await emailRepo.writeFile(campaignPath(campaign.id), serializeCampaign(measured));
+                  campaign = measured;
+                  action = "measured";
+                } else {
+                  // Already measured — the artifact does not change, only the
+                  // numbers the index carries.
+                  action = "readback refreshed";
+                }
               }
             } else {
               action = "readback skipped: no conversion_metric_id on the connection";

@@ -59,6 +59,7 @@ function evaluateAvailability(
     gads: "Google Ads",
     meta: "Meta Ads",
     shopify: "Shopify",
+      klaviyo: "Klaviyo",
   };
   const how = view.partialOk
     ? `Connect at least one of: ${missing.map((p) => labels[p]).join(", ")}`

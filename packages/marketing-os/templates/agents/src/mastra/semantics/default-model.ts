@@ -523,8 +523,54 @@ const glossary: GlossaryEntry[] = [
   },
 ];
 
+/**
+ * Email send performance, from the readback the email cron stores after each
+ * send matures. Not a live Klaviyo call — see klaviyo-plan.ts for why, and for
+ * why every rate here is recomputed from summed counts rather than averaged.
+ */
+const emailPerformance: View = {
+  name: "email_performance",
+  title: "Email performance",
+  description:
+    "How sent email campaigns actually performed — delivery, opens, clicks, unsubscribes and attributed revenue, per campaign or rolled up over time. Answers: which subject lines earned opens, whether a campaign drove orders, how this month's sends compare with last. Covers SENT campaigns only, and only once their numbers have matured.",
+  requires: ["klaviyo"],
+  freshness: {
+    latencyNote:
+      "Numbers are read back roughly 72 hours after a send, so a campaign sent in the last few days may not appear yet. They are a snapshot taken at readback, not live counters.",
+  },
+  timeDimension: { name: "date", grains: ["day", "week", "month", "quarter", "year"] },
+  defaults: { timeRange: "last_90_days", order: [{ field: "date", dir: "asc" }] },
+  measures: [
+    { name: "campaigns", title: "Campaigns", description: "Number of sent campaigns.", agg: "count", format: "integer", provenance: [{ provider: "klaviyo", expr: "count(campaigns)" }] },
+    { name: "recipients", title: "Recipients", description: "People the send was attempted to (delivered + bounced).", agg: "sum", format: "integer", synonyms: ["sends", "sent"], provenance: [{ provider: "klaviyo", expr: "sum(delivered + bounced)" }] },
+    { name: "delivered", title: "Delivered", description: "Messages that reached an inbox.", agg: "sum", format: "integer", provenance: [{ provider: "klaviyo", expr: "sum(delivered)" }] },
+    { name: "bounced", title: "Bounced", description: "Messages that could not be delivered.", agg: "sum", format: "integer", provenance: [{ provider: "klaviyo", expr: "sum(bounced)" }] },
+    { name: "opens_unique", title: "Unique opens", description: "Distinct people who opened. Inflated by privacy proxies that pre-fetch images — read it next to click rate, never alone.", agg: "sum", format: "integer", synonyms: ["opens"], provenance: [{ provider: "klaviyo", expr: "sum(opens_unique)" }] },
+    { name: "clicks_unique", title: "Unique clicks", description: "Distinct people who clicked a link. The most trustworthy engagement signal here.", agg: "sum", format: "integer", synonyms: ["clicks"], provenance: [{ provider: "klaviyo", expr: "sum(clicks_unique)" }] },
+    { name: "unsubscribes", title: "Unsubscribes", description: "People who opted out from this send.", agg: "sum", format: "integer", provenance: [{ provider: "klaviyo", expr: "sum(unsubscribes)" }] },
+    { name: "spam_complaints", title: "Spam complaints", description: "People who marked the send as spam.", agg: "sum", format: "integer", provenance: [{ provider: "klaviyo", expr: "sum(spam_complaints)" }] },
+    { name: "conversions", title: "Conversions", description: "Orders Klaviyo attributed to the send, on its own attribution window.", agg: "sum", format: "integer", provenance: [{ provider: "klaviyo", expr: "sum(conversions)" }] },
+    { name: "conversion_value", title: "Attributed revenue", description: "Revenue Klaviyo attributed to the send. A different counting system from Shopify orders — read the glossary before comparing the two.", agg: "sum", format: "currency", synonyms: ["email revenue"], provenance: [{ provider: "klaviyo", expr: "sum(conversion_value)" }] },
+    { name: "delivery_rate", title: "Delivery rate", description: "Delivered / recipients, pooled across the campaigns in range.", agg: "derived", format: "percent", provenance: [{ provider: "klaviyo", expr: "sum(delivered) / sum(recipients)" }] },
+    { name: "open_rate", title: "Open rate", description: "Unique opens / delivered, pooled.", agg: "derived", format: "percent", provenance: [{ provider: "klaviyo", expr: "sum(opens_unique) / sum(delivered)" }] },
+    { name: "click_rate", title: "Click rate", description: "Unique clicks / delivered, pooled.", agg: "derived", format: "percent", synonyms: ["ctr"], provenance: [{ provider: "klaviyo", expr: "sum(clicks_unique) / sum(delivered)" }] },
+    { name: "click_to_open_rate", title: "Click-to-open rate", description: "Unique clicks / unique opens — how compelling the email was to those who opened it.", agg: "derived", format: "percent", synonyms: ["ctor"], provenance: [{ provider: "klaviyo", expr: "sum(clicks_unique) / sum(opens_unique)" }] },
+    { name: "unsubscribe_rate", title: "Unsubscribe rate", description: "Unsubscribes / delivered, pooled. The cost side of send frequency.", agg: "derived", format: "percent", provenance: [{ provider: "klaviyo", expr: "sum(unsubscribes) / sum(delivered)" }] },
+    { name: "bounce_rate", title: "Bounce rate", description: "Bounced / recipients, pooled. A rising bounce rate is a list-hygiene problem.", agg: "derived", format: "percent", provenance: [{ provider: "klaviyo", expr: "sum(bounced) / sum(recipients)" }] },
+    { name: "conversion_rate", title: "Conversion rate", description: "Attributed orders / delivered, pooled.", agg: "derived", format: "percent", provenance: [{ provider: "klaviyo", expr: "sum(conversions) / sum(delivered)" }] },
+    { name: "revenue_per_recipient", title: "Revenue per recipient", description: "Attributed revenue / recipients — the measure that lets a small, well-targeted send beat a large one.", agg: "derived", format: "currency", synonyms: ["rpr"], provenance: [{ provider: "klaviyo", expr: "sum(conversion_value) / sum(recipients)" }] },
+  ],
+  dimensions: [
+    dimDate,
+    { name: "campaign", title: "Campaign", description: "The campaign's subject line.", type: "string", synonyms: ["subject", "subject line"], provenance: [{ provider: "klaviyo", expr: "subject" }] },
+    { name: "campaign_id", title: "Campaign ID", description: "The campaign's internal id.", type: "string", provenance: [{ provider: "klaviyo", expr: "id" }] },
+    { name: "archetype", title: "Archetype", description: "The campaign's kind — artist-drop, editorial, promotion, seasonal.", type: "string", synonyms: ["campaign type"], provenance: [{ provider: "klaviyo", expr: "archetype" }] },
+    { name: "status", title: "Status", description: "Where the campaign is in its lifecycle.", type: "string", provenance: [{ provider: "klaviyo", expr: "status" }] },
+  ],
+};
+
 export const DEFAULT_MODEL: Omit<SemanticModel, "store"> = {
   version: "1.0.0",
-  views: [traffic, acquisition, siteEvents, commerce, adsPerformance, marketingOverview],
+  views: [traffic, acquisition, siteEvents, commerce, adsPerformance, marketingOverview, emailPerformance],
   glossary,
 };

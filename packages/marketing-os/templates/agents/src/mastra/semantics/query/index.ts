@@ -11,6 +11,7 @@ import { GA4ReconnectRequiredError } from "../../../../lib/ga4";
 import { validateQuery } from "./validate";
 import { buildGA4Request, runGA4Query } from "./ga4-plan";
 import { buildShopifyPlan, runShopifyCommerceQuery } from "./shopify-plan";
+import { buildEmailPlan, runEmailQuery } from "./klaviyo-plan";
 import type { ExplainResult, QueryError, QueryInput, ResultEnvelope, ValidatedQuery } from "./types";
 import { isQueryError } from "./types";
 
@@ -22,6 +23,7 @@ const CONNECT_URL = process.env.MARKETING_OS_API_URL
 
 /** Which provider executes this view's query. */
 function primaryProvider(view: CompiledView): Provider {
+  if (view.requires.includes("klaviyo")) return "klaviyo";
   if (view.requires.includes("shopify") && !view.requires.includes("ga4")) return "shopify";
   if (view.requires.includes("ga4")) return "ga4";
   return view.requires[0];
@@ -51,7 +53,12 @@ export async function runQuery(input: QueryInput): Promise<ResultEnvelope | Quer
   const provider = primaryProvider(vq.view);
   let result;
   try {
-    result = provider === "shopify" ? await runShopifyCommerceQuery(vq) : await runGA4Query(vq);
+    result =
+      provider === "klaviyo"
+        ? await runEmailQuery(vq)
+        : provider === "shopify"
+          ? await runShopifyCommerceQuery(vq)
+          : await runGA4Query(vq);
   } catch (err) {
     if (err instanceof GA4ReconnectRequiredError) {
       return {
@@ -120,6 +127,18 @@ export async function explainQuery(input: QueryInput): Promise<ExplainResult | Q
     warnings.push(`Partial coverage: only ${vq.view.coverage.join(", ")} connected.`);
   }
   for (const c of collectCaveats(vq)) warnings.push(c);
+
+  if (provider === "klaviyo") {
+    const plan = buildEmailPlan(vq);
+    return {
+      view: vq.view.name,
+      provider,
+      plan: { sql: plan.sql, params: plan.params.length, group_by: plan.groupBy },
+      estimated_rows: "unknown until run",
+      warnings: [],
+      note: "Reads the stored readback table, not Klaviyo — no API quota. Campaigns sent within the last ~72h may not have matured yet.",
+    };
+  }
 
   if (provider === "shopify") {
     const plan = buildShopifyPlan(vq);

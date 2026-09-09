@@ -5,7 +5,7 @@
 // (explore_schema), validation, did-you-mean, and the query planner all fall out
 // of this one structure.
 
-export type Provider = "ga4" | "gads" | "meta" | "shopify";
+export type Provider = "ga4" | "gads" | "meta" | "shopify" | "klaviyo";
 
 export type Grain = "hour" | "day" | "week" | "month" | "quarter" | "year";
 

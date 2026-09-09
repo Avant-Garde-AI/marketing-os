@@ -188,6 +188,21 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
 
       // 1 — index sync (always; the projection converges on file truth)
       await syncCampaignIndex(shop, campaign, extras);
+
+      // Say what happened, out loud.
+      //
+      // These outcomes used to travel only in the cron's HTTP response body,
+      // which nobody reads — cronSweep logs an item only when it THROWS, and
+      // every interesting failure here is caught and turned into a string. So a
+      // readback erroring or skipping every hour looked exactly like a campaign
+      // with no numbers yet: silence. That is the "no data" versus "could not
+      // reach the data" confusion this codebase keeps paying for, and one line
+      // of logging is the whole fix.
+      if (action !== "indexed") {
+        const line = `[cron-email] ${shop}/${campaign.id} ${action}`;
+        if (/error|OUT-OF-BAND|skipped/i.test(action)) console.error(line);
+        else console.log(line);
+      }
       outcomes.push({ id: campaign.id, action });
     }
     return outcomes;

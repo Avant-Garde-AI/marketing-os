@@ -4,6 +4,7 @@ import { listCampaigns, type EmailCampaignRow } from "@/lib/email/console-data";
 import { emailSheetLink } from "@/lib/email/review-links";
 import { getTenant } from "@/lib/tenant-context";
 import { CopyLink } from "@/components/copy-link";
+import { EmailPerformanceBand } from "@/components/email/performance";
 
 /**
  * Email — the campaign library (WS4-R3, list side). Month-grouped rows from
@@ -91,6 +92,13 @@ export default async function EmailPage() {
           </div>
         ) : (
           <div className="animate-enter-2 space-y-8">
+            {/* Results first: the question people arrive with is "how did the
+                last one do", and the campaign list answers "what have we sent".
+                Renders nothing until something has actually been measured. */}
+            <EmailPerformanceBand
+              rows={campaigns}
+              currency={process.env.STORE_CURRENCY ?? "USD"}
+            />
             {months.map((month) => (
               <section key={month}>
                 <div className="mb-3 flex items-baseline gap-4">

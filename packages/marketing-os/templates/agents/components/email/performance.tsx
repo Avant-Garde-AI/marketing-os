@@ -134,7 +134,7 @@ function money(v: number, currency: string): string {
 }
 
 /**
- * A rate as a bar, scaled against the best campaign in view rather than against
+ * A rate as a bar, scaled against the highest rate in view rather than against
  * 100%. Email rates live in the single digits, so a 0–100 axis renders every
  * campaign as an identical sliver and hides exactly the differences worth
  * seeing. The number is always printed beside the bar — the bar ranks, the
@@ -192,8 +192,19 @@ export function EmailPerformanceBand({
     );
   }
 
-  const maxOpen = Math.max(...s.perCampaign.map((c) => c.openRate ?? 0), 0.0001);
-  const maxClick = Math.max(...s.perCampaign.map((c) => c.clickRate ?? 0), 0.0001);
+  // ONE shared scale across both metrics, not one per metric.
+  //
+  // Scaling opens and clicks independently ranks each metric well across
+  // campaigns and lies badly within a campaign — and with a single campaign in
+  // view it degenerates completely: both bars hit 100% and a 13.2% open rate
+  // renders identically to a 1.4% click rate. A shared maximum keeps the
+  // clicks bar honestly shorter than the opens bar it is a subset of, and
+  // still ranks campaigns against each other. Cross-campaign click differences
+  // compress, which is why the figure is printed beside every bar.
+  const scale = Math.max(
+    ...s.perCampaign.map((c) => Math.max(c.openRate ?? 0, c.clickRate ?? 0)),
+    0.0001,
+  );
 
   return (
     <section className="animate-enter-2 mb-10">
@@ -243,8 +254,8 @@ export function EmailPerformanceBand({
                 </span>
               </div>
               <div className="space-y-1.5">
-                <Bar value={c.openRate} max={maxOpen} label="Opens" />
-                <Bar value={c.clickRate} max={maxClick} label="Clicks" />
+                <Bar value={c.openRate} max={scale} label="Opens" />
+                <Bar value={c.clickRate} max={scale} label="Clicks" />
               </div>
             </li>
           ))}

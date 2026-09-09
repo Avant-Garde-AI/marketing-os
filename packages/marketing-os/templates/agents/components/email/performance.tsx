@@ -180,8 +180,9 @@ export function EmailPerformanceBand({
     return (
       <div className="animate-enter-2 mb-8 border border-hairline bg-raised px-5 py-4">
         <p className="text-[14px] leading-relaxed text-ink-2">
-          {anySent === 1 ? "One campaign has" : `${anySent} campaigns have`} gone out, and their
-          numbers have not come back yet.
+          {anySent === 1
+            ? "One campaign has gone out, and its numbers have not come back yet."
+            : `${anySent} campaigns have gone out, and their numbers have not come back yet.`}
         </p>
         <p className="mt-1 text-[13px] text-ink-3">
           Results land about a day after a send and keep moving for a fortnight while orders are

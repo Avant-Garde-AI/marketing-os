@@ -92,7 +92,15 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
       let action = "indexed";
 
       // 2 — send watch
-      if (campaign.status === "scheduled" && campaign.klaviyo?.campaignId) {
+      // Watch ANY campaign holding a Klaviyo id that we have not yet recorded as
+      // sent — not only `scheduled` ones. Klaviyo is the authority on whether mail
+      // left the building, and a campaign can reach Sent there by a route this repo
+      // never saw. Watching only `scheduled` left the Labor Day campaign reading
+      // `drafted` forever while Klaviyo had it Sent — and since readback only
+      // considers sent campaigns, its numbers were unreachable too. One wrong
+      // status quietly cost a campaign its entire analytics.
+      const PRE_SENT = ["proposed", "approved", "drafted", "scheduled"];
+      if (PRE_SENT.includes(campaign.status) && campaign.klaviyo?.campaignId) {
         try {
           const live = await klaviyo.getCampaignStatus(campaign.klaviyo.campaignId);
           const liveStatus = live.status.toLowerCase();
@@ -101,6 +109,8 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
             await emailRepo.writeFile(campaignPath(campaign.id), serializeCampaign(sent));
             campaign = sent;
             action = "marked-sent";
+          } else if (campaign.status !== "scheduled") {
+            // Has not sent, and we did not expect it to — nothing to report.
           } else if (
             live.scheduledAt &&
             campaign.scheduledAt &&

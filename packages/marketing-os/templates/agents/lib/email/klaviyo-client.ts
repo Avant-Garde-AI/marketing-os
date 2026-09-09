@@ -585,8 +585,15 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
         if (query.campaignIds.length > 100) {
           throw new Error("campaignValuesReport: at most 100 campaign ids per report (API limit)");
         }
-        const ids = query.campaignIds.map((id) => `"${id}"`).join(",");
-        attributes["filter"] = `any(campaign_id,[${ids}])`;
+        // `any` is NOT a supported operator for campaign_id — Klaviyo answers
+        // "Supported operators: equals, contains-any". This was silently
+        // breaking EVERY readback: the report 400s, the cron caught the error
+        // into a string nobody logged, and a campaign with real numbers looked
+        // identical to one with none. Verified live 2026-09-09.
+        attributes["filter"] =
+          query.campaignIds.length === 1
+            ? `equals(campaign_id,"${query.campaignIds[0]}")`
+            : `contains-any(campaign_id,[${query.campaignIds.map((id) => `"${id}"`).join(",")}])`;
       }
       const doc = await request({
         method: "POST",

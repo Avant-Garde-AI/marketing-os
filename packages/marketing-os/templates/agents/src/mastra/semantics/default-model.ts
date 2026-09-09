@@ -536,7 +536,7 @@ const emailPerformance: View = {
   requires: ["klaviyo"],
   freshness: {
     latencyNote:
-      "Numbers are read back roughly 72 hours after a send, so a campaign sent in the last few days may not appear yet. They are a snapshot taken at readback, not live counters.",
+      "A campaign first appears about 24 hours after its send, and its numbers are re-read until Klaviyo's 14-day conversion window closes — so opens and clicks settle quickly while attributed revenue keeps rising for a fortnight. Anything sent in the last day is absent, not zero.",
   },
   timeDimension: { name: "date", grains: ["day", "week", "month", "quarter", "year"] },
   defaults: { timeRange: "last_90_days", order: [{ field: "date", dir: "asc" }] },

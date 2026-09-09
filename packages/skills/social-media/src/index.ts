@@ -57,6 +57,20 @@ export type {
   RankOptions,
 } from "./reference";
 export { resolveSlots, assertComplete, chooseArchetype, missingRoles } from "./resolve";
+export {
+  specFromArchetype,
+  fetchImageAsset,
+  imageDimensions,
+  MAX_ASPECT_DISTORTION,
+  type ArchetypeComposeInput,
+  type MaterializeImage,
+  type MaterializedImage,
+  type SurfaceStyle,
+  type SurfaceComposeSpec,
+  type SurfaceComposeElement,
+  type SurfaceFill,
+  type TextStyle,
+} from "./archetype-surface";
 export type {
   SlotFill,
   SlotBindings,

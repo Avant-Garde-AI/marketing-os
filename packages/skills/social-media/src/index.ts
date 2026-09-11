@@ -148,3 +148,5 @@ export const requires = { providers: [], scopes: ["social:publish"] } as const;
 
 /** Spec 20 §5 `actions` — the SM2 publish lane (writes narrow through the gate). */
 export const actions = ["social.schedule_post", "social.publish_post", "social.cancel_post"] as const;
+
+export { POSTS_DIR, listPostIds } from "./artifacts";

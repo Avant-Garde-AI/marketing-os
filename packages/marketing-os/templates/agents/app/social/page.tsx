@@ -4,7 +4,8 @@ import { CopyLink } from "@/components/copy-link";
 import { getTenant } from "@/lib/tenant-context";
 import { listCalendarMonths, loadCalendar } from "@/lib/social/console-data";
 import { socialSheetLink } from "@/lib/social/review-links";
-import { parsePost, postPath } from "@/lib/social/artifacts";
+import { postMonth } from "@/lib/social/projection";
+import { listPostIds, parsePost, postPath } from "@/lib/social/artifacts";
 import { socialRepo } from "@/lib/social/repo";
 import type { SocialPost } from "@/lib/social/types";
 
@@ -83,29 +84,64 @@ export default async function SocialPage({
 }) {
   const sp = await searchParams;
   const { shop } = getTenant();
-  const months = (await listCalendarMonths(shop)).filter((m) => MONTH_RE.test(m)).sort().reverse();
+
+  // Enumerate POSTS, then enrich from the calendar — never the other way round.
+  // Walking the calendar means a post nobody scheduled does not exist as far as
+  // this page is concerned: four composed posts with design surfaces sat
+  // invisible for a week because their month had no calendar file, and a fifth
+  // was orphaned by a slot that never referenced it. A post is a real artifact
+  // whether or not anything points at it, and a worklist that hides work is
+  // worse than no worklist.
+  const ids = await listPostIds(socialRepo);
+  const posts: SocialPost[] = [];
+  for (const id of ids) {
+    try {
+      const raw = await socialRepo.readFile(postPath(id));
+      if (raw !== null) posts.push(parsePost(raw));
+    } catch {
+      // A post that will not parse is the detail page's problem to explain.
+      // Dropping it beats failing the whole list over one bad artifact.
+    }
+  }
 
   const requested = Array.isArray(sp.month) ? sp.month[0] : sp.month;
-  const show = requested && MONTH_RE.test(requested) ? [requested] : months;
 
   const byMonth = new Map<string, Row[]>();
-  for (const month of show) {
+  for (const post of posts) {
+    const month = postMonth(post);
+    if (requested && MONTH_RE.test(requested) && month !== requested) continue;
+    const rows = byMonth.get(month) ?? [];
+    rows.push({ post, slot: null, pillar: null });
+    byMonth.set(month, rows);
+  }
+
+  // The calendar contributes the slot and its pillar where it references a
+  // post. A post it does not mention keeps a null slot and shows as
+  // unscheduled, which is a true statement about it rather than a disappearance.
+  for (const month of byMonth.keys()) {
+    if (!MONTH_RE.test(month)) continue;
     const calendar = await loadCalendar(shop, month);
-    const rows: Row[] = [];
-    for (const s of calendar?.slots ?? []) {
-      if (!s.postId) continue;
-      try {
-        const raw = await socialRepo.readFile(postPath(s.postId));
-        if (raw === null) continue;
-        rows.push({ post: parsePost(raw), slot: s.slot, pillar: s.pillar ?? null });
-      } catch {
-        // A post that will not parse is a real problem, but it is the detail
-        // page's problem to explain. Dropping it from the list beats failing
-        // the whole month over one bad artifact.
+    if (!calendar) continue;
+    const slotByPost = new Map(
+      calendar.slots.filter((s) => s.postId).map((s) => [s.postId!, s]),
+    );
+    for (const row of byMonth.get(month) ?? []) {
+      const slot = slotByPost.get(row.post.id);
+      if (slot) {
+        row.slot = slot.slot;
+        row.pillar = slot.pillar ?? null;
       }
     }
-    rows.sort((a, b) => (a.slot ?? "").localeCompare(b.slot ?? ""));
-    if (rows.length) byMonth.set(month, rows);
+  }
+
+  for (const [month, rows] of byMonth) {
+    rows.sort(
+      (a, b) =>
+        (a.slot ?? a.post.scheduledAt ?? a.post.id).localeCompare(
+          b.slot ?? b.post.scheduledAt ?? b.post.id,
+        ),
+    );
+    if (!rows.length) byMonth.delete(month);
   }
 
   const staged = [...byMonth.keys()];

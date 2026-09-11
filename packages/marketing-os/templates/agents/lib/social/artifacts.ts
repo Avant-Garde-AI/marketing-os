@@ -34,6 +34,29 @@ import { POST_STATUSES } from "./types";
 
 export const STRATEGY_PATH = "social/strategy.md";
 
+/** Where post artifacts live. */
+export const POSTS_DIR = "social/posts/";
+
+/**
+ * Every post id in the repo, sorted.
+ *
+ * The console worklist walks THIS rather than the calendar. Walking the
+ * calendar means a post nobody scheduled does not exist as far as the UI is
+ * concerned — and four composed posts with design surfaces sat invisible for a
+ * week because their month had no calendar file, while a fifth was orphaned by
+ * a slot that never referenced it. A post is a real artifact whether or not
+ * anything points at it.
+ */
+export async function listPostIds(repo: { list(prefix: string): Promise<string[]> }): Promise<string[]> {
+  const paths = await repo.list(POSTS_DIR);
+  const ids = new Set<string>();
+  for (const path of paths) {
+    const m = /^social\/posts\/([^/]+)\/post\.md$/.exec(path);
+    if (m?.[1]) ids.add(m[1]);
+  }
+  return [...ids].sort();
+}
+
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 

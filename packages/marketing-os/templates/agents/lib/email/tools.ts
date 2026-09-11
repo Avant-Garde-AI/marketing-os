@@ -30,6 +30,7 @@ import {
   parseStrategy,
 } from "./artifacts";
 import { analyzeEmailCalendarGaps, proposeEmailPlan } from "./plan";
+import { getBrokerToken } from "../broker-client";
 
 // ---------------------------------------------------------------------------
 // Universal-content inlining (03 §3: blocks cannot be referenced in API
@@ -233,7 +234,10 @@ const performanceReadInput = z.object({
   conversionMetricId: z
     .string()
     .min(1)
-    .describe("REQUIRED by Klaviyo reporting — the tenant's conversion metric (Shopify Placed Order)"),
+    .optional()
+    .describe(
+      "Optional — leave it out. The store's conversion metric is read from its own Klaviyo connection. Pass one only to override that default; never ask a person for it.",
+    ),
 });
 
 const performanceReadOutput = z.object({
@@ -421,14 +425,43 @@ export function createEmailTools(repo: EmailRepo, klaviyo: KlaviyoClient): Email
             "klaviyo_performance_read: timeframe exceeds Klaviyo's 1-year reporting limit — split the query",
           );
         }
+        // Resolve the conversion metric from the store's own connection.
+        //
+        // This used to be a REQUIRED input, which the agent had no way to
+        // satisfy — so it stopped and asked a human for an id the platform
+        // already holds and the email cron reads every hour. Asking someone to
+        // copy a value out of Klaviyo settings to answer a question about their
+        // own store is the tool failing, not the person.
+        let conversionMetricId = input.conversionMetricId;
+        if (!conversionMetricId) {
+          try {
+            const broker = await getBrokerToken("klaviyo", "email");
+            conversionMetricId = (broker.context as { conversion_metric_id?: string })
+              .conversion_metric_id;
+          } catch (e) {
+            throw new Error(
+              `klaviyo_performance_read: could not reach the Klaviyo connection to resolve the ` +
+                `conversion metric (${e instanceof Error ? e.message : e}). That is a connection ` +
+                `failure, not a missing setting — do not ask anyone for the id by hand.`,
+            );
+          }
+        }
+        if (!conversionMetricId) {
+          throw new Error(
+            "klaviyo_performance_read: this store's Klaviyo connection has no conversion metric set, " +
+              "so revenue cannot be attributed. Delivery and engagement are unaffected — report those, " +
+              "and say the connection needs a conversion metric to add revenue.",
+          );
+        }
+
         const rows = await klaviyo.campaignValuesReport({
           ...(input.campaignIds ? { campaignIds: input.campaignIds } : {}),
           timeframe: input.timeframe,
-          conversionMetricId: input.conversionMetricId,
+          conversionMetricId,
         });
         return {
           rows,
-          conversionMetricId: input.conversionMetricId,
+          conversionMetricId,
           attributionBasis:
             "klaviyo campaign-values-report: attributed by campaign SEND DATE (matches the Klaviyo UI). Not comparable 1:1 with event-time metric aggregates or GA4/Shopify semantic-layer joins.",
         };

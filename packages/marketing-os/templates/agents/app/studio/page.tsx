@@ -48,9 +48,26 @@ function embedBase(): string {
  * drafts were never missing, they were one team switcher away, which looks
  * exactly like missing.
  */
-function canvasHash(teamId?: string, fileId?: string, pageId?: string): string {
+function canvasHash(
+  teamId?: string,
+  fileId?: string,
+  pageId?: string,
+  edit = false,
+): string {
   if (!teamId) return "";
   if (!fileId) return `#/dashboard/recent?team-id=${encodeURIComponent(teamId)}`;
+
+  // VIEW MODE by default when a draft is deep-linked. The workspace surrounds a
+  // 1080px board with a layers tree, a design inspector, rulers and a toolbar,
+  // and at the width this pane actually gets, that chrome covers the thing the
+  // reader came to look at. Most visits to a deep-linked draft are to SEE it;
+  // editing is the exception and gets a toggle rather than the default.
+  if (!edit) {
+    let hash = `#/view?file-id=${encodeURIComponent(fileId)}`;
+    if (pageId) hash += `&page-id=${encodeURIComponent(pageId)}`;
+    return `${hash}&index=0`;
+  }
+
   let hash = `#/workspace?team-id=${encodeURIComponent(teamId)}&file-id=${encodeURIComponent(fileId)}`;
   if (pageId) hash += `&page-id=${encodeURIComponent(pageId)}`;
   return hash;
@@ -146,8 +163,18 @@ export default async function StudioPage({
       teamId = undefined;
     }
   }
-  const src = `${base}/${canvasHash(teamId, fileId, pageId)}`;
+  const editing = firstParam(params.edit) === "1";
+  const src = `${base}/${canvasHash(teamId, fileId, pageId, editing)}`;
   const onDraft = Boolean(teamId && fileId);
+
+  // Toggle preserves every other param, so the handoff guard and the deep link
+  // survive the round trip.
+  const toggle = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (typeof v === "string" && k !== "edit") toggle.set(k, v);
+  }
+  if (!editing) toggle.set("edit", "1");
+  const toggleHref = `/studio?${toggle}`;
 
   return (
     <div className="flex h-screen">
@@ -173,13 +200,21 @@ export default async function StudioPage({
           <div className="flex min-w-0 items-center gap-4">
             <Eyebrow>Design Studio</Eyebrow>
             <span className="truncate text-[13px] text-ink-3">
-              {onDraft ? "Draft canvas" : "All drafts"}
+              {onDraft ? (editing ? "Editing" : "Draft canvas") : "All drafts"}
             </span>
           </div>
-          {/* Escape hatch: some browsers block embedded auth flows. */}
-          <a href={src} target="_blank" rel="noreferrer" className="arrow-link shrink-0 text-[14px]">
-            Open in new tab
-          </a>
+          <div className="flex shrink-0 items-center gap-5">
+            {/* View is the default; the tools are one click away, not gone. */}
+            {onDraft ? (
+              <a href={toggleHref} className="arrow-link text-[14px]">
+                {editing ? "Done editing" : "Edit on canvas"}
+              </a>
+            ) : null}
+            {/* Escape hatch: some browsers block embedded auth flows. */}
+            <a href={src} target="_blank" rel="noreferrer" className="arrow-link text-[14px]">
+              Open in new tab
+            </a>
+          </div>
         </div>
         <iframe
           src={src}

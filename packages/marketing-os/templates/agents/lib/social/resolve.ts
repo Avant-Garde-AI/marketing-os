@@ -49,7 +49,17 @@ import { rankArchetypes, resolveArchetype, type Board, type ResolvedSlot } from 
 export type SlotFill =
   | { kind: "image"; assetRef: string; alt?: string }
   | { kind: "text"; characters: string }
-  | { kind: "band"; color: string };
+  | { kind: "band"; color: string }
+  /**
+   * A named component from the store's design library (spec 30 §3).
+   *
+   * The craft lives in the library, not here: a "caption-band" is a ground, a
+   * hairline at the safe margin and a letterspaced eyebrow in a fixed optical
+   * relationship, and binding one means taking all of that rather than
+   * re-deriving the spacing at the call site. `overrides` replaces TEXT by
+   * element name — the content varies per post, the layout does not.
+   */
+  | { kind: "component"; ref: string; overrides?: Record<string, string> };
 
 /**
  * Role → content, as the caller assembled it. `null`/`undefined` is an
@@ -89,6 +99,7 @@ export interface Resolution {
 function emptyFill(fill: SlotFill): boolean {
   if (fill.kind === "text") return fill.characters.trim() === "";
   if (fill.kind === "image") return fill.assetRef.trim() === "";
+  if (fill.kind === "component") return fill.ref.trim() === "";
   return fill.color.trim() === "";
 }
 
@@ -120,7 +131,12 @@ export function resolveSlots(
       });
       continue;
     }
-    if (fill.kind !== rect.kind) {
+    // A COMPONENT satisfies any slot kind. A slot says "a band goes here"; a
+    // component is a composed fragment that can BE that band, plus the hairline
+    // and the type that belong with it. Requiring kind equality would make the
+    // library unusable exactly where it is most valuable — the slots whose
+    // craft is a relationship between several parts rather than one shape.
+    if (fill.kind !== "component" && fill.kind !== rect.kind) {
       misses.push({
         role: rect.role,
         expected: rect.kind,

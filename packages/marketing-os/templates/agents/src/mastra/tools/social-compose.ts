@@ -48,6 +48,7 @@ import { specFromArchetype } from "../../../lib/social/archetype-surface";
 import { estimateVideoCost } from "../../../lib/social/concepts";
 import type { SlotBindings } from "../../../lib/social/resolve";
 import { surfaceStyleFromTokens } from "../../../lib/social/surface-style";
+import { componentResolver, loadLibrary, surfaceStyleFromLibrary } from "../../../lib/design-surfaces/library-source";
 
 /** Named formats, so a caller does not have to remember platform pixel sizes. */
 const BOARDS = {
@@ -61,7 +62,18 @@ const bindingInput = z.object({
     .string()
     .min(1)
     .describe("The archetype role this fills — 'room', 'wall', 'work', 'band', 'headline', 'eyebrow'…"),
-  kind: z.enum(["image", "text", "band"]),
+  kind: z.enum(["image", "text", "band", "component"]),
+  ref: z
+    .string()
+    .optional()
+    .describe(
+      "Design-library component name (kind 'component') — e.g. 'caption-band'. Takes the brand's " +
+        "whole lockup (ground, rule, type, optical spacing) rather than re-deriving it here.",
+    ),
+  overrides: z
+    .record(z.string())
+    .optional()
+    .describe("Text overrides for a component, by element name — e.g. { eyebrow: 'Vent Stripe — Shelly Bremmer' }"),
   imageUrl: z
     .string()
     .optional()
@@ -141,7 +153,11 @@ export const composePostFromArchetype = createTool({
       }
 
       const brand = await loadBrandTokens(shop);
-      const style = surfaceStyleFromTokens(brand.tokens);
+      // The store's design library wins where it speaks; DESIGN.md tokens fill
+      // the rest (spec 30 §3). A store with no library composes exactly as
+      // before.
+      const library = await loadLibrary();
+      const style = surfaceStyleFromLibrary(library, surfaceStyleFromTokens(brand.tokens));
 
       const bindings: SlotBindings = {};
       for (const b of input.bindings) {
@@ -151,6 +167,9 @@ export const composePostFromArchetype = createTool({
         } else if (b.kind === "text") {
           if (!b.characters) return { ok: false, note: `role "${b.role}" is text but has no characters` };
           bindings[b.role] = { kind: "text", characters: b.characters };
+        } else if (b.kind === "component") {
+          if (!b.ref) return { ok: false, note: `role "${b.role}" is a component but has no ref` };
+          bindings[b.role] = { kind: "component", ref: b.ref, ...(b.overrides ? { overrides: b.overrides } : {}) };
         } else {
           bindings[b.role] = { kind: "band", color: b.color ?? style.bandColor };
         }
@@ -169,6 +188,7 @@ export const composePostFromArchetype = createTool({
           boardName: archetype.id,
           style,
           materialize: croppingMaterializer,
+          resolveComponent: componentResolver(library),
           ...(brand.tokens ? { tokens: brand.tokens } : {}),
           ...(brand.libraryColors ? { libraryColors: brand.libraryColors } : {}),
         });
@@ -316,7 +336,8 @@ export const composePostKeyframes = createTool({
       }
       const genome = parseGenome(raw);
       const brand = await loadBrandTokens(shop);
-      const style = surfaceStyleFromTokens(brand.tokens);
+      const library = await loadLibrary();
+      const style = surfaceStyleFromLibrary(library, surfaceStyleFromTokens(brand.tokens));
       const board = BOARDS[inputData.format ?? "instagram-story"];
 
       // Board names must be unique — exportSurfaceBoards addresses by name, so
@@ -345,6 +366,9 @@ export const composePostKeyframes = createTool({
           } else if (b.kind === "text") {
             if (!b.characters) return { ok: false, note: `Beat ${i + 1}: role "${b.role}" is text with no characters` };
             bindings[b.role] = { kind: "text", characters: b.characters };
+          } else if (b.kind === "component") {
+            if (!b.ref) return { ok: false, note: `Beat ${i + 1}: role "${b.role}" is a component with no ref` };
+            bindings[b.role] = { kind: "component", ref: b.ref, ...(b.overrides ? { overrides: b.overrides } : {}) };
           } else {
             bindings[b.role] = { kind: "band", color: b.color ?? style.bandColor };
           }
@@ -359,6 +383,7 @@ export const composePostKeyframes = createTool({
             boardName: names[i]!,
             style,
             materialize: croppingMaterializer,
+            resolveComponent: componentResolver(library),
           });
           boards.push({
             name: names[i]!,

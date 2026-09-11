@@ -197,3 +197,123 @@ describe("specFromArchetype", () => {
     expect(JSON.stringify(a.spec)).toEqual(JSON.stringify(b.spec));
   });
 });
+
+describe("component fills (spec 30 §3)", () => {
+  const captionBand = {
+    name: "caption-band",
+    width: 1080,
+    height: 216,
+    elements: [
+      { type: "rect" as const, name: "ground", x: 0, y: 0, width: 1080, height: 216, fills: [{ fillColor: "#F5F2ED", fillOpacity: 1 }] },
+      { type: "rect" as const, name: "rule", x: 64, y: 0, width: 952, height: 1, fills: [{ fillColor: "#2D2D2D", fillOpacity: 1 }] },
+      {
+        type: "text" as const,
+        name: "eyebrow",
+        x: 64,
+        y: 84,
+        width: 820,
+        height: 34,
+        characters: "WORK — ARTIST",
+        fontFamily: "Inter",
+        fontSize: "22",
+      },
+    ],
+  };
+  const resolveComponent = (ref: string) => (ref === "caption-band" ? captionBand : null);
+
+  it("materialises the whole lockup into the slot, namespaced by role", async () => {
+    const { spec } = await specFromArchetype({
+      archetype: captioned,
+      board,
+      bindings: {
+        room: { kind: "image", assetRef: "https://example.test/room.png" },
+        band: { kind: "component", ref: "caption-band", overrides: { eyebrow: "Vent Stripe — Shelly Bremmer" } },
+        eyebrow: { kind: "text", characters: "unused" },
+      },
+      fileName: "post",
+      style,
+      materialize: materialize(1080, 1134),
+      resolveComponent,
+    });
+    const names = spec.elements?.map((e) => e.name) ?? [];
+    expect(names).toEqual(expect.arrayContaining(["band/ground", "band/rule", "band/eyebrow"]));
+  });
+
+  it("applies text overrides by element name, and leaves the layout alone", async () => {
+    const { spec } = await specFromArchetype({
+      archetype: captioned,
+      board,
+      bindings: {
+        room: { kind: "image", assetRef: "https://example.test/room.png" },
+        band: { kind: "component", ref: "caption-band", overrides: { eyebrow: "A new line" } },
+        eyebrow: { kind: "text", characters: "unused" },
+      },
+      fileName: "post",
+      style,
+      materialize: materialize(1080, 1134),
+      resolveComponent,
+    });
+    const eyebrow = spec.elements?.find((e) => e.name === "band/eyebrow");
+    if (eyebrow?.type !== "text") throw new Error("no eyebrow");
+    expect(eyebrow.characters).toBe("A new line");
+    // The band slot is 1080x216 at this board, so the component lands 1:1 and
+    // the designer's optical position survives untouched.
+    expect(eyebrow.x).toBe(64);
+  });
+
+  it("refuses a component the library does not have, by name", async () => {
+    await expect(
+      specFromArchetype({
+        archetype: captioned,
+        board,
+        bindings: {
+          room: { kind: "image", assetRef: "https://example.test/room.png" },
+          band: { kind: "component", ref: "nope" },
+          eyebrow: { kind: "text", characters: "x" },
+        },
+        fileName: "post",
+        style,
+        materialize: materialize(1080, 1134),
+        resolveComponent,
+      }),
+    ).rejects.toThrow(/not in this store's design library/);
+  });
+
+  it("refuses a component squeezed into a differently-shaped slot", async () => {
+    // The craft IS the proportion: a band stretched taller has different
+    // optical spacing than the one the designer approved.
+    const tall = { ...captionBand, height: 600 };
+    await expect(
+      specFromArchetype({
+        archetype: captioned,
+        board,
+        bindings: {
+          room: { kind: "image", assetRef: "https://example.test/room.png" },
+          band: { kind: "component", ref: "caption-band" },
+          eyebrow: { kind: "text", characters: "x" },
+        },
+        fileName: "post",
+        style,
+        materialize: materialize(1080, 1134),
+        resolveComponent: () => tall,
+      }),
+    ).rejects.toThrow(/difference in proportion/);
+  });
+
+  it("refuses when no resolver was supplied at all", async () => {
+    await expect(
+      specFromArchetype({
+        archetype: captioned,
+        board,
+        bindings: {
+          room: { kind: "image", assetRef: "https://example.test/room.png" },
+          band: { kind: "component", ref: "caption-band" },
+          eyebrow: { kind: "text", characters: "x" },
+        },
+        fileName: "post",
+        style,
+        materialize: materialize(1080, 1134),
+      }),
+    ).rejects.toThrow(/no component resolver was supplied/);
+  });
+});

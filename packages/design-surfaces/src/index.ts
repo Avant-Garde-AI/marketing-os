@@ -14,3 +14,15 @@ export type {
 } from "./surface.js";
 export { bootstrapServiceAccount } from "./provision.js";
 export type { BootstrapResult } from "./provision.js";
+
+export {
+  composeLibraryFile,
+  validateLibrary,
+  sourceDigest,
+  COMPONENT_GUTTER,
+  type LibrarySource,
+  type LibraryColor,
+  type LibraryComponent,
+  type LibraryProblem,
+  type LibraryTypography,
+} from "./library.js";

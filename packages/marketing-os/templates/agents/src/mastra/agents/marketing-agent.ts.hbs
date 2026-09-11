@@ -15,6 +15,7 @@ import { reviewOfferExperiment } from "../tools/offer-review";
 import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
 import { brandSoulTools } from "../tools/brand-soul";
 import { designSurfaceTools } from "../tools/design-surfaces";
+import { designLibraryTools } from "../tools/design-library";
 import { imageryTools } from "../tools/imagery";
 import { socialTools } from "../tools/social";
 import { actionTools } from "../tools/actions";
@@ -79,6 +80,7 @@ const baseMarketingTools = {
   ...semanticTools,
   ...brandSoulTools,
   ...designSurfaceTools,
+  ...designLibraryTools,
   // Imagery resolution (reads: generates candidates, publishes nothing).
   ...imageryTools,
   ...socialTools,

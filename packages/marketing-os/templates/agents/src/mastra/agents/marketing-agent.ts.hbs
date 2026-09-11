@@ -225,7 +225,34 @@ export const marketingAgent = new Agent({
   // imagery, campaign authoring) where instruction-following across several
   // sequential calls is the whole job. Flash already handles the one-shot
   // thread-title classification above, which is the shape it suits.
-  model: "google/gemini-2.5-pro",
+  // Model FALLBACKS, not one model (Mastra normalises an array into its
+  // fallback chain). A capacity error is not a bug in anything we control and
+  // it is not rare: three consecutive authoring turns were lost to
+  // "This model is currently experiencing high demand" from
+  // generativelanguage, after the agent had already run two tools. Without a
+  // second model, one provider's busy afternoon takes the whole agent down,
+  // and the user sees "that didn't go through" with no way to proceed.
+  //
+  // Ordered by capability, not by cost: Pro first because this agent runs a
+  // multi-tool loop where instruction-following across sequential calls is the
+  // whole job. Flash is the same provider and a different capacity pool, which
+  // covers the common case; the third entry is a DIFFERENT PROVIDER on purpose,
+  // because a fallback chain that shares an outage with its primary is
+  // decoration. It is skipped automatically when no Anthropic key is set.
+  //
+  // maxRetries is low per entry: a model under load rarely recovers within one
+  // turn, so retrying it is latency the user pays for twice before the
+  // fallback is even tried.
+  model: [
+    { id: "pro", model: "google/gemini-2.5-pro", maxRetries: 1 },
+    { id: "flash", model: "google/gemini-2.5-flash", maxRetries: 1 },
+    {
+      id: "claude",
+      model: "anthropic/claude-sonnet-4-5",
+      maxRetries: 1,
+      enabled: Boolean(process.env.ANTHROPIC_API_KEY),
+    },
+  ],
 
   // Step budget. Mastra defaults a chat turn to 5 steps, and an editorial
   // authoring turn does not fit: the first end-to-end console run spent step 1

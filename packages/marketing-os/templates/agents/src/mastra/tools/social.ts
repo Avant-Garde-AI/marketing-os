@@ -29,6 +29,7 @@ import {
   serializePost,
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
+import { paletteOf } from "../../../lib/imagery/palette";
 import { linkPostToCalendarSlot, upsertCalendar, upsertPost } from "../../../lib/social/authoring";
 import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
 import { syncPostIndex } from "../../../lib/social/index-sync";
@@ -178,6 +179,15 @@ const socialPostUpsert = createTool({
           .describe("Every name the copy may credit — artist, work, collection. Read them from the artwork record; do not type them from memory."),
         allowedLinkHosts: z.array(z.string()).optional().describe("Hosts a link may point at, e.g. ['myarthaus.com']"),
         handle: z.string().optional().describe("Product slug the target link should contain"),
+        artworkImageUrl: z
+          .string()
+          .optional()
+          .describe(
+            "https URL of the WORK ITSELF (not a room scene or mockup). Its dominant colours are " +
+              "read from the pixels, and any colour the copy claims that the work does not have is " +
+              "REFUSED. Supply this whenever the copy describes how the piece looks — it is the only " +
+              "way a description can be checked at all.",
+          ),
       })
       .optional()
       .describe(
@@ -214,10 +224,27 @@ const socialPostUpsert = createTool({
     assetRefs?: string[];
     provenance?: { claim: string; origin: "owner" | "agent" | "data" }[];
     body?: string;
-    boundFacts?: { entities?: string[]; allowedLinkHosts?: string[]; handle?: string };
+    boundFacts?: {
+      entities?: string[];
+      allowedLinkHosts?: string[];
+      handle?: string;
+      artworkImageUrl?: string;
+    };
   }) => {
     const { boundFacts, ...postInput } = input;
-    const result = await upsertPost(socialRepo, postInput, boundFacts);
+    // Read the work's real colours before the write. This is what turns "soft
+    // swaths of dusty rose" on a black-ink drawing from an unverifiable
+    // sentence into a failed comparison — five of this store's ten posts
+    // described the artwork they linked to, and all five were wrong.
+    //
+    // A palette that cannot be read comes back empty, and empty means the
+    // colour claims went UNCHECKED rather than approved; checkPostClaims says
+    // which checks actually ran.
+    const { artworkImageUrl, ...facts } = boundFacts ?? {};
+    const bound = artworkImageUrl
+      ? { ...facts, palette: await paletteOf(artworkImageUrl) }
+      : facts;
+    const result = await upsertPost(socialRepo, postInput, bound);
     // Attach the post to the calendar slot it fulfils. Without this the month
     // sheet renders "the calendar has no posts attached to its slots" while the
     // posts sit right there — two complete artifacts with nothing joining them.

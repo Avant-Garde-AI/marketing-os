@@ -25,6 +25,8 @@
 
 import { createHash } from "node:crypto";
 import { checkDiscounts } from "./discount-refs";
+import { syncCampaignIndex } from "./index-sync";
+import { getTenant } from "../tenant-context";
 import { DEFAULT_ALLOWED_IMAGE_HOSTS, hostAllowed } from "../email-assembly/invariants";
 import { z } from "zod";
 import type { Action, ActionPreview, ActionResult } from "../skill-kit";
@@ -95,8 +97,24 @@ async function loadCampaign(repo: EmailRepo, id: string): Promise<EmailCampaign>
   return parseCampaign(raw);
 }
 
+/**
+ * Write the artifact AND the projection the console reads.
+ *
+ * Files are truth, but the console and calendar read mos_email_campaigns /
+ * mos_calendar_items, so an Action that only wrote the file left the UI
+ * showing the previous status. Five campaigns sat at "proposed" on the
+ * dashboard for an hour after being approved, and one showed "approved"
+ * while it was already scheduled to send — the operator's own screen
+ * disagreeing with the system about what had been authorised.
+ *
+ * Every Action mutates through here, so this is the one place that closes
+ * it. Index failures are swallowed and logged inside syncCampaignIndex: a
+ * stale projection is bad, but failing an approved Action because a cache
+ * write hiccuped is worse — the file has already been written by then.
+ */
 async function saveCampaign(repo: EmailRepo, campaign: EmailCampaign): Promise<void> {
   await repo.writeFile(campaignPath(campaign.id), serializeCampaign(campaign));
+  await syncCampaignIndex(getTenant().shop, campaign);
 }
 
 async function loadStrategy(repo: EmailRepo): Promise<EmailStrategy> {
@@ -306,8 +324,37 @@ async function hostImagesOnKlaviyo(
   }
   if (setters.size === 0) return [];
 
+  /**
+   * Klaviyo's image upload accepts jpeg, png and gif only. The art graph serves
+   * `.webp`, which re-hosting passed straight through, and three of five drafts
+   * died on `unsupported media type "image/webp"` after a human had already
+   * approved them.
+   *
+   * Rather than add an image-processing dependency to convert bytes we do not
+   * need to decode, ask the origin for a format it already has: the graph
+   * serves the same artwork at the same path with a `.jpg` extension. Verified
+   * against picasso.arthaus.cloud — same path, `image/jpeg`, 200.
+   *
+   * Falls back to the original URL when the jpeg twin is not there, so a host
+   * without that convention degrades to the old behaviour and the upload's own
+   * error still names the type.
+   */
+  const jpegTwin = async (url: string): Promise<string> => {
+    if (!/\.webp(\?|$)/i.test(url)) return url;
+    const twin = url.replace(/\.webp(?=\?|$)/i, ".jpg");
+    try {
+      const head = await fetch(twin, { method: "HEAD" });
+      const type = (head.headers.get("content-type") ?? "").toLowerCase();
+      if (head.ok && type.startsWith("image/") && !type.includes("webp")) return twin;
+    } catch {
+      /* fall through to the original */
+    }
+    return url;
+  };
+
   const done: string[] = [];
-  for (const [url, apply] of setters) {
+  for (const [rawUrl, apply] of setters) {
+    const url = await jpegTwin(rawUrl);
     // fetch() throws for DNS and transport failures, and undici's message for
     // all of them is the bare string "fetch failed" — no URL, no cause. That
     // reached the approval audit verbatim and cost two approval cycles before

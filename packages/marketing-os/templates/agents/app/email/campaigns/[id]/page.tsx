@@ -2,10 +2,16 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitives";
+import { Approvals } from "@/components/approvals";
 import { loadCampaignDetail, type SectionView } from "@/lib/email/console-data";
 import { getTenant } from "@/lib/tenant-context";
 import { emailPreviewLink, emailReviewLink } from "@/lib/email/review-links";
 import { CopyLink } from "@/components/copy-link";
+import { ReviewNotes } from "@/components/review/email-review";
+import { listNotes } from "@/lib/email/review-notes";
+import { listCampaigns } from "@/lib/email/console-data";
+import { buildRetrospective } from "@/lib/email/retrospective";
+import { CampaignPerformance } from "@/components/email/campaign-performance";
 
 /**
  * Email campaign detail (WS4-R3 / 02 §7): the campaign as the human reviews
@@ -109,6 +115,18 @@ export default async function EmailCampaignPage({
   const { shop } = getTenant();
   const preview = emailPreviewLink(shop, id);
   const review = emailReviewLink(shop, id);
+  // Notes are token-scoped so the same thread serves the public review room and
+  // this page. MintedLink deliberately exposes only the URL — widening it just
+  // to reach inside would leak the signing shape into every caller — so the
+  // token is read back off the link that was already minted.
+  const reviewParams = new URL(review.url).searchParams;
+  const notes = await listNotes(id).catch(() => []);
+
+  // Measured against the store's own other sends — a rate alone cannot be
+  // called good or bad, and this is the page where someone decides whether the
+  // email worked.
+  const allCampaigns = await listCampaigns().catch(() => []);
+  const retro = buildRetrospective(id, allCampaigns);
 
   function sectionThumb(s: SectionView): { src: string; local: boolean } | null {
     // Klaviyo-hosted image once the draft Action uploaded it; else a live
@@ -139,6 +157,8 @@ export default async function EmailCampaignPage({
           title={subject ?? `Campaign ${id}`}
           sub={`Campaign ${id}${archetype ? ` · ${archetype}` : ""}`}
         />
+
+        <CampaignPerformance retro={retro} currency={process.env.STORE_CURRENCY ?? "USD"} />
 
         {/* Status line */}
         <div className="animate-enter-2 mb-6 flex flex-wrap items-center gap-2">
@@ -176,6 +196,13 @@ export default async function EmailCampaignPage({
         )}
 
         <div className="animate-enter-2 space-y-6">
+          {/* Anything waiting on a person, for THIS campaign, at the top where the
+              status chips are — that is where someone looking at one campaign
+              expects to act on it. Renders nothing when nothing is pending, so a
+              campaign with no open approval is unchanged. Overview keeps the full
+              cross-campaign queue. */}
+          <Approvals campaignId={id} />
+
           {/* Subject + candidates */}
           <SectionCard title="Subject & preview">
             {subject ? (
@@ -367,6 +394,21 @@ export default async function EmailCampaignPage({
               </p>
               <CopyLink url={review.url} />
             </div>
+          </SectionCard>
+
+          {/* Notes. The same thread the public review room writes to, on the page
+              where an operator is actually watching the campaign change — reading
+              a rebuilt section and having to go find another URL to say something
+              about it is how feedback ends up in chat instead of on the record. */}
+          <SectionCard title="Notes">
+            <ReviewNotes
+              campaignId={id}
+              shop={shop}
+              token={reviewParams.get("t") ?? ""}
+              exp={reviewParams.get("e") ?? ""}
+              initial={notes}
+                      slots={(artifact?.sections ?? []).map((s) => s.slot).filter(Boolean)}
+            />
           </SectionCard>
 
           {/* Status trail + the Action gate's ledger */}

@@ -661,7 +661,17 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
     async getCampaignStatus(campaignId: string): Promise<{ status: string; scheduledAt?: string }> {
       const doc = await request({ path: EP.campaign(campaignId) });
       const r = asOne(doc, `campaign ${campaignId}`);
-      const scheduledAt = attr<string>(r, "scheduled_at") ?? attr<string>(r, "send_time");
+      // `send_time` is WHEN IT SENDS. `scheduled_at` is when somebody pressed
+      // schedule — a different question with a plausible-looking answer, and
+      // preferring it made the drift check compare the approval's timestamp
+      // against the approved send time. That fired OUT-OF-BAND on every healthy
+      // campaign (83 Oranges: "klaviyo says 2026-09-08T16:59, approved
+      // 2026-09-17T10:00" — both correct, describing different events). An
+      // alarm that cries wolf on every campaign is worse than no alarm, because
+      // it trains people past the one that matters. No fallback: if Klaviyo has
+      // no send_time there is no send time to report, and guessing is what
+      // caused this.
+      const scheduledAt = attr<string>(r, "send_time");
       return {
         status: attr<string>(r, "status") ?? "unknown",
         ...(scheduledAt ? { scheduledAt } : {}),

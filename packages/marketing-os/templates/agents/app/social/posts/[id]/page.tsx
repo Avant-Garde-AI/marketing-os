@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitives";
 import { getTenant } from "@/lib/tenant-context";
 import { loadPost } from "@/lib/social/console-data";
+import { postThumbnailUrl } from "@/lib/social/projection";
 
 /**
  * Social post detail (spec 24 §6): the post spec as the human reads it — the
@@ -41,6 +42,8 @@ export default async function SocialPostPage({
   // Next delivers route params already URL-decoded; loadPost rejects bad ids.
   const { id } = await params;
   const { shop } = getTenant();
+  // Same public base the review room and calendar thumbnails use.
+  const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
   const detail = await loadPost(shop, id);
 
   if (!detail) {
@@ -68,6 +71,8 @@ export default async function SocialPostPage({
   }
 
   const { post, studioPath } = detail;
+
+  const creativeSrc = postThumbnailUrl(post, publicUrl);
   const month = post.scheduledAt?.slice(0, 7);
   const when = post.scheduledAt
     ? new Date(post.scheduledAt).toLocaleString("en-US", {
@@ -157,6 +162,20 @@ export default async function SocialPostPage({
               ) : undefined
             }
           >
+            {/* The composed creative first — it IS the asset once a Design
+                Surface is bound, and rendering only assetRefs meant this page
+                said "No assets yet" about a post whose creative the review room
+                was showing perfectly well. Same export URL the review room and
+                the calendar thumbnail use: re-rendered on GET from the file id,
+                no signature, no expiry. */}
+            {creativeSrc ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={creativeSrc}
+                alt={`${post.channel} creative for ${post.id}`}
+                className="mb-3 block w-full border border-hairline bg-raised object-contain"
+              />
+            ) : null}
             {post.assetRefs.length > 0 ? (
               <ul className="space-y-1.5">
                 {post.assetRefs.map((ref) => (
@@ -165,10 +184,9 @@ export default async function SocialPostPage({
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : creativeSrc ? null : (
               <p className="text-sm text-ink-2">
-                No assets yet — the asset pipeline composes this post&apos;s creative on a
-                Design Surface and its exports land here.
+                No creative yet — compose it on a Design Surface and it appears here.
               </p>
             )}
           </SectionCard>

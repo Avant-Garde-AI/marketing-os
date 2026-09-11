@@ -119,3 +119,61 @@ Grounded in `brand/brand.md` (the Nest Curator thinks in rooms) and the existing
 - **D1** — Do concepts live in the calendar (a slot references a concept) or only at instantiation? Leaning: calendar slots gain an optional `conceptRef`, so a month can be planned as ideas before subjects exist.
 - **D2** — Does `needs` get a real predicate language, or start as a documented string plus a hand-written resolver per store? Leaning: string + resolver first; a DSL invented before three real stores exist will be wrong.
 - **D3** — Is `social_concept_propose` an Action (gated) or a read that emits a draft? Leaning: read that writes a `status: draft` artifact — drafts are free, promotion is the gate.
+
+---
+
+## 9. Video: Penpot holds the keyframes, not the film
+
+Added 2026-09-11, after rendering `how-it-was-made` end to end on Veo 3.1.
+
+**An mp4 never enters the canvas.** Penpot is a vector editor with no timeline;
+storing video there would be fighting the tool, and a rendered film is not an
+editable artifact in the sense the Design Studio means. The split:
+
+| | Owner | Editable |
+|---|---|---|
+| Keyframes (a beat's start/end state) | Penpot board | yes — Design Studio |
+| The render between them | Veo | no |
+| The finished mp4 | post `assetRefs` | no — reviewed, not edited |
+
+**A beat is a keyframe.** `ConceptBeat` already carries `archetypeId` and
+`seconds`, which turns out to be exactly the right shape: a beat is a frame
+composed as an archetype and held for a duration. Compose each beat as a named
+board (`boards[]` and `exportSurfaceBoards` already exist — email uses board
+names as slot keys), export them, and hand consecutive pairs to the video model
+as `image` and `lastFrame`.
+
+**This is what makes continuity structural rather than hoped-for.** The first
+real render held board, surface and light for six seconds and changed both in
+the last two — not model drift, but a brief that contradicted itself, because
+the `lastFrame` was an independently generated still shot on a different desk.
+When both keyframes are boards on ONE page sharing a background image and crop,
+that failure is impossible by construction. §"SceneConstants" stops being an
+instruction the model may or may not honour and becomes a property of the
+inputs. Prompt-level continuity remains, as the belt to that brace.
+
+**It also puts human editing in the right place.** The canvas is where a crop,
+a caption, a frame colour or a piece of brand type gets fixed — and then the
+video is re-rendered from the corrected keyframes. Nobody edits a film; they
+edit the two pictures it interpolates, which is a job a design tool is good at
+and a video tool is not.
+
+### What this needs ⟨BUILD⟩
+
+1. `compose_post_from_archetype` gains a multi-board form: one board per beat,
+   named for its role, sharing the file.
+2. A render step that walks consecutive exported boards into video-model calls
+   and attaches the result to the post as an asset.
+3. Cost control at that step. Veo is billed per second of output; a concept
+   with five beats is four renders, and that must be visible before it runs,
+   not after.
+
+### Model access, for the record
+
+Veo 3.1 required **no grant of any kind** on either `avant-garde-platform` or
+`arthaus-us`. An earlier claim in this workstream that it needed a Model Garden
+grant was wrong: the 404s came from model ids that do not exist
+(`veo-3.1-*-preview`, `veo-3.0-*`, `veo-2.0-*`). The working ids are
+`veo-3.1-fast-generate-001` and `veo-3.1-generate-001`, us-central1, via
+`:predictLongRunning` + `:fetchPredictOperation`. Noted because "we need access"
+is an expensive wrong answer — it sends someone to a console to fix nothing.

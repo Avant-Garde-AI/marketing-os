@@ -20,6 +20,7 @@
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createSocialTools } from "../../../lib/social/tools";
+import { createConceptTools } from "../../../lib/social/concept-tools";
 import {
   linkDesignToPost,
   parsePost,
@@ -40,6 +41,7 @@ import type { SkillToolDefinition } from "../../../lib/social/types";
 import "../../../lib/social/register-actions";
 
 const defs = createSocialTools(socialRepo);
+const conceptDefs = createConceptTools(socialRepo);
 
 /** SkillToolDefinition → Mastra tool (the wrap the pack's types.ts describes). */
 function toMastraTool<I extends z.ZodTypeAny, O extends z.ZodTypeAny>(
@@ -410,5 +412,12 @@ export const socialTools = {
   // social/reference/genome.md — no wiring. Stores without one are
   // unaffected: the tool answers available:false and compose stays brand-only.
   social_genome_read: toMastraTool(defs.social_genome_read),
+  // Post concepts (spec 29) — the idea layer above the genome. Reads plus one
+  // draft-only write; `instantiate` returns PLANS, so turning a plan into a
+  // post stays with social_post_upsert and its claims guard.
+  social_concept_list: toMastraTool(conceptDefs.social_concept_list),
+  social_concept_read: toMastraTool(conceptDefs.social_concept_read),
+  social_concept_draft: toMastraTool(conceptDefs.social_concept_draft),
+  social_concept_instantiate: toMastraTool(conceptDefs.social_concept_instantiate),
   social_link_design: socialLinkDesign,
 };

@@ -65,6 +65,7 @@ export {
   type FitVerdict, type NeedAssessment, type SceneConstants, type SelectionResult,
   type SequenceExpression, type SingleExpression, type SubjectFit,
 } from "./concepts";
+export { createConceptTools, type ConceptTools } from "./concept-tools";
 export {
   specFromArchetype,
   fetchImageAsset,

@@ -37,7 +37,7 @@ function errMsg(e: unknown): string {
 /** Console-relative Design Studio path (spec 23 DS4) — the abstraction seam:
  * the console owns the Studio URL (/studio embeds the canvas next to chat);
  * the raw Penpot editUrl is only the fallback for surfaces without a console. */
-function studioPath(teamId: string, fileId: string, pageId?: string): string {
+export function studioPath(teamId: string, fileId: string, pageId?: string): string {
   const qs = new URLSearchParams({ "team-id": teamId, "file-id": fileId });
   if (pageId) qs.set("page-id", pageId);
   return `/studio?${qs.toString()}`;
@@ -63,7 +63,7 @@ function libraryColorsFromTokens(file: DtcgTokensFile): { name: string; color: s
   return out;
 }
 
-interface BrandTokens {
+export interface BrandTokens {
   tokens?: DtcgTokens;
   libraryColors?: { name: string; color: string }[];
   designMdVersion?: number;
@@ -72,7 +72,7 @@ interface BrandTokens {
 /** Load + compile the tenant's DESIGN.md tokens. Degrades to {} on any
  * failure (no DESIGN.md, no DB, unparseable front matter) — a surface
  * without brand tokens beats a failed turn. */
-async function loadBrandTokens(shop: string): Promise<BrandTokens> {
+export async function loadBrandTokens(shop: string): Promise<BrandTokens> {
   try {
     const doc = await getBrandDoc(shop, "DESIGN.md");
     if (!doc) return {};

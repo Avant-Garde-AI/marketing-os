@@ -21,7 +21,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createSocialTools } from "../../../lib/social/tools";
 import { createConceptTools } from "../../../lib/social/concept-tools";
-import { composePostFromArchetype } from "./social-compose";
+import { composePostFromArchetype, composePostKeyframes } from "./social-compose";
 import {
   linkDesignToPost,
   parsePost,
@@ -450,5 +450,8 @@ export const socialTools = {
   // Compose a post's creative FROM an archetype (spec 29 → 24 §6): the join
   // between a concept's plan and an actual surface. Roles in, surface out.
   compose_post_from_archetype: composePostFromArchetype,
+  // Video authoring (spec 29 §9): beats become keyframe boards on ONE page,
+  // so continuity holds by construction rather than by prompt.
+  compose_post_keyframes: composePostKeyframes,
   social_link_design: socialLinkDesign,
 };

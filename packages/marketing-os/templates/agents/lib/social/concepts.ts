@@ -476,3 +476,54 @@ export function serializeConcept(concept: PostConcept): string {
   fm.status = concept.status;
   return document(fm, concept.body ?? "");
 }
+
+// ---------------------------------------------------------------------------
+// Cost, before it is spent
+// ---------------------------------------------------------------------------
+
+export interface VideoCostEstimate {
+  /** Renders needed: consecutive keyframe PAIRS, so beats − 1. */
+  renders: number;
+  /** Total output seconds across those renders. */
+  seconds: number;
+  /** Estimated spend, at the supplied per-second rate. */
+  cost: number;
+  /** Sentence-shaped, for an approval prompt. */
+  summary: string;
+}
+
+/**
+ * What rendering a concept's video expression will cost, before it runs.
+ *
+ * Video models bill per second of OUTPUT, and a beat script hides its own
+ * price: five beats is four renders, not one, because each render interpolates
+ * a consecutive pair of keyframes. A store that approved "make the video" on a
+ * three-beat concept and got billed for a five-beat one has been surprised by
+ * arithmetic nobody showed them.
+ *
+ * Beats without an explicit duration fall back to `defaultSeconds` — an
+ * estimate that silently skipped them would under-report exactly the beats
+ * whose length nobody had thought about.
+ */
+export function estimateVideoCost(
+  beats: ConceptBeat[],
+  ratePerSecond: number,
+  defaultSeconds = 5,
+): VideoCostEstimate {
+  const renders = Math.max(0, beats.length - 1);
+  // Each render spans a pair; charge the SECOND beat's duration, which is the
+  // segment being generated.
+  const seconds = beats.slice(1).reduce((n, b) => n + (b.seconds ?? defaultSeconds), 0);
+  const cost = Number((seconds * ratePerSecond).toFixed(2));
+  return {
+    renders,
+    seconds,
+    cost,
+    summary:
+      renders === 0
+        ? "No renders: a single keyframe is a still, not a video."
+        : `${renders} render${renders === 1 ? "" : "s"} over ${seconds}s of output, about ` +
+          `${cost.toFixed(2)} at ${ratePerSecond}/s. Each render interpolates one consecutive ` +
+          `pair of keyframes.`,
+  };
+}

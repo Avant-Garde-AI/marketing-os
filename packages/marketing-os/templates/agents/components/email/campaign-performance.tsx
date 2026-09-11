@@ -1,4 +1,4 @@
-import type { Retrospective } from "@/lib/email/retrospective";
+import type { Retrospective, Verdict } from "@/lib/email/retrospective";
 
 /**
  * How this one campaign did, against the store's own other sends.
@@ -31,18 +31,18 @@ function money(v: number, currency: string): string {
 }
 
 /**
- * "1.18× the usual" beats "+18%" here, because these are ratios of rates and
- * a percentage of a percentage is the classic way to mislead without lying.
- * Differences under a tenth are shown as level — at this sample size that is
- * what they are.
+ * The comparison, as judged by the retrospective module rather than re-decided
+ * here. Shows the ratio for scale and the verdict for meaning, and the verdict
+ * is direction-aware: more opens is better, more unsubscribes is worse, and
+ * rendering both as "1.8× the usual" invites someone to read churn as success.
  */
-function Versus({ v }: { v: number | null }) {
-  if (v === null) return <span className="text-ink-3">no baseline</span>;
-  if (v >= 0.9 && v <= 1.1) return <span className="text-ink-3">about usual</span>;
-  const better = v > 1;
+function Versus({ v }: { v: Verdict | undefined }) {
+  if (!v || v.band === "no baseline") return <span className="text-ink-3">no baseline</span>;
+  if (v.band === "about usual") return <span className="text-ink-3">about usual</span>;
+  const worse = v.band === "worse";
   return (
-    <span className={better ? "text-ink" : "text-ink-2"}>
-      {v.toFixed(2)}× {better ? "the usual" : "of usual"}
+    <span className={worse ? "text-danger" : "text-ink"}>
+      {v.ratio!.toFixed(2)}× — {worse ? "worse than usual" : "better than usual"}
     </span>
   );
 }
@@ -55,7 +55,7 @@ function Row({
 }: {
   label: string;
   value: string;
-  versus?: number | null;
+  versus?: Verdict;
   note?: string;
 }) {
   return (
@@ -115,13 +115,13 @@ export function CampaignPerformance({
         <Row
           label="Open rate"
           value={pct(p.openRate)}
-          versus={v?.openRate ?? null}
+          versus={v?.openRate}
           note={`${int(p.opens)} opens`}
         />
         <Row
           label="Click rate"
           value={pct(p.clickRate)}
-          versus={v?.clickRate ?? null}
+          versus={v?.clickRate}
           note={`${int(p.clicks)} clicks`}
         />
         <Row
@@ -132,7 +132,7 @@ export function CampaignPerformance({
         <Row
           label="Unsubscribes"
           value={int(p.unsubscribes)}
-          versus={v?.unsubRate ?? null}
+          versus={v?.unsubRate}
           note={pct(p.unsubRate, 2) + " of delivered"}
         />
         <Row

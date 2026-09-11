@@ -61,6 +61,27 @@ export interface Measured {
   unsubRate: number | null;
 }
 
+/**
+ * How a metric compares, already judged.
+ *
+ * The ratio alone invited each surface to pick its own threshold, and the agent
+ * duly called 1.04x "slightly above baseline" where the page called the same
+ * number "about usual". Whoever reads this should not be deciding what counts
+ * as a difference — so the band is computed here, once, and both read it.
+ *
+ * `direction` matters as much as the band: 1.81x opens is good news and 1.81x
+ * unsubscribes is bad news, and a surface that renders them identically is
+ * inviting someone to read churn as success.
+ */
+export type Band = "better" | "about usual" | "worse" | "no baseline";
+
+export interface Verdict {
+  ratio: number | null;
+  band: Band;
+  /** Which way is good for this metric. */
+  betterWhen: "higher" | "lower";
+}
+
 export interface Retrospective {
   id: string;
   subject: string | null;
@@ -70,8 +91,14 @@ export interface Retrospective {
   performance: Measured | null;
   /** Pooled across the store's OTHER measured campaigns. */
   baseline: (Measured & { campaigns: number }) | null;
-  /** Multiplicative difference vs baseline, e.g. 1.12 = 12% better. */
-  versus: { openRate: number | null; clickRate: number | null; unsubRate: number | null } | null;
+  /** Multiplicative difference vs baseline, already banded and direction-aware. */
+  versus: { openRate: Verdict; clickRate: Verdict; unsubRate: Verdict } | null;
+  /**
+   * True when the baseline is too small to carry an argument. A structured flag
+   * as well as prose, because a caveat buried in a list of strings is a caveat
+   * a summariser drops.
+   */
+  baselineIsThin: boolean;
   /** Things a reader must know before drawing a conclusion. */
   caveats: string[];
 }
@@ -126,6 +153,24 @@ const ratio = (a: number | null, b: number | null): number | null =>
   a === null || b === null || b === 0 ? null : a / b;
 
 /**
+ * Within a tenth of the baseline is "about usual". At these volumes a few
+ * percent either way is who happened to be in the audience, and naming it a
+ * change is how a noise reading becomes a strategy.
+ */
+function verdict(
+  mine: number | null,
+  base: number | null,
+  betterWhen: "higher" | "lower",
+): Verdict {
+  const r = ratio(mine, base);
+  if (r === null) return { ratio: null, band: "no baseline", betterWhen };
+  if (r >= 0.9 && r <= 1.1) return { ratio: r, band: "about usual", betterWhen };
+  const higher = r > 1;
+  const good = betterWhen === "higher" ? higher : !higher;
+  return { ratio: r, band: good ? "better" : "worse", betterWhen };
+}
+
+/**
  * Build the retrospective for one campaign out of the full campaign list.
  * Pure — the caller fetches; this decides what the numbers are allowed to say.
  */
@@ -142,6 +187,7 @@ export function buildRetrospective(campaignId: string, all: CampaignRow[]): Retr
       performance: null,
       baseline: null,
       versus: null,
+      baselineIsThin: true,
       caveats: [`No campaign "${campaignId}" in this store's index.`],
     };
   }
@@ -198,11 +244,13 @@ export function buildRetrospective(campaignId: string, all: CampaignRow[]): Retr
     versus:
       performance && baseline
         ? {
-            openRate: ratio(performance.openRate, baseline.openRate),
-            clickRate: ratio(performance.clickRate, baseline.clickRate),
-            unsubRate: ratio(performance.unsubRate, baseline.unsubRate),
+            openRate: verdict(performance.openRate, baseline.openRate, "higher"),
+            clickRate: verdict(performance.clickRate, baseline.clickRate, "higher"),
+            // The one metric where a bigger number is a worse result.
+            unsubRate: verdict(performance.unsubRate, baseline.unsubRate, "lower"),
           }
         : null,
+    baselineIsThin: !baseline || baseline.campaigns < 3,
     caveats,
   };
 }

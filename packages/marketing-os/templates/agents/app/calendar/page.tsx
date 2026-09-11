@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { PageHeader, Chip, EmptyState } from "@/components/primitives";
 import { CalendarView } from "@/components/calendar/calendar-view";
+import { calendarHrefFor } from "@/lib/calendar/review-routes";
 import { listCalendarItems, listCalendarMonths } from "@/lib/calendar/console-data";
+import { getTenant } from "@/lib/tenant-context";
 
 /**
  * Calendar — THE cross-channel calendar (WS4-R2 / 02 §6 / 05 H4.2).
@@ -58,6 +60,7 @@ export default async function CalendarPage({
         : (months[0] ?? currentMonth());
 
   const items = await listCalendarItems(month);
+  const { shop } = getTenant();
   const channels = [...new Set(items.map((i) => i.channel))].sort();
 
   return (
@@ -102,7 +105,13 @@ export default async function CalendarPage({
 
         {items.length > 0 ? (
           <>
-            <CalendarView month={month} items={items} />
+            <CalendarView
+              month={month}
+              items={items.map((i) => ({
+                ...i,
+                href: calendarHrefFor(i.channel, i.itemId, shop) ?? undefined,
+              }))}
+            />
             <p className="animate-enter-3 mt-5 text-[11.5px] text-ink-3">
               Read + click-through for now — scheduling changes happen where each channel&apos;s
               approvals live. Refine any month in chat.

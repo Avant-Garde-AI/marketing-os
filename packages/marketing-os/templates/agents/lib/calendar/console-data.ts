@@ -29,6 +29,9 @@ export interface CalendarItem {
   scheduledAt: string | null;
   /** Pack lifecycle string; the calendar renders chips, doesn't interpret. */
   status: string;
+  /** Where the card clicks through to. Resolved server-side because review
+   *  links are token-gated; absent falls back to the channel's detail route. */
+  href?: string;
   title: string;
   intent: string;
   thumbnailUrl: string | null;

@@ -121,6 +121,23 @@ export async function loadPostGroup(
     }
   }
 
+  // Nothing matched the key as a GROUP key. Try it as a member id: a calendar
+  // card knows the post it represents, not the group that post belongs to, and
+  // making the caller resolve that first would mean every entry point needs to
+  // read the artifacts before it can build a link.
+  if (details.length === 0) {
+    for (const path of paths.filter((p) => p.endsWith("/post.md"))) {
+      try {
+        const raw = await socialRepo.readFile(path);
+        if (raw === null) continue;
+        const post = parsePost(raw);
+        if (post.id === key) return loadPostGroup(shop, groupKey(post));
+      } catch {
+        // Already counted as unreadable on the first pass.
+      }
+    }
+  }
+
   const ordered = groupPosts(details.map((d) => d.post))[0]?.posts ?? [];
   const byId = new Map(details.map((d) => [d.post.id, d]));
   return { posts: ordered.map((p) => byId.get(p.id)!).filter(Boolean), unreadable };

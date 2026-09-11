@@ -80,7 +80,10 @@ function StatusChip({ status }: { status: string }) {
 }
 
 function ItemCard({ item, compact }: { item: CalendarItem; compact?: boolean }) {
-  const href = detailRouteFor(item.channel, item.itemId);
+  // Resolved server-side (app/calendar/page.tsx): review links are token-gated
+  // and a client component never sees a secret. Falls back to the detail route
+  // for channels with no review room.
+  const href = item.href ?? detailRouteFor(item.channel, item.itemId);
   const body = (
     <div
       className={

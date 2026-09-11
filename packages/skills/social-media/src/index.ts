@@ -58,6 +58,15 @@ export type {
 } from "./reference";
 export { resolveSlots, assertComplete, chooseArchetype, missingRoles } from "./resolve";
 export {
+  CONCEPTS_DIR, conceptPath, parseConcept, serializeConcept, validateConcept,
+  assertConceptValid, assessFit, selectSubjects, beatInstruction,
+  type PostConcept, type ConceptNeed, type ConceptBeat, type ConceptEvidence,
+  type ConceptExpressions, type ConceptFormat, type ConceptProblem, type ConceptVoice,
+  type FitVerdict, type NeedAssessment, type SceneConstants, type SelectionResult,
+  type SequenceExpression, type SingleExpression, type SubjectFit,
+} from "./concepts";
+export { createConceptTools, type ConceptTools } from "./concept-tools";
+export {
   specFromArchetype,
   fetchImageAsset,
   imageDimensions,

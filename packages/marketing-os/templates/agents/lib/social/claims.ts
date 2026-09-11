@@ -26,6 +26,8 @@
  */
 
 /** What the store says this post is actually about. */
+import { checkColorClaims, type PaletteColor } from "./palette";
+
 export interface BoundFacts {
   /**
    * Every entity the copy may name — people, works, collections. Matching is
@@ -46,6 +48,20 @@ export interface BoundFacts {
    * unbound name in prose, not a lighter one.
    */
   allowedHandles?: string[];
+  /**
+   * The work's dominant colours, extracted from its actual pixels.
+   *
+   * This is the only bound fact derived from the IMAGE rather than from a
+   * record, and it exists because every fabrication this store has shipped was
+   * a colour claim: a teal botanical described as "warm terracotta and ochre",
+   * a black-ink drawing as "dusty rose, sage and pale yellow". Names, handles
+   * and links could be checked against a list; a sentence about how something
+   * LOOKS had nothing to be compared against until now.
+   *
+   * Omitted means unchecked, and `checked` says so rather than implying the
+   * copy passed.
+   */
+  palette?: PaletteColor[];
 }
 
 export interface ClaimProblem {
@@ -56,7 +72,8 @@ export interface ClaimProblem {
     | "bad-link"
     | "link-not-the-subject"
     | "unbound-handle"
-    | "unbound-handle-claim";
+    | "unbound-handle-claim"
+    | "unsupported-color-claim";
   detail: string;
   severity: "blocking" | "warning";
 }
@@ -171,6 +188,16 @@ export function checkPostClaims(
     });
   }
 
+  // Colour claims, against the work's own pixels. BLOCKING, like the other
+  // attribution checks: describing a teal work as terracotta is the same
+  // species of error as crediting the wrong artist — a confident statement
+  // about someone's work that is simply untrue — and it reaches a reader the
+  // same way.
+  const palette = bound.palette ?? [];
+  for (const c of checkColorClaims(copy, palette)) {
+    problems.push({ id: "unsupported-color-claim", detail: c.detail, severity: "blocking" });
+  }
+
   return {
     ok: !problems.some((p) => p.severity === "blocking"),
     problems,
@@ -182,6 +209,10 @@ export function checkPostClaims(
       "foreign-link",
       "bad-link",
       "link-not-the-subject",
+      // Named only when a palette was supplied: an absent palette means the
+      // colour claims went UNCHECKED, and saying otherwise would let a caller
+      // read silence as approval.
+      ...(palette.length > 0 ? ["unsupported-color-claim"] : []),
     ],
   };
 }

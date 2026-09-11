@@ -67,6 +67,17 @@ export {
 } from "./concepts";
 export { createConceptTools, type ConceptTools } from "./concept-tools";
 export {
+  checkColorClaims,
+  colorClaimsIn,
+  colorWordsIn,
+  chroma,
+  deltaE,
+  type ColorClaim,
+  type ColorClaimOptions,
+  type ColorClaimProblem,
+  type PaletteColor,
+} from "./palette";
+export {
   specFromArchetype,
   fetchImageAsset,
   imageDimensions,

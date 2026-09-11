@@ -399,6 +399,28 @@ const TOOLS: ToolDef[] = [
     run: (a) => runMastra(emailAuthoringTools.gallery_wall_sets_read, a),
   },
   {
+    name: "klaviyo_audience_explain",
+    description:
+      "Explain what a Klaviyo SEGMENT actually selects: its rule in plain English plus its current profile count. Use before reusing a segment you did not create, and whenever a campaign names an audience you cannot vouch for — a name and a count cannot tell you a segment matches the wrong people, only the rule can. Segments only; a list has members rather than a rule. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: { segmentId: { type: "string", description: "Klaviyo segment id, e.g. Y7THBS." } },
+      required: ["segmentId"],
+    },
+    run: (a) => runMastra(emailToolMap().klaviyo_audience_explain, a),
+  },
+  {
+    name: "email_campaign_retrospective",
+    description:
+      "Everything needed to analyse a campaign that has already sent: its performance, a baseline pooled from this store's OTHER measured campaigns, the copy that shipped, the headline options it was chosen from, and the review notes people left. Use it before offering any opinion on how an email did. REPORT THE BANDS AS GIVEN: each comparison carries a verdict of better / worse / 'about usual', already judged and already direction-aware — a higher unsubscribe rate is WORSE, not a gain. Do not recompute a threshold or upgrade 'about usual' into a small improvement. If baselineIsThin is true, say so before drawing any conclusion from a difference. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: { campaignId: { type: "string", description: "e.g. 2026-09-07-promotion-labor-day" } },
+      required: ["campaignId"],
+    },
+    run: (a) => runMastra(emailToolMap().email_campaign_retrospective, a),
+  },
+  {
     name: "email_render_preview",
     description:
       "Assemble a campaign's current state into real email HTML and return links a human can open, plus the invariant report (errors/warnings). previewUrl is the raw email; reviewUrl is the SHAREABLE review room — the email with its subject, send date, rationale, audience and a notes thread, openable by someone with no console account. Hand over reviewUrl, not previewUrl. Both links EXPIRE; quote expiresAt whenever you paste one. Read-only; nothing touches Klaviyo.",

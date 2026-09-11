@@ -306,6 +306,67 @@ async function prepareFiles(
     },
 
     // Components
+    //
+    // Every entry here is one a SCAFFOLDED STORE FAILS TO BUILD without. The
+    // list is hand-maintained, so a page added to the template that imports a
+    // new component compiles fine in this repo and breaks only in a fresh
+    // store — the integration test's `next build` is the one place that
+    // notices, and it had been red for three commits when this was found.
+    {
+      templatePath: path.join(templateDir, "agents/components/app-shell.tsx"),
+      targetPath: path.join(targetDir, "agents/components/app-shell.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/approvals.tsx"),
+      targetPath: path.join(targetDir, "agents/components/approvals.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/primitives.tsx"),
+      targetPath: path.join(targetDir, "agents/components/primitives.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/chat/chat-panel.tsx"),
+      targetPath: path.join(targetDir, "agents/components/chat/chat-panel.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/skills/skills-admin.tsx"),
+      targetPath: path.join(targetDir, "agents/components/skills/skills-admin.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/provider-connections.ts"),
+      targetPath: path.join(targetDir, "agents/lib/provider-connections.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/shopify.ts"),
+      targetPath: path.join(targetDir, "agents/lib/shopify.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-enablements.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-enablements.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skills-catalog.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skills-catalog.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/chat/conversation-sidebar.tsx"),
+      targetPath: path.join(targetDir, "agents/components/chat/conversation-sidebar.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/chat/gen-ui.tsx"),
+      targetPath: path.join(targetDir, "agents/components/chat/gen-ui.tsx"),
+      overwrite: "skip",
+    },
     {
       templatePath: path.join(templateDir, "agents/components/nav.tsx"),
       targetPath: path.join(targetDir, "agents/components/nav.tsx"),

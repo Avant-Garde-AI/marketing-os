@@ -152,6 +152,25 @@ export interface SurfaceStyle {
   defaultText: TextStyle;
 }
 
+/**
+ * One component from the store's design library, as the compose lane needs it.
+ * Geometry is component-local: (0,0) is the component's own top-left.
+ */
+export interface ResolvedComponent {
+  name: string;
+  width: number;
+  height: number;
+  elements: SurfaceComposeElement[];
+}
+
+/**
+ * Look up a component by name. Supplied by the caller for the same reason
+ * `materialize` is: the pack must not learn where a store keeps its library.
+ * Returning null means "no such component", and the compose refuses by name
+ * rather than drawing nothing.
+ */
+export type ResolveComponent = (ref: string) => ResolvedComponent | null;
+
 export interface ArchetypeComposeInput {
   archetype: LayoutArchetype;
   board: Board;
@@ -161,6 +180,8 @@ export interface ArchetypeComposeInput {
   boardName?: string;
   style: SurfaceStyle;
   materialize: MaterializeImage;
+  /** Required only when a binding uses `kind: "component"`. */
+  resolveComponent?: ResolveComponent;
   tokens?: Record<string, unknown>;
   libraryColors?: { name: string; color: string; opacity?: number }[];
 }
@@ -291,6 +312,60 @@ export async function specFromArchetype(
         ...(style.textAlign ? { textAlign: style.textAlign } : {}),
         fills: [{ fillColor: style.color ?? "#000000", fillOpacity: 1 }],
       });
+      continue;
+    }
+
+    if (slot.fill.kind === "component") {
+      const { ref, overrides } = slot.fill;
+      if (!input.resolveComponent) {
+        throw new Error(
+          `role "${slot.role}" is bound to component "${ref}" but no component resolver was supplied — ` +
+            `the caller must provide one, because the pack does not know where this store keeps its library`,
+        );
+      }
+      const component = input.resolveComponent(ref);
+      if (!component) {
+        throw new Error(
+          `role "${slot.role}" is bound to component "${ref}", which is not in this store's design library. ` +
+            `Publish it, or bind the role directly.`,
+        );
+      }
+      // Refuse a component squeezed into a differently-shaped slot, for the
+      // same reason an image is: the craft IS the proportion. A caption band
+      // stretched 30% taller has different optical spacing than the one the
+      // designer approved, and it still exports cleanly.
+      const slotAspect = slot.width / slot.height;
+      const compAspect = component.width / component.height;
+      const distortion = Math.abs(slotAspect - compAspect) / compAspect;
+      if (distortion > MAX_ASPECT_DISTORTION) {
+        throw new Error(
+          `component "${ref}" is ${component.width}x${component.height} and role "${slot.role}" is ` +
+            `${slot.width}x${slot.height} — a ${Math.round(distortion * 100)}% difference in proportion. ` +
+            `Author the component at the slot's shape, or choose an archetype it fits.`,
+        );
+      }
+      const scale = slot.width / component.width;
+      for (const el of component.elements) {
+        const placed = {
+          ...el,
+          name: `${slot.role}/${el.name ?? el.type}`,
+          x: slot.x + Math.round(el.x * scale),
+          y: slot.y + Math.round(el.y * scale),
+          width: Math.max(1, Math.round(el.width * scale)),
+          height: Math.max(1, Math.round(el.height * scale)),
+        } as SurfaceComposeElement;
+        if (placed.type === "text") {
+          const override = overrides?.[el.name ?? ""];
+          if (override !== undefined) placed.characters = override;
+          // Type scales with the component so a library authored at 1080 still
+          // reads correctly when a slot is narrower.
+          const authored = Number((el as { fontSize?: string }).fontSize);
+          if (Number.isFinite(authored) && scale !== 1) {
+            placed.fontSize = String(Math.max(11, Math.round(authored * scale)));
+          }
+        }
+        elements.push(placed);
+      }
       continue;
     }
 

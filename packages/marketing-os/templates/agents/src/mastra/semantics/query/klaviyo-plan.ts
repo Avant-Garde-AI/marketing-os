@@ -25,18 +25,10 @@
 // stored row keeps Klaviyo's own per-campaign rate for single-campaign reads,
 // but any aggregate is rebuilt from the counts.
 
-import { Pool } from "pg";
 import { getTenant } from "../../../../lib/tenant-context";
+import { safeQuery, tenantIdForShop } from "../../../../lib/platform-db";
 import type { ProviderResult } from "./ga4-plan";
 import type { ValidatedQuery } from "./types";
-
-let _pool: Pool | null = null;
-function pool(): Pool {
-  const cs = process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!cs) throw new Error("email_performance needs SUPABASE_DATABASE_URL or DATABASE_URL");
-  if (!_pool) _pool = new Pool({ connectionString: cs, max: 3 });
-  return _pool;
-}
 
 /** A readback field, and how it aggregates. Counts sum; rates are rebuilt. */
 const COUNT_SQL: Record<string, string> = {
@@ -82,7 +74,7 @@ export interface EmailPlan {
   select: string[];
 }
 
-export function buildEmailPlan(vq: ValidatedQuery): EmailPlan {
+export function buildEmailPlan(vq: ValidatedQuery, tenantId: string): EmailPlan {
   const dims = vq.dimensions.map((d) => d.name).filter((n) => n in DIMENSION_SQL);
   const measures = vq.measures.map((m) => m.name);
 
@@ -112,7 +104,11 @@ export function buildEmailPlan(vq: ValidatedQuery): EmailPlan {
   }
   if (selectParts.length === 0) selectParts.push(`COUNT(*)::numeric AS "campaigns"`);
 
-  const params: unknown[] = [getTenant().shop, vq.time.start, vq.time.end];
+  // `tenant_id` is a resolved id, NOT the shop domain — the console page gets it
+  // via tenantIdForShop() and this planner passed the domain straight through,
+  // so every query matched zero rows while the page beside it showed data. The
+  // caller resolves it and passes it in.
+  const params: unknown[] = [tenantId, vq.time.start, vq.time.end];
   const where = [
     // Tenant scoping is not optional in a pooled runtime — one missing
     // predicate here leaks another store's send performance.
@@ -152,11 +148,34 @@ export function buildEmailPlan(vq: ValidatedQuery): EmailPlan {
   return { sql, params, groupBy, select: selectParts };
 }
 
+/** The tenant id this store's rows are filed under, as the console page resolves it. */
+async function resolveTenantId(): Promise<string> {
+  const { shop, tenantId } = getTenant();
+  const tid = await tenantIdForShop(shop, tenantId);
+  if (!tid) {
+    throw new Error(
+      `email_performance: could not resolve a tenant id for "${shop}". That is a lookup ` +
+        `failure, not an empty result — do not report it as "no campaigns".`,
+    );
+  }
+  return tid;
+}
+
 export async function runEmailQuery(vq: ValidatedQuery): Promise<ProviderResult> {
-  const plan = buildEmailPlan(vq);
-  const res = await pool().query(plan.sql, plan.params);
-  const truncated = res.rows.length > vq.limit;
-  const rows = (truncated ? res.rows.slice(0, vq.limit) : res.rows).map((r) => {
+  const tenantId = await resolveTenantId();
+  const plan = buildEmailPlan(vq, tenantId);
+  const out = await safeQuery<Record<string, unknown>>("email_performance", plan.sql, plan.params);
+  if (out === null) {
+    // safeQuery returns null when it cannot reach the database at all. Letting
+    // that fall through as an empty result set is how "we are not connected"
+    // gets reported to someone as "you sent no campaigns".
+    throw new Error(
+      "email_performance: the campaign index is unreachable, so no email figures can be " +
+        "returned. This is a connection failure, not a store with no sends.",
+    );
+  }
+  const truncated = out.length > vq.limit;
+  const rows = (truncated ? out.slice(0, vq.limit) : out).map((r) => {
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(r)) {
       // pg returns numerics as strings to protect precision; these are counts

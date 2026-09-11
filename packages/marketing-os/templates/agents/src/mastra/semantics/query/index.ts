@@ -129,7 +129,9 @@ export async function explainQuery(input: QueryInput): Promise<ExplainResult | Q
   for (const c of collectCaveats(vq)) warnings.push(c);
 
   if (provider === "klaviyo") {
-    const plan = buildEmailPlan(vq);
+    // explain runs without executing, so it has no tenant id to resolve; the
+    // placeholder keeps the SQL readable without pretending to be a real scope.
+    const plan = buildEmailPlan(vq, "<tenant>");
     return {
       view: vq.view.name,
       provider,

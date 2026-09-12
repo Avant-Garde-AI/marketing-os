@@ -339,6 +339,34 @@ export function serializePost(post: SocialPost): string {
  * Pure: returns a new post with `designSurface` set — replacing any previous
  * binding — leaving the input untouched. The caller persists the result via
  * serializePost.
+ *
+ * BINDING IS WHAT MAKES A POST `asset_ready`, and this is the only forward
+ * transition into that state. It was missing, and its absence made the whole
+ * publish lane unreachable: `requirePublishable` admits only asset_ready /
+ * scheduled / failed, every other write leaves a post `proposed`, and nothing
+ * anywhere advanced it. So a post could be planned, composed, bound to real
+ * creative and reviewed — and `social.schedule_post` still refused it with
+ * "only asset_ready/scheduled posts can take this action". The state existed,
+ * the two demotions into it existed (an edit voiding consent, the cron
+ * reverting drift), and the promotion did not.
+ *
+ * Which statuses move, and why the rest do not:
+ *
+ * - `proposed` / `approved` → `asset_ready`. The creative now exists and is
+ *   bound; that IS the definition of the state (see upsertPost's "the creative
+ *   is still bound, so asset_ready").
+ * - `scheduled` → `asset_ready`, consent dropped — but ONLY when the binding
+ *   actually changed. Re-linking the same surface is a no-op and must not
+ *   disarm an approved schedule. A DIFFERENT surface changes what ships, which
+ *   is exactly the D2 condition that voids consent; the cron would refuse the
+ *   publish anyway, so failing loudly here beats a card that looks armed.
+ *   `scheduledAt` survives: the human's intended time did not change, only the
+ *   picture, and making them retype it punishes them for fixing the creative.
+ * - `published` stays published — rebinding must never re-arm something that
+ *   already went live.
+ * - `cancelled` stays cancelled — someone decided that deliberately.
+ * - `failed` stays failed, which `social.publish_post` already accepts for
+ *   retry.
  */
 export function linkDesignToPost(post: SocialPost, ref: DesignSurfaceRef): SocialPost {
   const designSurface: DesignSurfaceRef = {
@@ -346,5 +374,20 @@ export function linkDesignToPost(post: SocialPost, ref: DesignSurfaceRef): Socia
     fileId: ref.fileId,
     ...(ref.pageId !== undefined ? { pageId: ref.pageId } : {}),
   };
-  return { ...post, designSurface };
+  const next: SocialPost = { ...post, designSurface };
+
+  if (post.status === "proposed" || post.status === "approved") {
+    next.status = "asset_ready";
+    return next;
+  }
+
+  if (post.status === "scheduled") {
+    const rebound = JSON.stringify(post.designSurface ?? null) !== JSON.stringify(designSurface);
+    if (rebound) {
+      next.status = "asset_ready";
+      delete next.approval;
+    }
+  }
+
+  return next;
 }

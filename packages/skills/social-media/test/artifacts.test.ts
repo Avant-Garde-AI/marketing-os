@@ -302,11 +302,62 @@ describe("post designSurface", () => {
       fileId: "1f9f7a2e-0000-8000-8000-00000000000f",
     });
     expect(relinked.designSurface).not.toHaveProperty("pageId");
-    // Everything else is untouched and the result round-trips.
-    expect({ ...relinked, designSurface: undefined }).toEqual({
+    // Everything else is untouched apart from the status promotion below, and
+    // the result round-trips.
+    expect({ ...relinked, designSurface: undefined, status: undefined }).toEqual({
       ...arthausPost,
       designSurface: undefined,
+      status: undefined,
     });
     expect(parsePost(serializePost(relinked))).toEqual(relinked);
+  });
+
+  // The promotion these cover is the ONLY forward path into asset_ready.
+  // Without it every publish Action refuses every post, which is how the lane
+  // shipped: complete, deployed, and unreachable from the front.
+  it("binding a creative promotes a proposed post to asset_ready", () => {
+    const proposed: SocialPost = { ...arthausPost, status: "proposed" };
+    expect(linkDesignToPost(proposed, surfaceRef).status).toBe("asset_ready");
+  });
+
+  it("promotes an approved post too — approval is about the copy, not the creative", () => {
+    expect(arthausPost.status).toBe("approved");
+    expect(linkDesignToPost(arthausPost, surfaceRef).status).toBe("asset_ready");
+  });
+
+  it("re-linking the SAME surface leaves an armed schedule armed", () => {
+    const scheduled: SocialPost = {
+      ...arthausPost,
+      designSurface: surfaceRef,
+      status: "scheduled",
+      approval: { hash: "abc", at: "2026-09-01T00:00:00Z" },
+    };
+    const relinked = linkDesignToPost(scheduled, { ...surfaceRef });
+    expect(relinked.status).toBe("scheduled");
+    expect(relinked.approval).toEqual(scheduled.approval);
+  });
+
+  it("binding a DIFFERENT surface to a scheduled post voids consent (D2)", () => {
+    const scheduled: SocialPost = {
+      ...arthausPost,
+      designSurface: surfaceRef,
+      status: "scheduled",
+      approval: { hash: "abc", at: "2026-09-01T00:00:00Z" },
+    };
+    const relinked = linkDesignToPost(scheduled, {
+      teamId: surfaceRef.teamId,
+      fileId: "1f9f7a2e-0000-8000-8000-0000000000ff",
+    });
+    expect(relinked.status).toBe("asset_ready");
+    expect(relinked.approval).toBeUndefined();
+    // The time survives — the creative changed, the intent did not.
+    expect(relinked.scheduledAt).toBe(arthausPost.scheduledAt);
+  });
+
+  it("never re-arms a published post, and never revives a cancelled one", () => {
+    for (const status of ["published", "cancelled"] as const) {
+      const post: SocialPost = { ...arthausPost, status };
+      expect(linkDesignToPost(post, surfaceRef).status).toBe(status);
+    }
   });
 });

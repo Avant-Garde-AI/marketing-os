@@ -74,7 +74,12 @@ const socialLinkDesign = createTool({
     "in social/posts/{id}/post.md so the post's console calendar entry links to the draft ('Open in Studio'). " +
     "Call this right after compose_design_surface whenever the draft is FOR a planned post (compose with kind " +
     "'social.post' and boundToId = the post id), completing the plan → compose → calendar loop. " +
-    "Relinking replaces any previous binding. Returns the console-relative studioPath for the draft.",
+    "THIS IS THE STEP THAT MAKES A POST SCHEDULABLE: binding the creative moves a proposed post to asset_ready, " +
+    "and social.schedule_post / social.publish_post refuse anything still proposed. A post with beautiful copy and " +
+    "no linked surface cannot ship. " +
+    "Relinking replaces any previous binding; re-binding a DIFFERENT surface to an already-scheduled post voids the " +
+    "publish consent and re-arms the approval card, because it changes what would ship. " +
+    "Returns the console-relative studioPath for the draft.",
   inputSchema: z.object({
     postId: z.string().min(1).describe("The planned post's id (social/posts/{id}/post.md)"),
     teamId: z.string().min(1).describe("Design Studio team id, as returned by compose_design_surface"),

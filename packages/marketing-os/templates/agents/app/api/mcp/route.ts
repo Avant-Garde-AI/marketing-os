@@ -42,7 +42,14 @@ How to work here:
 - Read semantic://glossary before comparing metrics across systems: GA4 key_events, platform conversions, and Shopify orders are three different counting systems, and sessions never reconcile with ad clicks.
 - Invalid field names return did-you-mean guidance — follow it rather than guessing.
 
-Resources: semantic://manifest (the full model), semantic://views/{view}, semantic://glossary, semantic://connections, semantic://cookbook. Prompts provide ready-made analysis playbooks.`;
+Resources: semantic://manifest (the full model), semantic://views/{view}, semantic://glossary, semantic://connections, semantic://cookbook. Prompts provide ready-made analysis playbooks.
+
+Email & campaigns — this store's own record, not a pooled copy:
+- email_calendar_read / email_campaign_read / email_strategy_read for what has been planned, sent, and why.
+- klaviyo_audiences_read / klaviyo_audience_explain for who a send reached — the second gives the actual rule behind an audience name, not just a count.
+- klaviyo_performance_read for a raw Klaviyo window; email_campaign_retrospective for a single campaign judged against this store's OWN other sends (a rate alone cannot be called good or bad — read the verdict bands and caveats it returns, do not recompute your own threshold).
+- email_review_notes / email_review_notes_resolve for what reviewers said.
+- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Nothing reachable here executes a write; sending happens only through this store's own governed approval flow.`;
 
 // ---------------------------------------------------------------------------
 // Tool definitions (JSON Schema mirrors the Mastra tools)

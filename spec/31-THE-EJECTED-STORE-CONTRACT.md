@@ -1,6 +1,6 @@
 # Spec 31 — The Ejected Store Contract
 
-**Status:** proposed · **Supersedes nothing** · **Companions:** spec 12 (Store MCP + semantic layer), spec 16 (model & credential topology), spec 18 (external MCP integration), spec 20 (capability suite & the Action gate)
+**Status:** §5.1–5.3 shipped 2026-09-14 (self-attach + local-pack suppression, live for Arthaus) · §5.4–5.5 and §6 open · **Supersedes nothing** · **Companions:** spec 12 (Store MCP + semantic layer), spec 16 (model & credential topology), spec 18 (external MCP integration), spec 20 (capability suite & the Action gate)
 
 ---
 
@@ -130,8 +130,7 @@ hosted plane cannot see, and the one whose absence caused §1.
 | rendering | `email_render_preview`, `email_review_sheet` |
 | catalogue | `imagery_resolve`, `imagery_rooms`, `artist_profile_read`, `gallery_wall_sets_read` |
 
-**Status: mostly served** — `klaviyo_audience_explain` and `email_campaign_retrospective` are
-the gap (§5.1).
+**Status: served (§5.1, shipped 2026-09-14).**
 
 A note on where Tier 2 data actually lives, because it is not uniform and the distinction
 matters when debugging: **artifacts** (`campaign.md`, `strategy.md`, `brand.md`) live in the
@@ -150,6 +149,23 @@ the store's repo and create *proposals*.
 discount, publish a post, or otherwise mutate external state. A connector token proves
 possession of a token; it does not carry a verified human identity, and approval requires one.
 This is spec 20's structural invariant and MCP does not get an exception to it.
+
+**A second Tier 3 gap, found building §5.3.** Actions are not reachable over MCP at all —
+`propose_action` is a native pooled-runtime tool, and its `preview()` step runs with THIS
+runtime's own bindings before anything reaches the gate. For the four action kinds whose
+preview() reads a campaign artifact (`email.approve_plan`, `klaviyo.create_campaign_draft`,
+`klaviyo.schedule_campaign`, `klaviyo.cancel_send`), that binding is the same local `emailRepo`
+the read tools use — so an ejected tenant's pooled agent could generate an approval card from a
+private, stale copy of a campaign the store's own team has never seen, and the card would look
+completely legitimate. `propose_action` now refuses these four kinds outright for an ejected
+tenant (§5.3) rather than preview them from the wrong copy. `klaviyo.create_segment` is exempt —
+it only reaches Klaviyo and Shopify through the broker, tenant-correct regardless of hosting.
+
+This is a **refusal, not a fix** — proposing one of these four for an ejected tenant currently has
+no correct path at all; the store's own console has no MCP-reachable equivalent of `propose_action`
+that runs against its own campaigns. Closing it for real needs either these actions exposed as
+Tier 3 MCP tools on the store's own endpoint, or `propose_action`'s preview step proxied to
+`{agentsUrl}` for these specific kinds. Neither is built. Open question §6.5.
 
 ---
 
@@ -177,30 +193,49 @@ token needs — so attaching an ejected store's own MCP requires **no new auth c
 
 ## 5. Build order
 
-### 5.1 — Close the Tier 2 gap *(small)*
+### 5.1 — Close the Tier 2 gap *(small)* — DONE, shipped 2026-09-14
 
-Add `klaviyo_audience_explain` and `email_campaign_retrospective` to the console's MCP tool list.
-Both already exist as console tools; this is exposure, not implementation.
+Added `klaviyo_audience_explain` and `email_campaign_retrospective` to the console's MCP tool
+list. Both already existed as console tools; this was exposure, not implementation.
 
-### 5.2 — Attach the store's own MCP *(the end-to-end fix)*
+### 5.2 — Attach the store's own MCP *(the end-to-end fix)* — DONE, shipped 2026-09-14
 
-Mint a connector token for the tenant and register `{agentsUrl}/api/mcp` as an
-`external_mcp_connections` row with `auth_type: "bearer_static"`. The pooled runtime picks it up
-through the path Picasso Concierge already uses, and the Slack agent gains the store's real tools
-reading the store's real data.
+`GET /api/broker/mcp-connections` now calls `ensureSelfConnection(tenantId, shop, agentsUrl)`
+before returning a tenant's connections — idempotent (a row already existing in any status is
+left alone), auto-activated (not `pending_review`; the url is `Tenant.agentsUrl`, not admin
+input), and best-effort (a failure never breaks the connections list). Verified live against
+Arthaus: the row was created, the handshake succeeded, and `tools_snapshot` carries all 28 tools.
 
-This should become **automatic at eject time**, not a manual step: setting `agentsUrl` is the
-declaration that state has moved, and the attachment is the consequence. A manual step here is a
-step someone forgets, and the symptom of forgetting it is §1.
+Guards a real edge case found while shipping this: a demo tenant's `agentsUrl` equals the pooled
+runtime's *own* production url — not a real ejection, presumably a leftover default. Self-attach
+compares against `MOS_POOLED_AGENTS_URL`/`VERCEL_PROJECT_PRODUCTION_URL` and skips when they
+match, rather than looping a tenant's tools back through HTTP to itself.
 
-### 5.3 — Stop the silent fallback *(the durable fix)*
+**A real bug was caught by testing this against the live database, not just typechecking it.**
+`external_mcp_connections_check` is `(auth_type = 'bearer_static') = (secret_ref IS NOT NULL)` —
+unconditional, not gated on row status. The natural sequence (insert with `secret_ref` NULL, name
+the Vault secret using the new row's id, then UPDATE it in) violates the constraint on the INSERT
+itself, before the row that would let you name the secret exists. `ensureSelfConnection` now
+generates its id client-side, stores the secret first, and inserts once with every column already
+valid. `createConnection()` — the console's own admin "add a connection" path — has the identical
+two-step shape and would fail the same way the first time anyone adds a `bearer_static` server by
+hand; it has never been exercised that way (the one connection in production, Picasso Concierge,
+is `auth_type: 'none'`). Not fixed here — flagged, since it is dormant rather than actively wrong.
 
-For a tenant with `agentsUrl` set, the pooled runtime's own email/social projection reads MUST
-NOT answer from platform storage. Either the store MCP answers, or the agent reports the store
-as unreachable.
+### 5.3 — Stop the silent fallback *(the durable fix)* — DONE, shipped 2026-09-14
 
-Without this, 5.2 is an optimisation that can silently regress to the broken state the moment a
-token expires — and regress *quietly*, which is the whole problem.
+`getEmailEnablement()` now also returns `ejected: boolean` (true when `Tenant.agentsUrl` names a
+*different* deployment — see the self-loop exclusion in 5.2). The pooled agent's tool and
+instruction assembly gates the local email pack on `enabled && !ejected`, not `enabled` alone:
+`enabled` answers whether the tenant has the capability, `ejected` answers whether this runtime's
+own copy of the tenant's data is the one to trust. For an ejected tenant the local pack is
+**removed**, not narrowed — merging both the local (wrong) and attached (correct) versions would
+leave the agent holding two tools answering the same question from two databases with no way to
+tell them apart by name. Confirmed against the live database: Arthaus's row resolves
+`enabled=true`, `ejected=true`, so the gate evaluates to "local pack absent" exactly as intended.
+
+`propose_action` carries the matching guard for the four Actions whose preview() depends on the
+same local data (§3, Tier 3 addendum).
 
 ### 5.4 — Clean the abandoned rows *(hygiene, needs owner sign-off)*
 
@@ -219,13 +254,29 @@ to generalise: *measure*, *the work record*, *propose — never execute*.
 ## 6. Open questions
 
 1. **Token lifecycle.** Connector tokens are minted per connection. What rotates them, and what
-   does the hosted plane do when one expires — degrade loudly (§5.3) or attempt re-mint?
-2. **Discovery vs. registration.** Should the pooled runtime discover `{agentsUrl}/api/mcp` from
-   the `Tenant` row directly, rather than requiring a row in `external_mcp_connections`? A
-   registered connection is visible and auditable; derived discovery cannot be forgotten. These
-   pull in opposite directions and the choice should be deliberate.
+   does the hosted plane do when one expires — degrade loudly (§5.3) or attempt re-mint? Right now
+   a dead token surfaces as `status: 'error'` on the connection row and `ensureSelfConnection`'s
+   idempotency check means it is never retried automatically — a human (or a future retry policy)
+   has to notice and act.
+2. **Discovery vs. registration — RESOLVED: registration, done lazily.** `ensureSelfConnection`
+   creates a real `external_mcp_connections` row (visible, auditable, disable-able) rather than
+   deriving the attachment purely from `Tenant.agentsUrl` at read time. It runs automatically on
+   first use rather than at a separate eject step, which gets the "cannot be forgotten" property
+   of pure discovery without giving up a durable, inspectable row.
 3. **Version skew.** An ejected console can be upgraded on its own schedule, so the hosted agent
    will meet stores serving older tool sets. `tools_snapshot` already records what a connection
    offered at attach time; the contract needs a stated minimum and a behaviour for stores below it.
 4. **Latency.** Every Tier 1/2 read becomes a network hop to the store's deployment. Acceptable
    for chat; needs measuring before anything on a hot path depends on it.
+5. **Tier 3 writes have no path for an ejected tenant.** See the Tier 3 addendum in §3. The four
+   email Actions now refuse cleanly instead of previewing from the wrong data, but refusing is not
+   the same as working — there is currently no way to propose a Klaviyo send for an ejected
+   tenant's Slack agent at all. Needs either MCP-reachable propose tools on the store's own
+   endpoint, or a preview proxy to `{agentsUrl}` for these specific kinds.
+6. **Social was not touched.** `lib/social/repo.ts`'s pooled copy is very likely the same
+   DB-backed-not-git-backed shape `lib/email/repo.ts` turned out to be (§4, discovered mid-build —
+   the original assumption that artifacts were git-backed and only projections needed gating was
+   wrong for email; nothing here has confirmed or ruled out the same for social). Until it is
+   checked, an ejected tenant's pooled agent proposing `social.schedule_post` /
+   `social.publish_post` / `social.cancel_post` carries the same unverified risk email's four
+   Actions carried before §5.3.

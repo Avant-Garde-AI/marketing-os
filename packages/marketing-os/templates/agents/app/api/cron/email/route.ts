@@ -67,9 +67,40 @@ async function shopsWithEmailArtifacts(): Promise<string[]> {
   return r.rows.map((row: { shop: string }) => row.shop);
 }
 
+/**
+ * Rotate a list so a fixed `.slice(0, N)` downstream does not mean "only the
+ * first N, forever." Found live: `cronSweep` takes `items.slice(0, limit)`
+ * with no cursor and no shuffle, `shopsWithEmailArtifacts` sorts
+ * alphabetically, and campaign ids are date-prefixed — so a shop sorting past
+ * position SHOPS_PER_FIRING, or a campaign sorting past CAMPAIGNS_PER_SHOP
+ * within one, would never be swept AT ALL, not slowly — permanently. A
+ * campaign sent 2026-09-15 sat with zero readback for 36+ hours while three
+ * OLDER campaigns kept refreshing normally, because the alphabetically-first
+ * N never changes.
+ *
+ * The offset advances by the hour (UTC), deterministically, with no state to
+ * persist or lose: over enough firings every item gets a turn, and it is
+ * still a plain slice — anything genuinely large still costs the same amount
+ * of work per firing.
+ */
+function rotated<T>(items: T[]): T[] {
+  if (items.length === 0) return items;
+  const hour = Math.floor(Date.now() / (60 * 60 * 1000));
+  const offset = hour % items.length;
+  return [...items.slice(offset), ...items.slice(0, offset)];
+}
+
 interface CampaignSweepOutcome {
   id: string;
   action: string;
+}
+
+/** True once nothing further will ever change for this campaign: measured,
+ *  and past the 14-day window this cron itself keeps refreshing inside. */
+function isSettled(campaign: EmailCampaign): boolean {
+  if (campaign.status !== "measured" || !campaign.scheduledAt) return false;
+  const sinceSend = Date.now() - Date.parse(campaign.scheduledAt);
+  return sinceSend >= ATTRIBUTION_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 }
 
 async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
@@ -78,16 +109,32 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
     const paths = (await emailRepo.list("email/campaigns/")).filter((p) => p.endsWith("/campaign.md"));
     const klaviyo = createKlaviyoClient();
 
-    for (const path of paths.slice(0, CAMPAIGNS_PER_SHOP)) {
+    // Read and parse EVERYTHING before capping to CAMPAIGNS_PER_SHOP, and sort
+    // settled campaigns to the back. A plain slice of an alphabetically (=
+    // chronologically, ids are date-prefixed) sorted list means "only the
+    // oldest N, forever" once a shop grows past the cap — see rotated()
+    // above for the fuller story; this is the same bug at the campaign level,
+    // and it is the one that actually starved 2026-09-15-seasonal-into-autumn.
+    // A settled campaign gains nothing from being revisited; an unsettled one
+    // loses a day of readback every firing it gets bumped.
+    const parsed: Array<{ path: string; campaign: EmailCampaign }> = [];
+    for (const path of paths) {
       const raw = await emailRepo.readFile(path);
       if (raw === null) continue;
-      let campaign: EmailCampaign;
       try {
-        campaign = parseCampaign(raw);
+        parsed.push({ path, campaign: parseCampaign(raw) });
       } catch (e) {
         outcomes.push({ id: path, action: `unparseable: ${e instanceof Error ? e.message : e}` });
-        continue;
       }
+    }
+    const prioritized = [...parsed].sort((a, b) => Number(isSettled(a.campaign)) - Number(isSettled(b.campaign)));
+    const deferred = prioritized.length - CAMPAIGNS_PER_SHOP;
+    if (deferred > 0) {
+      console.log(`[cron-email] ${shop}: ${deferred} campaign(s) deferred to a later firing (over the per-shop cap)`);
+    }
+
+    for (const { campaign: parsedCampaign } of prioritized.slice(0, CAMPAIGNS_PER_SHOP)) {
+      let campaign: EmailCampaign = parsedCampaign;
 
       let action = "indexed";
 
@@ -114,7 +161,13 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
           } else if (
             live.scheduledAt &&
             campaign.scheduledAt &&
-            live.scheduledAt !== campaign.scheduledAt
+            // Not string equality. Klaviyo answers in +00:00; the artifact was
+            // written in -04:00/-05:00 — "2026-09-17T14:00:00+00:00" and
+            // "2026-09-17T10:00:00-04:00" are the SAME instant, and a string
+            // comparison flagged them as drifted on every campaign that had
+            // ever gone through this branch. Compare the actual instants, with
+            // a minute of slack for the seconds Klaviyo rounds off.
+            Math.abs(Date.parse(live.scheduledAt) - Date.parse(campaign.scheduledAt)) > 60_000
           ) {
             // Out-of-band change: what was approved is no longer what will
             // send. Flag loudly; the schedule Action must be re-proposed.
@@ -216,7 +269,7 @@ export async function GET(req: NextRequest) {
   const shops = await shopsWithEmailArtifacts();
   const report = await cronSweep(
     "cron-email",
-    shops,
+    rotated(shops),
     SHOPS_PER_FIRING,
     (shop) => shop,
     async (shop) => {

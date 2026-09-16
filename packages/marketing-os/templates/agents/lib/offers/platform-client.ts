@@ -61,6 +61,12 @@ export const offerPlatformClient: OfferPlatformClient = {
       `/api/offers/stats?surfaceId=${encodeURIComponent(surfaceId)}&days=${days}`,
     );
   },
+  async reallocate(surfaceId, mode, opts) {
+    return offerApi("/api/offers/reallocate", {
+      method: "POST",
+      body: { surfaceId, mode, days: opts?.days, winner: opts?.winner },
+    });
+  },
 };
 
 /** Turn any failure into the `unavailable` shape the tools return to the

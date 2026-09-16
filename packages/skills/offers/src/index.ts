@@ -1,13 +1,9 @@
 /**
- * @avant-garde/skill-offers — Offer Agent skill pack (spec 32 OF0).
+ * @avant-garde/skill-offers — Offer Agent skill pack (spec 32 OF0/OF2).
  *
- * Spec 20 §5 package shape. `metadata`/`requires` land with the console
- * enable-gate wiring; `actions` (offer.activate/pause/retire/reallocate as
- * pack-owned Action<P> declarations) land in spec 32 OF2 once the artifact
- * model and the git-first write lane exist for them to write through. This
- * version ships the canonical logic that was duplicated across three repos:
- * manifest compilation, the dark-pattern gate, the experiment decision
- * engine, the two fully-shared tools, and instructions.
+ * Spec 20 §5 package shape: `tools`, `actions`, `instructions` all present.
+ * `metadata`/`requires`/the console enable-gate wiring live in each binding
+ * (mirrors how email/social wire theirs), not in this package.
  */
 
 export * from "./types";
@@ -26,4 +22,25 @@ export {
 export type { OfferDecision, OfferDecisionKind } from "./decision";
 export { createReviewOfferExperimentTool, createChartOfferPerformanceTool } from "./tools";
 export type { CreateOfferToolsDeps } from "./tools";
+export {
+  STRATEGY_PATH,
+  offerPath,
+  resultsPath,
+  offerManifestSchema,
+  parseStrategy,
+  serializeStrategy,
+  parseOffer,
+  serializeOffer,
+  parseResults,
+  serializeResults,
+  appendResultEntry,
+} from "./artifacts";
+export { createOfferActions } from "./actions";
+export type {
+  OfferActionDeps,
+  ActivateOfferParams,
+  PauseOfferParams,
+  RetireOfferParams,
+  ReallocateOfferParams,
+} from "./actions";
 export { instructions } from "./instructions";

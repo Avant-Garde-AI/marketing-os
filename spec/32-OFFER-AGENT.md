@@ -1,6 +1,6 @@
 # 32 — The Offer Agent: consolidation, the pack, and the $15 wedge
 
-> **Status:** PROPOSAL · 2026-09-11, decisions closed 2026-09-15
+> **Status:** decisions closed 2026-09-15 · **OF0 (consolidation) + OF1 (nav) + OF2 (artifacts/Actions, code-only) built 2026-09-16** — PRs open, not merged. OF2's migration is drafted, not applied. OF3-OF7 not started.
 > **Amends:** spec 14 Part II (the Offer Agent) and §2.4 (console placement). **Spec 14 Part I — the Storefront Surfaces framework — stands unchanged** as the runtime layer beneath this.
 > **Corrects:** spec 28 §3 (the hosted port it describes as pending has since landed).
 > **Companions:** 20 (Actions), 22 (Brand Soul), 23 (Design Surfaces), 24 (the pack pattern this follows), 25 (blocks + pack-owned schemas), 27 (change sets / Reviews), 28 (playbooks, the open-core line), 30 (design library), 31 (the ejected store contract).
@@ -190,13 +190,30 @@ offer.activate.execute():
 **This reverses what an earlier draft of this spec proposed**, and it is worth saying why.
 Spec 14 D3 ruled out "a git round-trip on offer approval" — and it was right, because at the
 time the only git lane was a **PR round-trip with human review latency**. `commitFile()` through
-the GitHub App is not that; it is an API call on the order of the database write beside it, and
-the email agent has been running it in a live write path since 2026-08-31. D3's constraint was
-never about the milliseconds, it was about not putting a second human approval behind the first
-one. Git-first preserves that and gets the audit trail too.
+the GitHub App is not that; it is an API call on the order of the database write beside it — the
+`brand.md` write path has been running it live since 2026-07 (`src/mastra/tools/brand-design.ts`).
+D3's constraint was never about the milliseconds, it was about not putting a second human
+approval behind the first one. Git-first preserves that and gets the audit trail too.
+
+**Correction, checked while building OF2 (2026-09-16):** the claim in an earlier draft of this
+paragraph — "the email agent has been running \[the git lane] in a live write path since
+2026-08-31" — is **wrong for the pooled runtime**. `templates/agents/lib/store-repo/` (the
+`STORE_REPO_MODE` seam this section describes) exists only in the OSS template; reading
+`marketing-os-hosted-agents/lib/email/repo.ts` directly confirms it has never imported it —
+`email/*.md` is DB-only there (`mos_email_artifacts`), exactly like every other artifact. A
+project memory independently records the same fact ("repo.ts is DB-backed with the git lane
+deferred; `commitFile()` in `brand-design.ts` is the proven path to promote"). So: the git-first
+*ordering* in this section is correct and is what OF2 built, and it is real, tested capability in
+the **template** (a self-hosted or ejected store on `mirror`/`git` mode gets it today). For the
+**pooled runtime** — where Arthaus and every non-ejected tenant actually run — `offers/*.md`
+lands in `mos_offer_artifacts` today, same as `email/*.md` lands in `mos_email_artifacts`,
+because that seam has not been ported there for either pack. Porting it is shared, not
+offers-specific, follow-up.
 
 Step 3 is still the deploy and is still what makes the offer live; a store on `STORE_REPO_MODE=db`
-gets the identical behaviour spec 14 shipped.
+(the template's default) or on the pooled runtime (which has no other mode yet) gets the
+identical externally-visible behaviour spec 14 shipped — the write just lands in a table instead
+of a commit until the seam is ported.
 
 ### 4.2 The index tables — mirror `007_email_and_calendar.sql` **(D6)**
 
@@ -405,7 +422,7 @@ that justifies a subscription. It needs a ritual, the way social has a weekly qu
 |---|---|---|---|
 | **OF0** | **De-duplicate.** `packages/skills/offers` with the `OfferRepo`/`StoreRepo` seam; template + pooled runtime bind it (vendored the way email is — see OQ4); the three-copy problem is closed. | M | One canonical implementation, tests green in all three repos |
 | **OF1** | **Console consolidation.** `/offers` + redirect, nav + icon, vocabulary sweep, Live tab re-titled, Drafts linking into Reviews, Setup with app-embed status. | S | A merchant never reads the word "surface" |
-| **OF2** | **Artifacts + the lane (D6).** `offers/strategy.md` / `offer.md` / `results.md` formats; `010_offers.sql` mirroring `007`; `mos_offer_artifacts`; `StorefrontSurface`/`SurfaceMetricDaily` migrated off Prisma with backfill; `--prefix offers/` on the existing backfill script; calendar-item + action-proposal + lifecycle-event wiring. | L | An offer is diffable, appears on the shared calendar, and links to its approval |
+| **OF2** | **Artifacts + the lane (D6).** `offers/strategy.md` / `offer.md` / `results.md` formats; the four Actions, git-first (§4.1); `010_offers.sql` mirroring `007` — **✅ built 2026-09-16, code-only**. Still open: applying the migration, backfilling `StorefrontSurface`/`SurfaceMetricDaily` into it, dropping the Prisma models, wiring `mos_calendar_items`, and the OQ6 executor cutover — bundled as one production checkpoint, not split across separate PRs. | L | An offer is diffable, appears on the shared calendar, and links to its approval |
 | **OF3** | **Parity I — the runtime.** `takeover` placement, exit-intent + teaser, extended targeting, scheduling windows. | M | A merchant can rebuild their current Wisepops setup |
 | **OF4** | **Parity II — the data.** Multi-step zero-party capture, the hosted capture POST endpoint (D8), Klaviyo sync with answers as profile properties, the **Captures** tab + CSV export. | M | The thing they log in for exists |
 | **OF5** | **The standing loop.** Weekly ritual cron, in-experiment reallocation under one approval, concluded → next-hypothesis, `offer-portfolio-audit`. | M | It optimises without being asked |
@@ -478,6 +495,22 @@ $15** — everything before it is hygiene and everything after it is compounding
    npm dependency. Offers should mirror it (D6), which means the three-copy problem in §1 becomes
    a *one-canonical-source, two-mechanical-vendors* problem. Better, but only if the vendoring is
    scripted and CI-checked. Today it is neither, for any pack. Worth fixing once, for all three.
-5. **When does `STORE_REPO_MODE` flip for offers?** Email sits on the same switch. Do offers
-   inherit the store's existing mode, or carry their own — and does the first store to run
-   `--prefix offers/` backfill do it before or after OF3 ships new manifest fields?
+5. **When does `STORE_REPO_MODE` flip for offers — and for the pooled runtime, at all?** Per
+   §4.1's correction: the `STORE_REPO_MODE` seam is template-only today; `marketing-os-hosted-agents`
+   has no git lane for *any* pack, email included. Porting it there is a prerequisite for offers'
+   git-first ordering to mean anything beyond "which table" for a pooled tenant — and it is shared
+   infrastructure, not something offers should build first on its own.
+6. **`offer.activate`'s executor: `app` or `agents`?** OF2 declared the Action in the
+   `executor: 'agents'` shape (dispatched to the tenant's own runtime, matching email) because
+   that is the only shape that can reach a `StoreRepo` to satisfy §4.1's git-first write.
+   `marketing-os-app`'s existing `offer.activate` is `executor: 'app'` — a direct Prisma mutation
+   with no repo access, registered and live today. OF2 registered the pack's version as *reachable*
+   (`register-actions.ts`, wired into `/api/actions/execute`) without touching `marketing-os-app`'s
+   registration or rerouting `propose_offer` to use it — moving a proposal's approval routing for
+   a live production Action is a coordinated, two-repo cutover and belongs with the OF2→production
+   checkpoint (migration apply + backfill + Prisma drop), not inside a code-only PR. The
+   `onDecline` semantics also do not carry over automatically: today a declined `app`-executor
+   proposal auto-retires the staged surface (`decideAction`'s `onDecline` hook); `agents`-executor
+   declines have no equivalent hook today. Generalizing decline-dispatch to `agents`-executor
+   actions (or accepting that a declined-but-never-activated offer just sits PAUSED, which never
+   renders either way) is part of this same decision.

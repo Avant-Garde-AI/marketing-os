@@ -4,13 +4,21 @@ import { OfferPerformance, type OfferPerfData } from "@/components/chat/gen-ui";
 import fileManifest from "@/config/surfaces.json";
 
 /**
- * Surfaces — the storefront management view (spec 14 addendum).
+ * Offers — the storefront offer management view (spec 32 OF1, renamed from
+ * "Surfaces" — spec 14 addendum). "Surface" stays the framework's word in
+ * code (lib/offers, config/surfaces.json, the app-embed extension); "Offer"
+ * is the merchant-facing word everywhere a merchant reads it (spec 32 §2.1).
  *
- * Each deployed surface renders as a card: status, live variant creative,
- * the experiment funnel (same registered component chat uses), the current
+ * Each deployed offer renders as a card: status, live variant creative, the
+ * experiment funnel (same registered component chat uses), the current
  * decision read, and actions. Monitoring is deterministic (the page calls
  * the same platform queries the agent's tools call — no model in the loop);
  * judgment deep-links into chat.
+ *
+ * A dedicated Drafts tab (unapproved proposals) and a Captures tab (what
+ * offers actually collected) are spec 32 OF2/OF4 — they need the artifact
+ * model and the platform's proposal-listing endpoint, neither of which
+ * exist yet. This version adds Setup only, which is self-contained.
  */
 
 export const dynamic = "force-dynamic";
@@ -56,7 +64,7 @@ async function platform<T>(path: string): Promise<T | null> {
   }
 }
 
-export default async function SurfacesPage() {
+export default async function OffersPage() {
   // Platform-stored surfaces (deploy-on-approve) + the file bootstrap manifest.
   const [list, stats] = await Promise.all([
     platform<{ surfaces: { surfaceId: string; status: string; allocation: number }[] }>("/api/offers/surfaces"),
@@ -80,7 +88,7 @@ export default async function SurfacesPage() {
     <div className="px-8 py-10">
       <div className="mx-auto max-w-[1200px]">
         <PageHeader
-          eyebrow="Surfaces"
+          eyebrow="Offers"
           title="On the storefront"
           sub="Every offer your agents run — its experiment, its numbers, and its next decision."
         />
@@ -150,7 +158,7 @@ export default async function SurfacesPage() {
                   </div>
                   {card.source === "bootstrap" && (
                     <p className="mt-2 text-[11.5px] text-ink-3">
-                      Bootstrap surface (config file) — superseded automatically by the first platform-deployed offer.
+                      Bootstrap offer (config file) — superseded automatically by the first platform-deployed offer.
                     </p>
                   )}
                 </SectionCard>
@@ -158,6 +166,24 @@ export default async function SurfacesPage() {
             })}
           </div>
         )}
+
+        <div className="animate-enter-3 mt-10 border border-hairline bg-raised p-6">
+          <h2 className="font-display text-[17px]">Setup</h2>
+          <p className="mt-1 text-[13.5px] text-ink-2">
+            Offers deploy through a Shopify theme app embed — no theme-code edits, survives
+            theme updates. There is one switch no agent can flip for you:
+          </p>
+          <ol className="mt-3 list-decimal space-y-1 pl-5 text-[13.5px] text-ink-2">
+            <li>Shopify admin → Online Store → Themes → Customize</li>
+            <li>App embeds (left rail) → toggle <strong className="font-medium text-ink">Marketing OS Surfaces</strong> on</li>
+            <li>Save</li>
+          </ol>
+          <p className="mt-3 text-[12px] text-ink-3">
+            An offer can be designed and approved with this off — it simply renders nowhere
+            until the embed is on. If an approved offer never seems to show up on the storefront,
+            this is the first thing to check.
+          </p>
+        </div>
       </div>
     </div>
   );

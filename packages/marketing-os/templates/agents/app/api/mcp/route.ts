@@ -19,6 +19,10 @@ import { createKlaviyoClient } from "@/lib/email/klaviyo-client";
 import { emailTools } from "@/src/mastra/tools/email";
 import { emailAuthoringTools } from "@/src/mastra/tools/email-authoring";
 import { actionTools } from "@/src/mastra/tools/actions";
+import { socialTools } from "@/src/mastra/tools/social";
+import { designLibraryTools } from "@/src/mastra/tools/design-library";
+import { designSurfaceTools } from "@/src/mastra/tools/design-surfaces";
+import { mirrorTools } from "@/lib/mcp/zod-schema";
 import {
   STATIC_RESOURCES,
   RESOURCE_TEMPLATES,
@@ -51,7 +55,18 @@ Email & campaigns — this store's own record, not a pooled copy:
 - klaviyo_audiences_read / klaviyo_audience_explain for who a send reached — the second gives the actual rule behind an audience name, not just a count.
 - klaviyo_performance_read for a raw Klaviyo window; email_campaign_retrospective for a single campaign judged against this store's OWN other sends (a rate alone cannot be called good or bad — read the verdict bands and caveats it returns, do not recompute your own threshold).
 - email_review_notes / email_review_notes_resolve for what reviewers said.
-- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Nothing reachable here executes a write; sending happens only through this store's own governed approval flow.`;
+- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Nothing reachable here executes a write; sending happens only through this store's own governed approval flow.
+
+Social & content — the same shape as email: author here, review in the console, publish only through the approval gate:
+- Read before you write: social_calendar_read for a month's plan, social_post_read for one post. Absence of a calendar is not evidence nothing is planned — posts are real artifacts whether or not a slot points at them. (There is no social_strategy_read; social/strategy.md lives in the store repo.)
+- social_concept_list / social_concept_read are the IDEA layer: reusable post structures (premise, payoff, the needs a subject must satisfy, and the beats each format expands into). Start here when asked for content, not at the image. social_concept_instantiate returns PLANS, never posts.
+- A concept's needs are gates, not suggestions. Assess each one against real evidence and let it REFUSE — a high refusal rate is the contract working, and inventing a subject that satisfies a need on paper is the failure it exists to stop.
+- social_genome_read for how this category actually composes a surface (archetypes, slots, copy formulas), when the store has committed a corpus.
+- compose_post_from_archetype turns a plan into real creative: roles in, a Design Surface out. compose_post_keyframes does the same for video beats on one page, so continuity holds by construction. Then social_link_design binds the surface to the post, which is ALSO what makes the post asset_ready and therefore schedulable — a post with no linked surface cannot ship.
+- check_design_library / publish_design_library govern how surfaces LOOK. The store's library (its named colours, type scale, caption band and credit lockup) lives in its repo and must be published before compose can use components rather than primitives. Check it before composing; drift is reported, never repaired.
+- social_post_upsert stages a post with its caption. Copy claims are checked against the artwork's own pixels and the store's own entities — a colour or an attribution the work does not support is REFUSED, not warned about. Supply boundFacts so the guard can do its job.
+- social_review_share mints the expiring link a human opens to review a month or a post group. It is feedback only and can never approve: possessing a link proves possession of a link, not identity. social_review_notes reads what they said.
+- Nothing here publishes. Scheduling and publishing go through propose_action (social.schedule_post / social.publish_post), where a human approves and the approval IS the consent the cron re-verifies before it ships.`;
 
 // ---------------------------------------------------------------------------
 // Tool definitions (JSON Schema mirrors the Mastra tools)
@@ -137,7 +152,85 @@ async function runMastra(tool: unknown, args: unknown): Promise<unknown> {
   return t.execute(args as never);
 }
 
+
+/**
+ * The social pack over MCP (spec 24 + 29), so content can be requested,
+ * composed and staged for review from outside the console — the same lane
+ * email has had since it shipped.
+ *
+ * Email hand-writes a JSON Schema per tool; these are DERIVED from each tool's
+ * own zod (lib/mcp/zod-schema.ts), so the MCP surface cannot drift from the
+ * tool it exposes. Descriptions come from the tools too — they are already
+ * written for an agent, and a second paraphrase here would be one more thing
+ * to keep true.
+ *
+ * An explicit allow-list, not the whole registry: a tool added to the runtime
+ * later has to be CHOSEN for the public endpoint rather than exposed by
+ * nobody remembering to exclude it. `social_scaffold` is deliberately absent —
+ * it seeds a store's initial artifacts and belongs to onboarding, not to
+ * everyday authoring.
+ *
+ * Read the list as the loop it is: plan → concept → compose → bind → stage →
+ * share for review. Publishing is not on it, and cannot be: writes leave this
+ * endpoint only as proposals through propose_action.
+ */
+function socialToolDefs(): ToolDef[] {
+  return [
+    ...mirrorTools(socialTools, [
+      "social_calendar_read",
+      "social_post_read",
+      "social_genome_read",
+      "social_concept_list",
+      "social_concept_read",
+      "social_concept_draft",
+      "social_concept_instantiate",
+      "social_plan_propose",
+      "social_calendar_upsert",
+      "social_post_upsert",
+      "compose_post_from_archetype",
+      "compose_post_keyframes",
+      "social_link_design",
+      "social_review_share",
+      "social_review_notes",
+      "social_review_notes_resolve",
+    ]),
+    ...mirrorTools(designLibraryTools, ["check_design_library", "publish_design_library"]),
+    ...mirrorTools(designSurfaceTools, [
+      "compose_design_surface",
+      "export_design_surface",
+      "list_design_surfaces",
+    ]),
+  ];
+}
+
+/**
+ * mirrorTools THROWS on a name its registry lacks, which is what you want when
+ * a tool gets renamed upstream — loud, immediate, with the available names in
+ * the message. But this list is built at module load, and an uncaught throw
+ * here would take down the WHOLE endpoint: analytics, resources and the email
+ * lane along with it. Losing social because social broke is proportionate;
+ * losing the store's semantic layer because a social tool was renamed is not.
+ *
+ * So: degrade loudly. The error names itself in the logs and social simply
+ * does not appear in tools/list, which is the same signal an operator gets
+ * from a pack that is not enabled.
+ */
+const SOCIAL_TOOLS: ToolDef[] = (() => {
+  try {
+    return socialToolDefs();
+  } catch (e) {
+    console.error(
+      "[mcp] social tools NOT exposed — the runtime registry no longer matches the " +
+        "allow-list in this route. Every other tool still works:",
+      e instanceof Error ? e.message : e,
+    );
+    return [];
+  }
+})();
+
+
 const TOOLS: ToolDef[] = [
+  ...SOCIAL_TOOLS,
   {
     name: "explore_schema",
     description:

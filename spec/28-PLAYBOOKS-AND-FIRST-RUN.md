@@ -86,6 +86,8 @@ different licences.
 
 | Half | What it does | Where it lives | Licence | Hosted stores? |
 |---|---|---|---|---|
+> **CORRECTED 2026-09-11 (see [32-OFFER-AGENT.md](./32-OFFER-AGENT.md) §1):** the port described below as pending has landed — `marketing-os-hosted-agents/src/mastra/tools/offers.ts` + `lib/offers/` serve the authoring tools to the pooled runtime, and `offer-engine` is `availability: "installable"` with `feature: "offers"` gated at the $15 Starter plan. The unintended result is that the offer engine now exists in **three** copies across three repos; spec 32 OF0 closes that.
+
 | **Authoring** | `propose_offer` (designs incentive + copy + arms, side-effect free), `offer_review` (read a running test, recommend), `offer_performance` | `packages/marketing-os/templates/agents/src/mastra/tools/offer-*.ts` | **MIT** (`@avant-garde/marketing-os`) | ❌ never ported to the pooled runtime |
 | **Storefront + governance** | Surfaces app embed (theme app extension, off by default), surface store with mechanical re-validation, dark-pattern blocklist, `offer.activate` Action, daily metrics, posterior-based weight reallocation | `marketing-os-app` (`extensions/surfaces`, `api.offers.*`, `lib/actions.server.ts`, `offer-posteriors.server.ts`) | private | ✅ live |
 

@@ -59,6 +59,12 @@ export interface LibraryTypography {
   fontFamily: string;
   /** Penpot font id (`gfont-*`); derived from fontFamily when omitted. */
   fontId?: string;
+  /**
+   * Penpot's `font-variant-id` (Google's variant name: "regular", "500",
+   * "700italic"). Derived from fontWeight/fontStyle when omitted; set it
+   * explicitly only for a face whose variants are not named that way.
+   */
+  fontVariantId?: string;
   fontSize: string;
   fontWeight?: string;
   fontStyle?: string;
@@ -95,6 +101,31 @@ export interface LibraryProblem {
 /** Penpot font id from a family, matching compose.ts's scheme exactly. */
 function gfontId(family: string): string {
   return `gfont-${family.toLowerCase().replace(/\s+/g, "-")}`;
+}
+
+/**
+ * The Google-Fonts variant name for a weight and style — Penpot's
+ * `font-variant-id`, which its Typography schema REQUIRES.
+ *
+ * Omitting it made every publish fail at the server with a malli assertion
+ * naming `[:font-variant-id]`, and nothing local caught it: the builder
+ * produced a perfectly well-formed .penpot, the zip contained a
+ * `/typographies/` directory, and the package's own tests asserted exactly
+ * that. The file was only ever wrong by the standard of the server that had
+ * never been asked to accept it.
+ *
+ * The naming is Google's, not ours: 400 is "regular" rather than "400", and
+ * italics concatenate without a separator ("500italic"). Getting this wrong
+ * does not error — Penpot falls back to a variant it does have, which is the
+ * same silent substitution that had this library rendering in Lora.
+ */
+export function fontVariantId(weight?: string, style?: string): string {
+  const w = (weight ?? "400").trim();
+  const italic = (style ?? "normal").trim().toLowerCase() === "italic";
+  if (w === "400" || w.toLowerCase() === "regular" || w.toLowerCase() === "normal") {
+    return italic ? "italic" : "regular";
+  }
+  return italic ? `${w}italic` : w;
 }
 
 /**
@@ -213,6 +244,7 @@ export async function composeLibraryFile(source: LibrarySource): Promise<Uint8Ar
       name: t.name,
       fontId: t.fontId ?? gfontId(t.fontFamily),
       fontFamily: t.fontFamily,
+      fontVariantId: t.fontVariantId ?? fontVariantId(t.fontWeight, t.fontStyle),
       fontSize: t.fontSize,
       fontWeight: t.fontWeight ?? "400",
       fontStyle: t.fontStyle ?? "normal",

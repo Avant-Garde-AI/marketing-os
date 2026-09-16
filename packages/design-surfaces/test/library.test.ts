@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   composeLibraryFile,
+  fontVariantId,
   sourceDigest,
   validateLibrary,
   type LibrarySource,
@@ -143,3 +144,25 @@ function zipEntryNames(buf: Buffer): string[] {
   }
   return names;
 }
+
+describe("fontVariantId", () => {
+  // Penpot's Typography schema REQUIRES font-variant-id. Leaving it out made
+  // every publish fail at the server with a malli assertion, while the local
+  // builder produced a well-formed file and the tests above passed — the file
+  // was only wrong by the standard of a server nobody had asked yet.
+  it("uses Google's names, where 400 is 'regular' and not '400'", () => {
+    expect(fontVariantId("400", "normal")).toBe("regular");
+    expect(fontVariantId(undefined, undefined)).toBe("regular");
+    expect(fontVariantId("400", "italic")).toBe("italic");
+  });
+
+  it("names other weights by number, with italic concatenated", () => {
+    expect(fontVariantId("500", "normal")).toBe("500");
+    expect(fontVariantId("700", "italic")).toBe("700italic");
+  });
+
+  it("accepts the word forms a hand-written library will contain", () => {
+    expect(fontVariantId("normal")).toBe("regular");
+    expect(fontVariantId("regular")).toBe("regular");
+  });
+});

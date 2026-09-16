@@ -1,5 +1,5 @@
 /**
- * Offer Agent — type definitions (spec 32 OF0).
+ * Offer Agent — type definitions (spec 32 OF0/OF2).
  *
  * This pack was consolidated from three diverging copies (spec 32 §1): the
  * MIT console template's `offer-{design,performance,review}.ts`, the pooled
@@ -8,9 +8,10 @@
  * (or near enough) across the first two — the actual sources of duplication
  * bugs — pulled into one place.
  *
- * `OfferRepo` mirrors `EmailRepo`/`SocialRepo`: unused until spec 32 OF2 wires
- * `offers/*.md` artifacts through it, declared now for shape parity with the
- * other packs and so OF2 is additive rather than a rename.
+ * `OfferRepo` mirrors `EmailRepo`/`SocialRepo`: the seam `offers/*.md`
+ * artifacts (below, OF2) read and write through — a store's repo via the
+ * hosted runtime's `StoreRepo` binding (git-first per `STORE_REPO_MODE`,
+ * spec 32 D6), an in-memory fake in tests.
  *
  * `OfferPlatformClient` and `OfferAttributionClient` are the seams — this
  * pack never sees a credential. The template binds them to
@@ -19,7 +20,7 @@
  * pattern as `KlaviyoClient` in the email pack.
  */
 
-import type { StoreRepo } from "@avant-garde/skill-kit";
+import type { ProvenanceClaim, StoreRepo } from "@avant-garde/skill-kit";
 
 export type OfferRepo = StoreRepo;
 
@@ -131,6 +132,17 @@ export interface OfferPlatformClient {
   }>;
   /** GET /api/offers/stats — per-arm counters + posteriors for a surface. */
   getStats(surfaceId: string, days: number): Promise<OfferPlatformStatsResponse>;
+  /**
+   * POST /api/offers/reallocate — every status transition and weight change
+   * after the initial stage: pause/resume/retire (status only), promote
+   * (winner takes the variant share) and thompson (posterior-weighted
+   * reallocation). Control's share is never touched by promote/thompson.
+   */
+  reallocate(
+    surfaceId: string,
+    mode: "pause" | "resume" | "retire" | "promote" | "thompson",
+    opts?: { days?: number; winner?: string },
+  ): Promise<{ ok: boolean; surfaceId: string; status?: string }>;
 }
 
 /** Shopify capture-tag attribution (customers tagged `<surfaceId>`,
@@ -157,4 +169,71 @@ export interface OfferProposalHandler {
     channel: string | null;
     note: string;
   }>;
+}
+
+// ---------------------------------------------------------------------------
+// Repo artifacts (spec 32 §4/OF2) — offers/strategy.md, offers/{id}/offer.md,
+// offers/{id}/results.md. Files are truth; the compiled OfferManifest above
+// and the platform's index row are both projections rebuildable from these.
+// ---------------------------------------------------------------------------
+
+/** The lifecycle an offer.md's `status` field walks (spec 32 §4.2's event
+ * list, minus the "reallocated"/"failed" events, which are results.md
+ * entries rather than a resting state). */
+export type OfferStatus = "proposed" | "approved" | "active" | "paused" | "retired";
+
+/** offers/strategy.md — the standing offer strategy (spec 32 §4). */
+export interface OfferStrategy {
+  /** Incentive types this brand will run, in priority order, each with why
+   * (cites the persona signal from brand.md §2/§6 it answers — spec 32 §2.1
+   * of 14: "A discount is one arm of a hypothesis, never the default"). */
+  incentives: { type: string; rationale: string; brandRef?: string }[];
+  /** Placements this brand allows by default; a proposal may request one
+   * outside this list, but it is a flag on the approval card, not a block —
+   * the mechanical gates (dark-pattern, consent) are what actually block. */
+  allowedPlacements: OfferManifest["placement"][];
+  defaultConsentText: string;
+  frequencyPosture: {
+    suppressAfterDismissDays: number;
+    maxPerSession: number;
+  };
+  /** A human-readable restatement of the mechanical dark-pattern stance —
+   * documentation, not enforcement (gateOfferContent enforces regardless). */
+  darkPatternStance: string;
+  provenance: ProvenanceClaim[];
+}
+
+/** offers/{id}/offer.md — one offer's spec + status trail. */
+export interface Offer {
+  id: string;
+  title: string;
+  /** One sentence: why this offer, for this persona (propagated from
+   * propose_offer's `hypothesis` param). */
+  hypothesis: string;
+  /** Citation into brand.md — the persona signal this incentive answers. */
+  personaRef?: string;
+  status: OfferStatus;
+  manifest: OfferManifest;
+  /** The compiled deploy's identity once activated — null before then. */
+  experimentId: string | null;
+  provenance: ProvenanceClaim[];
+  /** Free-form notes body, same physical format as email's campaign.md. */
+  body: string;
+}
+
+/** One results.md entry — a snapshot taken at a review (spec 32 §4). */
+export interface OfferResultEntry {
+  at: string; // ISO datetime
+  decision: "promote" | "reallocate" | "continue" | "wash" | "retire";
+  rationale: string;
+  winner: string | null;
+  /** The posteriors as of this read — arm key -> pBest, for the historical
+   * record; not the full stats payload (that lives in the platform index). */
+  posteriors: Record<string, number>;
+}
+
+/** offers/{id}/results.md — append-only review log for one offer. */
+export interface OfferResults {
+  offerId: string;
+  entries: OfferResultEntry[];
 }

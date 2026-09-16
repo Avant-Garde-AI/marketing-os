@@ -23,6 +23,7 @@ import { runWithTenant } from "../../../../lib/tenant-context";
 // invisible to this one).
 import "../../../../lib/social/register-actions";
 import "../../../../lib/email/register-actions";
+import "../../../../lib/offers/register-actions";
 
 export const maxDuration = 120;
 

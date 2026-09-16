@@ -65,6 +65,8 @@ export interface LibraryTypography {
   fontStyle?: string;
   lineHeight?: string;
   letterSpacing?: string;
+  /** "none" | "uppercase" | "lowercase" | "capitalize". Defaults to "none". */
+  textTransform?: string;
 }
 
 export interface LibraryComponent {
@@ -243,8 +245,17 @@ export async function composeLibraryFile(source: LibrarySource): Promise<Uint8Ar
       fontSize: t.fontSize,
       fontWeight: t.fontWeight ?? "400",
       fontStyle: t.fontStyle ?? "normal",
-      ...(t.lineHeight ? { lineHeight: t.lineHeight } : {}),
-      ...(t.letterSpacing ? { letterSpacing: t.letterSpacing } : {}),
+      // Penpot's Typography schema is CLOSED and requires all eleven of these.
+      // lineHeight and letterSpacing used to be spread in only when the source
+      // set them, and textTransform was never emitted at all, so a library that
+      // omitted any of them was rejected by the server with an assertion naming
+      // one field at a time. Defaults here rather than in the source type: a
+      // store should not have to write `textTransform: "none"` on six styles to
+      // make a publish work, and "no opinion" has an obvious right answer for
+      // each of these.
+      lineHeight: t.lineHeight ?? "1.2",
+      letterSpacing: t.letterSpacing ?? "0",
+      textTransform: t.textTransform ?? "none",
     });
   }
 

@@ -53,6 +53,64 @@ function extractFileId(result: unknown): string | undefined {
   return undefined;
 }
 
+/** A Penpot page object, as far as board enumeration cares. */
+interface PenpotObject {
+  id: string;
+  name?: string;
+  type?: string;
+  parentId?: string;
+  "parent-id"?: string;
+  frameId?: string;
+  x?: number;
+  y?: number;
+  height?: number;
+  selrect?: { x?: number; y?: number; height?: number };
+}
+
+function originOf(o: PenpotObject): { x: number; y: number; height: number } {
+  return {
+    x: o.x ?? o.selrect?.x ?? 0,
+    y: o.y ?? o.selrect?.y ?? 0,
+    height: o.height ?? o.selrect?.height ?? 0,
+  };
+}
+
+/**
+ * Sort boards into READING ORDER — top to bottom, then left to right.
+ *
+ * Boards used to come back in `Object.values(objects)` order, which is
+ * Penpot's own map order and has nothing to do with layout. One unsorted
+ * enumeration produced four separate wrong behaviours:
+ *
+ *  - `exportSurface` with no objectId takes `boardIds[0]`, so the single
+ *    image published for a multi-board surface was an ARBITRARY slide. A
+ *    three-slide carousel enumerated `3-payoff, 1-setup, 2-turn`, and the
+ *    post would have shipped its payoff as the opening image.
+ *  - `exportSurfaceBoards` with no names returned artifacts in that order.
+ *  - the review preview read backwards, which is how this was first noticed —
+ *    and the hardest class to catch, because the artifact was right and only
+ *    the presentation lied.
+ *  - carousel publishing, when it lands, would scramble slides by default.
+ *
+ * Geometry is the right key and names are not: names are author-supplied,
+ * `1/2/3` and `setup/turn/payoff` and `Story: …` all coexist in this store,
+ * and none of them sorts. `layoutBoards` stacks at x=0 with increasing y, so
+ * a y-then-x sort recovers declaration order exactly for anything this
+ * system composed, and gives a human-arranged canvas the order a human
+ * would read it in.
+ *
+ * The row tolerance handles boards laid out side by side: two boards whose
+ * tops are within half a board height are the same row, so x decides.
+ * Without it, a hand-nudged board one pixel high would jump the queue.
+ */
+export function readingOrder(a: PenpotObject, b: PenpotObject): number {
+  const pa = originOf(a);
+  const pb = originOf(b);
+  const tolerance = Math.min(pa.height, pb.height) / 2;
+  if (Math.abs(pa.y - pb.y) > tolerance) return pa.y - pb.y;
+  return pa.x - pb.x;
+}
+
 export class DesignSurfaceAdapter {
   readonly client: PenpotClient;
 
@@ -192,7 +250,7 @@ export class DesignSurfaceAdapter {
       data?: {
         pagesIndex?: Record<
           string,
-          { id: string; name: string; objects?: Record<string, { id: string; name?: string; type?: string; parentId?: string; "parent-id"?: string; frameId?: string }> }
+          { id: string; name: string; objects?: Record<string, PenpotObject> }
         >;
         pages?: string[];
       };
@@ -210,6 +268,7 @@ export class DesignSurfaceAdapter {
             const parent = (o.parentId ?? o["parent-id"]) as string | undefined;
             return o.type === "frame" && o.id !== ROOT && parent === ROOT;
           })
+          .sort(readingOrder)
           .map((o) => ({ id: o.id, name: o.name ?? "" }));
         return { id: p.id, name: p.name, boardIds: boards.map((b) => b.id), boards };
       });

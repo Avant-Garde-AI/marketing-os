@@ -1,5 +1,5 @@
 /**
- * Offer pack tools (spec 32 OF0) — replaces the three loose files
+ * Offer pack tools (spec 32 OF0-OF3) — replaces the three loose files
  * (offer-design.ts, offer-performance.ts, offer-review.ts) that predated the
  * pack pattern. Wraps the vendored pack's `review_offer_experiment` and
  * `chart_offer_performance` (lib/offers/tools.ts, byte-identical logic to
@@ -73,13 +73,38 @@ export const proposeOffer = createTool({
       .describe("Stable id, e.g. ofr_spring_editions"),
     title: z.string().describe("Short human name for the offer"),
     hypothesis: z.string().describe("One sentence: why this offer, for this persona"),
-    placement: z.enum(["corner-card", "overlay"]).default("corner-card"),
-    triggerSeconds: z.number().int().min(5).max(60).default(10),
+    placement: z
+      .enum(["corner-card", "overlay", "takeover"])
+      .default("corner-card")
+      .describe("takeover is the full-screen format — use sparingly, e.g. a seasonal campaign, not a default."),
+    triggerKind: z
+      .enum(["delay", "exit-intent"])
+      .default("delay")
+      .describe("exit-intent fires as the visitor moves to leave, rather than after a fixed delay."),
+    triggerSeconds: z.number().int().min(5).max(60).default(10).describe("Ignored when triggerKind is exit-intent."),
     pages: z.array(z.enum(["home", "collection", "product", "cart"])).default(["home", "collection", "product"]),
     variants: z
       .record(z.string(), variantContentSchema)
       .describe('Variant copy keyed by arm ("v1", "v2", …) — 1 or 2 variants'),
     controlWeight: z.number().min(0.2).max(0.5).default(0.34),
+    teaser: z
+      .boolean()
+      .optional()
+      .describe("Re-open tab after a dismiss. Defaults on for corner-card, off otherwise; set explicitly to override."),
+    targeting: z
+      .object({
+        devices: z.array(z.enum(["desktop", "mobile"])).optional(),
+        referrerContains: z.array(z.string()).optional(),
+        utmSources: z.array(z.string()).optional(),
+        countries: z.array(z.string()).optional(),
+        returningOnly: z.boolean().optional(),
+      })
+      .optional()
+      .describe("Client-side targeting — no extra request. countries reads Shopify's own resolved localization."),
+    schedule: z
+      .object({ from: z.string(), to: z.string() })
+      .optional()
+      .describe("ISO datetimes — a campaign window, e.g. Black Friday. Omit for an always-on offer."),
   }),
   outputSchema: z.object({
     proposalId: z.string(),
@@ -102,10 +127,14 @@ export const proposeOffer = createTool({
     const surface = compileOfferManifest({
       surfaceSlug: inputData.surfaceSlug,
       placement: inputData.placement,
+      triggerKind: inputData.triggerKind,
       triggerSeconds: inputData.triggerSeconds,
       pages: inputData.pages,
       variants,
       controlWeight: inputData.controlWeight,
+      teaser: inputData.teaser,
+      targeting: inputData.targeting,
+      schedule: inputData.schedule,
     });
 
     const gates = gateOfferContent(variants as unknown as Record<string, Record<string, string>>);

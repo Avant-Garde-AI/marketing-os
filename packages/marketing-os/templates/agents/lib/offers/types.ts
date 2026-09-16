@@ -1,5 +1,5 @@
 /**
- * VENDORED from packages/skills/offers/src/types.ts (spec 32 OF0/OF2).
+ * VENDORED from packages/skills/offers/src/types.ts (spec 32 OF0/OF2/OF3).
  *
  * CANONICAL LOGIC lives in packages/skills/offers — this is a mechanical
  * copy so the scaffolded template stays self-contained (it ships into a
@@ -65,21 +65,45 @@ export interface OfferManifestArm {
   weight: number;
 }
 
+/** Client-side, zero-request targeting (spec 32 §5/OF3). `countries` reads
+ * from a Liquid-rendered data attribute (Shopify already resolves it
+ * server-side for the page render — no extra request); everything else
+ * reads from data the runtime already has (viewport, referrer, URL). */
+export interface OfferTargeting {
+  devices?: ("desktop" | "mobile")[];
+  referrerContains?: string[];
+  utmSources?: string[];
+  countries?: string[];
+  returningOnly?: boolean;
+}
+
 export interface OfferManifest {
   id: string;
   type: "offer";
-  placement: "corner-card" | "overlay";
+  placement: "corner-card" | "overlay" | "takeover";
   trigger: {
-    kind: "delay";
+    /** exit-intent (OF3): desktop mouseout-toward-chrome; mobile has no
+     * mouseout, so the runtime uses a scroll-velocity heuristic instead —
+     * never a history/back-button trap. */
+    kind: "delay" | "exit-intent";
     seconds: number;
     suppressAfterDismissDays: number;
     maxPerSession: number;
   };
+  /** The re-open tab shown after a dismiss (OF3) — strictly less aggressive
+   * than re-showing the modal; omitted/false means no teaser. */
+  teaser?: { enabled: boolean };
   audience: {
     newVisitorsOnly: boolean;
     excludeSubscribed: boolean;
     pages: ("home" | "collection" | "product" | "cart")[];
+    targeting?: OfferTargeting;
   };
+  /** Campaign scheduling window (OF3), ISO datetimes. Evaluated client-side
+   * as defense-in-depth; ideally the manifest endpoint also excludes
+   * out-of-window surfaces server-side (smaller payload, no early leak of a
+   * not-yet-live campaign) — that half is not built here. */
+  schedule?: { from: string; to: string };
   experiment: {
     id: string;
     policy: "fixed" | "thompson";

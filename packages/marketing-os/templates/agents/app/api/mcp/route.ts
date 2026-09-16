@@ -45,7 +45,9 @@ How to work here:
 Resources: semantic://manifest (the full model), semantic://views/{view}, semantic://glossary, semantic://connections, semantic://cookbook. Prompts provide ready-made analysis playbooks.
 
 Email & campaigns — this store's own record, not a pooled copy:
-- email_calendar_read / email_campaign_read / email_strategy_read for what has been planned, sent, and why.
+- email_campaigns_list for "what has been sent / what's scheduled" — filter by month and/or status. Start here for any "this week/month" question.
+- email_calendar_read reads a SEPARATE, optional planning file that only exists for a month someone ran email_plan_propose on. Most months never have one — its absence is not evidence nothing was sent. Do not use it to answer "what happened"; use email_campaigns_list.
+- email_campaign_read / email_strategy_read for one campaign's full detail, and why the plan is shaped the way it is.
 - klaviyo_audiences_read / klaviyo_audience_explain for who a send reached — the second gives the actual rule behind an audience name, not just a count.
 - klaviyo_performance_read for a raw Klaviyo window; email_campaign_retrospective for a single campaign judged against this store's OWN other sends (a rate alone cannot be called good or bad — read the verdict bands and caveats it returns, do not recompute your own threshold).
 - email_review_notes / email_review_notes_resolve for what reviewers said.
@@ -279,8 +281,20 @@ const TOOLS: ToolDef[] = [
     run: (a) => emailTool("email_plan_propose", a),
   },
   {
+    name: "email_campaigns_list",
+    description: "List real campaigns — id, subject, archetype, lifecycle status, sent/scheduled date — filterable by month and/or status. Use for 'what have we sent' / 'what's planned this month'. email_calendar_read reads a SEPARATE optional planning file that most months never have; its absence does not mean nothing was sent.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        month: { type: "string", description: "YYYY-MM. Omit to list everything." },
+        status: { type: "string", description: "One of proposed, approved, drafted, scheduled, sent, measured." },
+      },
+    },
+    run: (a) => emailTool("email_campaigns_list", a ?? {}),
+  },
+  {
     name: "email_calendar_read",
-    description: "Read the store's email calendar for a month: every slot, its archetype, audience, status and linked campaign, plus gap analysis against the strategy.",
+    description: "Read the store's email calendar SCAFFOLD for a month — a planning artifact that only exists if email_plan_propose was run on it: every slot, its archetype, audience, status and linked campaign, plus gap analysis against the strategy. For what has actually been sent or scheduled, use email_campaigns_list instead.",
     inputSchema: { type: "object", properties: { month: { type: "string", description: "YYYY-MM" } }, required: ["month"] },
     run: (a) => emailTool("email_calendar_read", a),
   },

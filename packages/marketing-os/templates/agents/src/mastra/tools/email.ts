@@ -22,6 +22,7 @@ import type { SkillToolDefinition } from "../../../lib/skill-kit";
 import { emailPreviewLink, emailReviewLink, emailSheetLink } from "../../../lib/email/review-links";
 import { listNotes, listOpenNotes, resolveNotes } from "../../../lib/email/review-notes";
 import { explainDefinition } from "../../../lib/email/segments";
+import { buildRetrospective, loadCampaignRows } from "../../../lib/email/retrospective";
 import { getTenant } from "../../../lib/tenant-context";
 import "../../../lib/email/register-actions";
 
@@ -181,14 +182,77 @@ const klaviyoAudienceExplain = createTool({
   },
 });
 
+/**
+ * Everything needed to judge a send that has already happened.
+ *
+ * Analysis of an email is only as good as what it is allowed to see. Numbers
+ * alone produce horoscopes — "engagement was solid, consider testing subject
+ * lines" — because there is nothing concrete to point at. So this returns the
+ * performance, the store's own baseline, the copy that actually shipped, the
+ * alternatives that were rejected at selection time, and what human reviewers
+ * said, in one payload.
+ *
+ * The headline options are the quietly valuable part: the campaign was CHOSEN
+ * from a set, so a disappointing open rate can be weighed against the phrasings
+ * that were passed over, instead of inventing new ones from nothing.
+ */
+const emailCampaignRetrospective = createTool({
+  id: "email_campaign_retrospective",
+  description:
+    "Assemble everything needed to analyse a campaign that has already sent: its performance, a baseline pooled from this store's OTHER measured campaigns, the subject and sections that shipped, the headline options it was chosen from, and the review notes people left. Use it before offering any opinion on how an email did. REPORT THE BANDS AS GIVEN: each comparison carries a verdict of better / worse / 'about usual', already judged and already direction-aware — a higher unsubscribe rate is WORSE, not a gain. Do not recompute a threshold or upgrade 'about usual' into a small improvement; within a tenth of the baseline is noise at these volumes. If baselineIsThin is true, say so in your answer before drawing any conclusion from a difference. The caveats are limits on what you may claim, not boilerplate to skip. Read-only.",
+  inputSchema: z.object({
+    campaignId: z.string().min(1).describe("Campaign id, e.g. 2026-09-07-promotion-labor-day."),
+  }),
+  outputSchema: z.object({
+    retrospective: z.record(z.string(), z.unknown()),
+    content: z.record(z.string(), z.unknown()),
+    notes: z.array(z.record(z.string(), z.unknown())),
+  }),
+  execute: async ({ campaignId }: { campaignId: string }) => {
+    const [all, raw, notes] = await Promise.all([
+      loadCampaignRows(),
+      emailRepo.readFile(campaignPath(campaignId)),
+      listNotes(campaignId).catch(() => []),
+    ]);
+    const retrospective = buildRetrospective(campaignId, all);
+    // The artifact is the record of what actually shipped — read it from the
+    // store repo rather than a console projection, so this works on every
+    // surface.
+    const a = raw === null ? null : parseCampaign(raw);
+    return {
+      retrospective: retrospective as unknown as Record<string, unknown>,
+      content: {
+        subject: a?.subject ?? null,
+        previewText: a?.previewText ?? null,
+        archetype: a?.archetype ?? null,
+        // What it was chosen from, and which one won.
+        headlineOptions: a?.headlineOptions ?? [],
+        selectedHeadlineId: a?.selectedHeadlineId ?? null,
+        sections: (a?.sections ?? []).map((sec: { slot?: string; type?: string }) => ({ slot: sec.slot, type: sec.type })),
+        audience: a?.audience ?? null,
+        rationale: a?.body ?? null,
+      },
+      notes: notes.map((nt) => ({
+        id: nt.id,
+        // Self-declared, never authenticated — a note is a request, not a verdict.
+        author: nt.author,
+        body: nt.body,
+        resolved: nt.resolvedAt !== null,
+      })) as unknown as Array<Record<string, unknown>>,
+    };
+  },
+});
+
 export const emailTools = {
   email_plan_propose: toMastraTool(defs.email_plan_propose),
+  email_campaigns_list: toMastraTool(defs.email_campaigns_list),
   email_calendar_read: toMastraTool(defs.email_calendar_read),
   email_campaign_read: toMastraTool(defs.email_campaign_read),
   klaviyo_audiences_read: toMastraTool(defs.klaviyo_audiences_read),
   klaviyo_templates_read: toMastraTool(defs.klaviyo_templates_read),
   klaviyo_performance_read: toMastraTool(defs.klaviyo_performance_read),
   klaviyo_audience_explain: klaviyoAudienceExplain,
+  email_campaign_retrospective: emailCampaignRetrospective,
   email_render_preview: emailRenderPreview,
   email_review_sheet: emailReviewSheet,
   email_review_notes: emailReviewNotes,

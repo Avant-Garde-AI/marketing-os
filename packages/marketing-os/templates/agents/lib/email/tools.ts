@@ -30,6 +30,7 @@ import {
   parseStrategy,
 } from "./artifacts";
 import { analyzeEmailCalendarGaps, proposeEmailPlan } from "./plan";
+import { loadCampaignRows } from "./retrospective";
 import { getBrokerToken } from "../broker-client";
 
 // ---------------------------------------------------------------------------
@@ -66,6 +67,32 @@ export function inlineUniversalContent(
 
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
 const monthSchema = z.string().regex(MONTH_RE, "YYYY-MM").describe("Calendar month, YYYY-MM");
+
+const campaignsListInput = z.object({
+  month: monthSchema
+    .optional()
+    .describe(
+      "YYYY-MM. Filters to campaigns sent OR scheduled in this month. Omit to list everything.",
+    ),
+  status: z
+    .enum(["proposed", "approved", "drafted", "scheduled", "sent", "measured"])
+    .optional()
+    .describe("Filter to one lifecycle status, e.g. 'sent' for what has actually gone out."),
+});
+
+const campaignsListOutput = z.object({
+  campaigns: z.array(
+    z.object({
+      id: z.string(),
+      subject: z.string().nullable(),
+      archetype: z.string(),
+      status: z.string(),
+      sentAt: z.string().nullable(),
+      scheduledAt: z.string().nullable(),
+      measured: z.boolean().describe("True when performance numbers exist for this campaign."),
+    }),
+  ),
+});
 
 const slotSchema = z.object({
   slot: z.string().describe("ISO date (YYYY-MM-DD)"),
@@ -276,6 +303,7 @@ const performanceReadOutput = z.object({
 
 export interface EmailTools {
   email_plan_propose: SkillToolDefinition<typeof planProposeInput, typeof planProposeOutput>;
+  email_campaigns_list: SkillToolDefinition<typeof campaignsListInput, typeof campaignsListOutput>;
   email_calendar_read: SkillToolDefinition<typeof calendarReadInput, typeof calendarReadOutput>;
   email_campaign_read: SkillToolDefinition<typeof campaignReadInput, typeof campaignReadOutput>;
   klaviyo_audiences_read: SkillToolDefinition<typeof audiencesReadInput, typeof audiencesReadOutput>;
@@ -315,10 +343,36 @@ export function createEmailTools(repo: EmailRepo, klaviyo: KlaviyoClient): Email
       },
     },
 
+    email_campaigns_list: {
+      id: "email_campaigns_list",
+      description:
+        "List real campaigns — id, subject, archetype, lifecycle status, sent/scheduled date — filterable by month and/or status. Use this for 'what have we sent', 'what's planned this month', 'what's scheduled next': it reads the actual campaign index, not a planning artifact. email_calendar_read reads a SEPARATE, optional scaffold file (email/calendar/{YYYY-MM}.md) that only exists for months someone ran email_plan_propose on — most months never have one, and its absence does not mean nothing was sent. Read-only.",
+      inputSchema: campaignsListInput,
+      outputSchema: campaignsListOutput,
+      execute: async ({ month, status }) => {
+        const rows = await loadCampaignRows();
+        const inMonth = (iso: string | null) => (month ? (iso ?? "").slice(0, 7) === month : true);
+        const campaigns = rows
+          .filter((r) => (status ? r.status === status : true))
+          .filter((r) => inMonth(r.sentAt) || inMonth(r.scheduledAt))
+          .map((r) => ({
+            id: r.id,
+            subject: r.subject,
+            archetype: r.archetype,
+            status: r.status,
+            sentAt: r.sentAt,
+            scheduledAt: r.scheduledAt,
+            measured: r.readback !== null,
+          }))
+          .sort((a, b) => (b.sentAt ?? b.scheduledAt ?? "").localeCompare(a.sentAt ?? a.scheduledAt ?? ""));
+        return { campaigns };
+      },
+    },
+
     email_calendar_read: {
       id: "email_calendar_read",
       description:
-        "Read a month's email calendar (email/calendar/{YYYY-MM}.md) with gap analysis: slots without campaigns or audiences, archetype balance vs strategy weights, audience contact pressure vs cadence caps, quiet-period violations.",
+        "Read a month's email calendar SCAFFOLD (email/calendar/{YYYY-MM}.md) — a planning artifact that only exists for a month if email_plan_propose was run on it, with gap analysis: slots without campaigns or audiences, archetype balance vs strategy weights, audience contact pressure vs cadence caps, quiet-period violations. For 'what has actually been sent or scheduled', use email_campaigns_list instead — a missing calendar file does NOT mean no campaigns exist for that month.",
       inputSchema: calendarReadInput,
       outputSchema: calendarReadOutput,
       execute: async ({ month }) => {

@@ -63,4 +63,61 @@ describe("compileOfferManifest", () => {
     expect(m.consent).toEqual({ capturesEmail: true });
     expect(m.variants.v1!.style.font).toBe("inherit");
   });
+
+  describe("OF3: takeover, exit-intent, teaser, targeting, schedule", () => {
+    it("accepts takeover placement", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", placement: "takeover", variants: { v1: variant } });
+      expect(m.placement).toBe("takeover");
+    });
+
+    it("accepts exit-intent trigger kind", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", triggerKind: "exit-intent", variants: { v1: variant } });
+      expect(m.trigger.kind).toBe("exit-intent");
+    });
+
+    it("defaults the teaser ON for corner-card and omits it otherwise", () => {
+      const corner = compileOfferManifest({ surfaceSlug: "ofr_a", variants: { v1: variant } });
+      expect(corner.teaser).toEqual({ enabled: true });
+
+      const overlay = compileOfferManifest({ surfaceSlug: "ofr_b", placement: "overlay", variants: { v1: variant } });
+      expect(overlay.teaser).toBeUndefined();
+    });
+
+    it("an explicit teaser:false always wins, even for corner-card", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", teaser: false, variants: { v1: variant } });
+      expect(m.teaser).toBeUndefined();
+    });
+
+    it("an explicit teaser:true wins for a non-corner-card placement", () => {
+      const m = compileOfferManifest({
+        surfaceSlug: "ofr_x",
+        placement: "overlay",
+        teaser: true,
+        variants: { v1: variant },
+      });
+      expect(m.teaser).toEqual({ enabled: true });
+    });
+
+    it("carries targeting through untouched when supplied", () => {
+      const targeting = { devices: ["mobile"] as const, countries: ["US", "CA"], returningOnly: true };
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", targeting, variants: { v1: variant } });
+      expect(m.audience.targeting).toEqual(targeting);
+    });
+
+    it("omits targeting when not supplied", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", variants: { v1: variant } });
+      expect(m.audience.targeting).toBeUndefined();
+    });
+
+    it("carries a schedule window through untouched when supplied", () => {
+      const schedule = { from: "2026-11-20T00:00:00Z", to: "2026-12-02T00:00:00Z" };
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", schedule, variants: { v1: variant } });
+      expect(m.schedule).toEqual(schedule);
+    });
+
+    it("omits schedule when not supplied", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_x", variants: { v1: variant } });
+      expect(m.schedule).toBeUndefined();
+    });
+  });
 });

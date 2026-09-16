@@ -93,6 +93,28 @@ describe("offer round-trip", () => {
     expect(parsed.experimentId).toBe(manifest.experiment.id);
   });
 
+  it("round-trips OF3 manifest fields (takeover, exit-intent, targeting, schedule)", () => {
+    const of3Manifest = compileOfferManifest({
+      surfaceSlug: "ofr_bfcm",
+      placement: "takeover",
+      triggerKind: "exit-intent",
+      targeting: { devices: ["mobile"], countries: ["US"], returningOnly: true },
+      schedule: { from: "2026-11-20T00:00:00Z", to: "2026-12-02T00:00:00Z" },
+      variants: { v1: variant },
+    });
+    const of3Offer: Offer = { ...offer, id: "ofr_bfcm", manifest: of3Manifest };
+    const parsed = parseOffer(serializeOffer(of3Offer));
+    expect(parsed).toEqual(of3Offer);
+    expect(parsed.manifest.placement).toBe("takeover");
+    expect(parsed.manifest.trigger.kind).toBe("exit-intent");
+    expect(parsed.manifest.audience.targeting).toEqual({
+      devices: ["mobile"],
+      countries: ["US"],
+      returningOnly: true,
+    });
+    expect(parsed.manifest.schedule).toEqual({ from: "2026-11-20T00:00:00Z", to: "2026-12-02T00:00:00Z" });
+  });
+
   it("rejects an unknown status", () => {
     const raw = serializeOffer(offer).replace("status: proposed", "status: live");
     expect(() => parseOffer(raw)).toThrow(/invalid front matter/);

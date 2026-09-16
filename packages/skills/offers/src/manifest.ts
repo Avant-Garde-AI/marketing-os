@@ -1,5 +1,6 @@
 /**
- * compileOfferManifest — the authoring→manifest compile (spec 14 O2/O4).
+ * compileOfferManifest — the authoring→manifest compile (spec 14 O2/O4,
+ * extended OF3 for takeover/exit-intent/teaser/targeting/schedule).
  *
  * Pulled verbatim (same weight math, same defaults) from what the template's
  * `offer-design.ts` and the pooled runtime's `offers.ts` had each grown
@@ -8,15 +9,23 @@
  * experiment-integrity bug, not a cosmetic one.
  */
 
-import type { OfferManifest, OfferVariantContent } from "./types";
+import type { OfferManifest, OfferTargeting, OfferVariantContent } from "./types";
 
 export interface CompileOfferManifestInput {
   surfaceSlug: string;
-  placement?: "corner-card" | "overlay";
+  placement?: "corner-card" | "overlay" | "takeover";
+  /** delay (default) or exit-intent — see OfferManifest.trigger's doc. */
+  triggerKind?: "delay" | "exit-intent";
   triggerSeconds?: number;
   pages?: ("home" | "collection" | "product" | "cart")[];
   variants: Record<string, OfferVariantContent>;
   controlWeight?: number;
+  /** Defaults to true when placement is "corner-card" (the format the
+   * teaser exists for); explicit false always wins. */
+  teaser?: boolean;
+  targeting?: OfferTargeting;
+  /** ISO datetimes. Both required together, or omit entirely. */
+  schedule?: { from: string; to: string };
 }
 
 const DEFAULT_STYLE = {
@@ -35,13 +44,14 @@ export function compileOfferManifest(input: CompileOfferManifestInput): OfferMan
   }
   const controlWeight = input.controlWeight ?? 0.34;
   const share = (1 - controlWeight) / variantKeys.length;
+  const placement = input.placement ?? "corner-card";
 
-  return {
+  const manifest: OfferManifest = {
     id: input.surfaceSlug,
     type: "offer",
-    placement: input.placement ?? "corner-card",
+    placement,
     trigger: {
-      kind: "delay",
+      kind: input.triggerKind ?? "delay",
       seconds: input.triggerSeconds ?? 10,
       suppressAfterDismissDays: 14,
       maxPerSession: 1,
@@ -68,4 +78,11 @@ export function compileOfferManifest(input: CompileOfferManifestInput): OfferMan
     ),
     consent: { capturesEmail: true as const },
   };
+
+  const teaserOn = input.teaser ?? placement === "corner-card";
+  if (teaserOn) manifest.teaser = { enabled: true };
+  if (input.targeting) manifest.audience.targeting = input.targeting;
+  if (input.schedule) manifest.schedule = input.schedule;
+
+  return manifest;
 }

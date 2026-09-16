@@ -1,0 +1,43 @@
+{
+  "name": "@avant-garde/skill-offers",
+  "version": "0.1.0",
+  "description": "Offer Agent skill pack (spec 32): canonical manifest compilation, dark-pattern gating, and experiment decision logic for storefront offers. Vendored into the console template and the pooled runtime (spec 32 D6/OQ4) rather than depended on directly, mirroring email-campaign/social-media. The pack never touches a platform credential — OfferPlatformClient and OfferAttributionClient are seams each binding supplies.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "instructions.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@avant-garde/design-loop": "^0.1.0",
+    "@avant-garde/skill-kit": "workspace:*",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/skills/offers"
+  }
+}

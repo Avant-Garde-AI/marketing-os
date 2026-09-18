@@ -56,11 +56,25 @@ function pool(): Pool | null {
   return _pool;
 }
 
-async function shopsWithSocialPosts(): Promise<string[]> {
+/**
+ * Shops this sweep should visit.
+ *
+ * ANY social artifact, not only posts. The publish pass no-ops for a shop with
+ * nothing due, so the superset costs nothing — and the token pass MUST reach a
+ * shop that has no posts yet, because a credential has to be alive BEFORE
+ * anything can be scheduled against it.
+ *
+ * This was `path LIKE 'social/posts/%'`, which made token maintenance
+ * conditional on already having content. Arthaus cleared its drafts, the sweep
+ * stopped visiting the shop entirely, and a token repair that was deployed and
+ * correct simply never ran — the store looked broken in exactly the way the
+ * repair existed to fix.
+ */
+async function shopsWithSocialArtifacts(): Promise<string[]> {
   const p = pool();
   if (!p) return [];
   const r = await p.query(
-    `SELECT DISTINCT shop FROM mos_social_artifacts WHERE path LIKE 'social/posts/%' ORDER BY shop`,
+    `SELECT DISTINCT shop FROM mos_social_artifacts WHERE path LIKE 'social/%' ORDER BY shop`,
   );
   return r.rows.map((row: { shop: string }) => row.shop);
 }
@@ -210,7 +224,7 @@ export async function GET(req: NextRequest) {
   const denied = cronGate(req);
   if (denied) return denied;
 
-  const shops = await shopsWithSocialPosts();
+  const shops = await shopsWithSocialArtifacts();
   const report = await cronSweep(
     "cron-social",
     shops,

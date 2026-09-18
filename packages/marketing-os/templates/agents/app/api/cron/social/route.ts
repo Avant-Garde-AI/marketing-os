@@ -37,6 +37,9 @@ import { socialRepo } from "../../../../lib/social/repo";
 import { parsePost, postPath, serializePost } from "../../../../lib/social/artifacts";
 import { createSocialActions, verifyScheduleConsent } from "../../../../lib/social/actions";
 import { socialActionDeps } from "../../../../lib/social/register-actions";
+import { maybeRefreshInstagram } from "../../../../lib/social/channels/refresh";
+import { brokerTokenSource } from "../../../../lib/social/channels";
+import { channelConnectionStatus, storeChannelToken } from "../../../../lib/broker-client";
 import type { SocialPost } from "../../../../lib/social/types";
 
 export const runtime = "nodejs";
@@ -122,6 +125,54 @@ async function sweepShop(shop: string): Promise<PostSweepOutcome[]> {
   });
 }
 
+
+/**
+ * Keep the store's Instagram token alive (spec 24 §4 credential seam).
+ *
+ * Runs on the SAME sweep as publishing, before it, and for EVERY shop with
+ * social artifacts — not only ones with a post due. A token that expires while
+ * nothing is scheduled is exactly as dead as one that expires mid-campaign,
+ * and it is the case nobody notices: Arthaus's expired during a quiet fortnight
+ * and was found three days later by a publish attempt.
+ *
+ * Never throws. A refresh problem must not stop posts that are due from
+ * shipping with the token that is still valid today — degrading publishing
+ * because renewal failed would turn a warning into the outage it exists to
+ * prevent.
+ */
+async function refreshChannelTokens(shop: string): Promise<string | null> {
+  return runWithTenant({ shop, storeSlug: shop.replace(/\.myshopify\.com$/, "") }, async () => {
+    try {
+      const status = await channelConnectionStatus();
+      const verdict = await maybeRefreshInstagram({
+        currentToken: () => brokerTokenSource.accessToken("instagram"),
+        daysRemaining: status.daysRemaining,
+        store: async (t) => {
+          await storeChannelToken({
+            channel: "instagram",
+            token: t.token,
+            expiresAt: t.expiresAt,
+          });
+        },
+      });
+      if (verdict.action === "skipped") return null;
+      if (verdict.action === "refreshed") {
+        return `instagram token refreshed — good for ${verdict.daysRemaining} more days`;
+      }
+      console.error(`[cron-social] ${shop} instagram token refresh FAILED: ${verdict.reason}`);
+      return `TOKEN: ${verdict.reason}`;
+    } catch (e) {
+      // Including a broker that is not configured at all, which is the normal
+      // state for a store still on the env bootstrap.
+      console.error(
+        `[cron-social] ${shop} token refresh skipped:`,
+        e instanceof Error ? e.message : e,
+      );
+      return null;
+    }
+  });
+}
+
 export async function GET(req: NextRequest) {
   const denied = cronGate(req);
   if (denied) return denied;
@@ -133,14 +184,16 @@ export async function GET(req: NextRequest) {
     SHOPS_PER_FIRING,
     (shop) => shop,
     async (shop) => {
+      const tokenNote = await refreshChannelTokens(shop);
       const outcomes = await sweepShop(shop);
-      if (outcomes.length === 0) return "nothing due";
+      if (outcomes.length === 0) return tokenNote ?? "nothing due";
       const flagged = outcomes.filter(
         (o) => o.action.startsWith("OUT-OF-BAND") || o.action.startsWith("FAILED"),
       );
-      return `${outcomes.length} post(s)${flagged.length ? `, ${flagged.length} FLAGGED` : ""}: ${outcomes
+      const posts = `${outcomes.length} post(s)${flagged.length ? `, ${flagged.length} FLAGGED` : ""}: ${outcomes
         .map((o) => `${o.id}=${o.action}`)
         .join("; ")}`;
+      return tokenNote ? `${tokenNote}; ${posts}` : posts;
     },
   );
   return Response.json(report);

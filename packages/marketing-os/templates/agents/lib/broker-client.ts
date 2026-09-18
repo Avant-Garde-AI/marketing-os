@@ -37,18 +37,17 @@ export interface BrokerToken {
 
 const cache = new Map<string, BrokerToken>();
 
-export async function getBrokerToken(provider: string, product: string): Promise<BrokerToken> {
+/**
+ * The broker's two-path auth, in one place.
+ *
+ * Extracted when the WRITE path (storeChannelToken) landed: two copies of
+ * this would be two chances for the hosted lane to drift from the
+ * client-owned one, and a request that authenticates as the wrong tenant is
+ * the worst failure this system has — it does not error, it succeeds against
+ * somebody else's store.
+ */
+function brokerHeaders(): Record<string, string> {
   const tenant = getTenant();
-  const key = `${tenant.storeSlug}:${provider}:${product}`;
-
-  const cached = cache.get(key);
-  if (cached && Date.now() < cached.expiresAt) return cached;
-
-  const apiUrl = process.env.MARKETING_OS_API_URL;
-  if (!apiUrl) {
-    throw new BrokerError("MARKETING_OS_API_URL is not configured.", "NOT_CONFIGURED", 500);
-  }
-
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (HOSTED) {
     const serviceKey = process.env.MOS_PLATFORM_SERVICE_KEY;
@@ -68,6 +67,22 @@ export async function getBrokerToken(provider: string, product: string): Promise
     }
     headers.Authorization = `Bearer ${deploymentKey}`;
   }
+  return headers;
+}
+
+export async function getBrokerToken(provider: string, product: string): Promise<BrokerToken> {
+  const tenant = getTenant();
+  const key = `${tenant.storeSlug}:${provider}:${product}`;
+
+  const cached = cache.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached;
+
+  const apiUrl = process.env.MARKETING_OS_API_URL;
+  if (!apiUrl) {
+    throw new BrokerError("MARKETING_OS_API_URL is not configured.", "NOT_CONFIGURED", 500);
+  }
+
+  const headers = brokerHeaders();
 
   const res = await fetch(`${apiUrl.replace(/\/$/, "")}/api/broker/token`, {
     method: "POST",
@@ -103,4 +118,76 @@ export async function getBrokerToken(provider: string, product: string): Promise
   };
   cache.set(key, token);
   return token;
+}
+
+// ---------------------------------------------------------------------------
+// Channel publish tokens — the write half (POST /api/broker/channel-token)
+// ---------------------------------------------------------------------------
+
+export interface ChannelConnectionStatus {
+  connected: boolean;
+  status: string | null;
+  channels: string[];
+  expiresAt: string | null;
+  lastRefresh: string | null;
+  daysRemaining: number | null;
+}
+
+function apiBase(): string {
+  const apiUrl = process.env.MARKETING_OS_API_URL;
+  if (!apiUrl) {
+    throw new BrokerError("MARKETING_OS_API_URL is not configured.", "NOT_CONFIGURED", 500);
+  }
+  return apiUrl.replace(/\/$/, "");
+}
+
+async function channelTokenCall<T>(body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(`${apiBase()}/api/broker/channel-token`, {
+    method: "POST",
+    headers: brokerHeaders(),
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
+    throw new BrokerError(
+      err?.message ?? `Broker error ${res.status}`,
+      err?.error ?? "BROKER_ERROR",
+      res.status,
+    );
+  }
+  return (await res.json()) as T;
+}
+
+/**
+ * Persist a renewed publish token for a channel.
+ *
+ * Invalidates the read cache for that channel: the whole point of storing a
+ * new token is that the next publish uses it, and a 60-second cache holding
+ * the token we just replaced would make a refresh look like it did nothing.
+ */
+export async function storeChannelToken(opts: {
+  channel: string;
+  token: string;
+  expiresAt?: Date | null;
+  externalAccount?: string | null;
+}): Promise<{ created: boolean; channels: string[]; expiresAt: string | null }> {
+  const result = await channelTokenCall<{
+    ok: boolean;
+    created: boolean;
+    channels: string[];
+    expiresAt: string | null;
+  }>({
+    action: "store",
+    channel: opts.channel,
+    token: opts.token,
+    expiresAt: opts.expiresAt?.toISOString() ?? null,
+    externalAccount: opts.externalAccount ?? null,
+  });
+  cache.delete(`${getTenant().storeSlug}:meta:${opts.channel}`);
+  return result;
+}
+
+/** Connection metadata only — never a token. */
+export async function channelConnectionStatus(): Promise<ChannelConnectionStatus> {
+  return channelTokenCall<ChannelConnectionStatus>({ action: "status" });
 }

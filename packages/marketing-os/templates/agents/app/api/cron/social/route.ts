@@ -37,8 +37,8 @@ import { socialRepo } from "../../../../lib/social/repo";
 import { parsePost, postPath, serializePost } from "../../../../lib/social/artifacts";
 import { createSocialActions, verifyScheduleConsent } from "../../../../lib/social/actions";
 import { socialActionDeps } from "../../../../lib/social/register-actions";
-import { maybeRefreshInstagram } from "../../../../lib/social/channels/refresh";
-import { brokerTokenSource } from "../../../../lib/social/channels";
+import { ensureUsableInstagramToken, maybeRefreshInstagram } from "../../../../lib/social/channels/refresh";
+import { brokerTokenSource, envTokenSource } from "../../../../lib/social/channels";
 import { channelConnectionStatus, storeChannelToken } from "../../../../lib/broker-client";
 import type { SocialPost } from "../../../../lib/social/types";
 
@@ -143,6 +143,34 @@ async function sweepShop(shop: string): Promise<PostSweepOutcome[]> {
 async function refreshChannelTokens(shop: string): Promise<string | null> {
   return runWithTenant({ shop, storeSlug: shop.replace(/\.myshopify\.com$/, "") }, async () => {
     try {
+      // REPAIR FIRST. brokerTokenSource prefers Vault and falls back to env
+      // only when the broker ERRORS — never when it returns a token that is
+      // present and dead. So a stale Vault entry silently shadows a freshly
+      // set env token, which is exactly how a token regenerated in the Meta
+      // dashboard can have no effect at all.
+      const repair = await ensureUsableInstagramToken({
+        storedToken: () => brokerTokenSource.accessToken("instagram"),
+        bootstrapToken: () => envTokenSource.accessToken("instagram"),
+        store: async (token, identity) => {
+          await storeChannelToken({
+            channel: "instagram",
+            token,
+            // Expiry unknown for a bootstrap token. Null is correct and
+            // self-correcting: the very next sweep sees no expiry, refreshes,
+            // and records a real one.
+            expiresAt: null,
+            externalAccount: identity.userId,
+          });
+        },
+      });
+      if (repair.action === "broken") {
+        console.error(`[cron-social] ${shop} instagram token UNUSABLE: ${repair.reason}`);
+        return `TOKEN UNUSABLE: ${repair.reason}`;
+      }
+      if (repair.action === "repaired") {
+        console.error(`[cron-social] ${shop} instagram token REPAIRED: ${repair.note}`);
+      }
+
       const status = await channelConnectionStatus();
       const verdict = await maybeRefreshInstagram({
         currentToken: () => brokerTokenSource.accessToken("instagram"),
@@ -155,9 +183,14 @@ async function refreshChannelTokens(shop: string): Promise<string | null> {
           });
         },
       });
-      if (verdict.action === "skipped") return null;
+      const repaired =
+        repair.action === "repaired"
+          ? `instagram token repaired (was shadowed by a stale stored credential)`
+          : null;
+      if (verdict.action === "skipped") return repaired;
       if (verdict.action === "refreshed") {
-        return `instagram token refreshed — good for ${verdict.daysRemaining} more days`;
+        const note = `instagram token refreshed — good for ${verdict.daysRemaining} more days`;
+        return repaired ? `${repaired}; ${note}` : note;
       }
       console.error(`[cron-social] ${shop} instagram token refresh FAILED: ${verdict.reason}`);
       return `TOKEN: ${verdict.reason}`;

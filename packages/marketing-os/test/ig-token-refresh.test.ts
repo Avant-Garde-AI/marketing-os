@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  ensureUsableInstagramToken,
   maybeRefreshInstagram,
   refreshInstagramToken,
   REFRESH_THRESHOLD_DAYS,
@@ -114,6 +115,74 @@ describe("refreshInstagramToken", () => {
   it("refuses a response with no token rather than storing undefined", async () => {
     vi.stubGlobal("fetch", async () => ({ ok: true, json: async () => ({}) }));
     await expect(refreshInstagramToken("IGAA-old")).rejects.toThrow(/refresh failed/);
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("ensureUsableInstagramToken", () => {
+  const ok = { ok: true, json: async () => ({ user_id: "1784", username: "arthaushq", account_type: "BUSINESS" }) };
+  const dead = { ok: false, status: 400, json: async () => ({ error: { message: "Session has expired" } }) };
+
+  it("leaves a working stored token alone, even when env differs", async () => {
+    vi.stubGlobal("fetch", async () => ok);
+    const store = vi.fn();
+    const v = await ensureUsableInstagramToken({
+      storedToken: async () => "vault-good",
+      bootstrapToken: async () => "env-other",
+      store,
+    });
+    expect(v.action).toBe("healthy");
+    expect(store).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("repairs when a dead stored token shadows a working env one", async () => {
+    // The exact Arthaus failure: a token regenerated in the Meta dashboard had
+    // no effect because Vault was answering first with a revoked credential.
+    const seen: string[] = [];
+    vi.stubGlobal("fetch", async (u: URL) => {
+      const t = new URL(u).searchParams.get("access_token")!;
+      seen.push(t);
+      return t === "env-good" ? ok : dead;
+    });
+    const store = vi.fn();
+    const v = await ensureUsableInstagramToken({
+      storedToken: async () => "vault-stale",
+      bootstrapToken: async () => "env-good",
+      store,
+    });
+    expect(v.action).toBe("repaired");
+    expect(store).toHaveBeenCalledOnce();
+    expect(store.mock.calls[0]![0]).toBe("env-good");
+    expect(store.mock.calls[0]![1].username).toBe("arthaushq");
+    expect(seen).toEqual(["vault-stale", "env-good"]);
+    vi.unstubAllGlobals();
+  });
+
+  it("does not 'repair' when both sources hold the same dead value", async () => {
+    vi.stubGlobal("fetch", async () => dead);
+    const store = vi.fn();
+    const v = await ensureUsableInstagramToken({
+      storedToken: async () => "same-dead",
+      bootstrapToken: async () => "same-dead",
+      store,
+    });
+    expect(v.action).toBe("broken");
+    expect(v.action === "broken" && v.reason).toMatch(/only token available/);
+    expect(store).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("reports both failures when neither token works", async () => {
+    vi.stubGlobal("fetch", async () => dead);
+    const v = await ensureUsableInstagramToken({
+      storedToken: async () => "a",
+      bootstrapToken: async () => "b",
+      store: async () => {},
+    });
+    expect(v.action).toBe("broken");
+    expect(v.action === "broken" && v.reason).toMatch(/stored token unusable/);
+    expect(v.action === "broken" && v.reason).toMatch(/bootstrap token also refused/);
     vi.unstubAllGlobals();
   });
 });

@@ -168,3 +168,124 @@ export async function maybeRefreshInstagram(deps: {
     daysRemaining: Math.floor(refreshed.expiresIn / 86_400),
   };
 }
+
+export interface TokenIdentity {
+  userId: string;
+  username: string;
+  accountType?: string;
+}
+
+/**
+ * Ask Instagram whether a token actually works, and whose it is.
+ *
+ * Stored state cannot answer this. A credential that was revoked, or
+ * invalidated because someone changed a password, looks exactly like a healthy
+ * one in the database — `status = 'active'`, expiry in the future, nothing
+ * amiss. The only source of truth is the API that will refuse the publish.
+ */
+export async function validateInstagramToken(
+  token: string,
+): Promise<{ ok: true; identity: TokenIdentity } | { ok: false; reason: string }> {
+  const url = new URL(`${GRAPH_BASE()}/me`);
+  url.searchParams.set("fields", "user_id,username,account_type");
+  url.searchParams.set("access_token", token);
+  try {
+    const res = await fetch(url);
+    const body = (await res.json().catch(() => ({}))) as {
+      user_id?: string | number;
+      username?: string;
+      account_type?: string;
+      error?: { message?: string };
+    };
+    if (!res.ok || body.error || !body.username) {
+      return { ok: false, reason: body.error?.message ?? `HTTP ${res.status}` };
+    }
+    return {
+      ok: true,
+      identity: {
+        userId: String(body.user_id ?? ""),
+        username: body.username,
+        ...(body.account_type ? { accountType: body.account_type } : {}),
+      },
+    };
+  } catch (e) {
+    return { ok: false, reason: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+export type RepairVerdict =
+  | { action: "healthy"; identity: TokenIdentity }
+  | { action: "repaired"; identity: TokenIdentity; note: string }
+  | { action: "broken"; reason: string };
+
+/**
+ * Make sure the token the publish path will USE is one that works.
+ *
+ * `brokerTokenSource` prefers Vault and falls back to env only when the broker
+ * ERRORS — not when it returns a token that is present, well-formed and dead.
+ * So a stale Vault entry silently SHADOWS a freshly-set env token, and every
+ * publish fails while the operator looks at a correct-looking env var and a
+ * connection row marked active. That is precisely what Arthaus hit: a token
+ * regenerated in the Meta dashboard had no effect, because nothing was reading
+ * it.
+ *
+ * Repair, rather than merely report, because the fix is unambiguous: if the
+ * stored credential is refused and the bootstrap one is accepted, the
+ * bootstrap is right and Vault is stale. Anything else would require a human
+ * to know that Vault shadows env, which is exactly the knowledge this seam
+ * exists to remove.
+ *
+ * It never repairs in the other direction. A working stored token is left
+ * alone even when env disagrees, because env is the bootstrap and Vault is
+ * where the rotating credential lives.
+ */
+export async function ensureUsableInstagramToken(deps: {
+  storedToken: () => Promise<string>;
+  bootstrapToken: () => Promise<string>;
+  store: (token: string, identity: TokenIdentity) => Promise<void>;
+}): Promise<RepairVerdict> {
+  let stored: string | null = null;
+  let storedFailure = "no stored token";
+  try {
+    stored = await deps.storedToken();
+  } catch (e) {
+    storedFailure = e instanceof Error ? e.message : String(e);
+  }
+
+  if (stored) {
+    const check = await validateInstagramToken(stored);
+    if (check.ok) return { action: "healthy", identity: check.identity };
+    storedFailure = check.reason;
+  }
+
+  let bootstrap: string;
+  try {
+    bootstrap = await deps.bootstrapToken();
+  } catch (e) {
+    return {
+      action: "broken",
+      reason: `stored token unusable (${storedFailure}); no bootstrap token either (${e instanceof Error ? e.message : String(e)})`,
+    };
+  }
+
+  // Same value, already known bad — say so plainly rather than "repairing" it
+  // into the same failure and reporting success.
+  if (bootstrap === stored) {
+    return { action: "broken", reason: `the only token available is being refused: ${storedFailure}` };
+  }
+
+  const check = await validateInstagramToken(bootstrap);
+  if (!check.ok) {
+    return {
+      action: "broken",
+      reason: `stored token unusable (${storedFailure}); bootstrap token also refused (${check.reason})`,
+    };
+  }
+
+  await deps.store(bootstrap, check.identity);
+  return {
+    action: "repaired",
+    identity: check.identity,
+    note: `the stored credential was being refused (${storedFailure}) and was shadowing a working one; the working token is now stored`,
+  };
+}

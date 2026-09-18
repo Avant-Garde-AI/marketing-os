@@ -36,7 +36,12 @@ import { syncPostIndex } from "../../../lib/social/index-sync";
 import { socialReviewLink, socialSheetLink } from "../../../lib/social/review-links";
 import { channelConnectionStatus } from "../../../lib/broker-client";
 import { brokerTokenSource } from "../../../lib/social/channels";
-import { REFRESH_THRESHOLD_DAYS } from "../../../lib/social/channels/refresh";
+import {
+  REFRESH_THRESHOLD_DAYS,
+  ensureUsableInstagramToken,
+} from "../../../lib/social/channels/refresh";
+import { envTokenSource } from "../../../lib/social/channels";
+import { storeChannelToken } from "../../../lib/broker-client";
 import { listNotes, listOpenNotes, resolveNotes } from "../../../lib/review/notes";
 import { IDENTITY_CAVEAT } from "../../../lib/review/note-shape";
 import { getTenant } from "../../../lib/tenant-context";
@@ -439,8 +444,16 @@ const socialChannelHealth = createTool({
   description:
     "Is this store actually able to publish? Checks the Instagram connection LIVE — resolves the publish token, calls the platform with it, and reports the account it belongs to plus how many days the credential has left. " +
     "Run this before scheduling anything, and whenever a publish fails: a token that expired is indistinguishable from a broken integration in every other symptom. " +
-    "Returns no credential, ever — only whether one works, for whom, and for how much longer.",
-  inputSchema: z.object({}),
+    "Returns no credential, ever — only whether one works, for whom, and for how much longer. " +
+    "Pass repair:true when it reports a problem: a stored credential that has been revoked will otherwise keep SHADOWING a freshly set one, and repair stores whichever token the platform actually accepts.",
+  inputSchema: z.object({
+    repair: z
+      .boolean()
+      .optional()
+      .describe(
+        "Attempt to fix a shadowed credential: if the stored token is refused and the bootstrap one works, store the working one. Never the reverse.",
+      ),
+  }),
   outputSchema: z.object({
     canPublish: z.boolean(),
     account: z.string().optional(),
@@ -451,7 +464,29 @@ const socialChannelHealth = createTool({
     expiresAt: z.string().nullable(),
     note: z.string(),
   }),
-  execute: async () => {
+  execute: async (input: { repair?: boolean }) => {
+    let repairNote = "";
+    if (input.repair) {
+      const verdict = await ensureUsableInstagramToken({
+        storedToken: () => brokerTokenSource.accessToken("instagram"),
+        bootstrapToken: () => envTokenSource.accessToken("instagram"),
+        store: async (token, identity) => {
+          await storeChannelToken({
+            channel: "instagram",
+            token,
+            expiresAt: null,
+            externalAccount: identity.userId,
+          });
+        },
+      });
+      repairNote =
+        verdict.action === "repaired"
+          ? ` REPAIRED: ${verdict.note}.`
+          : verdict.action === "broken"
+            ? ` REPAIR FAILED: ${verdict.reason}.`
+            : " Repair was unnecessary — the stored token already works.";
+    }
+
     let status: Awaited<ReturnType<typeof channelConnectionStatus>> | null = null;
     try {
       status = await channelConnectionStatus();
@@ -472,7 +507,7 @@ const socialChannelHealth = createTool({
         daysRemaining: status?.daysRemaining ?? null,
         storedIn,
         expiresAt: status?.expiresAt ?? null,
-        note: `No Instagram publish token could be resolved: ${e instanceof Error ? e.message : String(e)}`,
+        note: `No Instagram publish token could be resolved: ${e instanceof Error ? e.message : String(e)}.${repairNote}`,
       };
     }
 
@@ -500,7 +535,7 @@ const socialChannelHealth = createTool({
           `Instagram rejected the stored token: ${body.error?.message ?? `HTTP ${res.status}`}. ` +
           (storedIn === "env"
             ? "It lives in an env var, so nothing can renew it — re-authorise the account in the Meta app dashboard (Instagram → API setup with Instagram login → Generate token) and set ARTHAUS_IG_ACCESS_TOKEN."
-            : "The stored credential needs re-authorising in the Meta app dashboard."),
+            : "The stored credential needs re-authorising in the Meta app dashboard.") + repairNote,
       };
     }
 
@@ -522,7 +557,7 @@ const socialChannelHealth = createTool({
       daysRemaining: days,
       storedIn,
       expiresAt: status?.expiresAt ?? null,
-      note: health,
+      note: `${health}${repairNote}`,
     };
   },
 });

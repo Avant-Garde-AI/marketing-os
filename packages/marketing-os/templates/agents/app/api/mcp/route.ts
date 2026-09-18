@@ -65,6 +65,7 @@ Social & content — the same shape as email: author here, review in the console
 - compose_post_from_archetype turns a plan into real creative: roles in, a Design Surface out. compose_post_keyframes does the same for video beats on one page, so continuity holds by construction. Then social_link_design binds the surface to the post, which is ALSO what makes the post asset_ready and therefore schedulable — a post with no linked surface cannot ship.
 - check_design_library / publish_design_library govern how surfaces LOOK. The store's library (its named colours, type scale, caption band and credit lockup) lives in its repo and must be published before compose can use components rather than primitives. Check it before composing; drift is reported, never repaired.
 - social_post_upsert stages a post with its caption. Copy claims are checked against the artwork's own pixels and the store's own entities — a colour or an attribution the work does not support is REFUSED, not warned about. Supply boundFacts so the guard can do its job.
+- social_channel_health answers whether this store can publish AT ALL: it resolves the Instagram token, asks Instagram who it belongs to, and reports days remaining. Check it before scheduling — an expired token is indistinguishable from a broken integration by every other symptom. It returns no credential.
 - social_review_share mints the expiring link a human opens to review a month or a post group. It is feedback only and can never approve: possessing a link proves possession of a link, not identity. social_review_notes reads what they said.
 - Nothing here publishes. Scheduling and publishing go through propose_action (social.schedule_post / social.publish_post), where a human approves and the approval IS the consent the cron re-verifies before it ships.`;
 
@@ -190,6 +191,7 @@ function socialToolDefs(): ToolDef[] {
       "compose_post_from_archetype",
       "compose_post_keyframes",
       "social_link_design",
+      "social_channel_health",
       "social_review_share",
       "social_review_notes",
       "social_review_notes_resolve",

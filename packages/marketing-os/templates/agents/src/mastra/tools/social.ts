@@ -34,6 +34,9 @@ import { linkPostToCalendarSlot, upsertCalendar, upsertPost } from "../../../lib
 import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
 import { syncPostIndex } from "../../../lib/social/index-sync";
 import { socialReviewLink, socialSheetLink } from "../../../lib/social/review-links";
+import { channelConnectionStatus } from "../../../lib/broker-client";
+import { brokerTokenSource } from "../../../lib/social/channels";
+import { REFRESH_THRESHOLD_DAYS } from "../../../lib/social/channels/refresh";
 import { listNotes, listOpenNotes, resolveNotes } from "../../../lib/review/notes";
 import { IDENTITY_CAVEAT } from "../../../lib/review/note-shape";
 import { getTenant } from "../../../lib/tenant-context";
@@ -430,8 +433,103 @@ const socialReviewNotesResolve = createTool({
   execute: async (input: { noteIds: string[] }) => ({ resolved: await resolveNotes(input.noteIds) }),
 });
 
+
+const socialChannelHealth = createTool({
+  id: "social_channel_health",
+  description:
+    "Is this store actually able to publish? Checks the Instagram connection LIVE — resolves the publish token, calls the platform with it, and reports the account it belongs to plus how many days the credential has left. " +
+    "Run this before scheduling anything, and whenever a publish fails: a token that expired is indistinguishable from a broken integration in every other symptom. " +
+    "Returns no credential, ever — only whether one works, for whom, and for how much longer.",
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    canPublish: z.boolean(),
+    account: z.string().optional(),
+    accountId: z.string().optional(),
+    accountType: z.string().optional(),
+    daysRemaining: z.number().nullable(),
+    storedIn: z.string().describe("Where the credential lives — 'vault' (rotatable) or 'env' (bootstrap, cannot self-renew)"),
+    expiresAt: z.string().nullable(),
+    note: z.string(),
+  }),
+  execute: async () => {
+    let status: Awaited<ReturnType<typeof channelConnectionStatus>> | null = null;
+    try {
+      status = await channelConnectionStatus();
+    } catch {
+      // A store still on the env bootstrap has no connection row. That is a
+      // real, reportable state rather than an error — it publishes fine today
+      // and cannot renew itself, which is precisely what this tool exists to
+      // surface.
+    }
+    const storedIn = status?.connected ? "vault" : "env";
+
+    let token: string;
+    try {
+      token = await brokerTokenSource.accessToken("instagram");
+    } catch (e) {
+      return {
+        canPublish: false,
+        daysRemaining: status?.daysRemaining ?? null,
+        storedIn,
+        expiresAt: status?.expiresAt ?? null,
+        note: `No Instagram publish token could be resolved: ${e instanceof Error ? e.message : String(e)}`,
+      };
+    }
+
+    // The only honest test is asking Instagram. A stored token that expired
+    // looks perfectly healthy in the database.
+    const base = (process.env.SOCIAL_IG_GRAPH_BASE ?? "https://graph.instagram.com/v23.0").replace(/\/$/, "");
+    const url = new URL(`${base}/me`);
+    url.searchParams.set("fields", "user_id,username,account_type");
+    url.searchParams.set("access_token", token);
+    const res = await fetch(url);
+    const body = (await res.json().catch(() => ({}))) as {
+      user_id?: string | number;
+      username?: string;
+      account_type?: string;
+      error?: { message?: string };
+    };
+
+    if (!res.ok || body.error) {
+      return {
+        canPublish: false,
+        daysRemaining: status?.daysRemaining ?? null,
+        storedIn,
+        expiresAt: status?.expiresAt ?? null,
+        note:
+          `Instagram rejected the stored token: ${body.error?.message ?? `HTTP ${res.status}`}. ` +
+          (storedIn === "env"
+            ? "It lives in an env var, so nothing can renew it — re-authorise the account in the Meta app dashboard (Instagram → API setup with Instagram login → Generate token) and set ARTHAUS_IG_ACCESS_TOKEN."
+            : "The stored credential needs re-authorising in the Meta app dashboard."),
+      };
+    }
+
+    const days = status?.daysRemaining ?? null;
+    const health =
+      storedIn === "env"
+        ? "Working, but stored in an env var: nothing can renew it, so it WILL expire silently. It moves to Vault automatically on the next cron sweep."
+        : days === null
+          ? "Working, stored in Vault, with no expiry recorded yet — the next refresh will record one."
+          : days <= REFRESH_THRESHOLD_DAYS
+            ? `Working, and due for renewal (${days} days left; renews at ${REFRESH_THRESHOLD_DAYS}).`
+            : `Working, ${days} days remaining.`;
+
+    return {
+      canPublish: true,
+      account: body.username,
+      accountId: body.user_id !== undefined ? String(body.user_id) : undefined,
+      accountType: body.account_type,
+      daysRemaining: days,
+      storedIn,
+      expiresAt: status?.expiresAt ?? null,
+      note: health,
+    };
+  },
+});
+
 export const socialTools = {
   social_scaffold: socialScaffold,
+  social_channel_health: socialChannelHealth,
   social_review_share: socialReviewShare,
   social_review_notes: socialReviewNotes,
   social_review_notes_resolve: socialReviewNotesResolve,

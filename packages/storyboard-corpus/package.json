@@ -1,0 +1,44 @@
+{
+  "name": "@avant-garde/storyboard-corpus",
+  "version": "0.0.1",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./vertex": {
+      "types": "./dist/vertex.d.ts",
+      "default": "./dist/vertex.js"
+    },
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "default": "./dist/cli.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "description": "Offline whole-post visual corpus extraction with audited resume and bounded Vertex execution.",
+  "bin": {
+    "storyboard-corpus": "./dist/cli.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

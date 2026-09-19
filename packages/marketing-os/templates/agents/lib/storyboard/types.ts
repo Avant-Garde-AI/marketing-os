@@ -1,3 +1,4 @@
+/** Vendored from packages/storyboard. Update the canonical source first. */
 /**
  * The Storyboard IR (spec 33 §2) — what a post MEANS, before anything about how
  * it looks.

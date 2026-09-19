@@ -1,3 +1,4 @@
+import { storyboardTools } from "../tools/storyboard";
 import { Agent } from "@mastra/core/agent";
 import { Memory } from "@mastra/memory";
 import { storage } from "../storage";
@@ -84,6 +85,7 @@ const baseMarketingTools = {
   // Imagery resolution (reads: generates candidates, publishes nothing).
   ...imageryTools,
   ...socialTools,
+  ...storyboardTools,
   // spec 20 A1: the agent's ONLY write interface — proposes a governed Action
   // for human approval. Execute paths are structurally unreachable from here
   // (they live behind the platform gate's service secret).

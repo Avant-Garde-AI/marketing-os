@@ -276,6 +276,16 @@ that a human can read and reject cheaply, before spend.
 4. **How knowledge is actually injected.** brand.md is long. The genome is
    currently worthless (§0.1). Prior posts are few. Retrieval strategy, and what
    to do when the corpus is thin, are open.
+5. **How the corpus gets re-distilled — including who orchestrates it.**
+   §0.5 establishes that 923 organic posts (345 carousels, 179 video, all with
+   engagement) have never been looked at visually, and that the ad lane kept
+   39.4 % of what it was given. What is NOT decided, deliberately, is the
+   pipeline that fixes it: batch or streaming, one pass or staged, where
+   clustering sits relative to model extraction, whether the unit of extraction
+   is a post or a beat, and whether this runs inside the Mastra harness or
+   beside it as an offline job whose output the harness merely reads. This is
+   an orchestration design problem in its own right and is handed over
+   unsolved — see §9.
 
 ### 3.1 The genome must be re-distilled, not re-acquired
 
@@ -397,3 +407,42 @@ All observed in this system, not imagined.
 - **Garbage in.** Frame-in-frame proves a harness cannot outrun its inputs.
 - **Zero-evidence archetypes served as fact.** Five of seven, used unknowingly,
   by the author of this document.
+
+---
+
+## 9. What is being handed over, and to whom
+
+This document and `packages/storyboard/` exist so that a stronger model can do
+the architecture. The scaffold is deliberately the part that is safe to be
+wrong about — types, seams, validation — and everything load-bearing is left
+open on purpose.
+
+**Decide these. Do not treat any as settled by this draft.**
+
+| # | Question | Where |
+|---|---|---|
+| 1 | Sub-agent decomposition — Mastra sub-agents, tools on one agent, or workflow stages | §3.1 |
+| 2 | Where novelty comes from, given that a corpus-guided planner regresses to its mean | §3.2 |
+| 3 | Branching and budget shape — N storyboards vs one storyboard × N images per beat | §3.3 |
+| 4 | Knowledge injection and retrieval when the corpus is thin | §3.4 |
+| 5 | **Corpus re-distillation, and how to orchestrate it** | §3.5, §0.5 |
+| 6 | What a narrative critic and a visual critic actually are | §4 |
+
+**Constraints that are not open.**
+
+- Build on the Mastra harness this repo already runs. Atelier is the reference
+  for the explore/critique loop and is NOT a dependency (§0.4) — its unit is a
+  performing ad and its loop optimises a single frame; this needs an arc.
+- Governance stays in the same process as the creativity: the claims guard,
+  the Action gate, review links and publish consent already exist and already
+  work. Do not rebuild them, and do not route around them.
+- `packages/storyboard` imports no renderer, ever. That is what keeps a
+  canvas/Figma exporter a swap rather than a rewrite (§5).
+- Evidence discipline is not negotiable. `evidence.n` means "exemplars I
+  counted"; a researched claim may never carry a count (§0.1).
+
+**One input problem no architecture solves.** Every Arthaus product image is a
+framed render on a 2048² canvas, so feeding one to the mockup engine yields a
+frame inside a frame. Until bare artwork masters are reachable, a better
+harness produces better-composed pictures of the wrong thing. Treat it as a
+precondition, not a detail.

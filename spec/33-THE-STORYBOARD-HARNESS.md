@@ -26,17 +26,78 @@ at the keyboard.
 
 ### 0.1 The scraped library distilled to rectangles
 
-`social/reference/genome.md` is 2.4 KB. It holds seven archetypes. Five carry
-`evidence: { n: 0 }` — they are hand-written prose turned into boxes. The two
-with real evidence (n=32, n=20) are generic centred stacks with a logo, a
-headline and a subhead: ad furniture from the retail cohort.
+`social/reference/genome.md` is 2.4 KB and holds seven archetypes. Only two
+carry a corpus count (n=32, n=20), and both are generic centred stacks with a
+logo — ad furniture from the retail cohort.
 
-`scripts/distill.mjs` extracts exactly `{ role, kind, x, y, w, h }` and says so:
-*"the market's register belongs in `doNot`, not in the archetypes."* Treatment
-was discarded on purpose. `corpus/.gitignore` is `*`, so the raw acquisition was
-never committed and nothing can be re-distilled.
+**Correction, 2026-09-19.** An earlier draft of this section called the five
+`evidence: { n: 0 }` archetypes "hand-written prose turned into boxes",
+implying carelessness. That was wrong and unfair to the lane that produced
+them. `research/04-genome-emission.md` MANDATES `n: 0` for the artist cohort:
 
-Two thousand five hundred reference ads became four rectangle lists.
+> `evidence.n` is 0 for every archetype. Always. That field means "exemplars I
+> counted in a corpus", and this lane counted none. [...] Filling in `n` would
+> let a researched claim pose as an observed one, which is the one thing this
+> whole chain is built to prevent.
+
+So `n: 0` is a working honesty mechanism, not a defect. The defect is that
+nothing DOWNSTREAM reads it: this document's own author used five
+zero-evidence archetypes without noticing, because `social_genome_read` serves
+them indistinguishably from counted ones. Fix the consumer, not the marker
+(see §3.1).
+
+The real problem is narrower and worse than "the archetypes are fake".
+`scripts/distill.mjs` extracts exactly `{ role, kind, x, y, w, h }` and says so
+— *"the market's register belongs in `doNot`, not in the archetypes."*
+Treatment was discarded on purpose. What reached the composer was geometry, and
+geometry alone cannot be interesting.
+
+### 0.5 The corpus is not lost, and it is bigger than the genome suggests
+
+Verified 2026-09-19 against `gs://arthaus-creative-corpus/` (project
+`arthaus-us`). The raw acquisition is intact. The distillate is thin because
+the funnel lost almost everything, not because little was gathered.
+
+**Paid ads — clustered, and the clustering nearly all drained away:**
+
+| stage | count |
+|---|---|
+| ad images stored | 393 |
+| classified `designed_ad` | 261 |
+| fed to layout-synth | 198 |
+| **quarantined (unparseable)** | **66** |
+| instances clustered | 132 |
+| coverage — instances landing in a kept cluster | **39.4 %** |
+| **canonicals kept** | **2** |
+
+`min_cluster_size` was lowered from a configured 15 to 7 to get even those two,
+and the run's own note says so: *"canonicals from a small corpus are weaker
+evidence — check member_count before relying on one."* The provider was real
+Vertex rather than the mock (77 distinct zone types; the mock emits exactly 2),
+so parse quality is genuine — there was simply not enough of it.
+
+Both surviving canonicals are `centered_stack`. That is the entire reason the
+genome offers nothing but centred stacks.
+
+**Organic posts — never clustered at all:**
+
+| | |
+|---|---|
+| artists | 40, across four follower tiers (100k+, 20-100k, 5-20k, Society6 field) |
+| posts | 923, every one with engagement |
+| **carousels** | **345** |
+| **video** | **179** |
+| single image | 399 |
+| engagement (likes+comments) | median 320 - p90 5,478 - max 637,451 |
+
+This is the material a NARRATIVE harness actually needs — 524 multi-frame posts
+by working artists, with a performance signal attached — and layout-synth never
+touched it. It went to the researched-dossier lane and came back as prose.
+
+**One decay to plan around:** the organic records store Instagram CDN
+`imageUrl`s, which expire. Sampled 2026-09-19: **403 Forbidden**. Metadata,
+captions and engagement survive; the pixels need re-pulling before anything can
+be clustered visually.
 
 ### 0.2 Creative intent died in prose
 
@@ -216,23 +277,46 @@ that a human can read and reject cheaply, before spend.
    currently worthless (§0.1). Prior posts are few. Retrieval strategy, and what
    to do when the corpus is thin, are open.
 
-### 3.1 The genome must be re-acquired or retired
+### 3.1 The genome must be re-distilled, not re-acquired
 
-Until §0.1 is fixed the orchestrator has no template knowledge worth having.
-Two honest options, and the scaffold assumes neither:
+Superseded by §0.5: the corpus is intact, so this is a DISTILLATION problem,
+not an acquisition one. Three things follow.
 
-- **Re-acquire** with treatment retained, the corpus committed (or at least
-  retained under licence), and per-archetype evidence that includes what made
-  the layout work — not only where the boxes were.
-- **Retire** and let a real pattern library (Atelier's Crello store and graph
-  retriever are the reference) supply structure, with the genome reduced to
-  register and `doNot`.
+**Cluster the organic corpus.** 923 posts, 345 of them carousels and 179 video,
+with engagement attached — and never visually clustered. This is where narrative
+structure lives, and where a critic can learn what "worked" means for this
+market rather than for advertising in general. The images need re-pulling first
+(§0.5), which is an Apify re-run over handles we already hold.
 
-Shipping archetypes with `evidence.n: 0` and no warning is what let this draft's
-author use five fictional layouts without noticing. `readGenome` should refuse
-to serve a zero-evidence archetype unless explicitly asked for.
+**Extract with a frontier model, not a zone parser.** layout-synth answers
+"where were the boxes". The questions a storyboard needs are "what is the arc",
+"what does beat 2 do that beat 1 did not", "why is this worth swiping" — and
+those are read from the images and captions together, by a model, not by
+geometry clustering. Keep the geometry pass; it is cheap and it grounds
+composition. It is simply not the interesting half.
 
----
+**Fix the funnel before blaming the corpus.** 66 of 198 ads quarantined and
+39.4 % coverage means the ad lane discarded roughly two thirds of what it was
+given. A distillation that keeps a third of its input and then lowers its own
+cluster-size threshold to find two patterns is reporting weakness accurately;
+the honest response is to raise yield, not to re-scrape.
+
+Until then the orchestrator has no template knowledge worth having, and
+`social_genome_read` should refuse to serve a zero-evidence archetype unless
+explicitly asked for — which is what would have stopped this document's author
+using five of them.
+
+### 3.1b Retirement remains an option
+
+If the re-distillation in §3.1 does not yield archetypes with real member
+counts and a stated reason they work, retire the genome rather than keep a
+weak one on life support: reduce it to `register` and `doNot` — the parts that
+were always prose and are honest as prose — and let a real pattern library
+supply structure. Atelier's Crello store and graph retriever are the reference
+for what that looks like.
+
+What must not continue is the current state: four rectangle lists serving as a
+design system, with nothing telling a reader which of them were counted.
 
 ## 4. Critique ⟨BUILD — interfaces only in this scaffold⟩
 

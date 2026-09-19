@@ -581,3 +581,26 @@ consent are unchanged. The new planning path does not save a post or mark it rea
   critique through the existing gate, then compose through the renderer seam.
 - Port tested changes into the store console in a reviewable PR. No hosted-runtime
   divergence or live store deployment is authorized by a planning result.
+
+
+### 10.7 Offline execution pilot
+
+`packages/storyboard-corpus` implements a separate whole-post extraction runner,
+append-only local ledger and explicit Vertex pixel adapter. The CLI dry-runs by
+default and requires a model, project and post cap before `--execute`. It is not
+an Atelier dependency or a new write path in the interactive agent. Changes to
+media bytes, caption, model, prompt or extractor version invalidate resume; every
+failed attempt remains visible, including provider usage when available.
+
+The extraction schema retains per-image observations, transitions, treatment and
+continuity. It does not emit counted patterns: clustering and admission follow
+visual review. Video inputs are timestamped image samples with limited coverage,
+never a poster silently treated as a whole video. The package does not yet acquire
+or normalize GCS records; its local input manifest is intentionally explicit.
+
+**Another inventory question surfaced:** the September 1 handoff describes a
+separate 504-artist crawl with thousands of downloaded images and periodic GCS
+backup. The 40-artist pilot is not necessarily the entire organic acquisition.
+Inspect the bucket prefixes before concluding all organic pixels must be re-pulled.
+These historical counts remain unverified until authentication is restored.
+See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the bounded pilot sequence.

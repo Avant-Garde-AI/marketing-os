@@ -1,8 +1,8 @@
 # 33 — The Storyboard Harness
 
 > **Status:** Implementation in progress — planning and model-backed critics
-> implemented; live corpus extraction, imagery dispatch and human acceptance
-> remain outstanding. §10 records the architecture decisions and their limits.
+> implemented; a three-single-image corpus pilot succeeded. Arc extraction,
+> imagery dispatch and human acceptance remain outstanding. §10 records the architecture decisions and their limits.
 > **Supersedes, in effect:** the compose half of 24-SOCIAL-MEDIA-AGENT and the
 > archetype half of 29-POST-CONCEPTS. Neither is deleted; both become inputs.
 > **Depends on:** 22-BRAND-SOUL (brand.md is truth), 23-DESIGN-SURFACES-PENPOT
@@ -95,10 +95,21 @@ This is the material a NARRATIVE harness actually needs — 524 multi-frame post
 by working artists, with a performance signal attached — and layout-synth never
 touched it. It went to the researched-dossier lane and came back as prose.
 
-**One decay to plan around:** the organic records store Instagram CDN
-`imageUrl`s, which expire. Sampled 2026-09-19: **403 Forbidden**. Metadata,
-captions and engagement survive; the pixels need re-pulling before anything can
-be clustered visually.
+**Correction from direct bucket inspection, 2026-09-19:** the table above is
+only the 40-artist pilot. `instagram-organic/2026-09-01/field-cohort/` also
+contains 504 account records, 6,958 post rows (6,947 unique shortcodes), and
+6,927 saved JPEG objects. Its rows comprise 1,337 `Image`, 3,020 `Sidecar` and
+2,601 `Video` records. This broader cohort includes adjacent accounts; it must
+not be described as 504 verified working artists.
+
+The blanket claim that all organic pixels need re-pulling was wrong. The field
+cohort has durable images. However, its records contain only one `imageFile`
+per post, no carousel children and no video stream: a saved cover cannot prove
+an arc. Inventory matching finds 1,332 single-image rows with saved pixels;
+32 rows across all formats lack a saved-image reference. Deduplicate by post identity
+before counting evidence. Expiring CDN URLs remain an acquisition problem for
+missing slides and video, not a reason to discard the saved single images.
+See §10.7 and the pilot report for execution and coverage limits.
 
 ### 0.2 Creative intent died in prose
 
@@ -544,9 +555,9 @@ not independent posts. Single images remain useful without being counted as arcs
    explicit denominators. Repair the ad lane’s 66 quarantined records separately;
    do not mix paid and organic performance signals or lower thresholds silently.
 
-GCS execution was attempted but blocked by expired Google authentication. No
-organic pixels were inspected in this implementation, no fresh counts are claimed,
-and this design has not yet earned a claim of better corpus yield.
+GCS authentication and read access were restored on 2026-09-19. Direct inventory
+corrected the acquisition assumptions in §0.5. A single-image extraction pilot
+does not establish carousel transitions or better full-corpus yield.
 
 ### 10.5 Critics (question 6)
 
@@ -571,8 +582,8 @@ consent are unchanged. The new planning path does not save a post or mark it rea
 
 ### 10.6 Remaining acceptance work
 
-- Restore corpus credentials, execute a small visual extraction pilot, inspect
-  its outputs, then expand with measured coverage and quarantine recovery.
+- Validate the small visual extraction pilot, recover complete carousel/video
+  media, then expand with measured coverage and quarantine recovery.
 - Supply bare-master provenance or choose the framed-object route deliberately.
 - Prepare the store context manifest and select a configured vision-capable
   `STORYBOARD_MODEL`; run the planning tool and get human agreement on an arc and
@@ -595,12 +606,15 @@ failed attempt remains visible, including provider usage when available.
 The extraction schema retains per-image observations, transitions, treatment and
 continuity. It does not emit counted patterns: clustering and admission follow
 visual review. Video inputs are timestamped image samples with limited coverage,
-never a poster silently treated as a whole video. The package does not yet acquire
-or normalize GCS records; its local input manifest is intentionally explicit.
+never a poster silently treated as a whole video. The field-cohort normalizer
+audits complete single images separately from
+carousel/video covers. Acquisition is operator-controlled and the local input
+manifest is explicit. Three real single-image extractions succeeded on 2026-09-20;
+that result validates pixel transport and basic treatment extraction, not arcs.
 
-**Another inventory question surfaced:** the September 1 handoff describes a
-separate 504-artist crawl with thousands of downloaded images and periodic GCS
-backup. The 40-artist pilot is not necessarily the entire organic acquisition.
-Inspect the bucket prefixes before concluding all organic pixels must be re-pulled.
-These historical counts remain unverified until authentication is restored.
+**Inventory verified:** the larger field cohort and its saved pixels exist.
+The normalized complete-post lane accepts verified `Image` records; `Sidecar`
+and `Video` covers remain explicitly incomplete and require reacquisition.
+Clustering single-image treatments can proceed independently, but it cannot
+supply evidence for between-beat narrative moves.
 See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the bounded pilot sequence.

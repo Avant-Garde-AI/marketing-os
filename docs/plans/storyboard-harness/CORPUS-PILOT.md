@@ -1,15 +1,87 @@
 # Whole-post corpus extraction pilot
 
-Status: local implementation in progress; GCS sign-in is waiting for a fresh
-verification code. No claim of visual inspection or extraction is made yet.
+Status: GCS access restored; three real single-image extractions succeeded on
+2026-09-20 using `gemini-3.1-pro-preview` in project `arthaus-us`. Inputs and
+observations were visually reviewed. No carousel/video arc has been extracted,
+no production patterns emitted, and no full-corpus job launched.
 
-The first question is whether re-acquisition is necessary. The September 1
-handoff records a second, larger organic crawl: 504 artist handles, roughly 5.9k
-images downloaded at the time of writing, and a periodic backup into the creative
-corpus bucket. Those pixels may be stored separately from the 40-artist pilot
-whose Instagram CDN URLs expired. Inventory the bucket root and all organic/field
-prefixes before launching any Apify job. These are historical handoff figures,
-not a verified current bucket inventory.
+## Direct inventory and correction
+
+The bucket contains more than the original 40-artist pilot. Downloaded metadata
+under `instagram-organic/2026-09-01/field-cohort/` verifies:
+
+| Measure | Count |
+| --- | ---: |
+| Account metadata files | 504 |
+| Post rows | 6,958 |
+| Unique shortcodes | 6,947 |
+| Saved JPEG objects | 6,927 |
+| Single-image rows / matching saved objects | 1,337 / 1,332 |
+| Carousel rows / matching cover objects | 3,020 / 3,006 |
+| Video rows / matching poster objects | 2,601 / 2,588 |
+| Rows without a matching image object | 32 |
+
+Eleven duplicate rows are cross-account appearances of the same shortcode.
+Also, 778 rows have negative like-count sentinels; treat these as unknown,
+never as negative engagement or zero. The 32 missing images have no `imageFile`,
+rather than a named object that disappeared. One saved JPEG is unreferenced by
+the current field metadata.
+
+Counts of matching rows are not unique evidence counts. The field includes
+adjacent accounts, so relevance must be reviewed before admitting patterns.
+Every field post has only one image reference; metadata has neither child slides
+nor video streams. The original pilot sample retains `childCount` but no child
+media. Saved carousel covers and video posters remain incomplete posts.
+
+## Measured three-post pilot
+
+The selection deliberately contrasts three treatments, rather than ranking by
+engagement. Source images remained outside Git. All three were downloaded from
+the field cohort, inspected directly, then supplied as image bytes to Vertex.
+
+| Post | Visible input and reviewed extraction |
+| --- | --- |
+| `sweeney_boo / DcfQ9hZm0bu` | Three comic covers on one canvas; extractor identified a comparison/catalog treatment, not three carousel beats. |
+| `pascalcampionart / Dbg1Bb8SCIm` | Pink sky between dark vertical buildings and small pedestrians; extractor retained color, scale, lighting and painterly treatment. |
+| `margaretmoralesart / DcWG8Bxxlcm` | Angled tablet showing line art with hand and stylus; extractor retained the process context and foreground focus treatment. |
+
+Result: 3/3 schema-valid, complete single-image observations. Reported usage:
+4,444 input tokens and 761 output tokens; no thinking-token field was returned.
+This is reported provider usage, not a reconciled invoice. Six earlier attempts
+failed locally obtaining a token because the worktree PATH omitted gcloud;
+those failures remain in the ledger and are not counted as observations. A
+subsequent resume returned all three cached observations without new model calls. Adding
+the SDK bin directory to PATH resolved the issue without another login.
+
+The pilot validates actual-pixel transport and basic treatment extraction. Its
+short prose observations need a larger stratified calibration set before choosing
+clustering features. It proves neither quality of multi-beat analysis nor a
+relationship between treatment and engagement. No human approval of a storyboard
+or creative rejection has yet been demonstrated.
+
+The normalizer was also run over all 504 downloaded metadata files: it retains
+1,332 remotely available single-image candidates, audits 5,599 incomplete
+carousel/video rows, quarantines all 22 appearances of the 11 duplicated IDs,
+and records five missing single-image references. Supplying only the three
+actually downloaded filenames yields exactly three locally ready candidates.
+Package validation: 28 tests, TypeScript typecheck and declaration build passed.
+
+## Next execution batches
+
+1. Deduplicate globally by Instagram shortcode and audit source provenance.
+   Normalize complete single-image records only; retain excluded covers in an
+   explicit coverage report. Check image paths and durable object membership.
+2. Calibrate on a stratified set of art-relevant single images, including plain,
+   repetitive and unusual posts. Review extraction disagreements, then cluster
+   treatment observations with retained outliers. Keep engagement out of the
+   vision prompt and join it only for descriptive, artist-relative comparisons.
+3. Reacquire a small representative set of carousel child media in source order
+   and real videos, using existing handles/post URLs. Preserve slide counts and
+   video sampling times, mirror bytes durably, and audit completeness before
+   extraction. Covers alone cannot enter the arc lane.
+4. Review observed transitions, then expand through bounded, resumable batch
+   execution. Version prompts and feature schemas; unique whole posts are the
+   unit of evidence. Pattern admission remains reviewed, not automatic.
 
 ## Execution ownership
 

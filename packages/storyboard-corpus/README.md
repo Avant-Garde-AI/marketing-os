@@ -24,9 +24,18 @@ the source metadata. Video uses `kind: video-sample` with ascending timestamps i
 `sampleTimeSeconds`; the pilot accepts decoded PNG/JPEG/WebP samples, not MP4 files.
 Two timestamps prove sampled coverage, not inspection of everything between them.
 
+The `normalizeFieldCohort` API audits raw field metadata and separates complete
+single-image candidates from incomplete carousel/video covers. Normalize unknown
+engagement honestly and deduplicate by shortcode before counting evidence.
+See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the live pilot findings.
+
+The executable needs `gcloud` on its inherited PATH. In environments where the
+shell finds it but child processes do not, prepend the SDK `bin` directory to
+PATH before starting the CLI. Do not repeat OAuth sign-in for a PATH error.
+
 Original pixels and local run ledgers belong outside Git. The runner loads local
-files through an acquisition seam; GCS download and raw-record normalization are
-separate tasks pending inspection of the actual corpus. Local readability does
+files through an acquisition seam; GCS download remains an explicit operator
+step, separate from metadata normalization. Local readability does
 not certify that an image contains the expected post: visually review the pilot.
 
 Resuming a matching successful run skips model execution. Changing content,

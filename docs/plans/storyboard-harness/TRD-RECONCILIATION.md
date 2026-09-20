@@ -2,6 +2,12 @@
 
 Status: architecture decision record, 2026-09-20.
 
+**Historical synthesis:** the [core architecture and implementation plan](../../STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md)
+is now authoritative for forward work. It refines beat/presentation mapping,
+evidence scope, benchmark transfer, storage and review semantics. Preserve this
+record to show how those decisions developed; do not implement conflicting
+requirements from this earlier document.
+
 This document reconciles spec 33 and its first implementation with the supplied
 research report, *Building On-Taste Storyboards and Narratives for an AI Creative
 Agent*, and the *Atelier Narrative & Storyboard Sub-Module TRD*. The research is
@@ -220,4 +226,3 @@ for reacquisition identity and cover analysis, but cannot support arc evidence.
 - Performance labels: Bonnard/Axon field availability and granularity must be
   audited before designing the critic feature table or promising Stage 4.
 - Bare artwork masters remain a hard prerequisite for any mockup-input path.
-

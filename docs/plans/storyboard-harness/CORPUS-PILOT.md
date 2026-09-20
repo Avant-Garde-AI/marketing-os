@@ -1,5 +1,9 @@
 # Whole-post corpus extraction pilot
 
+For the full extraction v2, narrative modeling, research and delivery plan, see
+the [core architecture](../../STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md).
+This document remains the report of the measured v1 pilot.
+
 Status: GCS access restored; three real single-image extractions succeeded on
 2026-09-20 using `gemini-3.1-pro-preview` in project `arthaus-us`. Inputs and
 observations were visually reviewed. No carousel/video arc has been extracted,

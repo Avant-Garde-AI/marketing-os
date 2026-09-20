@@ -1,5 +1,9 @@
 # 33 — The Storyboard Harness
 
+> **Forward plan:** [Creative core architecture and implementation](../docs/STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md)
+> consolidates the research, current code, corpus findings, contracts, evaluation
+> gates and work packages. This spec preserves the diagnosis and implementation history.
+
 > **Status:** Implementation in progress — planning and model-backed critics
 > implemented; a three-single-image corpus pilot succeeded. Arc extraction,
 > imagery dispatch and human acceptance remain outstanding. §10 records the architecture decisions and their limits.
@@ -641,3 +645,32 @@ The three-image pilot proved transport and provenance, not the target narrative
 ontology. Full reconciliation, current-component disposition and the execution
 sequence are recorded in
 `docs/plans/storyboard-harness/TRD-RECONCILIATION.md`.
+
+## 12. Comprehensive implementation plan — 2026-09-20
+
+The [core plan](../docs/STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md) is the
+canonical forward architecture. It preserves Mastra, renderer independence,
+counted-evidence semantics and existing approval authority. Proposed contract
+revisions remain planned until implemented with their tests and migrations.
+
+It corrects three oversimplifications in the earlier reconciliation: beats and
+presentation units need an explicit realization map rather than exactly one beat
+per shot; counted single-image treatment evidence is distinct from sequence
+evidence; and literature-specific judge percentages do not establish release
+thresholds for this product. Human preference, structural validity and measured
+outcomes retain separate contracts and evaluation gates.
+
+The plan includes the offline acquisition/annotation/library pipeline, online
+creative/review/render workflow, dependency and storage boundaries, budget and
+failure recovery, research experiments, implementation work packages, migration
+and rollout strategy, and traceability to the supplied TRD. Its first acceptance
+milestone remains a human-approved, evidence-supported Arthaus arc with an agreed
+candidate rejection before imagery spend, followed by governed realization.
+
+NeuroGraph is an optional joint-deployment integration: persona/scenario context
+primarily arrives over MCP from the customer agent, while proprietary Creative
+Review skills, tools and models own creative outcome assessment. Reserve distinct
+ports and leave both implementations empty for now. Missing integrations remain
+explicitly unavailable; the social agent retains independent planning and human
+review. Predictions and simulated responses are not observed business outcomes,
+and neither integration changes existing approval authority.

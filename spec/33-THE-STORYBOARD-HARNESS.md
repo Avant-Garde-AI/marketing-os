@@ -666,3 +666,11 @@ failure recovery, research experiments, implementation work packages, migration
 and rollout strategy, and traceability to the supplied TRD. Its first acceptance
 milestone remains a human-approved, evidence-supported Arthaus arc with an agreed
 candidate rejection before imagery spend, followed by governed realization.
+
+NeuroGraph is an optional joint-deployment integration: persona/scenario context
+primarily arrives over MCP from the customer agent, while proprietary Creative
+Review skills, tools and models own creative outcome assessment. Reserve distinct
+ports and leave both implementations empty for now. Missing integrations remain
+explicitly unavailable; the social agent retains independent planning and human
+review. Predictions and simulated responses are not observed business outcomes,
+and neither integration changes existing approval authority.

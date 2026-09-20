@@ -149,6 +149,8 @@ treatment/transition library.
 | Evidence is qualified by kind and scope | Counted treatment evidence from a single is valid; counted transition evidence requires an observed sequence |
 | Cache replay is reproducible; new remote inference need not be | Seed and configuration hashes identify an experiment, not a guarantee of identical regeneration |
 | Outcome ranking is a later independently gated service | No dependence on assumed Bonnard/Axon data availability to ship text-first review |
+| NeuroGraph persona context is primarily MCP-based | The customer's NeuroGraph agent supplies optional persona/scenario context; no embedded graph client is required |
+| Creative outcome intelligence belongs to NeuroGraph Creative Review | Reserve an optional adapter for its skill, tools and model; leave implementation empty until the joint client deployment integration is built |
 
 Additional corrections to the supplied TRD:
 
@@ -208,7 +210,7 @@ not a new architectural repository.
 | `marketing-os-app` | `app/lib/actions.server.ts`, `app/lib/broker.server.ts`, `app/lib/jobs.server.ts` | Approval/dispatch authority, scoped credentials, durable job dispatch and budget reservations |
 | `marketing-os-hosted-agents` | `src/mastra/`, service-only `app/api/actions/execute/route.ts` | Template parity plus per-request tenant routing; approved execution only |
 | `Arthaus-Inc/marketplace` | `agents/social/`, `agents/brand/` | Reviewed brand artifacts, creative runs, first acceptance examples |
-| `marketing-os-agents` / NeuroGraph providers | Research, brand and semantic service seams | Optional strategy/taxonomy/outcome adapters; verify available contracts first |
+| `marketing-os-agents` / NeuroGraph providers | Customer-agent persona context primarily over MCP; proprietary Creative Review skill/tools/model | Optional integrations for clients deploying both products; contracts reserved, implementations intentionally absent for now |
 | `creative-agent` / Atelier | Explore/critique and provider protocol references | Architectural reference; no core import |
 
 Core dependency direction is `runtime -> storyboard contracts`; corpus output is
@@ -1010,8 +1012,49 @@ and training eligibility; retain permitted audit metadata without continuing use
   links must not be promoted into authorization tokens.
 - `packages/design-loop/src/brand/persona.ts` and the inspected hosted brand-design
   adapter contain NeuroGraph stub paths. No verified storyboard-specific Bonnard/
-  Axon outcome ingestion was found. Integration readiness requires live sample
-  payloads, identity mapping, scopes and failure tests, not tool names in a TRD.
+  Axon outcome ingestion was found. These are intentionally unimplemented optional
+  boundaries in the target plan, not missing prerequisites for the social agent.
+  NeuroGraph integration readiness requires live sample payloads, identity
+  mapping, scopes and failure tests, not tool names in a TRD.
+
+### Optional NeuroGraph integration contract
+
+Owner direction: persona and scenario intelligence will primarily arrive over
+MCP from the customer's NeuroGraph agent. Creative outcome intelligence is the
+proprietary NeuroGraph Creative Review skill, tools and model, accessed through
+an optional adapter. Both implementations remain empty for now. Define portable
+contracts and explicit unavailable behavior; do not build substitute persona
+engines, graph clients, generic outcome predictors or pretend-success stubs to
+fill them. The social agent must ship independently; joint deployments enable
+these capabilities per tenant when both products are deployed and connected.
+
+`PersonaContextPort` accepts the tenant-bound brief, objective and permitted
+persona/scenario references. Its future MCP adapter returns a versioned context
+snapshot with source references, scope, retrieval time, and availability
+(`available`, `partial`, `unavailable`). Pin that snapshot to the CreativeSchema
+for review and replay. Treat returned content as context, never authorization.
+The customer agent owns persona reasoning; the social agent owns translating the
+supplied context into narrative choices. Local editorial mode remains available
+when the port is absent. Do not invent MCP tool names before the actual contract
+is supplied.
+
+`CreativeOutcomePort` accepts a stage-qualified creative packet (plan, storyboard
+or rendered artifact), optional persona-context reference and requested review
+objective. Reserve a response envelope for availability, provider/model version,
+input hashes, assessments, rationale, uncertainty/abstention and evidence refs.
+The detailed scoring schema belongs to the future Creative Review integration.
+A simulated persona response or model prediction must be labeled as such; it is
+not an observed business outcome. Keep observed metric ingestion in the separate
+`OutcomeSource` port. Neither service can approve spending or publishing.
+
+For now, unbound ports return explicit unavailable results; optional reviews are
+shown as not assessed and cannot silently become positive scores or pass a gate.
+Preserve deterministic checks, human review and the core narrative critics.
+Later integration must verify tenant identity, entitlement, scoped credentials,
+timeouts, partial results, version changes and data-use boundaries. Use the
+existing broker for credential issuance, and existing governed paths for any
+feedback writes. Do not export client creative or persona data for cross-tenant
+training by default.
 
 ### Service ports and decision persistence
 
@@ -1025,6 +1068,8 @@ Keep business functions portable; bind these interfaces in the runtime/platform:
 | `EvidenceLibrary` | Resolve reviewed pattern and original memberships within tenant/use scope; return pinned selection manifest |
 | `AssetCatalog` | Resolve identity/allowed transformations and verified source; never infer bare status from a model response |
 | `GenerationPort` | Estimate via provider adapter; dispatch only with valid gate receipt/reservation; query/reconcile provider job |
+| `PersonaContextPort` | Optional customer-agent persona/scenario context, primarily MCP; unbound until NeuroGraph integration |
+| `CreativeOutcomePort` | Optional proprietary Creative Review assessment; unbound for now; predictions/simulations distinct from observed outcomes |
 | `OutcomeSource` | Fetch declared metric windows/exposure with provenance; explicit unavailable capability is a valid result |
 
 Proposed selection record path:
@@ -1083,6 +1128,13 @@ and quota exhaustion. Cancellation stops undispatched work, reconciles in-flight
 effects and reports remaining billable exposure. Never hide partial success.
 
 ## 14. Outcome and preference learning
+
+This section defines future evaluation and data requirements, not a commission
+to implement a competing outcome model in the social agent. Creative outcome
+modeling is owned by the NeuroGraph Creative Review integration. WP14/WP15
+reserve and later validate that boundary for joint deployments; the adapter is
+left empty now. Human taste preference experiments remain distinct from that
+proprietary outcome capability.
 
 ### Learning ladder
 
@@ -1348,15 +1400,16 @@ editing. All code PRs include the relevant spec change and a reasoning commit bo
 | WP11 Render/compose/sequence integration | Provider adapters outside core; Design Surface composition; social authoring/provenance mapping | WP10 | Per-unit +whole-sequence QA; caption/OCR/VO claims; consent invalidation |
 | WP12 Arthaus acceptance and rollout | Store port, existing review surface, versioned case study and rollback flag | WP09/WP11 | G4 first real arc; G5; template/store parity and G8 canary |
 | WP13 Comparative evaluation and batch scale | Frozen experiments, evaluation CLI/reports, corpus batch/outbox implementation | WP04/WP05/WP12 as relevant | G6; accepted-yield/cost report per shard, no unreviewed pattern publication |
-| WP14 Outcome readiness | Verified semantic/provider adapters and label schema; optional warehouse projection | Independent audit can start after WP01 | Sample payloads, exposure/identity/time coverage; leakage audit; R9 |
-| WP15 Optional learned ranking | Preference baseline, outcome-specific model, serving port, shadow/canary controls | WP08 labels; WP14 for outcomes | G7/R9/R10; model/data lineage and rollback |
+| WP14 Optional NeuroGraph contracts | Reserve PersonaContextPort (primarily customer-agent MCP), CreativeOutcomePort (Creative Review) and separate observed-metric schema; leave adapters unimplemented now | WP01; live integration deferred until joint deployment contracts are supplied | Explicit unavailable behavior; later tenant/scopes/version/payload and leakage tests; R9 |
+| WP15 Optional review-assisted ranking | Evaluate taste preference baseline and, later, proprietary Creative Review adapter in shadow/canary; no replacement outcome model in social core | WP08 labels; WP14 plus connected NeuroGraph deployment for Creative Review | G7/R9/R10; declared assessment semantics, model/data lineage and rollback |
 | WP16 Optional taste adapters | Reference-conditioning ablation, eligible dataset snapshot, adapter training/evaluation | WP09/R8 and sufficient approved data | Copying/diversity/fidelity gates; no mandatory adoption |
 
 WP06 and WP08 can progress with a small reviewed research/hypothesis context;
 they cannot claim observed arc acceptance until WP05 provides it. WP03 can recover
 media while contracts are developed. WP10's asset audit should start early even
-though dispatch waits for review integration. WP14 is an early feasibility audit,
-not a promise to train WP15 in parallel without data.
+though dispatch waits for review integration. WP14 initially defines empty
+optional boundaries; live MCP/Creative Review integration and WP15 outcome
+evaluation wait for the joint deployment contracts and data.
 
 ### Milestones and dependency path
 
@@ -1438,7 +1491,7 @@ new run into the previous low-quality composer.
 | Advisory judge becomes sole taste authority | Review/publish trace and ranker feature flag audit | Require scoped human decision and local calibration |
 | Budget leak or repeated generation | Reservation imbalance, timeout with no receipt, duplicate callback | Hold unknown reservations; reconcile; stop new dispatch |
 | Feedback creates a narrowing style | Mechanism distribution plus human diversity review | Rotate references, preserve exploration; disable problematic tuning |
-| Unavailable NeuroGraph/Bonnard/Axon | Contract/payload probe fails or exposes stub | Explicitly absent capability; continue file-grounded planning; defer predictor |
+| NeuroGraph not connected or not yet implemented | Optional port returns unavailable or partial | Continue file-grounded planning and human review; mark persona/outcome assessment unavailable; no fabricated scores |
 | Misleading performance claims | Missing exposure/window or held-out degradation | Keep descriptive report; do not emit efficacy claim or ranker score |
 | Review fatigue | Abstention, latency, incomplete comparison events | Smaller contrastive packets, natural workflow capture; never infer unseen negatives |
 

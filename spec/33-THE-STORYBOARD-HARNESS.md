@@ -618,3 +618,26 @@ and `Video` covers remain explicitly incomplete and require reacquisition.
 Clustering single-image treatments can proceed independently, but it cannot
 supply evidence for between-beat narrative moves.
 See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the bounded pilot sequence.
+
+## 11. Research and TRD reconciliation — 2026-09-20
+
+The supplied narrative/storyboard research and Atelier sub-module TRD validate
+the plan-first premise while expanding the target architecture. The first
+implementation built a useful middle slice: grounded beat-level storyboards,
+independent critique and human review before pixels. The production target adds
+an upstream immutable Creative Schema and separates narrative plans from
+shot-level Storyboard IRs and governed render handoffs.
+
+The core package remains renderer-independent and Mastra remains the Marketing
+OS harness. Atelier is a protocol reference, not a dependency. Deterministic
+structural checks gate hard constraints; model-based narrative and visual editors
+remain advisory until measured against human pairwise judgments. A performance
+critic, taste adapters and outcome-driven taxonomy updates are later gated
+capabilities, not properties the current implementation may claim.
+
+The corpus extraction contract will be revised before scale to separate visible
+frame observations, adjacent transitions and grounded narrative annotations.
+The three-image pilot proved transport and provenance, not the target narrative
+ontology. Full reconciliation, current-component disposition and the execution
+sequence are recorded in
+`docs/plans/storyboard-harness/TRD-RECONCILIATION.md`.

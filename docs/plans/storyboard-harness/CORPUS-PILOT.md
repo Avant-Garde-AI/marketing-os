@@ -9,6 +9,14 @@ Status: GCS access restored; three real single-image extractions succeeded on
 observations were visually reviewed. No carousel/video arc has been extracted,
 no production patterns emitted, and no full-corpus job launched.
 
+As of 2026-09-22, `packages/storyboard-corpus/src/acquire/manifest.ts` supplies
+the v2 pure acquisition contract: expected versus recovered ordered children,
+canonical identity/occurrences, durable object checksums, and separate visual,
+audio and transcript coverage. It can classify a recovered post as ready,
+incomplete, expired, failed or excluded without a model call. It is deliberately
+not an Instagram puller: the original 40-artist cohort still needs an authorized
+Apify recovery run before its 923 posts can enter extraction.
+
 ## Direct inventory and correction
 
 The bucket contains more than the original 40-artist pilot. Downloaded metadata

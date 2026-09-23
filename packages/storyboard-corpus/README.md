@@ -30,12 +30,19 @@ engagement honestly and deduplicate by shortcode before counting evidence.
 See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the live pilot findings.
 
 `CorpusSnapshot v2` is the acquisition boundary for the next extraction version.
-It records expected and recovered media, verified source order, durable
+It records expected and recovered media, verified source order with an evidence
+reference, durable
 object/checksum evidence, and separate visual/audio/transcript coverage. The
 pure `assessSnapshot()` helper derives readiness without hiding incomplete,
-expired, failed, or excluded source rows. A carousel cover or video poster
+expired, failed, or excluded source rows. Known child counts can be held before
+the provider supplies child identities. A carousel cover or video poster
 therefore remains ineligible for whole-post extraction. The contract does not
 scrape Instagram or invoke a model.
+
+`recoverCarousel()` binds a normalized provider and durable media mirror to
+that contract. It checks exact post identity, child order and expected count,
+then retains failed child mirrors as explicit gaps. A source provider adapter
+and durable blob writer are still required for a live recovery run.
 
 The executable needs `gcloud` on its inherited PATH. In environments where the
 shell finds it but child processes do not, prepend the SDK `bin` directory to

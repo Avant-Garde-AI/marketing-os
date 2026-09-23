@@ -10,6 +10,8 @@ const orderedChildSchema = z
     ordinal: z.number().int().nonnegative(),
     modality,
     sourceRef: text,
+    /** Source bytes, a poster, or a decoded derivative sample. */
+    assetRole: z.enum(["source", "poster", "sample"]).optional(),
     objectRef: text.optional(),
     localPath: text.optional(),
     checksum: checksum.optional(),
@@ -30,7 +32,10 @@ const metricSchema = z
     if (metric.status === "measured" && metric.value === undefined)
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "measured metrics require a value" });
     if (metric.status !== "measured" && metric.value !== undefined)
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "unknown metrics cannot invent a value" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "unknown metrics cannot invent a value",
+      });
   });
 
 /**
@@ -58,13 +63,14 @@ export const corpusSnapshotSchema = z
       })
       .strict(),
     media: z
-      .object({ expected: z.array(orderedChildSchema).min(1), actual: z.array(orderedChildSchema) })
+      .object({ expected: z.array(orderedChildSchema), actual: z.array(orderedChildSchema) })
       .strict(),
     coverage: z
       .object({
         expectedCount: z.number().int().positive(),
         acquiredCount: z.number().int().nonnegative(),
         orderingVerified: z.boolean(),
+        orderingEvidenceRef: text.optional(),
         modalitiesObserved: z.array(modality),
         visualSamplesCovered: z.boolean(),
         fullVisualStreamCovered: z.boolean(),
@@ -73,7 +79,9 @@ export const corpusSnapshotSchema = z
       })
       .strict(),
     metrics: z.record(metricSchema),
-    scope: z.object({ paidOrganic: z.enum(["paid", "organic", "unknown"]), useScope: text.optional() }).strict(),
+    scope: z
+      .object({ paidOrganic: z.enum(["paid", "organic", "unknown"]), useScope: text.optional() })
+      .strict(),
     identity: z
       .object({
         canonicalPostId: text,
@@ -105,41 +113,84 @@ export type SnapshotAssessment = {
   status: SnapshotStatus;
   complete: boolean;
   reasons: string[];
-  modalityGaps: Array<"visual" | "audio" | "transcript">;
+  modalityGaps: Array<"visual" | "full-visual-stream" | "audio" | "transcript">;
 };
 
 /** Derives recovery readiness without hiding excluded, expired, or failed source rows. */
 export function assessSnapshot(raw: unknown): SnapshotAssessment {
   const parsed = corpusSnapshotSchema.safeParse(raw);
   if (!parsed.success)
-    return { canonicalPostId: "invalid", status: "failed", complete: false, reasons: ["snapshot-invalid"], modalityGaps: ["visual"] };
+    return {
+      canonicalPostId: "invalid",
+      status: "failed",
+      complete: false,
+      reasons: ["snapshot-invalid"],
+      modalityGaps: ["visual"],
+    };
   const snapshot = parsed.data;
   const reasons: string[] = [];
-  if (snapshot.coverage.expectedCount !== snapshot.media.expected.length) reasons.push("expected-count-mismatch");
-  if (snapshot.coverage.acquiredCount !== snapshot.media.actual.length) reasons.push("acquired-count-mismatch");
-  if (!ordered(snapshot.media.expected) || !ordered(snapshot.media.actual) || !snapshot.coverage.orderingVerified)
+  if (snapshot.coverage.expectedCount !== snapshot.media.expected.length)
+    reasons.push("expected-identities-unknown");
+  if (snapshot.coverage.acquiredCount !== snapshot.media.actual.length)
+    reasons.push("acquired-count-mismatch");
+  if (
+    !ordered(snapshot.media.expected) ||
+    !ordered(snapshot.media.actual) ||
+    !snapshot.coverage.orderingVerified ||
+    !snapshot.coverage.orderingEvidenceRef
+  )
     reasons.push("order-unverified");
-  if (snapshot.media.expected.length !== snapshot.media.actual.length) reasons.push("media-incomplete");
+  if (snapshot.coverage.expectedCount !== snapshot.media.actual.length)
+    reasons.push("media-incomplete");
+  if (
+    new Set(snapshot.media.expected.map((child) => child.childId)).size !==
+      snapshot.media.expected.length ||
+    new Set(snapshot.media.actual.map((child) => child.childId)).size !==
+      snapshot.media.actual.length
+  )
+    reasons.push("duplicate-child-id");
   for (const [index, expected] of snapshot.media.expected.entries()) {
     const actual = snapshot.media.actual[index];
-    if (!actual || expected.childId !== actual.childId || expected.modality !== actual.modality)
+    if (
+      !actual ||
+      expected.childId !== actual.childId ||
+      expected.modality !== actual.modality ||
+      expected.sourceRef !== actual.sourceRef
+    )
       reasons.push(`child-mismatch:${index}`);
   }
-  if (snapshot.media.actual.some((child) => !child.objectRef || !child.checksum)) reasons.push("durable-media-missing");
-  if (snapshot.media.actual.some((child) => child.modality === "unknown")) reasons.push("unknown-modality");
+  if (snapshot.media.actual.some((child) => !child.objectRef || !child.checksum))
+    reasons.push("durable-media-missing");
+  if (snapshot.media.actual.some((child) => child.assetRole !== "source"))
+    reasons.push("source-media-missing");
+  if (snapshot.media.actual.some((child) => child.modality === "unknown"))
+    reasons.push("unknown-modality");
+  if (
+    snapshot.media.actual.some(
+      (child) => !snapshot.coverage.modalitiesObserved.includes(child.modality)
+    )
+  )
+    reasons.push("modality-inventory-mismatch");
   const modalityGaps: SnapshotAssessment["modalityGaps"] = [];
   if (!snapshot.coverage.visualSamplesCovered) modalityGaps.push("visual");
   const hasVideo = snapshot.media.expected.some((child) => child.modality === "video");
+  if (hasVideo && !snapshot.coverage.fullVisualStreamCovered)
+    modalityGaps.push("full-visual-stream");
   if (hasVideo && !snapshot.coverage.audioCovered) modalityGaps.push("audio");
   if (hasVideo && !snapshot.coverage.transcriptCovered) modalityGaps.push("transcript");
-  const complete = reasons.length === 0 && snapshot.coverage.visualSamplesCovered;
-  const status =
-    snapshot.disposition === "excluded" || snapshot.disposition === "expired" || snapshot.disposition === "failed"
-      ? snapshot.disposition
-      : complete
-        ? "ready"
-        : "incomplete";
-  return { canonicalPostId: snapshot.identity.canonicalPostId, status, complete, reasons: [...new Set(reasons)], modalityGaps };
+  const terminal =
+    snapshot.disposition === "excluded" ||
+    snapshot.disposition === "expired" ||
+    snapshot.disposition === "failed";
+  const complete = !terminal && reasons.length === 0 && snapshot.coverage.visualSamplesCovered;
+  const status = terminal ? snapshot.disposition : complete ? "ready" : "incomplete";
+  return {
+    canonicalPostId: snapshot.identity.canonicalPostId,
+    status,
+    complete,
+    reasons: [...new Set(reasons)],
+    modalityGaps,
+  };
 }
 
 export function summarizeRecovery(snapshots: unknown[]) {
@@ -152,6 +203,9 @@ export function summarizeRecovery(snapshots: unknown[]) {
     failed: assessments.filter((item) => item.status === "failed").length,
     excluded: assessments.filter((item) => item.status === "excluded").length,
     visualGaps: assessments.filter((item) => item.modalityGaps.includes("visual")).length,
+    fullVisualStreamGaps: assessments.filter((item) =>
+      item.modalityGaps.includes("full-visual-stream")
+    ).length,
     audioGaps: assessments.filter((item) => item.modalityGaps.includes("audio")).length,
     transcriptGaps: assessments.filter((item) => item.modalityGaps.includes("transcript")).length,
   };

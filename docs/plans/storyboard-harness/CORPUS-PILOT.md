@@ -9,21 +9,34 @@ Status: GCS access restored; three real single-image extractions succeeded on
 observations were visually reviewed. No carousel/video arc has been extracted,
 no production patterns emitted, and no full-corpus job launched.
 
+As of 2026-09-23, `packages/storyboard-corpus/src/acquire/manifest.ts` supplies
+the v2 pure acquisition contract: expected versus recovered ordered children,
+canonical identity/occurrences, durable object checksums, and separate visual,
+audio and transcript coverage. `recoverCarousel()` binds a normalized source
+provider and media mirror, checks identity and order, and retains missing
+children explicitly. It can classify a recovered post as ready, incomplete,
+expired, failed or excluded without a model call. A live source provider and
+mirror are still needed before the original 40-artist cohort can enter
+whole-post extraction.
+The first [24-carousel recovery slice](RECOVERY-SLICE-2026-09-23.md) is frozen
+from the original source metadata, with expected child counts and acquisition
+checks recorded before any provider run.
+
 ## Direct inventory and correction
 
 The bucket contains more than the original 40-artist pilot. Downloaded metadata
 under `instagram-organic/2026-09-01/field-cohort/` verifies:
 
-| Measure | Count |
-| --- | ---: |
-| Account metadata files | 504 |
-| Post rows | 6,958 |
-| Unique shortcodes | 6,947 |
-| Saved JPEG objects | 6,927 |
+| Measure                                    |         Count |
+| ------------------------------------------ | ------------: |
+| Account metadata files                     |           504 |
+| Post rows                                  |         6,958 |
+| Unique shortcodes                          |         6,947 |
+| Saved JPEG objects                         |         6,927 |
 | Single-image rows / matching saved objects | 1,337 / 1,332 |
-| Carousel rows / matching cover objects | 3,020 / 3,006 |
-| Video rows / matching poster objects | 2,601 / 2,588 |
-| Rows without a matching image object | 32 |
+| Carousel rows / matching cover objects     | 3,020 / 3,006 |
+| Video rows / matching poster objects       | 2,601 / 2,588 |
+| Rows without a matching image object       |            32 |
 
 Eleven duplicate rows are cross-account appearances of the same shortcode.
 Also, 778 rows have negative like-count sentinels; treat these as unknown,
@@ -43,11 +56,11 @@ The selection deliberately contrasts three treatments, rather than ranking by
 engagement. Source images remained outside Git. All three were downloaded from
 the field cohort, inspected directly, then supplied as image bytes to Vertex.
 
-| Post | Visible input and reviewed extraction |
-| --- | --- |
-| `sweeney_boo / DcfQ9hZm0bu` | Three comic covers on one canvas; extractor identified a comparison/catalog treatment, not three carousel beats. |
-| `pascalcampionart / Dbg1Bb8SCIm` | Pink sky between dark vertical buildings and small pedestrians; extractor retained color, scale, lighting and painterly treatment. |
-| `margaretmoralesart / DcWG8Bxxlcm` | Angled tablet showing line art with hand and stylus; extractor retained the process context and foreground focus treatment. |
+| Post                               | Visible input and reviewed extraction                                                                                              |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `sweeney_boo / DcfQ9hZm0bu`        | Three comic covers on one canvas; extractor identified a comparison/catalog treatment, not three carousel beats.                   |
+| `pascalcampionart / Dbg1Bb8SCIm`   | Pink sky between dark vertical buildings and small pedestrians; extractor retained color, scale, lighting and painterly treatment. |
+| `margaretmoralesart / DcWG8Bxxlcm` | Angled tablet showing line art with hand and stylus; extractor retained the process context and foreground focus treatment.        |
 
 Result: 3/3 schema-valid, complete single-image observations. Reported usage:
 4,444 input tokens and 761 output tokens; no thinking-token field was returned.

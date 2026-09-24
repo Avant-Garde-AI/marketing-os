@@ -47,11 +47,36 @@ attempts. An explicit response shape then yielded 3/3 schema-valid outputs;
 these are calibration attempts, not a reliability rate. Provider-reported usage
 for the final three outputs was 6,474 input, 1,755 output and 3,000 thinking
 tokens across both passes. This is neither a price estimate nor a reconciled
-invoice. The local probe has resumable records outside Git, but v2 is not yet
-wired to the production pilot CLI/ledger. No recovered carousel or video was
+invoice. The first local probe's resumable records stayed outside Git; the
+snapshot-ledger CLI was added the following day. No recovered carousel or video was
 available to test a real between-beat transition, and no cluster or pattern was
 admitted. The next calibration must pair complete recovered carousels with
 human judgments of what each adjacent slide actually changes.
+
+### V2 snapshot-ledger run — 2026-09-24
+
+`storyboard-corpus-v2` now runs the staged extractor from a `CorpusSnapshot v2`
+manifest through a local, single-writer JSONL ledger. It checks source
+completeness, local bytes against stored SHA-256 hashes, ordered refs and model
+output. The dry run does not call a model or obtain an access token. A matching
+successful input resumes without another model call; engagement-only metric
+changes do not invalidate it. The v1 CLI remains available separately.
+
+The three saved field-cohort single images above were wrapped in explicit
+single-image snapshots with original source metadata and the existing GCS image
+objects as durable references. The local manifest and pixels stayed outside
+Git. The dry run found 3/3 complete and locally available. The executed run
+wrote three ready rows and three extracted rows; each output held one grounded
+observation, zero adjacent transitions and `review.state = unreviewed`. Running
+the exact command again left the ledger at six rows, demonstrating cached
+resume. Provider-reported usage for the executed three was 6,456 input, 1,814
+output and 3,138 thinking tokens across both passes.
+
+Two initial annotations still added irrelevant missing-audio caveats to static
+images. A tightened annotation prompt was re-probed on those two images: 2/2
+schema-valid and neither repeated that caveat. This small correction is not a
+semantic accuracy rate. V2 has **not** run on a complete recovered carousel;
+the provider adapter and durable child-media mirror still gate a real arc test.
 
 ## Direct inventory and correction
 

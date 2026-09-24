@@ -15,6 +15,10 @@
     "./cli": {
       "types": "./dist/cli.d.ts",
       "default": "./dist/cli.js"
+    },
+    "./cli-v2": {
+      "types": "./dist/cli-v2.d.ts",
+      "default": "./dist/cli-v2.js"
     }
   },
   "files": [
@@ -36,7 +40,8 @@
   },
   "description": "Offline whole-post visual corpus extraction with audited resume and bounded Vertex execution.",
   "bin": {
-    "storyboard-corpus": "./dist/cli.js"
+    "storyboard-corpus": "./dist/cli.js",
+    "storyboard-corpus-v2": "./dist/cli-v2.js"
   },
   "engines": {
     "node": ">=20.0.0"

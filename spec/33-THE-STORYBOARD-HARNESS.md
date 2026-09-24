@@ -631,9 +631,10 @@ model call receives ordered media bytes with no caption or engagement. The
 second receives validated observations plus the caption as labeled context,
 still without engagement. Exact media order, adjacent transition references,
 beat support and claim-source references are checked. Output remains unreviewed.
-The pure acquisition contract can classify incomplete media, but the v2 model
-adapter has not yet been bound to the durable CLI ledger or run on a recovered
-carousel. It therefore does not establish an observed arc pattern.
+At that checkpoint, the pure acquisition contract could classify incomplete
+media, but the v2 model adapter had not yet been bound to the durable CLI
+ledger or run on a recovered carousel. It did not establish an observed arc
+pattern.
 
 Three complete single-image posts passed a bounded live v2 probe on 2026-09-23.
 The model distinguished three comic covers _within one image_ from a carousel,
@@ -642,6 +643,18 @@ presentation. The city annotation also emitted an irrelevant audio limitation,
 and fine OCR remains uncertain. Schema validity is not semantic approval: the
 next evidence gate is human review of complete recovered carousel transitions.
 Measured prompts, failures and usage are in the pilot report.
+
+### 10.9 Snapshot-ledger execution — 2026-09-24
+
+The v2 adapter now has a separate local CLI and resumable ledger. It accepts
+only ready `CorpusSnapshot v2` records with local mirrored image children,
+checks their source order and byte checksums, then records output as unreviewed.
+It does not scrape a post, infer missing carousel slides or publish a pattern.
+The original v1 CLI is preserved. A measured three-single-image ledger run
+completed, and a repeat produced no additional ledger rows. Two targeted
+re-probes showed that an explicit still-image instruction removed irrelevant
+audio caveats from those examples; human judgment and real carousel transitions
+remain the next validation gate. See the pilot report for counts and limits.
 
 ## 11. Research and TRD reconciliation — 2026-09-20
 

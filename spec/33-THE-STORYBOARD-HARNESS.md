@@ -730,6 +730,18 @@ the model still inferred "censorship" from black rectangles. Structural output
 validity is therefore not evidence support or human approval. Corpus
 interpretations need an independent support review before pattern admission.
 
+### 10.14 Cross-session handoff correction — 2026-09-24
+
+The acquired source snapshot and caption-context candidate can now be restored
+from private GCS by a later worker. The worker names 1–3 post shortcodes under
+one explicit prefix, sets a byte ceiling, and verifies source identity and
+content-addressed image checksums before writing a local v2 manifest. Dry run
+does not access GCS. A fresh-cache rehearsal restored the two-slide
+`DcOzDxkkkUT` still carousel and the v2 CLI recognized it as locally ready,
+without a scraper or model call. This closes the **local cross-session media
+handoff** gap only. It does not make video, mixed-media, worker scheduling,
+semantic review or full-corpus extraction complete.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

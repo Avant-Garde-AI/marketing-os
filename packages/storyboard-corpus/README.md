@@ -77,8 +77,22 @@ with cache paths. The caption is sent only to the second interpretation pass.
 The source prefix must be private:
 raw provider evidence can contain captions and expiring media URLs. Failed or
 incomplete snapshots remain visible in the manifest and cannot enter v2
-extraction. Production orchestration, cross-session media rehydration and
-batching remain open.
+extraction. Production orchestration and batching remain open.
+
+For a later worker, rehydrate named candidates from the private GCS prefix into
+a private local cache before v2. This makes no scraper or model calls. A dry run
+makes no GCS calls; `--execute` reads the stored `candidate.json` objects,
+verifies source identity and SHA-256 media checksums, and writes a local v2
+manifest. It accepts at most three shortcodes and an explicit aggregate byte
+ceiling. Mixed/video or incomplete snapshots are refused.
+
+```sh
+node dist/cli-rehydrate.js \
+  --prefix gs://YOUR_PRIVATE_BUCKET/storyboard/recovery \
+  --shortcodes POST_SHORTCODE --cache-dir /tmp/private-storyboard-cache \
+  --out /tmp/private-storyboard-cache/ready.json --max-bytes 33554432
+# Add --execute to read private GCS and create the local manifest.
+```
 
 `analyzePostV2()` is the staged extraction contract for media supplied from a
 complete snapshot. The caller must first verify acquisition readiness; the

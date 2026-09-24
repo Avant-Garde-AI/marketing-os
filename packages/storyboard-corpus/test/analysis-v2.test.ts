@@ -116,6 +116,18 @@ describe("grounded v2 analysis contract", () => {
     expect(result.review.state).toBe("unreviewed");
   });
 
+  it("accepts focal replacement as distinct from addition", async () => {
+    const changed = stages();
+    changed.observe = async () => ({
+      value: {
+        ...observed,
+        transitions: [{ ...observed.transitions[0]!, operation: "replacement" }],
+      },
+    });
+    const result = await analyzePostV2(input, changed);
+    expect(result.transitions[0]?.operation).toBe("replacement");
+  });
+
   it("keeps caption and engagement out of the pixel pass, and engagement out of interpretation", async () => {
     const guarded = stages();
     guarded.observe = async (received) => {

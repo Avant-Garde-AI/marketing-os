@@ -542,6 +542,9 @@ export function countedPostIds(extracted: LedgerRow[]): string[] {
 export * from "./field-cohort.js";
 export * from "./acquire/manifest.js";
 export * from "./acquire/recover.js";
+export * from "./acquire/apify.js";
+export * from "./acquire/media-mirror.js";
+export * from "./acquire/gcs-writer.js";
 export * from "./analysis/v2.js";
 export * from "./analysis/vertex-v2.js";
 export * from "./analysis/run-v2.js";

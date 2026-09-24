@@ -26,6 +26,8 @@ export type ProviderChild = {
 export type ProviderPost = {
   shortcode: string;
   accountHandle: string;
+  ownerHandle?: string;
+  sourceAttribution?: "owner" | "coauthor";
   children: ProviderChild[];
   /** Durable reference to the provider response that proves child order. */
   orderEvidenceRef?: string;
@@ -118,6 +120,8 @@ export async function recoverCarousel(
     snapshot.reason = "provider-identity-mismatch";
     return { snapshot: corpusSnapshotSchema.parse(snapshot), assessment: assessSnapshot(snapshot) };
   }
+  if (fetched.ownerHandle) snapshot.source.ownerAccount = fetched.ownerHandle;
+  if (fetched.sourceAttribution) snapshot.source.attribution = fetched.sourceAttribution;
   const children = fetched.children;
   const orderIsValid =
     !!fetched.orderEvidenceRef &&

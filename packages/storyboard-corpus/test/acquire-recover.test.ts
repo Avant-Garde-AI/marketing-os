@@ -43,6 +43,27 @@ describe("carousel recovery", () => {
     });
   });
 
+  it("keeps the source artist occurrence distinct from a verified owning coauthor", async () => {
+    const collaborative: RecoveryProvider = {
+      fetchPost: async () => ({
+        shortcode: "abc",
+        accountHandle: "artist",
+        ownerHandle: "gallery",
+        sourceAttribution: "coauthor",
+        children,
+        orderEvidenceRef: "gs://evidence/collaborative.json",
+      }),
+    };
+    const { snapshot, assessment } = await recoverCarousel(source, collaborative, mirror);
+    expect(assessment.complete).toBe(true);
+    expect(snapshot.source).toMatchObject({
+      account: "artist",
+      ownerAccount: "gallery",
+      attribution: "coauthor",
+    });
+    expect(snapshot.identity.occurrenceAliases).toEqual(["artist:abc"]);
+  });
+
   it("does not mirror a provider response for another shortcode", async () => {
     let called = false;
     const result = await recoverCarousel(

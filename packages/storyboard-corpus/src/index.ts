@@ -104,9 +104,12 @@ export const ledgerRowSchema = z.object({
   diagnostics: z
     .object({
       provider: text,
+      stage: z.enum(["observation", "annotation"]).optional(),
       httpStatus: z.number().int().optional(),
       finishReason: text.optional(),
       retryable: z.boolean(),
+      schemaPaths: z.array(z.string()).optional(),
+      invalidJson: z.boolean().optional(),
       usage: z
         .object({
           inputTokens: z.number().int().nonnegative().optional(),
@@ -129,6 +132,8 @@ export const ledgerRowSchema = z.object({
       })
     )
     .optional(),
+  snapshotRef: text.optional(),
+  snapshotDigest: text.optional(),
 });
 export type LedgerRow = z.infer<typeof ledgerRowSchema>;
 
@@ -539,3 +544,4 @@ export * from "./acquire/manifest.js";
 export * from "./acquire/recover.js";
 export * from "./analysis/v2.js";
 export * from "./analysis/vertex-v2.js";
+export * from "./analysis/run-v2.js";

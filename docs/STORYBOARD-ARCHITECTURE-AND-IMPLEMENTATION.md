@@ -92,6 +92,19 @@ branch artifacts, not a claim that the work is deployed or merged to `main`.
 | Validation | 32 storyboard tests and 28 corpus tests reported at their implementation checkpoints; corpus build/typecheck pass | Human storyboard acceptance; calibrated extraction of actual arcs; final sequence evaluation |
 | Assets | Framed product render defect verified in handover | Verified bare masters or owner-approved framed-object creative route |
 
+Progress after this baseline (2026-09-24, in stacked draft PRs): the acquisition
+contract now distinguishes expected from recovered children and freezes a
+24-carousel recovery slice. A staged v2 extractor separates pixel observations
+from caption-aware narrative interpretation. Its local CLI verifies ready
+snapshots and mirrored bytes, records unreviewed results, and resumes exact
+inputs from a JSONL ledger. A measured three-single-image ledger run succeeded,
+followed by one source-complete three-slide carousel extracted from the first
+frozen recovery target. Its T-shirt → hoodie → accessories sequence and route
+line are an unreviewed observation, not an admitted pattern. These increments
+advance WP03 and WP04 but do not meet either work package's exit gate. See the
+[pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results
+and remaining acquisition limits.
+
 The live three-single-image pilot inspected actual pixels with
 `gemini-3.1-pro-preview`: 3/3 valid results, 4,444 reported input tokens and 761
 output tokens, with no thinking-token field returned. Resume reused the results.

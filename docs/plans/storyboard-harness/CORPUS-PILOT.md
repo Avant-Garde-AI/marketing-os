@@ -293,7 +293,8 @@ those are interpretive overreaches for a human reviewer to adjudicate. No
 engagement metric was supplied to the vision passes, and these examples do not
 establish that any transition causes performance. Human review, an intentionally
 ordinary/weak contrast sample, and a held-out set still precede clustering or
-pattern admission.
+pattern admission. The [sequence review packet](SEQUENCE-REVIEW-2026-09-24.md)
+places the three proposed arcs and disputed readings next to their source posts.
 
 The local manifests are `/private/tmp/storyboard-recovery-v2-{medium,long}-manifest.json`;
 the v2 ledgers are `/private/tmp/storyboard-{medium,long}-v2-ledger.jsonl` and

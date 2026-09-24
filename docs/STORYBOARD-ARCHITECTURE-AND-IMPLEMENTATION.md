@@ -98,10 +98,14 @@ contract now distinguishes expected from recovered children and freezes a
 from caption-aware narrative interpretation. Its local CLI verifies ready
 snapshots and mirrored bytes, records unreviewed results, and resumes exact
 inputs from a JSONL ledger. A measured three-single-image ledger run succeeded,
-followed by one source-complete three-slide carousel extracted from the first
-frozen recovery target. Its T-shirt → hoodie → accessories sequence and route
-line are an unreviewed observation, not an admitted pattern. These increments
-advance WP03 and WP04 but do not meet either work package's exit gate. See the
+followed by source-complete three-, six-, and ten-slide carousels from frozen
+recovery targets. The short merch sequence swaps focal products while retaining
+a route motif; the medium gallery sequence changes views then moves to a
+sculpture detail; the long book sequence maps ten slides to four proposed beats.
+These are unreviewed observations, not admitted patterns. Reusable bounded
+Apify/CDN/GCS recovery now exists, including explicit owner/coauthor evidence.
+These increments advance WP03 and WP04 but do not meet either work package's
+exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results
 and remaining acquisition limits.
 
@@ -270,7 +274,7 @@ These are proposed v0 terms for calibration, not empirical discoveries.
 | --- | --- | --- |
 | Communicative function | introduce, question, contrast, demonstrate, explain, reveal, resolve, invite, pause, repeat | What information the unit supplies |
 | Hook mechanism | withheld identity, scale ambiguity, incongruity, direct question, process entry, sensory detail, recognizable scene, none | Visible/textual device and unresolved reader question |
-| Transition operation | reveal, zoom/reframe, context expansion, comparison, progression, cause/consequence, reversal, accumulation, repetition, no-change | Concrete source and target observations |
+| Transition operation | reveal, replacement, zoom/reframe, context expansion, comparison, progression, cause/consequence, reversal, accumulation, repetition, no-change | Concrete source and target observations; replacement was added after the first real carousel showed a focal product swap with a persistent graphic motif |
 | Proof mode | product fact, visible detail, demonstrated process, attributed testimony, measured result, none | Evidence origin; no inferred material/process claims from appearance alone |
 | Continuity | fixed object, recurring character, palette, setting, spatial relation, motif, text device, audio motif | Bound asset/entity IDs; distinguish semantic motif from visual identity |
 | Treatment | photograph, illustration, typography-led, collage, diagram, process capture, mixed | Locatable examples; camera terms optional when applicable |
@@ -668,7 +672,8 @@ Every source row remains in the inventory, including failures and exclusions.
 
 ```text
 CorpusSnapshot
-  source: platform, original post ID/URL, account occurrence, publishedAt
+  source: platform, original post ID/URL, account occurrence, owning account,
+          owner/coauthor attribution, publishedAt
   capture: metadataCapturedAt, mediaCapturedAt, collector/version, object generation
   media: ordered expected children, actual objects, checksums, MIME, dimensions
   coverage: expectedCount, acquiredCount, orderingVerified, modalitiesObserved
@@ -689,7 +694,10 @@ fallback discovery keys. Fetch all children and preserve provider order,
 child IDs, type and expected count. Support mixed image/video carousels. Mirror
 bytes immediately to a scoped durable prefix; do not retain only fresh CDN URLs.
 Verify decoded MIME/dimensions and compare returned identity to the requested
-post. A page with two photos is not proof that a ten-slide post is complete.
+post. A source artist may be a documented coauthor while another account owns
+the post; retain both identities and require explicit owner or coauthor evidence.
+A tag alone is not sufficient. A page with two photos is not proof that a
+ten-slide post is complete.
 
 For video, retain the source clip where available and duration, shot boundaries,
 audio availability and transcript alignment. Start with boundary-aware sampling

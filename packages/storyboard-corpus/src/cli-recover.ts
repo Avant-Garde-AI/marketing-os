@@ -143,6 +143,7 @@ export async function mainRecover(
   const candidates: Array<{
     snapshotRef: string;
     snapshot: Awaited<ReturnType<typeof recoverCarousel>>["snapshot"];
+    caption?: string;
   }> = [];
   const counts = {
     selected: selected.length,
@@ -166,7 +167,24 @@ export async function mainRecover(
     await execFile("gcloud", ["storage", "cp", localSnapshotPath, snapshotRef], {
       timeout: 120_000,
     });
-    candidates.push({ snapshotRef, snapshot });
+    const durableCandidatePath = `${options.cacheDir}/snapshots/${source.shortcode}-candidate.json`;
+    await writeFile(
+      durableCandidatePath,
+      JSON.stringify({ snapshotRef, snapshot: durableSnapshot, caption: result.caption }, null, 2) +
+        "\n",
+      { mode: 0o600 }
+    );
+    await execFile(
+      "gcloud",
+      [
+        "storage",
+        "cp",
+        durableCandidatePath,
+        `${options.prefix.replace(/\/+$/, "")}/posts/${source.shortcode}/candidate.json`,
+      ],
+      { timeout: 120_000 }
+    );
+    candidates.push({ snapshotRef, snapshot, caption: result.caption });
     counts[result.assessment.status]++;
     print(
       `${source.shortcode}: ${result.assessment.status}, ${snapshot.coverage.acquiredCount}/${snapshot.coverage.expectedCount} children`

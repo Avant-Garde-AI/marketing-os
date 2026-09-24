@@ -9,7 +9,13 @@ import {
   type LedgerRow,
   type PostInput,
 } from "../index";
-import { analyzePostV2, type V2Stages } from "./v2";
+import {
+  analyzePostV2,
+  validateObservations,
+  type AnalysisInput,
+  type ObservationStage,
+  type V2Stages,
+} from "./v2";
 
 export type V2Candidate = { snapshotRef: string; snapshot: CorpusSnapshot; caption?: string };
 export type V2RunOptions = {
@@ -97,6 +103,31 @@ function requestHash(candidate: V2Candidate, stages: V2Stages): string {
   );
 }
 
+function observationHash(candidate: V2Candidate, stages: V2Stages): string {
+  const snapshot = candidate.snapshot;
+  return sha256(
+    JSON.stringify({
+      snapshotRef: candidate.snapshotRef,
+      postId: snapshot.identity.canonicalPostId,
+      model: stages.model,
+      observationPromptHash: stages.observationPromptHash,
+      expected: snapshot.media.expected.map((child) => ({
+        childId: child.childId,
+        ordinal: child.ordinal,
+        modality: child.modality,
+      })),
+      media: snapshot.media.actual.map((child) => ({
+        childId: child.childId,
+        ordinal: child.ordinal,
+        modality: child.modality,
+        checksum: child.checksum,
+        assetRole: child.assetRole,
+      })),
+      coverage: snapshot.coverage,
+    })
+  );
+}
+
 /** One local writer, explicit post cap, no retries or source URL fetching. */
 export async function runV2Extraction(
   candidates: V2Candidate[],
@@ -118,6 +149,7 @@ export async function runV2Extraction(
     const previous = await options.ledger.latest(options.runId, postId);
     const snapshotDigest = sha256(JSON.stringify(candidate.snapshot));
     const hash = requestHash(candidate, options.stages);
+    const obsHash = observationHash(candidate, options.stages);
     const base: LedgerRow = {
       runId: options.runId,
       postId,
@@ -174,20 +206,63 @@ export async function runV2Extraction(
         rows.push(previous);
         continue;
       }
-      await options.ledger.append(base);
-      const output = await analyzePostV2(
-        {
-          post: acquired,
-          snapshotRef: candidate.snapshotRef,
-          coverage: {
-            visualSamplesCovered: snapshot.coverage.visualSamplesCovered,
-            fullVisualStreamCovered: snapshot.coverage.fullVisualStreamCovered,
-            audioCovered: snapshot.coverage.audioCovered,
-            transcriptCovered: snapshot.coverage.transcriptCovered,
-          },
+      const analysisInput: AnalysisInput = {
+        post: acquired,
+        snapshotRef: candidate.snapshotRef,
+        coverage: {
+          visualSamplesCovered: snapshot.coverage.visualSamplesCovered,
+          fullVisualStreamCovered: snapshot.coverage.fullVisualStreamCovered,
+          audioCovered: snapshot.coverage.audioCovered,
+          transcriptCovered: snapshot.coverage.transcriptCovered,
         },
-        options.stages
-      );
+      };
+      const ledgerRows = await options.ledger.rows();
+      await options.ledger.append(base);
+      const reusable = [...ledgerRows]
+        .reverse()
+        .find(
+          (row) =>
+            row.runId === options.runId &&
+            row.postId === postId &&
+            row.status === "observed" &&
+            row.validated === true &&
+            row.observationHash === obsHash &&
+            row.observation !== undefined
+        );
+      let observedResult: { value: ObservationStage; usage?: import("./v2").StageUsage };
+      if (reusable) {
+        observedResult = {
+          value: reusable.observation as ObservationStage,
+          usage: reusable.observationUsage,
+        };
+        validateObservations(analysisInput, observedResult.value);
+      } else {
+        const response = await options.stages.observe({
+          postId,
+          format: acquired.input.format,
+          snapshotRef: candidate.snapshotRef,
+          coverage: analysisInput.coverage,
+          media: acquired.media,
+        });
+        const value = validateObservations(analysisInput, response.value);
+        observedResult = { value, usage: response.usage };
+        await options.ledger.append({
+          ...base,
+          status: "observed",
+          observationHash: obsHash,
+          observation: value,
+          observationUsage: response.usage,
+          validated: true,
+          media: media.map((item) => ({
+            ref: item.ref,
+            sourceRef: item.sourceRef,
+            ordinal: item.ordinal,
+            checksum: item.checksum,
+          })),
+          updatedAt: now().toISOString(),
+        });
+      }
+      const output = await analyzePostV2(analysisInput, options.stages, observedResult);
       const done: LedgerRow = {
         ...base,
         status: "extracted",

@@ -145,7 +145,33 @@ describe("v2 local snapshot runner", () => {
     candidate.caption = "a newly edited caption";
     const changed = await runV2Extraction([candidate], options);
     expect(changed[0]?.inputHash).not.toBe(first[0]?.inputHash);
-    expect(counter).toEqual({ observe: 2, annotate: 2 });
+    expect(counter).toEqual({ observe: 1, annotate: 2 });
+    options.stages.annotationPromptHash = "story-hash-v2";
+    await runV2Extraction([candidate], options);
+    expect(counter).toEqual({ observe: 1, annotate: 3 });
+    options.stages.observationPromptHash = "pixel-hash-v2";
+    await runV2Extraction([candidate], options);
+    expect(counter).toEqual({ observe: 2, annotate: 4 });
+  });
+
+  it("resumes a validated observation after annotation failure", async () => {
+    const { candidate, ledger } = await fixture();
+    const counter = { observe: 0, annotate: 0 };
+    const failing = stages(counter);
+    failing.annotate = async () => {
+      counter.annotate += 1;
+      throw new Error("annotation unavailable");
+    };
+    const options = { runId: "test", ledger, stages: failing, maxPosts: 1 };
+    expect((await runV2Extraction([candidate], options))[0]?.status).toBe("extraction-failed");
+    expect((await ledger.rows()).map((row) => row.status)).toEqual([
+      "ready",
+      "observed",
+      "extraction-failed",
+    ]);
+    const resumed = await runV2Extraction([candidate], { ...options, stages: stages(counter) });
+    expect(resumed[0]?.status).toBe("extracted");
+    expect(counter).toEqual({ observe: 1, annotate: 2 });
   });
 
   it("quarantines incomplete source snapshots before reading pixels", async () => {

@@ -704,6 +704,32 @@ remain unreviewed; the book output also uses unsupported intent language
 ("unboxing-style" and "censorship bars") that a reviewer must correct or
 reject. The pilot report records exact artifacts and failure/retry history.
 
+### 10.13 Reliability and relevance correction — 2026-09-24
+
+The next contrast slice showed that child-byte completeness is not semantic
+media completeness. A six-child artist carousel included a video at ordinal 1;
+all six originals were mirrored, but the post remains ineligible for still-only
+v2 extraction until temporal, audio and transcript coverage are represented.
+Another two-slide example moves from isolated geometric artwork to its use on
+a shirt. That is an observed art-to-product recontextualization; pixels do not
+establish whether the shirt was manufactured or is a mockup. A nine-slide
+wedding-stationery case is source-complete and narratively structured, yet its
+relevance to Arthaus artist storytelling remains uncertain and its visual text
+has inconsistencies. Artist tier and engagement rank alone are insufficient
+corpus-admission criteria.
+
+Caption belongs beside the source snapshot as labeled interpretation context,
+not in the pixel observation call. A real caption-only re-run reused a validated
+`observed` stage checkpoint and paid only for annotation. The checkpoint is
+bound to ordered media checksums, coverage, source, model and observation
+prompt; caption and annotation-prompt changes cannot invalidate pixel facts.
+The ten-slide book also exposed repeated JSON shape errors. Both v2 model
+passes now request explicit structured output and still enforce local schema,
+locator and claim checks. One measured recheck succeeded structurally, while
+the model still inferred "censorship" from black rectangles. Structural output
+validity is therefore not evidence support or human approval. Corpus
+interpretations need an independent support review before pattern admission.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

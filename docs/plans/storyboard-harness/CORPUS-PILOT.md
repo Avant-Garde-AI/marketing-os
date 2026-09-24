@@ -230,7 +230,9 @@ checkpointing and quarantine handling, not the unit of execution for carousels.
    extracted transition is observed or merely inferred from the caption.
 7. Review ledger failures and costs before expanding. No automatic retries,
    silent model downgrades, or hidden quarantine. A changed input checksum,
-   caption, model, prompt or extractor version invalidates cached extraction.
+   caption, model, prompt or extractor version invalidates the final extraction;
+   caption-only and interpretation-prompt changes may reuse a validated pixel
+   checkpoint.
 8. Only after the extraction survives review, cluster visual treatment and
    narrative-transition features. Retain outliers. Count unique whole posts,
    never frames. Do not emit a production pattern library from the pilot by
@@ -302,6 +304,50 @@ copies under each post's private GCS prefix. `snapshot.json` in GCS omits local
 cache paths; cross-session rehydration is still required before another model
 run. The recovery CLI does not orchestrate videos, mixed-media carousels,
 concurrent workers or the complete corpus.
+
+## Lower-tier contrast and extraction reliability — 2026-09-24
+
+Three more frozen sources were selected using metadata only, adding B/C tiers
+and lower within-account engagement ranks. All source metrics remained outside
+the vision and interpretation prompts. Selection is not evidence that those
+metrics were caused by creative treatment.
+
+| Post / source occurrence | Recovery | Current interpretation status |
+| --- | --- | --- |
+| `DWn9eg1CM4-` / `hypathie_aswang_art` (B, medium, low rank) | 6/6 original children mirrored, but child 1 is video | **Incomplete for v2**: the clip lacks sampled visual stream, audio and transcript coverage. A byte-complete mixed carousel is not a visually complete still carousel. |
+| `DcOzDxkkkUT` / `andywestface` (B, short, low rank) | 2/2 still images | The first slide is an isolated geometric elephant illustration; the second shows that design on a T-shirt in a styled scene. V2 extracted two observations, one transition and two beats. The art-to-product move is visible; the model's claim that the shirt is a real physical product is not proven by pixels. |
+| `DbrKcVgH03k` / `girly_trend` (C, long, middle rank; low absolute engagement) | 9/9 still images | A wedding stationery and signage collection. V2 extracted nine observations, eight transitions and six caption-aware beats after one annotation-shape failure. Its relevance to an artist social-storytelling library is **uncertain**, and checked slides show inconsistent event dates and garbled small text that the narrative summary smooths over. Hold for relevance and OCR-consistency review. |
+
+The initial local recovery CLI omitted captions from extraction manifests even
+though the provider evidence retained them. The adapter and CLI now carry the
+source caption as labeled context beside the snapshot, never into the pixel
+pass. Existing private evidence was used to hydrate the local B/C manifests;
+private `candidate.json` objects now preserve caption plus the source snapshot
+without local cache paths. Caption changes on the elephant and wedding cases
+reran **only annotation**: the validated observations were reused from the new
+`observed` JSONL checkpoint. The checkpoint hash includes source order, media
+checksums, coverage, model and pixel prompt, but excludes engagement, caption
+and the annotation prompt. Changing pixels or the pixel prompt still invalidates
+it.
+
+Repeated ten-slide book calls exposed that JSON mode alone could produce wrong
+field names even with valid JSON, consistent with Google's
+[structured-output guidance](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/control-generated-output).
+The Vertex adapter now supplies explicit
+response schemas for both passes, with schema content included in the prompt
+hash. A measured recheck completed the book's ten observations and four beats.
+The explicit schema solved that run's shape failure; it did **not** prevent the
+unsupported "censorship boxes" wording. The record retains the earlier
+429, output-cap, observation-shape and annotation-shape failures. No automatic
+retries or silent repair were introduced. A separate evidence-support review
+is required before any extracted interpretation can be admitted as a pattern.
+
+At this checkpoint, six selected carousels have been reacquired: five are
+source-complete still sequences (30 slides total), and one mixed-media post is
+held incomplete. All five have at least one successful unreviewed v2 output;
+none has passed human semantic review or entered the counted genome. The
+[sequence review packet](SEQUENCE-REVIEW-2026-09-24.md) now includes the two
+new still cases and the mixed-media hold.
 
 Outputs are local research artifacts. They do not update store context, genome,
 posts or publish consent. Reviewed pattern admission and merchant-facing writes

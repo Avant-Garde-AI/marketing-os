@@ -47,17 +47,162 @@ narrative gives mechanism, optional hook/payoff, continuity and limitations.
 An inferred reader state is explicitly a hypothesis. A static image may imply
 a story spatially without fabricating a sequence. Report weak/no narrative
 honestly. Do not assert that any move caused engagement or that a viewer actually
-felt the intended emotion. Do not invent visible details. For single-image or
+felt the intended emotion. Name an action or presentation genre only when its
+defining event is in the grounded observations: opening a book is not necessarily
+unboxing it. Keep an obscuring shape as an observed shape; do not assign a
+purpose such as censorship or redaction unless supplied evidence establishes it.
+Use "may" or "could" for proposed intent, and do not turn it into an observed
+fact. Do not invent visible details. For single-image or
 carousel stills, do not invent a missing-audio or missing-transcript limitation;
 those coverage limits apply only to video. Return JSON in this exact shape:
 {"beats":[{"id":"b0","supportingObservationIds":["o0"],
 "function":"presentation","informationAdded":"what the reader learns",
-"claimRefs":[]}],"transitionInterpretations":[],
+"claimRefs":[]}],"transitionInterpretations":[{"transitionId":"EXACT_OBSERVED_TRANSITION_ID",
+"interpretation":"hypothesized role of the visible change",
+"alternativeReading":"another plausible role"}],
 "narrative":{"mechanism":"mechanism or no clear narrative",
 "continuity":[],"limitations":[]}}
 For every observed transition add one transitionInterpretation in source order.
-Use empty arrays where applicable; field names and array types are exact.
+The transitionId value must copy the corresponding observed transition's id
+exactly; do not emit id, fromObservationId or toObservationId inside a
+transitionInterpretation. Use an empty transitionInterpretations array only
+when the observation stage has no transitions. Other arrays may be empty;
+field names and array types are exact.
 No Markdown.`;
+
+// Vertex JSON mode alone does not enforce field names. Keep these transport
+// schemas small and let the local Zod/locator checks enforce deeper invariants.
+const string = { type: "STRING" } as const;
+const stringArray = { type: "ARRAY", items: string } as const;
+const OBSERVATION_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    observations: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: string,
+          mediaRef: string,
+          ordinal: { type: "INTEGER" },
+          visible: string,
+          treatmentTags: stringArray,
+          textSpans: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: { text: string, location: string },
+              required: ["text", "location"],
+              propertyOrdering: ["text", "location"],
+            },
+          },
+          uncertainty: string,
+        },
+        required: ["id", "mediaRef", "ordinal", "visible", "treatmentTags", "textSpans"],
+        propertyOrdering: [
+          "id",
+          "mediaRef",
+          "ordinal",
+          "visible",
+          "treatmentTags",
+          "textSpans",
+          "uncertainty",
+        ],
+      },
+    },
+    transitions: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: string,
+          fromObservationId: string,
+          toObservationId: string,
+          observableChange: string,
+          operation: {
+            type: "STRING",
+            enum: [
+              "addition",
+              "replacement",
+              "removal",
+              "reveal",
+              "reframe",
+              "repeat",
+              "contrast",
+              "process",
+              "unknown",
+            ],
+          },
+          uncertainty: string,
+        },
+        required: ["id", "fromObservationId", "toObservationId", "observableChange", "operation"],
+        propertyOrdering: [
+          "id",
+          "fromObservationId",
+          "toObservationId",
+          "observableChange",
+          "operation",
+          "uncertainty",
+        ],
+      },
+    },
+    limitations: stringArray,
+  },
+  required: ["observations", "transitions", "limitations"],
+  propertyOrdering: ["observations", "transitions", "limitations"],
+} as const;
+
+const ANNOTATION_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    beats: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          id: string,
+          supportingObservationIds: stringArray,
+          function: string,
+          informationAdded: string,
+          claimRefs: stringArray,
+          inferredReaderState: string,
+        },
+        required: ["id", "supportingObservationIds", "function", "informationAdded", "claimRefs"],
+        propertyOrdering: [
+          "id",
+          "supportingObservationIds",
+          "function",
+          "informationAdded",
+          "claimRefs",
+          "inferredReaderState",
+        ],
+      },
+    },
+    transitionInterpretations: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { transitionId: string, interpretation: string, alternativeReading: string },
+        required: ["transitionId", "interpretation"],
+        propertyOrdering: ["transitionId", "interpretation", "alternativeReading"],
+      },
+    },
+    narrative: {
+      type: "OBJECT",
+      properties: {
+        mechanism: string,
+        continuity: stringArray,
+        limitations: stringArray,
+        hook: string,
+        payoff: string,
+      },
+      required: ["mechanism", "continuity", "limitations"],
+      propertyOrdering: ["mechanism", "continuity", "limitations", "hook", "payoff"],
+    },
+  },
+  required: ["beats", "transitionInterpretations", "narrative"],
+  propertyOrdering: ["beats", "transitionInterpretations", "narrative"],
+} as const;
 
 type ProviderUsage = { inputTokens?: number; outputTokens?: number; thinkingTokens?: number };
 type ProviderResponse = {
@@ -134,13 +279,14 @@ export function createVertexV2Stages(options: VertexV2Options): V2Stages {
   async function call<T>(
     stage: "observation" | "annotation",
     prompt: string,
+    responseSchema: Record<string, unknown>,
     parts: Array<Record<string, unknown>>,
     parse: (raw: unknown) => T
   ): Promise<StageResult<T>> {
     const body = JSON.stringify({
       systemInstruction: { parts: [{ text: prompt }] },
       contents: [{ role: "user", parts }],
-      generationConfig: { responseMimeType: "application/json", maxOutputTokens },
+      generationConfig: { responseMimeType: "application/json", responseSchema, maxOutputTokens },
     });
     if (Buffer.byteLength(body, "utf8") > 25 * 1024 * 1024)
       throw new Error("Vertex request exceeds 25 MiB encoded payload cap");
@@ -246,8 +392,20 @@ export function createVertexV2Stages(options: VertexV2Options): V2Stages {
 
   return {
     model: options.model,
-    observationPromptHash: sha256(JSON.stringify({ prompt: OBSERVATION_PROMPT, maxOutputTokens })),
-    annotationPromptHash: sha256(JSON.stringify({ prompt: ANNOTATION_PROMPT, maxOutputTokens })),
+    observationPromptHash: sha256(
+      JSON.stringify({
+        prompt: OBSERVATION_PROMPT,
+        schema: OBSERVATION_RESPONSE_SCHEMA,
+        maxOutputTokens,
+      })
+    ),
+    annotationPromptHash: sha256(
+      JSON.stringify({
+        prompt: ANNOTATION_PROMPT,
+        schema: ANNOTATION_RESPONSE_SCHEMA,
+        maxOutputTokens,
+      })
+    ),
     observe(input: ObservationInput): Promise<StageResult<ObservationStage>> {
       if (input.media.length < 1 || input.media.length > 20)
         throw new Error("v2 observation requires 1–20 media items");
@@ -277,13 +435,17 @@ export function createVertexV2Stages(options: VertexV2Options): V2Stages {
           inlineData: { mimeType: mediaMime(item.bytes), data: item.bytes.toString("base64") },
         });
       }
-      return call("observation", OBSERVATION_PROMPT, parts, (raw) =>
+      return call("observation", OBSERVATION_PROMPT, OBSERVATION_RESPONSE_SCHEMA, parts, (raw) =>
         observationStageSchema.parse(raw)
       );
     },
     annotate(input: AnnotationInput): Promise<StageResult<AnnotationStage>> {
-      return call("annotation", ANNOTATION_PROMPT, [{ text: JSON.stringify(input) }], (raw) =>
-        annotationStageSchema.parse(raw)
+      return call(
+        "annotation",
+        ANNOTATION_PROMPT,
+        ANNOTATION_RESPONSE_SCHEMA,
+        [{ text: JSON.stringify(input) }],
+        (raw) => annotationStageSchema.parse(raw)
       );
     },
   };

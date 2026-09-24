@@ -28,6 +28,7 @@ export type ProviderPost = {
   accountHandle: string;
   ownerHandle?: string;
   sourceAttribution?: "owner" | "coauthor";
+  caption?: string;
   children: ProviderChild[];
   /** Durable reference to the provider response that proves child order. */
   orderEvidenceRef?: string;
@@ -49,6 +50,7 @@ export interface MediaMirror {
 export type RecoveryResult = {
   snapshot: CorpusSnapshot;
   assessment: ReturnType<typeof assessSnapshot>;
+  caption?: string;
 };
 
 /**
@@ -159,5 +161,9 @@ export async function recoverCarousel(
   snapshot.reason = assessment.complete
     ? undefined
     : assessment.reasons.join(",") || "visual-coverage-missing";
-  return { snapshot: corpusSnapshotSchema.parse(snapshot), assessment: assessSnapshot(snapshot) };
+  return {
+    snapshot: corpusSnapshotSchema.parse(snapshot),
+    assessment: assessSnapshot(snapshot),
+    caption: fetched.caption,
+  };
 }

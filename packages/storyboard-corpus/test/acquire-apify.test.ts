@@ -156,6 +156,19 @@ describe("Apify recovery provider", () => {
     });
   });
 
+  it("keeps a public caption as labeled context for the later annotation stage", async () => {
+    const provider = createApifyRecoveryProvider({
+      token: "test-token",
+      maxItems: 1,
+      maxTotalChargeUsd: 0.25,
+      fetch: async () => jsonResponse(response({ caption: "Original artist caption" })),
+      writeRawResponse: async () => "gs://evidence/caption.json",
+    });
+    await expect(provider.fetchPost(source)).resolves.toMatchObject({
+      caption: "Original artist caption",
+    });
+  });
+
   it("fails closed when durable evidence is unavailable or child media fields are incomplete", async () => {
     const base = {
       token: "test-token",

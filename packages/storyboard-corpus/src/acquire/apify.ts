@@ -34,6 +34,7 @@ type ApifyPost = {
   shortCode?: unknown;
   ownerUsername?: unknown;
   coauthorProducers?: unknown;
+  caption?: unknown;
   type?: unknown;
   childPosts?: unknown;
 };
@@ -194,6 +195,7 @@ export function createApifyRecoveryProvider(options: ApifyProviderOptions): Reco
         accountHandle: source.accountHandle,
         ownerHandle: post.ownerUsername.trim(),
         sourceAttribution: ownerMatches ? "owner" : "coauthor",
+        caption: nonempty(post.caption) ? post.caption : undefined,
         children,
         orderEvidenceRef: orderEvidenceRef.trim(),
       };

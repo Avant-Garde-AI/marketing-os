@@ -89,6 +89,16 @@ describe("Vertex v2 staged transport", () => {
       outputTokens: 40,
     });
     expect(requests).toHaveLength(2);
+    expect(requests[0]?.generationConfig?.responseSchema?.required).toEqual([
+      "observations",
+      "transitions",
+      "limitations",
+    ]);
+    expect(requests[1]?.generationConfig?.responseSchema?.required).toEqual([
+      "beats",
+      "transitionInterpretations",
+      "narrative",
+    ]);
     const pixelCall = JSON.stringify(requests[0]);
     const interpretationCall = JSON.stringify(requests[1]);
     expect(pixelCall).toContain(Buffer.from([255, 216, 255, 0]).toString("base64"));
@@ -98,6 +108,9 @@ describe("Vertex v2 staged transport", () => {
     expect(interpretationCall).toContain("A painted figure on pale ground");
     expect(interpretationCall).not.toContain("999");
     expect(interpretationCall).not.toContain(Buffer.from([255, 216, 255, 0]).toString("base64"));
+    expect(interpretationCall).toContain("opening a book is not necessarily");
+    expect(interpretationCall).toContain("obscuring shape as an observed shape");
+    expect(interpretationCall).toContain("transitionId value must copy");
   });
 
   it("keeps a provider failure body out of the public error", async () => {

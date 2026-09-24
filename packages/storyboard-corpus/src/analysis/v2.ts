@@ -166,7 +166,10 @@ function unique(values: string[]): boolean {
   return new Set(values).size === values.length;
 }
 
-function validateObservations(input: AnalysisInput, output: ObservationStage): ObservationStage {
+export function validateObservations(
+  input: AnalysisInput,
+  output: ObservationStage
+): ObservationStage {
   const result = observationStageSchema.parse(output);
   const media = input.post.media;
   if (result.observations.length !== media.length)
@@ -219,7 +222,8 @@ function validateAnnotation(observed: ObservationStage, output: AnnotationStage)
 
 export async function analyzePostV2(
   input: AnalysisInput,
-  stages: V2Stages
+  stages: V2Stages,
+  cachedObservation?: StageResult<ObservationStage>
 ): Promise<PostAnalysisV2> {
   postSchema.parse(input.post.input);
   if (!input.snapshotRef.trim() || !input.post.inputHash.trim())
@@ -237,13 +241,15 @@ export async function analyzePostV2(
     throw new AnalysisContractError("attached media must match the ordered post input");
   if (!input.coverage.visualSamplesCovered)
     throw new AnalysisContractError("visual samples are not covered");
-  const observedResult = await stages.observe({
-    postId: input.post.input.postId,
-    format: input.post.input.format,
-    snapshotRef: input.snapshotRef,
-    coverage: input.coverage,
-    media: input.post.media,
-  });
+  const observedResult =
+    cachedObservation ??
+    (await stages.observe({
+      postId: input.post.input.postId,
+      format: input.post.input.format,
+      snapshotRef: input.snapshotRef,
+      coverage: input.coverage,
+      media: input.post.media,
+    }));
   const observed = validateObservations(input, observedResult.value);
   const annotatedResult = await stages.annotate({
     postId: input.post.input.postId,

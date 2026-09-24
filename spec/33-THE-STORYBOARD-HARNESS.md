@@ -654,7 +654,22 @@ The original v1 CLI is preserved. A measured three-single-image ledger run
 completed, and a repeat produced no additional ledger rows. Two targeted
 re-probes showed that an explicit still-image instruction removed irrelevant
 audio caveats from those examples; human judgment and real carousel transitions
-remain the next validation gate. See the pilot report for counts and limits.
+remained the next validation gate at that checkpoint. See the pilot report for
+counts and limits.
+
+### 10.10 First source-complete carousel — 2026-09-24
+
+One frozen original-cohort carousel was recovered with exact post identity and
+three ordered child IDs. The provider response, mirrored pixels and a complete
+snapshot are durable research objects. V2 observed two adjacent changes in the
+actual slides: T-shirts give way to a hoodie, then hats and stickers, with an
+orange running-route line linking the presentation from start dot to finish
+flag. This is the first direct corpus example of a second beat doing something
+new. The output remains **unreviewed**: a possible overstatement of continuous
+photography and coarse `addition` transition labels need human adjudication.
+One extracted sequence cannot justify a reusable pattern, outcome claim or
+counted genome update. The bounded recovery run and its limitations are in the
+pilot report.
 
 ## 11. Research and TRD reconciliation — 2026-09-20
 

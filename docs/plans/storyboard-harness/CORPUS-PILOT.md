@@ -75,8 +75,39 @@ output and 3,138 thinking tokens across both passes.
 Two initial annotations still added irrelevant missing-audio caveats to static
 images. A tightened annotation prompt was re-probed on those two images: 2/2
 schema-valid and neither repeated that caveat. This small correction is not a
-semantic accuracy rate. V2 has **not** run on a complete recovered carousel;
-the provider adapter and durable child-media mirror still gate a real arc test.
+semantic accuracy rate.
+
+### First complete carousel — 2026-09-24
+
+A one-post, capped `apify/instagram-scraper` probe fetched the first frozen
+carousel, `kevinruss / DTbusF1GO7X`. The returned post identity matched the
+source, and its `childPosts` contained the expected three ordered, distinct
+child IDs. Each fresh CDN image decoded as JPEG; the original provider response,
+all three bytes, a ready snapshot and the v2 ledger were mirrored under
+`gs://arthaus-creative-corpus/instagram-organic/2026-09-24/recovery-pilot/DTbusF1GO7X/`.
+The durable snapshot has source order evidence, object references and SHA-256
+checksums. Local paths and pixels were kept outside Git. The source was visually
+inspected slide by slide before interpretation.
+
+The v2 CLI dry-run classified the snapshot as complete and locally available.
+One executed call yielded three observations, two adjacent transitions, three
+beats and `review.state = unreviewed`. The visible move is a merch sequence:
+T-shirts on slide 1, a hoodie on slide 2, hats and bumper stickers on slide 3.
+Provider-reported usage for this two-call extraction was 5,575 input, 2,604
+output and 1,748 thinking tokens; these counts are not a reconciled invoice.
+An orange route line and black-and-white running imagery connect the slides;
+the line begins at a green dot and ends at a checkered flag. That is a concrete
+example of beat 2 adding something beat 1 did not. The model's language of a
+"single continuous photograph" may overstate continuity in a photo collage,
+and its `addition` operation underdescribes replacement of the focal product.
+Those are review findings, not verified pattern labels.
+
+This one post proves the acquisition-to-v2 path can carry ordered real slides;
+it does not establish a reliable narrative taxonomy, comparative performance
+or human approval of a new storyboard. Likes/comments were retained in the
+snapshot but not sent to either model pass. A repeatable, bounded source
+provider and media-mirror adapter is still being built from the observed
+response shape before the remaining frozen slice can run.
 
 ## Direct inventory and correction
 

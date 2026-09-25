@@ -109,6 +109,14 @@ candidates in a later worker, with identity and checksum verification and no
 scraper or model call; a fresh-cache rehearsal succeeded for the two-slide
 art-to-shirt case. This is still a bounded local handoff, not a production
 queue or corpus backfill.
+The [content-archetype correction](plans/storyboard-harness/CONTENT-ARCHETYPE-SYSTEM.md)
+now makes the immediate product target explicit: repeatable reader-facing
+post arguments instantiated with verified art-graph and catalog subjects,
+not replication of individual corpus posts. Existing Post Concepts are the
+store-owned authoring surface; the corpus supplies inspected moves and later
+comparative evidence. A required concept need now needs a checkable source
+reference to qualify. Automated Picasso-to-catalog verification and pattern
+admission remain open.
 These increments advance WP03 and WP04 but do not meet either work package's
 exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results

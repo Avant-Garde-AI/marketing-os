@@ -742,6 +742,25 @@ without a scraper or model call. This closes the **local cross-session media
 handoff** gap only. It does not make video, mixed-media, worker scheduling,
 semantic review or full-corpus extraction complete.
 
+### 10.15 Content-archetype correction — 2026-09-25
+
+The useful corpus output is not a copied layout or a list of transition verbs.
+It is a reviewed, repeatable **content argument**: reader question, graph-backed
+subject requirements, information gained at each beat, allowed variation,
+refusal cases and provenance. Existing Post Concepts (spec 29) and store-owned
+`social/concepts/*.md` are the authoring surface; the genome remains a later
+layout input. Andy Westface's art-to-shirt change can inform a transition
+vocabulary, but it is not an Arthaus post archetype. No current concept is
+proven to drive Arthaus engagement. Corpus-relative engagement can prioritize
+review; observed Arthaus outcomes are required to validate a series.
+
+The [content-archetype decision record](../docs/plans/storyboard-harness/CONTENT-ARCHETYPE-SYSTEM.md)
+sets the graph/catalog grounding contract, candidate series, corpus evidence
+standard and next product acceptance loop. The social pack now instructs
+concept-first subject selection and requires a checkable source reference on
+each satisfied concept need. This is a first guard, not the finished Picasso
+MCP adapter or a complete graph-to-storyboard integration.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

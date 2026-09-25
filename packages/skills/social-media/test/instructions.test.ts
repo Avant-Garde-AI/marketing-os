@@ -11,6 +11,8 @@ describe("instructions", () => {
 
   it("carries the governance rules", () => {
     expect(instructions).toContain("Plan from the Brand Soul");
+    expect(instructions).toContain("Choose a content idea before a layout");
+    expect(instructions).toContain("Ground each instance in real subjects");
     expect(instructions).toContain("Every slot carries its why");
     expect(instructions).toContain("Never engagement bait");
     expect(instructions).toContain("writes are Actions");

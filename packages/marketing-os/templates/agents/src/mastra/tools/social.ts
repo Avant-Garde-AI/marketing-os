@@ -21,6 +21,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createSocialTools } from "../../../lib/social/tools";
 import { createConceptTools } from "../../../lib/social/concept-tools";
+import { socialGraphSubjects } from "./social-graph";
 import { composePostFromArchetype, composePostKeyframes } from "./social-compose";
 import {
   linkDesignToPost,
@@ -582,6 +583,7 @@ export const socialTools = {
   // draft-only write; `instantiate` returns PLANS, so turning a plan into a
   // post stays with social_post_upsert and its claims guard.
   social_concept_list: toMastraTool(conceptDefs.social_concept_list),
+  social_graph_subjects: socialGraphSubjects,
   social_concept_read: toMastraTool(conceptDefs.social_concept_read),
   social_concept_draft: toMastraTool(conceptDefs.social_concept_draft),
   social_concept_instantiate: toMastraTool(conceptDefs.social_concept_instantiate),

@@ -283,6 +283,11 @@ Production jobs use workload identity or broker-issued scoped credentials;
 interactive model tools never receive durable secrets. The offline research
 store and a tenant's private taste store are separate access domains.
 
+A [bounded transition-library contract](plans/storyboard-harness/PATTERN-ADMISSION-CONTRACT.md)
+now normalizes extraction proposals, requires verified review authority before
+counted export and refuses unreviewed retrieval. Production review/loading and
+graph projection remain open; Arthaus's staged proposals contain no admissions.
+
 ## 5. Narrative ontology
 
 The ontology is a versioned annotation vocabulary, not a list of compulsory

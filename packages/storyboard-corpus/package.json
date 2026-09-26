@@ -27,6 +27,10 @@
     "./cli-rehydrate": {
       "types": "./dist/cli-rehydrate.d.ts",
       "default": "./dist/cli-rehydrate.js"
+    },
+    "./library": {
+      "types": "./dist/library.d.ts",
+      "default": "./dist/library.js"
     }
   },
   "files": [

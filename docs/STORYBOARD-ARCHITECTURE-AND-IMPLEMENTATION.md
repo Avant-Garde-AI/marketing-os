@@ -115,8 +115,10 @@ post arguments instantiated with verified art-graph and catalog subjects,
 not replication of individual corpus posts. Existing Post Concepts are the
 store-owned authoring surface; the corpus supplies inspected moves and later
 comparative evidence. A required concept need now needs a checkable source
-reference to qualify. Automated Picasso-to-catalog verification and pattern
-admission remain open.
+reference to qualify. A bounded Picasso-to-catalog read adapter now returns
+tenant-bound subject evidence packets; a live read rehearsal accepted two
+current product records and rejected one without a public page. Same-call
+concept/storyboard binding, persistent review and pattern admission remain open.
 These increments advance WP03 and WP04 but do not meet either work package's
 exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results

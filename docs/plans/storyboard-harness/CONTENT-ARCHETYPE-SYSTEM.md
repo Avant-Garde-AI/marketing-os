@@ -36,7 +36,7 @@ An instantiated archetype should carry these linked records:
 | Evidence ledger | Original inspected post IDs and slide locators; reviewer corrections; separately, observed outcome tests | Corpus and measurement records, never model assertion |
 
 Graph retrieval must be a **read-only capability port** bound to the tenant's
-existing Picasso MCP connection. A tool result is not authority merely because
+enabled connection. Picasso is the first integration, not a base-agent dependency. A tool result is not authority merely because
 the agent says it queried the graph: the packet needs resolvable result IDs or
 source refs and catalog handles. `explore_concept` and `faceted_discovery` can
 find subjects; `get_artwork_facets` can support visual descriptions;
@@ -62,8 +62,8 @@ now acquire a bounded packet directly from the current tenant's enabled graph
 connection and Shopify client. A caller selects an enabled connection prefix
 and concept, with at most six subjects. The adapter invokes only
 `explore_concept` and `get_artwork_facets`, then joins **exact** returned handles
-to current Shopify products. A graph-only `-no-frame`/`-old` alias is preserved
-while looking up facets; it never silently changes the catalog product.
+to current Shopify products. Facet aliases are now explicit store configuration, scoped to the selected
+connection; no suffix convention is inferred or catalog identity changed.
 Discovery, facets and catalog results each return a tenant-bound, timestamped,
 hashed receipt with their normalized evidence. They are request-local records,
 not persisted reference artifacts or review decisions.
@@ -129,25 +129,15 @@ One remains reviewable after a critic comparison correction; two fail brand
 copy checks. All remain hypotheses. This is a concrete human-review input,
 not deployed same-call tool acceptance, corpus admission or proof of diversity.
 
-## Candidate Arthaus series to test
+## Store-specific candidate series
 
-These are **design hypotheses**, not admitted findings. They are deliberately
-different reader arguments. Each can run over many catalog subjects if its
-requirements are met; none copies an exemplar's styling or artwork.
-
-| Series hypothesis | Reader payoff and beat change | Graph/catalog contract | Refusal and variation |
-| --- | --- | --- | --- |
-| **One feeling, three visual languages** | Start with a mood/question, reveal two works that express it through contrasting palette or medium, then a third that breaks the expected look while preserving the mood. The final beat teaches the relationship, not just shows another SKU. | A named concept/facet with at least three available works, distinct artists or media, verified facet paths for both shared and contrasting traits. | Refuse if the works are near-duplicates or the shared connection is only the model's prose. Rotate the concept, ordering and contrast dimension. |
-| **The unexpected neighbor** | Show one work, introduce a visually surprising second, then reveal the specific graph relationship that makes them hang together; optionally show a catalog-supported arrangement. | Seed artwork, `recommend_similar` or `concept_walk` edge/path, verified facets on both endpoints, two available handles. | Refuse if the relationship cannot be explained without generic taste language or if imagery cannot show the pair honestly. Vary graph path and reveal order. |
-| **Choose the anchor, then the wall** | Begin with an anchor piece and a concrete reason it anchors; beat 2 adds a piece that changes the wall's balance; payoff shows a complete, curator-approved set. | Verified anchor, real companion works and explicit shared/contrasting facets; approved set geometry or existing imagery. | Refuse an invented arrangement or unsupported scale. Vary the anchor constraint and wall composition, not just artwork names. |
-| **The detail that changes the reading** | An artwork detail poses a visual question; the full work answers it; a related work shows that the motif or treatment is not isolated. | High-resolution authorized image, locatable detail, full work handle, graph-backed related work and facet. | Refuse if the crop is illegible, the related-work link is weak, or a framed render is misrepresented as bare art. Vary the detail and relationship. |
-
-The existing `one-work-three-rooms` and `true-to-scale` concepts remain useful
-utility experiments, but the room imagery/accurate dimensions contract must be
-satisfied before they enter an automated rotation. `how-it-was-made` cannot
-claim documentary process from a finished image; any simulation needs explicit
-labeling and an owner decision. Candidate-series names and directions are
-reviewable proposals, not automatic edits to store-owned concept files.
+Tenant premises, named subjects, cadence and examples belong in the store's
+`agents/social/` artifacts. Arthaus's proposed series have moved to
+[`marketplace/agents/social/research/storyboard-harness/CONTENT-ARCHETYPES.md`](https://github.com/Arthaus-Inc/marketplace/blob/main/agents/social/research/storyboard-harness/CONTENT-ARCHETYPES.md)
+(companion ownership PR; available on main after merge). No store candidates
+are shipped as shared default archetypes. The reusable definition is a reader
+question, information-changing beats, required inputs, refusal conditions and
+variation axes; actual concept instances are authored and reviewed per store.
 
 ## How the corpus can support or reject these
 

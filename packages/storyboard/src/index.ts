@@ -19,3 +19,4 @@ export type { ExploreOptions, ExploreResult, BeatOutcome } from "./explore";
 export * from "./schemas";
 export * from "./critics";
 export * from "./plan";
+export * from "./graph-context";

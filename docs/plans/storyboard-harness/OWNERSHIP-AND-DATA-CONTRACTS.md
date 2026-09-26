@@ -80,8 +80,9 @@ Preserve these separations in every extraction/library change:
 A library snapshot needs explicit domain/tenant scope, revision, evidence status,
 source lineage and retrieval eligibility. Unreviewed/zero-evidence recipes cannot
 silently become counted defaults. The existing pattern/reference schemas and
-checks cover parts of this; the full library admission/projection pipeline is
-still roadmap work. Do not invent a implemented generic knowledge graph merely
+checks cover parts of this; the [transition admission compiler](PATTERN-ADMISSION-CONTRACT.md) now provides
+a bounded proposal/review/retrieval seam. Production review authority, loader
+wiring and graph projection remain roadmap work. Do not invent a implemented generic knowledge graph merely
 because extraction JSON exists. Raw competitor pixels/copy are references to
 inspect, not default production assets or copy to repeat.
 

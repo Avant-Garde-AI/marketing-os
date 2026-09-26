@@ -806,6 +806,25 @@ store environment lacks explicit `STORYBOARD_MODEL` configuration. Durable human
 review, runtime/scaffold/MCP exposure parity, corpus admission and the blind
 creative comparison remain open. The read-only tool changes no approval authority.
 
+### 10.18 Live core rehearsal and critic comparison correction — 2026-09-26
+
+Fresh graph/catalog acquisition and a local Vertex transport produced three
+detail/reveal boards from actual catalog pixels. The current board was mistakenly
+included among its comparison alternatives; live critics treated that as a
+duplicate or emitted verdicts for alternatives. Exclude self from comparisons
+and explicitly scope narrative verdicts to the selected board. Preserve the
+existing fail-closed protocol validation. The integration test now checks that
+each critic receives only the other two boards.
+
+Re-running only critics retained one board and rejected two for brand-copy
+violations. These are advisory judgments awaiting human agreement; protocol
+failures do not count as creative elimination. All boards remain hypotheses and
+share the same detail/full mechanic. No corpus pattern was admitted, no imagery
+was generated and no publication occurred. The offline Vertex probe is not a
+deployed Mastra/MCP-tool acceptance test. Model/provider failures, token usage,
+source scope, saved comparison and next acceptance steps are recorded in the
+[live review](../docs/plans/storyboard-harness/LIVE-STORYBOARD-REVIEW-2026-09-26.md).
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

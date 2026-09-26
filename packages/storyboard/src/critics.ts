@@ -32,6 +32,10 @@ missing inputs; explain which need is unmet.
 Return one whole-story verdict (no beatId or candidateId), plus optional local
 findings. Every reason must name a concrete strength or defect and its location;
 for a kill, explain what would need to change. Scores are comparators, not truth.
+Evaluate only the supplied storyboard. Alternatives are comparison context,
+not additional subjects to judge. Never emit candidateId in narrative verdicts;
+use beatId only for a local finding on this storyboard, and omit both IDs for
+the required whole-story judgment.
 Do not pass to be polite and do not kill merely to meet an elimination quota.`;
 
 export function createNarrativeCritic(
@@ -46,7 +50,7 @@ export function createNarrativeCritic(
         await model.generate({
           task: "narrative-critique",
           instruction: NARRATIVE,
-          data: { context, storyboard, alternatives },
+          data: { context, storyboard, alternatives: alternatives.filter((other) => other.id !== storyboard.id) },
           schema: verdictsSchema,
           ...(context.subjects?.length ? { images: context.subjects.map((subject) => ({ label: `catalog:${subject.handle}`, url: subject.assetRef })) } : {}),
         })

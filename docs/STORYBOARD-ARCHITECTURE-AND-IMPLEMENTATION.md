@@ -516,6 +516,12 @@ Approved source truth is retained; retrieval/search/graph records can be rebuilt
 
 ## 7. Interactive workflow and state
 
+The [final-post delivery plan](plans/storyboard-harness/FINAL-POST-DELIVERY.md)
+sets the immediate integration path to the existing social review room. Current
+board composition/export supports multiple frames, but review/publish resolves
+one image; ordered assets, sequence display and complete-post consent are still
+required. No new storyboard-generated final post has been deployed yet.
+
 ### Stage sequence
 
 1. Resolve tenant, objective, source snapshots and model/budget policies.

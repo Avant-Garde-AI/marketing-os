@@ -142,6 +142,10 @@ export interface Storyboard {
   id: string;
   /** The concept this instantiates, when it came from one (spec 29). */
   conceptId?: string;
+  /** Exact catalog subjects selected for this option when planning from a graph packet. */
+  subjectHandles?: string[];
+  /** Explicit content-contract assessment; model proposals remain subject to independent critique and human review. */
+  needAssessments?: Array<{ needId: string; met: boolean; sourceRefs: string[]; reason: string }>;
   format: StoryboardFormat;
   /**
    * The arc in one sentence — what a reader takes away. Written BEFORE the

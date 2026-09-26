@@ -89,10 +89,39 @@ at `/private/tmp/storyboard-graph-live-20260925/packet.json`; no post was create
 One discovery result's recorded mood was `happy`, so the query itself cannot
 prove a semantic need for calm. Semantic Post Concept needs still require
 assessment; this tool does not infer them from a match.
-The storyboard tool does not yet consume this packet in the same server-side
-call, so a source string passed independently to `social_concept_instantiate`
-is still a caller assertion. Persistent receipts, an authenticated review and
-generated/hosted/store deployment parity remain open.
+The independent `social_concept_instantiate` path still accepts caller source
+assertions. The same-call planning path below acquires its own packet instead.
+Persistent receipts, an authenticated review and generated/hosted/store
+deployment parity remain open.
+
+### Same-call concept-to-storyboard path — 2026-09-25
+
+`social_graph_storyboard_plan` reads an existing store concept, current brand
+instructions and optional reviewed pattern context, acquires current graph and
+catalog evidence, then calls the three-candidate planner. The core compiler is
+provider-neutral; acquisition stays in the runtime. No client/model-supplied
+packet is accepted. Concept contents, permitted formats, selected subjects and
+receipts enter the context bound to the review hash. Existing catalog pixels
+are delivered to the planner and each independent narrative critique.
+
+Candidates must name exact selected handles and assess required concept needs
+with reasons and source refs. Changed concepts, blocked formats, substituted
+subjects, missing required assessments and unknown refs fail structural
+grounding. A reference can still be semantically insufficient: a graph result
+for calm with a `happy` mood is not proof of calm. Independent critique and
+human review must reject unsupported readings. The packet does not provide
+verified scale, room imagery, process documentation, inventory or bare masters.
+Unsupported needs must remain unmet; ordinary catalog renders cannot enter
+mockups as verified bare artwork.
+
+Four integration tests verify compiler binding, refusal and pixel delivery;
+the 36-test storyboard suite, typecheck/build and targeted runtime tool
+typecheck pass. A live planner run has not occurred: the current store
+environment lacks an explicit `STORYBOARD_MODEL` provider/model setting. No
+imagery or publishing is performed. Draft concept status remains visible;
+missing admitted patterns produces hypotheses, never counted evidence. The
+current two graph reads support facet discovery only; relationship series
+still need acquired `recommend_similar`/`concept_walk` paths before qualification.
 
 ## Candidate Arthaus series to test
 

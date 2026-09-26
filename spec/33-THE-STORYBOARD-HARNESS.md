@@ -779,6 +779,33 @@ subjects and rejected a third for a missing public product page. The
 [decision record](../docs/plans/storyboard-harness/CONTENT-ARCHETYPE-SYSTEM.md)
 records those limits and the next thin product loop.
 
+### 10.17 Concept and acquired subjects bound to planning — 2026-09-25
+
+The template's `social_graph_storyboard_plan` now reads one store-owned concept,
+acquires graph/catalog subjects and compiles them into the planner context in
+the same server-side call. It accepts no caller-supplied subject packet. The
+provider-neutral compiler pins the concept contents, allowed formats, required
+needs, tenant and acquired receipts into the review context. Catalog images are
+sent to both planning and independent narrative critique; no imagery is generated.
+
+Every candidate names its selected handles and assesses the concept's needs
+with reasons and source references. Structural grounding eliminates changed
+concepts, blocked formats, unknown/substituted subjects and missing required
+need assessments or references. These checks establish inspectability, not
+whether a referenced fact actually proves a semantic need: the critic and human
+must review that. Catalog imagery retains unknown asset classification unless
+already verified; a graph match cannot authorize a room, scale, process claim
+or bare-artwork mockup. Missing admitted pattern context yields hypotheses.
+
+Four compiler/planner integration tests cover tenant/source binding, unsupported
+candidates and image delivery to planner and critics. The storyboard suite has
+36 passing tests; package typecheck/build and targeted template tool typecheck
+pass. This is implemented and tested source, not a deployed or creatively
+accepted result. No live graph-grounded board has been generated yet: the
+store environment lacks explicit `STORYBOARD_MODEL` configuration. Durable human
+review, runtime/scaffold/MCP exposure parity, corpus admission and the blind
+creative comparison remain open. The read-only tool changes no approval authority.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

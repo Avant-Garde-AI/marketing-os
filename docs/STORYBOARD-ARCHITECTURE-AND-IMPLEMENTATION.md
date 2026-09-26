@@ -117,8 +117,14 @@ store-owned authoring surface; the corpus supplies inspected moves and later
 comparative evidence. A required concept need now needs a checkable source
 reference to qualify. A bounded Picasso-to-catalog read adapter now returns
 tenant-bound subject evidence packets; a live read rehearsal accepted two
-current product records and rejected one without a public page. Same-call
-concept/storyboard binding, persistent review and pattern admission remain open.
+current product records and rejected one without a public page. The template's
+`social_graph_storyboard_plan` now binds a store concept, freshly acquired
+subjects and their catalog images to planning and independent critique in one
+read-only call. Candidates must preserve concept/format/subject identity and
+provide sourced required-need assessments. References do not prove semantic
+support; critic and human review still decide that. This path has integration
+tests but no live model rehearsal yet (explicit `STORYBOARD_MODEL` is absent).
+Persistent review, deployment parity and pattern admission remain open.
 These increments advance WP03 and WP04 but do not meet either work package's
 exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results

@@ -26,6 +26,10 @@ and alternatives that are the same story with different wording.
 Reject unsupported factual assertions, borrowed conclusions with no evidence,
 and novelty that breaks the brand. Corpus observations show association, not
 causal proof of performance. Do not invent counts or pretend to have seen pixels.
+When a content concept is supplied, check every required need against the actual
+facts and assets. A retrieved graph association is not evidence of room imagery,
+dimensions, artist process, or stock. Reject any option that papers over those
+missing inputs; explain which need is unmet.
 Return one whole-story verdict (no beatId or candidateId), plus optional local
 findings. Every reason must name a concrete strength or defect and its location;
 for a kill, explain what would need to change. Scores are comparators, not truth.
@@ -45,6 +49,7 @@ export function createNarrativeCritic(
           instruction: NARRATIVE,
           data: { context, storyboard, alternatives },
           schema: verdictsSchema,
+          ...(context.subjects?.length ? { images: context.subjects.map((subject) => ({ label: `catalog:${subject.handle}`, url: subject.assetRef })) } : {}),
         })
       );
       if (!result.verdicts.some((v) => !v.beatId && !v.candidateId)) {

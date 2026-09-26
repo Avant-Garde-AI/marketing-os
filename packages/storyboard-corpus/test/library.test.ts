@@ -26,6 +26,9 @@ describe("reviewed transition library", () => {
     const library = await compileTransitionLibrary(scope, [p], [], verified);
     expect(library.entries).toEqual([]);
     expect(library.held[0]?.reason).toBe("unreviewed");
+    const revised = await compileTransitionLibrary(scope, [{ ...p, move: "Revised move" }], [], verified);
+    expect(revised.revisionHash).not.toBe(library.revisionHash);
+    expect(library.held[0]?.proposalHash).toBe(patternProposalHash(p));
     expect(() => retrieveTransitionPatterns(library, scope, ["context"])).toThrow("admitted");
   });
   it("requires authenticated authority and binds review to the exact proposal contents", async () => {

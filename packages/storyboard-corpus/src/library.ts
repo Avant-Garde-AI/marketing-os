@@ -135,17 +135,17 @@ export async function compileTransitionLibrary(
   if (new Set(reviews.map((r) => r.proposalHash)).size !== reviews.length || reviews.some((r) => !hashes.has(r.proposalHash)))
     throw new Error("Review is duplicate, stale or refers to an absent proposal");
   const entries: Array<{ proposal: TransitionPatternProposal; review: PatternReviewDecision; acceptedExemplarIds: string[]; postCount: number; accountCount: number; plannerPattern: PlannerTransitionPattern }> = [];
-  const held: Array<{ id: string; reason: string }> = [];
+  const held: Array<{ id: string; proposalHash: string; reason: string }> = [];
   for (const proposal of parsed) {
     validateProposal(proposal);
     const review = reviews.find((r) => r.proposalHash === patternProposalHash(proposal));
-    if (!review) { held.push({ id: proposal.id, reason: "unreviewed" }); continue; }
+    if (!review) { held.push({ id: proposal.id, proposalHash: patternProposalHash(proposal), reason: "unreviewed" }); continue; }
     if (!(await authority.verifyReview(review))) throw new Error("Pattern review authority could not be verified");
     if (new Set(review.exemplars.map((e) => e.id)).size !== review.exemplars.length || review.exemplars.some((e) => !proposal.exemplars.some((p) => p.id === e.id)))
       throw new Error("Review contains duplicate or foreign exemplar decisions");
-    if (review.decision === "reject") { held.push({ id: proposal.id, reason: "review-rejected" }); continue; }
+    if (review.decision === "reject") { held.push({ id: proposal.id, proposalHash: patternProposalHash(proposal), reason: "review-rejected" }); continue; }
     const accepted = proposal.exemplars.filter((e) => review.exemplars.some((r) => r.id === e.id && r.visibleChangeConfirmed && r.interpretationConfirmed && r.domainFitConfirmed));
-    if (!accepted.length) { held.push({ id: proposal.id, reason: "no-reviewed-support" }); continue; }
+    if (!accepted.length) { held.push({ id: proposal.id, proposalHash: patternProposalHash(proposal), reason: "no-reviewed-support" }); continue; }
     entries.push({ proposal, review, acceptedExemplarIds: accepted.map((e) => e.id),
       postCount: new Set(accepted.map((e) => e.postRef)).size, accountCount: new Set(accepted.map((e) => e.accountRef)).size,
       plannerPattern: { id: `${proposal.id}@${proposal.revision}`, basis: "counted", move: proposal.move, rationale: proposal.rationale,

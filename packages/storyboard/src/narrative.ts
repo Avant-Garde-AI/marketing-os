@@ -38,19 +38,24 @@ function aspectRatio(aspect: string): number | undefined {
 }
 
 /**
- * Does the arc turn?
+ * Does the storyboard declare a candidate arc structure?
  *
- * A sequence that never leaves `setup` is a catalogue with slide numbers. This
- * is the single most valuable structural rule, because the failure it catches —
- * three variations of the same statement — is exactly what the first three
- * composed posts were, and no amount of visual polish fixes it.
+ * Role labels and transition prose do not prove a semantic turn. A two-beat
+ * setup→payoff may combine its turn and resolution in the second beat, so it
+ * need not add a redundant middle slide or rename that beat. Its incoming
+ * transition must be explicit; the independent critic judges the meaning.
  *
  * A single is exempt: a one-beat arc implies its turn rather than showing one.
  */
 function hasTurn(storyboard: Storyboard): boolean {
   if (storyboard.format === "single") return true;
   const roles = new Set(storyboard.beats.map((b) => b.role));
-  return roles.has("turn") || (roles.has("tension") && roles.has("payoff"));
+  if (roles.has("turn") || (roles.has("tension") && roles.has("payoff"))) return true;
+  if (storyboard.beats.length !== 2) return false;
+  const [setup, payoff] = storyboard.beats;
+  return setup?.role === "setup" && payoff?.role === "payoff" &&
+    !isBlank(payoff.transition?.change) && !isBlank(payoff.transition?.why) &&
+    Array.isArray(payoff.transition?.patternRefs);
 }
 
 /**
@@ -128,9 +133,9 @@ export function validateStoryboard(storyboard: Storyboard): Problem[] {
   if (!hasTurn(storyboard)) {
     fail(
       "beats",
-      `no turn: roles are ${storyboard.beats.map((b) => b.role).join(" → ") || "(none)"}. ` +
-        "A sequence that never leaves setup is a catalogue with slide numbers. Give it a `turn`, " +
-        "or a `tension` that a `payoff` resolves",
+      `no turn structure: roles are ${storyboard.beats.map((b) => b.role).join(" → ") || "(none)"}. ` +
+        "Use a `turn`, a `tension` resolved by `payoff`, or a two-beat setup → payoff with an explicit incoming transition. " +
+        "The narrative critic still judges whether that change earns the swipe",
     );
   }
 

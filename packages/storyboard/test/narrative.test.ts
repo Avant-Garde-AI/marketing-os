@@ -207,3 +207,36 @@ it("refuses motion durations on still formats while preserving video durations",
   ] });
   expect(fatalProblems(validateStoryboard(video))).toEqual([]);
 });
+
+
+it("admits a two-beat setup→payoff whose incoming reveal combines the turn and payoff", () => {
+  const sb = storyboard({ format: "carousel", beats: [
+    beat({ id: "detail", role: "setup", assertion: "The isolated marks look abstract", brief: { ...beat().brief, shows: "An isolated texture detail" } }),
+    beat({ id: "whole", role: "payoff", assertion: "The marks are the atmosphere around a human figure",
+      transition: { change: "Texture detail to the full figure and surrounding marks", why: "Reinterpret the abstraction through its context", patternRefs: [] },
+      brief: { ...beat().brief, shows: "The complete real work with its figure" } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(sb))).toEqual([]);
+  expect(sb.beats.map((item) => item.role)).toEqual(["setup", "payoff"]);
+});
+
+it("does not admit a two-beat setup→payoff without a complete incoming transition", () => {
+  for (const transition of [undefined,
+    { change: "", why: "Resolve the premise", patternRefs: [] },
+    { change: "Show the whole work", why: " ", patternRefs: [] },
+  ]) {
+    const sb = storyboard({ format: "carousel", beats: [
+      beat({ id: "detail", role: "setup" }), beat({ id: "whole", role: "payoff", transition }),
+    ] });
+    expect(fatalProblems(validateStoryboard(sb)).some((problem) => problem.detail.includes("no turn structure"))).toBe(true);
+  }
+});
+
+it("keeps the setup→payoff exception narrow rather than admitting any longer catalogue sequence", () => {
+  const sb = storyboard({ format: "carousel", beats: [
+    beat({ id: "one", role: "setup" }),
+    beat({ id: "two", role: "setup", transition: { change: "Another detail", why: "More marks", patternRefs: [] } }),
+    beat({ id: "three", role: "payoff", transition: { change: "The whole work", why: "Resolve context", patternRefs: [] } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(sb)).some((problem) => problem.detail.includes("no turn structure"))).toBe(true);
+});

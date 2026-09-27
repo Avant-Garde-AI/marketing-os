@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { bindGraphSubjectReads, collectGraphSubjects, type GraphSubjectDependencies } from "../src/graph-subjects";
+import { bindGraphSubjectReads, collectGraphSubjects, parseGraphFacetAliases, type GraphSubjectDependencies } from "../src/graph-subjects";
 
 function dependencies(): GraphSubjectDependencies {
   return {
     tenant: "store-a", now: () => "2026-09-25T12:00:00.000Z",
+    facetHandleAliases: { "blue-study-no-frame": "blue-study" },
     callGraph: vi.fn(async (operation) => operation === "explore_concept"
       ? { results: [{ handle: "blue-study-no-frame", title: "Stale title", artist: "Artist A" }] }
       : { artworks: [{ handle: "blue-study", palette: ["blue"], subject: ["sea"], movement: [] }] }),
@@ -12,6 +13,22 @@ function dependencies(): GraphSubjectDependencies {
 }
 
 describe("graph-to-catalog subject packets", () => {
+  it("reads only the selected connection's explicit aliases and defaults to exact identity", () => {
+    const raw = JSON.stringify({ version: 1, connections: { art_graph: { facetHandleAliases: { "work-old": "work" } } } });
+    expect(parseGraphFacetAliases(raw, "art_graph")).toEqual({ "work-old": "work" });
+    expect(parseGraphFacetAliases(raw, "other_graph")).toEqual({});
+    expect(parseGraphFacetAliases(null, "art_graph")).toEqual({});
+    expect(() => parseGraphFacetAliases("{}", "art_graph")).toThrow();
+    expect(() => parseGraphFacetAliases("x".repeat(50_001), "art_graph")).toThrow("exceeds");
+  });
+  it("never infers another store's suffix aliases and refuses invalid configured identities", async () => {
+    const deps = { ...dependencies(), facetHandleAliases: undefined };
+    const packet = await collectGraphSubjects({ concept: "quiet water", limit: 1 }, deps);
+    expect(deps.callGraph).toHaveBeenNthCalledWith(2, "get_artwork_facets", { handles: ["blue-study-no-frame"] });
+    expect(packet.subjects).toEqual([]);
+    expect(packet.rejected[0]?.reasons).toContain("graph-facets-missing");
+    await expect(collectGraphSubjects({ concept: "quiet", limit: 1 }, { ...dependencies(), facetHandleAliases: { "blue-study-no-frame": "../other" } })).rejects.toThrow();
+  });
   it("binds only required enabled connection reads and rejects unavailable connections", async () => {
     const explore = vi.fn(async () => ({ results: [] }));
     const call = bindGraphSubjectReads("picasso_concierge", {

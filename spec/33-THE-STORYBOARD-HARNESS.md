@@ -825,6 +825,31 @@ deployed Mastra/MCP-tool acceptance test. Model/provider failures, token usage,
 source scope, saved comparison and next acceptance steps are recorded in the
 [live review](../docs/plans/storyboard-harness/LIVE-STORYBOARD-REVIEW-2026-09-26.md).
 
+### 10.19 Three ownership layers — 2026-09-26
+
+Separate A: portable deep-agent planning/critique/review mechanisms; B: store
+brand, catalog/art-graph bindings, editorial concepts and creative runs; and
+C: social dataset schemas, observation/transition vocabulary, exemplar lineage
+and reviewed domain knowledge. The generated template distributes A and C
+contracts, not a store's approved recipes or graph naming conventions. Actual
+corpus assets and private/domain reference libraries retain their scoped data
+owner; a graph projection does not replace source artifacts or admission review.
+
+The shared subject collector now defaults to exact identity and accepts only
+explicit integration-supplied facet aliases. Runtime tools read them from the
+tenant's versioned `social/reference/art-graph.json` for the selected enabled
+connection. Remove inferred `-old`/`-no-frame` stripping; it was an Arthaus
+implementation detail. Facet aliases never change catalog identity. Missing
+config uses exact handles; malformed config fails closed. Tests cover default
+identity, connection isolation and configured alias validation.
+
+Detailed Arthaus candidate series and the live comparison move to marketplace
+`agents/social/research/storyboard-harness/`, with its mapping in
+`agents/social/reference/`. Core keeps architecture, contracts and the generic
+critic correction. The [ownership record](../docs/plans/storyboard-harness/OWNERSHIP-AND-DATA-CONTRACTS.md)
+documents implemented seams and planned corpus projection/admission. The
+companion store PR does not deploy runtime code or activate concepts.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

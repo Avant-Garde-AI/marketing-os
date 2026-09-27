@@ -3,7 +3,7 @@ import { z } from "zod";
 import { planStoryboards } from "../../../lib/storyboard/plan";
 import { planningContextSchema } from "../../../lib/storyboard/schemas";
 import { compileGraphPlanningContext } from "../../../lib/storyboard/graph-context";
-import { collectGraphSubjects, bindGraphSubjectReads } from "../../../lib/social/graph-subjects";
+import { collectGraphSubjects, bindGraphSubjectReads, parseGraphFacetAliases } from "../../../lib/social/graph-subjects";
 import { readCatalogSubjects } from "../../../lib/social/catalog-subjects";
 import { conceptPath, parseConcept } from "../../../lib/social/concepts";
 import { getExternalMcpTools } from "./external-mcp";
@@ -45,6 +45,7 @@ export const storyboardTools = {
         tenant: tenant.shop,
         callGraph: bindGraphSubjectReads(graphPrefix, await getExternalMcpTools()),
         readCatalog: readCatalogSubjects,
+        facetHandleAliases: parseGraphFacetAliases(await socialRepo.readFile("social/reference/art-graph.json"), graphPrefix),
       });
       const context = compileGraphPlanningContext(base, concept, packet, tenant.shop);
       const review = await planStoryboards(brief, context, createMastraStoryModel(model));

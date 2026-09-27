@@ -8,6 +8,18 @@ const facetValues = z.array(text.max(300)).max(50).default([]);
 const resultSchema = z.object({ results: z.array(z.object({ handle, title: text.max(1000), artist: z.string().optional() })).max(100) });
 const facetsSchema = z.object({ artworks: z.array(z.object({ handle, palette: facetValues, subject: facetValues, movement: facetValues, mood: facetValues })).max(100) });
 
+/** Read-only tenant artifact; never supplied by a model or inferred from suffixes. */
+export function parseGraphFacetAliases(raw: string | null, prefix: string): Record<string, string> {
+  if (!/^[a-z0-9_]{1,100}$/.test(prefix)) throw new Error("Use the exact enabled graph connection prefix");
+  if (raw === null) return {};
+  if (raw.length > 50_000) throw new Error("Graph configuration exceeds 50,000 characters");
+  const config = z.object({
+    version: z.literal(1),
+    connections: z.record(z.string().regex(/^[a-z0-9_]{1,100}$/), z.object({ facetHandleAliases: z.record(handle, handle) }).strict()),
+  }).strict().parse(JSON.parse(raw));
+  return config.connections[prefix]?.facetHandleAliases ?? {};
+}
+
 export interface CatalogSubject {
   handle: string;
   title: string;
@@ -45,6 +57,8 @@ export interface GraphSubjectDependencies {
   tenant: string;
   callGraph: (operation: "explore_concept" | "get_artwork_facets", args: Record<string, unknown>) => Promise<unknown>;
   readCatalog: (handles: string[]) => Promise<CatalogSubject[]>;
+  /** Store/provider-owned facet aliases. Catalog identity always remains exact. */
+  facetHandleAliases?: Record<string, string>;
   now?: () => string;
 }
 
@@ -108,8 +122,9 @@ export async function collectGraphSubjects(
   const packet: GraphSubjectPacket = { tenant, query, receipts: [discovery], subjects: [], rejected: [] };
   if (!selected.length) return packet;
 
-  // Graph aliases are explicit and preserved; catalog lookup always uses the original exact handle.
-  const graphHandle = (h: string) => h.replace(/(?:-no-frame|-old)$/, "");
+  // No store naming convention is inferred by the shared collector.
+  const aliases = z.record(handle, handle).parse(dependencies.facetHandleAliases ?? {});
+  const graphHandle = (h: string) => Object.hasOwn(aliases, h) ? aliases[h]! : h;
   const facetArgs = { handles: [...new Set(selected.map((r) => graphHandle(r.handle)))] };
   const facets = facetsSchema.parse(decode(await dependencies.callGraph("get_artwork_facets", facetArgs)));
   if (new Set(facets.artworks.map((r) => r.handle)).size !== facets.artworks.length) throw new Error("Graph facets returned duplicate handles");

@@ -226,6 +226,11 @@ Additional corrections to the supplied TRD:
 
 ## 4. System ownership and dependency boundaries
 
+The [three-layer ownership contract](plans/storyboard-harness/OWNERSHIP-AND-DATA-CONTRACTS.md)
+separates the reusable deep-agent mechanism, store implementation and corpus
+knowledge contracts/data. Store recipes and creative runs are not core defaults.
+
+
 ```mermaid
 flowchart TD
     R[Research propositions] --> V[Versioned vocabulary]

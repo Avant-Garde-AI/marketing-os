@@ -75,3 +75,12 @@ The narrative critic requires a separate provider-visible `wholeStory` judgment
 and checks transition alignment with adjacent briefs. Selection re-runs current
 structural and source-grounding gates even for older reviewable flags. A stored
 critique result never exempts a candidate from current buildability checks.
+
+
+The provider response schema is scoped to exact acquired identifiers and
+conditional on format/sourcing. Source-backed briefs require explicit assets;
+still formats reject video durations. A two-beat setup → payoff with a complete
+incoming transition reaches independent critique because the reveal may combine
+a turn and its resolution. No structural pass establishes narrative quality,
+and no missing field or role is repaired after model generation. Live findings
+and corrections remain in the production checkpoint.

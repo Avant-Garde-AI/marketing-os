@@ -10,5 +10,5 @@ export function planningTransportFixtureV1(output: unknown): unknown {
     if (new Set(entries.map(([id]) => id)).size !== entries.length) throw new Error("Duplicate fixture need IDs");
     return { ...story, needAssessmentsById: Object.fromEntries(entries) };
   });
-  return { transportVersion: 1, storyboards };
+  return { transportVersion: "planning-v1", storyboards };
 }

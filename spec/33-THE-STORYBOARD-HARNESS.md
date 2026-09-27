@@ -1129,3 +1129,8 @@ required properties even where a schema description omits array length rules.
 As with normal parsed JSON objects, duplicate raw property occurrences are not
 observable after parsing; the duplicate guard applies to configured need IDs,
 and foreign/extra fields are rejected by the transport schema.
+
+The transport wire version is the string literal `planning-v1`. Gemini rejected
+a numeric literal converted to an enum before generation; its schema enum
+values must be strings. This compatibility correction changes no need
+decision or public IR field and adds no model retry.

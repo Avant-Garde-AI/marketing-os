@@ -195,7 +195,7 @@ describe("need assessment transport v1", () => {
     ...context.concept!.needs, { id: "related-work", required: false, description: "A related work if one is acquired" },
   ] } };
   type NeedValue = Omit<NonNullable<Storyboard["needAssessments"]>[number], "needId">;
-  type Transport = { transportVersion: 1; storyboards: Array<Omit<Storyboard, "needAssessments"> & { needAssessmentsById: Record<string, NeedValue> }> };
+  type Transport = { transportVersion: "planning-v1"; storyboards: Array<Omit<Storyboard, "needAssessments"> & { needAssessmentsById: Record<string, NeedValue> }> };
   function authored(): Transport {
     const output = plans();
     output.storyboards.forEach((board) => {

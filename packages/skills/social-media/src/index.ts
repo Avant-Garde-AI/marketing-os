@@ -66,6 +66,7 @@ export {
   type SequenceExpression, type SingleExpression, type SubjectFit,
 } from "./concepts";
 export { createConceptTools, type ConceptTools } from "./concept-tools";
+export * from "./graph-subjects";
 export {
   checkColorClaims,
   colorClaimsIn,

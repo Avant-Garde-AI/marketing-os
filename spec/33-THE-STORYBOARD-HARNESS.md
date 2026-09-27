@@ -761,6 +761,24 @@ concept-first subject selection and requires a checkable source reference on
 each satisfied concept need. This is a first guard, not the finished Picasso
 MCP adapter or a complete graph-to-storyboard integration.
 
+### 10.16 Read-only graph subject packet — 2026-09-25
+
+The first Picasso-to-catalog seam now invokes the tenant's enabled concept and
+facet reads, then resolves at most six exact graph-discovered handles against
+current Shopify data. It returns normalized, tenant-bound evidence receipts,
+usable subject facts and explicit rejected handles. Active Online Store
+listing and current image are eligibility checks; stock availability remains
+unknown. Facet lookup aliases never substitute another catalog product. No
+model, imagery provider, artifact write or publishing action is called.
+
+This closes the **tested read adapter** gap, not graph-to-storyboard
+acceptance. Semantic concept needs, same-call planner binding, durable review,
+and deployment parity are still open. A live Picasso query and facet read,
+replayed through the collector with a fresh Shopify read, returned two usable
+subjects and rejected a third for a missing public product page. The
+[decision record](../docs/plans/storyboard-harness/CONTENT-ARCHETYPE-SYSTEM.md)
+records those limits and the next thin product loop.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

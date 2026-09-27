@@ -47,13 +47,52 @@ images and product links come from the catalog at plan/dispatch time. If a
 required fact or image is absent, the archetype refuses that subject. No graph
 result may make a framed render into a bare-artwork master.
 
-The current native `shopify-get-products` read is too thin for that join: it
+The native `shopify-get-products` read is too thin for that join: it
 returns ID, title, status and image/variant counts, but not handle, asset URL,
 dimensions, price or inventory. The next adapter must extend a tenant-scoped
 catalog **read** or use an existing equivalent; it must not treat the graph's
 cached product fields as current commerce truth. Current `sourceRef` strings
 are caller-supplied and only enforce an inspectable assertion. The adapter
 must resolve and pin real MCP/catalog receipts before claiming verification.
+
+### First read adapter — 2026-09-25
+
+`collectGraphSubjects()` and the template's `social_graph_subjects` read tool
+now acquire a bounded packet directly from the current tenant's enabled graph
+connection and Shopify client. A caller selects an enabled connection prefix
+and concept, with at most six subjects. The adapter invokes only
+`explore_concept` and `get_artwork_facets`, then joins **exact** returned handles
+to current Shopify products. A graph-only `-no-frame`/`-old` alias is preserved
+while looking up facets; it never silently changes the catalog product.
+Discovery, facets and catalog results each return a tenant-bound, timestamped,
+hashed receipt with their normalized evidence. They are request-local records,
+not persisted reference artifacts or review decisions.
+
+The new catalog reader uses the shared tenant-scoped Shopify client. It reads
+title, status, Online Store URL and an actual `MediaImage` URL, rejects unexpected
+handles and surfaces provider errors. The collector rejects absent facets,
+missing/inactive products, missing public product pages or images. A video
+preview is not accepted as artwork pixels. Shopify exposes product listing and
+media fields in its [Admin Product contract](https://shopify.dev/docs/api/admin-graphql/latest/objects/Product);
+this adapter still reports **inventory availability unknown** and supplies no
+dimensions, verified masters or artist-process facts.
+
+Five graph-packet tests and six catalog-reader tests cover alias preservation,
+current product fields, unavailable inputs, tenant-separated receipts and
+provider failures. A read-only live rehearsal also listed all eight Picasso
+tools, fetched three `calm and contemplative` results and their facets, then
+replayed those saved graph responses through the collector with a fresh
+Shopify read. `bm33` and `sun-leaf-abstract-botanical-mid-century` had current
+active product records, Online Store URLs and images. `explore-4-old` was
+rejected for a missing public product page. The request-local packet is private
+at `/private/tmp/storyboard-graph-live-20260925/packet.json`; no post was created.
+One discovery result's recorded mood was `happy`, so the query itself cannot
+prove a semantic need for calm. Semantic Post Concept needs still require
+assessment; this tool does not infer them from a match.
+The storyboard tool does not yet consume this packet in the same server-side
+call, so a source string passed independently to `social_concept_instantiate`
+is still a caller assertion. Persistent receipts, an authenticated review and
+generated/hosted/store deployment parity remain open.
 
 ## Candidate Arthaus series to test
 

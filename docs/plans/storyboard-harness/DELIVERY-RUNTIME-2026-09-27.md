@@ -12,7 +12,8 @@ No production social publishing is part of the implementation test.
    tool-less and output bounded; the planner/critics make at most four calls.
 2. Open the returned narrative `reviewUrl`. Compare all alternatives and their
    elimination reasons, evidence status, beat changes, copy and source bindings.
-3. Propose `storyboard.select` through the existing gate. The authenticated
+3. Propose `storyboard.select` through the existing gate using `propose_action`
+   from chat or the authenticated MCP endpoint. The authenticated
    human approves the exact review/candidate and agrees a real elimination
    reason. No public URL can perform this step. No image generation happens.
 4. Author a proposed SocialPost through `social_post_upsert` with bound facts.
@@ -52,3 +53,16 @@ hashes, edits, unsupported adapters and mocked Instagram carousel flow.
 Arthaus typecheck and production build pass. The production checkpoint is
 recorded separately after deployment; it must distinguish live tool/page tests
 from authenticated human selection and final publishing.
+
+## Production model boundary
+
+The first Arthaus graph run failed strict schema validation (one candidate,
+missing transition references and continuity). The adapter now supplies the
+complete structural shape in instructions, uses explicit low thinking for
+Google Gemini 3 string models, and caps planning at 24,000 output tokens and each
+critic at 8,000. SDK/processor retries are disabled: at most one provider call
+per stage, up to four total, with zero imagery calls. Partial output is rejected,
+including a provider `length` finish reason even if recovered JSON parses.
+No missing candidate, continuity or evidence field is fabricated to repair a
+response. Thinking-budget truncation is a hypothesis, not a confirmed diagnosis
+of the original response. Live retest results belong in the store checkpoint.

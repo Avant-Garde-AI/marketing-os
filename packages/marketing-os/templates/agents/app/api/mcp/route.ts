@@ -200,6 +200,7 @@ function socialToolDefs(): ToolDef[] {
       "social_review_notes",
       "social_review_notes_resolve",
     ]),
+    ...mirrorTools(actionTools, ["propose_action"]),
     ...mirrorTools(storyboardTools, ["social_graph_storyboard_plan", "social_storyboard_plan", "social_storyboard_review_read", "social_storyboard_realization_prepare"]),
     ...mirrorTools(designLibraryTools, ["check_design_library", "publish_design_library"]),
     ...mirrorTools(designSurfaceTools, [

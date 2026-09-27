@@ -94,11 +94,18 @@ const manifestVariantSchema = z.object({
   content: z.object({
     eyebrow: z.string().optional(),
     headline: z.string(),
+    headlineAccent: z.string().optional(),
     body: z.string(),
+    points: z.string().optional(),
     placeholder: z.string().optional(),
     cta: z.string(),
     success: z.string(),
     consent: z.string(),
+    decline: z.string().optional(),
+    imageSrc: z.string().optional(),
+    imageAlt: z.string().optional(),
+    imageFocus: z.string().optional(),
+    imageCaption: z.string().optional(),
   }),
   style: z.object({
     bg: z.string(),
@@ -107,6 +114,8 @@ const manifestVariantSchema = z.object({
     accent: z.string(),
     line: z.string(),
     font: z.string(),
+    fontDisplay: z.string().optional(),
+    fontMono: z.string().optional(),
   }),
 });
 
@@ -121,6 +130,7 @@ const offerTargetingSchema = z.object({
 export const offerManifestSchema = z.object({
   id: z.string(),
   type: z.literal("offer"),
+  title: z.string().optional(),
   placement: z.enum(["corner-card", "overlay", "takeover"]),
   trigger: z.object({
     kind: z.enum(["delay", "exit-intent"]),

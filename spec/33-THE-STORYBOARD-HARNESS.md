@@ -1058,3 +1058,34 @@ instead of claiming a mathematically impossible crop. Alternative comparison
 still examines information gain rather than merely different starting details.
 This corrects critic guidance, not calibration evidence; fresh live review and
 human agreement remain necessary. The earlier critique is retained as diagnostic.
+
+
+Production concept-voice correction: preserving a full concept only inside a
+fact blob dropped its declared voice from the typed planning contract, allowing
+invented generic copy formula IDs. `PlanningContext` now optionally carries
+`copyFormulas: [{id, source, definition}]` (up to 20 acquired creative
+definitions), and the selected concept may declare
+`voice: {copyFormulaRefs?, hook?}`. Graph compilation preserves that voice and
+refuses configured references without a nonempty definition whose source is an
+already acquired base fact or brand source. Duplicate IDs/references fail.
+Definitions are creative guidance; they never establish counted corpus efficacy.
+
+Configured nonempty formula refs scope automated instances to those exact IDs:
+the provider response requires `copyFormulaRef` from that set, and saved-review
+grounding independently rejects missing/foreign IDs or unavailable definitions.
+The planner and independent critic receive the typed hook and acquired selected
+formula definition to shape and assess copy, subordinate to brand and claims.
+An ID alone does not prove the copy follows the formula. Legacy concepts without
+voice remain flexible, and generated/no-asset planning stays supported. Caption
+remains optional during planning; the delivery/post/publish contracts retain
+their own requirements for actual final copy. Core contracts contain no brand
+formula constants or proprietary voice service dependencies.
+
+
+Saved-review compatibility remains fail closed: if the acquired full concept
+fact declares nonempty formula refs but the compact typed context omitted or
+changed them, grounding refuses it with a replan requirement. It does not
+populate missing voice or infer formula definitions from prose. Only the
+selected formula's structural rules apply; requirements from a different
+formula are not imported. Universal brand and factual constraints still bind,
+and real conflicts must be reported rather than silently reconciled.

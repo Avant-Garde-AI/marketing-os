@@ -1,6 +1,6 @@
 /** Vendored from packages/storyboard. Update the canonical source first. */
 import { createHash } from "node:crypto";
-import { planningContextSchema, type PlanningContext } from "./schemas";
+import { copyFormulaProblems, planningContextSchema, type PlanningContext } from "./schemas";
 
 /** Provider-neutral evidence packet; the runtime must acquire it itself, not accept it from a model. */
 export interface SubjectPlanningPacket {
@@ -15,6 +15,7 @@ export interface PlanningConcept {
   status: "draft" | "active" | "retired";
   needs: Array<{ id: string; description: string; required?: boolean }>;
   expressions: { single?: unknown; carousel?: { availability?: string }; video?: { availability?: string } };
+  voice?: { copyFormulaRefs?: string[]; hook?: string };
 }
 
 /** Compile acquired facts into a planning context without importing an MCP client or renderer. */
@@ -24,6 +25,7 @@ export function compileGraphPlanningContext(
   packet: SubjectPlanningPacket,
   tenant: string
 ): PlanningContext {
+  const acquiredBase = planningContextSchema.parse(base);
   if (!tenant.trim() || packet.tenant !== tenant) throw new Error("Subject packet tenant does not match the planning request");
   if (concept.status === "retired") throw new Error("Retired content concepts cannot be instantiated");
   const formats = (["single", "carousel", "video"] as const).filter((format) => {
@@ -42,15 +44,21 @@ export function compileGraphPlanningContext(
       throw new Error(`Catalog subject ${subject.handle} lacks acquired graph and catalog receipts`);
   }
   const source = `concept:${createHash("sha256").update(JSON.stringify({ tenant, concept })).digest("hex")}`;
-  const facts = new Map(base.facts.map((f) => [f.source, f]));
+  const selectedConcept = { id: concept.id, source, premise: concept.premise, payoff: concept.payoff, formats,
+    needs: concept.needs.map((need) => ({ ...need, required: need.required !== false })),
+    ...(concept.voice ? { voice: concept.voice } : {}),
+  };
+  const voiceProblems = copyFormulaProblems({ ...acquiredBase, concept: selectedConcept });
+  if (voiceProblems.length) throw new Error(voiceProblems.join("; "));
+  const facts = new Map(acquiredBase.facts.map((f) => [f.source, f]));
   for (const r of packet.receipts) facts.set(r.ref, { source: r.ref, content: JSON.stringify(r.data) });
   facts.set(source, { source, content: JSON.stringify(concept) });
-  const assets = new Map(base.assets.map((a) => [a.ref, a]));
+  const assets = new Map(acquiredBase.assets.map((a) => [a.ref, a]));
   for (const subject of packet.subjects)
     if (!assets.has(subject.imageUrl)) assets.set(subject.imageUrl, { ref: subject.imageUrl, kind: "unknown" });
   return planningContextSchema.parse({
-    ...base, facts: [...facts.values()], assets: [...assets.values()],
-    concept: { id: concept.id, source, premise: concept.premise, payoff: concept.payoff, formats, needs: concept.needs.map((need) => ({ ...need, required: need.required !== false })) },
+    ...acquiredBase, facts: [...facts.values()], assets: [...assets.values()],
+    concept: selectedConcept,
     subjects: packet.subjects.map((subject) => ({ handle: subject.handle, assetRef: subject.imageUrl, sourceRefs: subject.sourceRefs })),
   });
 }

@@ -1655,3 +1655,11 @@ The [operator path](plans/storyboard-harness/DELIVERY-RUNTIME-2026-09-27.md)
 preserves story selection before imagery and separate publishing consent.
 Research and the supplied TRD continue to guide experiments; no dataset-wide
 extraction, proven engagement lift or learned performance model is claimed here.
+
+
+The live concept/genome bridge also binds declared copy formulas: exact store
+definitions are acquired and source-pinned, concept hook/formula IDs survive
+typed compilation, output choices are scoped to the selected concept, and older
+reviews that omitted this voice require a new plan. This consumes reusable
+writing guidance without serving uncounted layouts or granting performance
+authority. It does not replace the planned corpus admission and taste evaluation.

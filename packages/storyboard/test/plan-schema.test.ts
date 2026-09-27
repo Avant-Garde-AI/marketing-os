@@ -149,3 +149,41 @@ describe("context-scoped planner output schema", () => {
     expect(review.options[0]?.verdicts.some((verdict) => verdict.reason.includes("unmet"))).toBe(true);
   });
 });
+
+
+describe("context-scoped copy voice", () => {
+  const voiced: PlanningContext = { ...context,
+    concept: { ...context.concept!, voice: { copyFormulaRefs: ["viewing-question"], hook: "Ask about the detail, then locate it" } },
+    copyFormulas: [{ id: "viewing-question", source: "brand:current", definition: "A viewing question followed by a concrete contextual observation" }],
+  };
+  it("requires the configured exact formula in the actual response schema and carries its definition to critique", async () => {
+    const output = plans();
+    output.storyboards.forEach((board) => { board.copyFormulaRef = "viewing-question"; });
+    let schema: z.ZodTypeAny | undefined;
+    const observed: unknown[] = [];
+    const review = await planStoryboards("Read a real detail", voiced, { generate: async (request) => {
+      if (request.task === "plan-storyboards") { schema = request.schema; return request.schema.parse(output); }
+      const data = request.data as { context: PlanningContext; storyboard: Storyboard };
+      observed.push({ definition: data.context.copyFormulas?.[0]?.definition, voice: data.context.concept?.voice, ref: data.storyboard.copyFormulaRef });
+      return request.schema.parse({ wholeStory: { kill: false, score: 0.7, reason: "The viewing question resolves through the actual context" } });
+    } });
+    const shape = (schema as z.AnyZodObject).shape.storyboards.element.shape;
+    expect(shape.copyFormulaRef.isOptional()).toBe(false);
+    expect(shape.copyFormulaRef.options).toEqual(["viewing-question"]);
+    expect(review.modelCalls).toBe(4);
+    expect(observed).toHaveLength(3);
+    expect(observed[0]).toEqual({ definition: voiced.copyFormulas![0]!.definition, voice: voiced.concept!.voice, ref: "viewing-question" });
+    for (const ref of [undefined, "generic-description"]) {
+      const invalid = structuredClone(output);
+      invalid.storyboards[0]!.copyFormulaRef = ref;
+      expect(() => schema!.parse(invalid)).toThrow();
+    }
+  });
+  it("fails before any model call when configured definitions or provenance are unavailable", async () => {
+    let called = false;
+    const neverCalled: StoryModel = { generate: async () => { called = true; throw new Error("Unexpected model call"); } };
+    await expect(planStoryboards("A real detail", { ...voiced, copyFormulas: [] }, neverCalled)).rejects.toThrow("unavailable copy formula definition");
+    await expect(planStoryboards("A real detail", { ...voiced, copyFormulas: [{ ...voiced.copyFormulas![0]!, source: "brand:foreign" }] }, neverCalled)).rejects.toThrow("unavailable definition source");
+    expect(called).toBe(false);
+  });
+});

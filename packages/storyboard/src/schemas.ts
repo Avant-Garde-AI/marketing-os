@@ -95,14 +95,48 @@ export const planningContextSchema = z.object({
       })
     )
     .max(40),
+  copyFormulas: z.array(z.object({ id: text, source: text, definition: text.max(12000) }).strict()).max(20).optional(),
   concept: z.object({
     id: text, source: text, premise: text, payoff: text,
     needs: z.array(z.object({ id: text, description: text, required: z.boolean() })).max(20),
     formats: z.array(z.enum(STORYBOARD_FORMATS)).min(1),
+    voice: z.object({ copyFormulaRefs: z.array(text).max(20).optional(), hook: text.max(12000).optional() }).optional(),
   }).optional(),
   subjects: z.array(z.object({ handle: text, assetRef: text, sourceRefs: z.array(text).min(2) })).max(6).optional(),
 });
 export type PlanningContext = z.infer<typeof planningContextSchema>;
+
+/** Copy rules are acquired creative definitions, never counted performance evidence. */
+export function copyFormulaProblems(context: PlanningContext): string[] {
+  const problems: string[] = [];
+  const formulas = context.copyFormulas ?? [];
+  const sources = new Set([context.brand.source, ...context.facts.map((fact) => fact.source)]);
+  if (new Set(formulas.map((formula) => formula.id)).size !== formulas.length)
+    problems.push("Copy formula definitions contain duplicate IDs");
+  for (const formula of formulas) {
+    if (!formula.definition?.trim()) problems.push(`Copy formula '${formula.id}' has no acquired definition`);
+    if (!sources.has(formula.source)) problems.push(`Copy formula '${formula.id}' cites an unavailable definition source`);
+  }
+  const configured = context.concept?.voice?.copyFormulaRefs ?? [];
+  const conceptFact = context.concept && context.facts.find((fact) => fact.source === context.concept!.source);
+  if (conceptFact) {
+    let acquired: unknown;
+    try { acquired = JSON.parse(conceptFact.content); } catch { /* A generic fact need not be a concept JSON document. */ }
+    if (acquired && typeof acquired === "object" && !Array.isArray(acquired)) {
+      const voice = (acquired as { voice?: { copyFormulaRefs?: unknown } }).voice;
+      const refs = voice?.copyFormulaRefs;
+      if (Array.isArray(refs) && refs.length &&
+          (refs.length !== configured.length || refs.some((ref) => typeof ref !== "string" || !configured.includes(ref)))) {
+        problems.push("Concept voice was not compiled; replan with acquired definitions");
+      }
+    }
+  }
+  if (new Set(configured).size !== configured.length) problems.push("Content concept voice contains duplicate copy formula references");
+  for (const ref of configured)
+    if (!formulas.some((formula) => formula.id === ref && formula.definition?.trim() && sources.has(formula.source)))
+      problems.push(`Content concept requires an unavailable copy formula definition: ${ref}`);
+  return problems;
+}
 export type NarrativePattern = z.infer<typeof patternSchema>;
 
 export const verdictSchema = z.object({

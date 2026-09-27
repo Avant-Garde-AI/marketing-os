@@ -48,6 +48,14 @@ When a content concept is supplied, check every required need against the actual
 facts and assets. A retrieved graph association is not evidence of room imagery,
 dimensions, artist process, or stock. Reject any option that papers over those
 missing inputs; explain which need is unmet.
+When concept.voice configures copyFormulaRefs, judge on-slide copy and caption
+against the selected copyFormulaRef's acquired definition and voice.hook. A
+formula ID is not enough: reject generic copy that ignores its declared shape
+or register. Judge the selected formula's requirements without importing a
+different formula's structure. Universal brand and factual rules still apply;
+report an actual conflict rather than silently overriding either requirement.
+These definitions are creative rules subordinate to brand, never
+counted evidence of performance or factual support for an assertion.
 Return a required wholeStory object with kill, reason and score, without any
 beatId or candidateId. Optional localFindings are an array of beat-specific
 objects with kill, reason, score and an exact beatId from this storyboard.

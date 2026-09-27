@@ -1464,6 +1464,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/voice.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/voice.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/storyboard/graph-context.ts"),
       targetPath: path.join(targetDir, "agents/lib/storyboard/graph-context.ts"),
       overwrite: "skip",

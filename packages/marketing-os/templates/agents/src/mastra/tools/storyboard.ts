@@ -7,6 +7,7 @@ import { imageDigest } from "../../../lib/storyboard/assets";
 import { planStoryboards } from "../../../lib/storyboard/plan";
 import { planningContextSchema } from "../../../lib/storyboard/schemas";
 import { compileGraphPlanningContext } from "../../../lib/storyboard/graph-context";
+import { bindConceptVoice } from "../../../lib/storyboard/voice";
 import { collectGraphSubjects, bindGraphSubjectReads, parseGraphFacetAliases } from "../../../lib/social/graph-subjects";
 import { readCatalogSubjects } from "../../../lib/social/catalog-subjects";
 import { conceptPath, parseConcept } from "../../../lib/social/concepts";
@@ -75,6 +76,7 @@ export const storyboardTools = {
         brand: { source: "brand.md", content: brand }, facts: [], patterns: [], priorPosts: [], assets: [],
       };
       base.brand = { source: "brand.md", content: brand };
+      const voice = await bindConceptVoice(base, concept, socialRepo);
       const graphConfigRaw = await socialRepo.readFile("social/reference/art-graph.json");
       const packet = await collectGraphSubjects({ concept: graphQuery, limit: limit ?? 4 }, {
         tenant: tenant.shop,
@@ -82,9 +84,10 @@ export const storyboardTools = {
         readCatalog: readCatalogSubjects,
         facetHandleAliases: parseGraphFacetAliases(graphConfigRaw, graphPrefix),
       });
-      const context = compileGraphPlanningContext(base, concept, packet, tenant.shop);
+      const context = compileGraphPlanningContext(voice.context, concept, packet, tenant.shop);
       const review = await planStoryboards(brief, context, createMastraStoryModel(model));
       const artifact = await persistStoryboardReview({ repo: socialRepo, tenant: tenant.shop, brief, context, review, sources: [
+        ...voice.sources,
         { path: CONTEXT_PATH, hash: baseRaw === null ? null : storyboardContentHash(baseRaw) },
         { path: conceptPath(conceptId), hash: storyboardContentHash(conceptRaw) },
         { path: "social/reference/art-graph.json", hash: graphConfigRaw === null ? null : storyboardContentHash(graphConfigRaw) },

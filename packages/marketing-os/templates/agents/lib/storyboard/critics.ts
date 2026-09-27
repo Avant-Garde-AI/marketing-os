@@ -49,6 +49,18 @@ When a content concept is supplied, check every required need against the actual
 facts and assets. A retrieved graph association is not evidence of room imagery,
 dimensions, artist process, or stock. Reject any option that papers over those
 missing inputs; explain which need is unmet.
+A concept expression's example role list is a recipe, not an additional hard
+need. An earned two-beat setup-to-payoff can contain the turn in its reveal;
+do not reject it solely for lacking a separately labeled turn. Apply this
+semantic standard consistently across every alternative.
+Ground rule claims in the actual supplied brand. Call a word explicitly banned
+only when its literal ban is present; never expand a ban list. A vague-superlative
+category may justify a taste rejection, but cite that actual category and explain
+the offending copy rather than inventing a literal ban.
+A clearly proposed room/wall placement is creative recommendation, not a claim
+of an observed room. The brand may require such advice. Require acquired facts
+for claims of actual room imagery, measured fit or dimensions, not for an
+honestly phrased placement suggestion. Do not invent a ban on recommendations.
 When concept.voice configures copyFormulaRefs, judge on-slide copy and caption
 against the selected copyFormulaRef's acquired definition and voice.hook. A
 formula ID is not enough: reject generic copy that ignores its declared shape

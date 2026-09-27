@@ -1598,7 +1598,7 @@ and empirical assumptions explicit.
 | R4.2 Per-dimension control | Adopt as policy; no simulated per-field sampling temperature | WP02/06, R6 |
 | R4.3 Nonempty freedom | Adopt within immutable hard constraints | WP01, G1 |
 | R4.4 NeuroGraph-owned enums | Adapt: local versioned vocabulary with optional external IDs until integration and semantics verified | WP01/14 |
-| R5.1 K>=4 | Initial configurable K=4; evaluate 3/4/6 and cost | WP06, R5 |
+| R5.1 K>=4 | First bounded production pilot uses K=3 (one planner plus up to three critic calls); evaluate 3/4/6 and cost before generalizing candidate count | WP06, R5 |
 | R5.2 Exactly one beat per shot | Replace with explicit realization mapping; full coverage still mandatory | WP01, R2/G0 |
 | R5.3 Patch-only reviser | Adopt allowlisted patches and dependency invalidation | WP07, R7 |
 | R5.4 Resumable stages | Adopt authenticated Mastra checkpoints and artifact revisions | WP08, G0/G8 |
@@ -1628,4 +1628,4 @@ the corrections or the measured corpus findings in this plan.
 
 ## Runtime delivery checkpoint (2026-09-27)
 
-The first source-backed still realization, durable human selection, ordered immutable social assets, full-carousel review and publish consent are implemented. See [the delivery runtime](plans/storyboard-harness/DELIVERY-RUNTIME-2026-09-27.md) for the exact operator path and current limits. Corpus admission, generated imagery/motion/spend adapters, persona MCP and creative-outcome integration retain the boundaries described above. Deployment/test evidence must not be presented as a human approval or an engagement-efficacy result.
+The first source-backed still realization, durable human selection, ordered immutable social assets, full-carousel review and publish consent are implemented. The bounded production pilot uses three narrative alternatives; this does not complete the planned 3/4/6 candidate-count evaluation. See [the delivery runtime](plans/storyboard-harness/DELIVERY-RUNTIME-2026-09-27.md) for the exact operator path and current limits. Corpus admission, generated imagery/motion/spend adapters, persona MCP and creative-outcome integration retain the boundaries described above. Deployment/test evidence must not be presented as a human approval or an engagement-efficacy result.

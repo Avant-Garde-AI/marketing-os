@@ -16,7 +16,7 @@ import type { ComposeSpec, ComposeElement } from "../design-surfaces/types";
 import { getBrandInstructions } from "../../src/mastra/brand/store";
 import { loadBrandTokens } from "../../src/mastra/tools/design-surfaces";
 import { readSelectedStoryboard } from "./reviews";
-import { imageDigest, saveSocialImage } from "./assets";
+import { imageDigest, saveSocialImage, validateSocialAssetBase } from "./assets";
 import type { Storyboard } from "./types";
 import type { PlanningContext } from "./schemas";
 
@@ -52,6 +52,11 @@ export function validateRealization(story: Storyboard, context: PlanningContext,
     if (beat.brief.seconds) throw new Error("Motion requires a separately quoted imagery adapter");
     if (`${l.width}:${l.height}` !== size) throw new Error("Carousel slide dimensions must agree");
     if (l.width / l.height < 0.8 || l.width / l.height > 1.91) throw new Error("Unsupported Instagram image aspect");
+    if (beat.brief.aspect) {
+      const parts = beat.brief.aspect.split(":").map(Number);
+      if (parts.length !== 2 || !parts[0] || !parts[1] || Math.abs(l.width / l.height - parts[0] / parts[1]) > 0.01)
+        throw new Error("Layout aspect differs from selected visual brief");
+    }
     if (!beat.brief.asset || beat.brief.sourcing === "generated" || beat.brief.asset.use === "mockup-input")
       throw new Error("This adapter requires an existing source asset; generation and mockups require a separately quoted imagery adapter");
     if (!context.assets.some(a => a.ref === beat.brief.asset!.ref)) throw new Error("Asset is absent from reviewed context");
@@ -134,6 +139,7 @@ export function createRealizationAction(): RuntimeAction<RealizationParams> {
       const m = await material(p); const tenant = getTenant();
       const base = process.env.MOS_AGENTS_PUBLIC_URL;
       if (!base) throw new Error("Missing public deployment URL");
+      validateSocialAssetBase(base);
       // Resume only an exact completed execution. New consent or material gets a new realization.
       const receiptPath = `social/storyboards/${p.reviewId}/realizations/${m.previewHash}.json`;
       const previous = await socialRepo.readFile(receiptPath);

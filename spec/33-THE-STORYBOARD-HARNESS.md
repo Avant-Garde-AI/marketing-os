@@ -927,3 +927,41 @@ ports and leave both implementations empty for now. Missing integrations remain
 explicitly unavailable; the social agent retains independent planning and human
 review. Predictions and simulated responses are not observed business outcomes,
 and neither integration changes existing approval authority.
+# Runtime delivery checkpoint — 2026-09-27
+
+The client-owned scaffold now persists a tenant-bound narrative review at
+`social/storyboards/{reviewId}/review.json`. Its content hash binds the brief,
+context, three alternatives, critique, source artifact hashes and tenant. The
+signed `/review/storyboard/{reviewId}` page is a read-only shortlist. Possession
+of its URL is never approval authority.
+
+`storyboard.select` uses the existing Action gate to record a surviving option
+and human agreement with a real eliminated alternative's critique. Context,
+brand or source-artifact changes refuse selection/realization. A record of a
+model recommendation alone never becomes a selected storyboard.
+
+The first realization adapter is deliberately source-backed still imagery.
+`social_storyboard_realization_prepare` reads reviewed Shopify source bytes and
+prepares explicit beat layouts/crops with source hashes. The governed
+`social.storyboard_realize` action composes one Penpot board per beat, exports
+each in exact order, verifies dimensions, and persists full-hash JPEGs through
+the tenant's StoreRepo. Source image coordinates are explicit; resizing
+contains rather than silently cropping or stretching. A crop of a framed
+render remains a derived crop, never a bare master or mockup input. Generated
+imagery, mockup inputs and motion refuse until separately quoted adapters exist.
+
+The post's `renderedSequence` stores storyboard/review hashes and ordered
+`{beatId, boardName, url, sha256, width, height}` slides. The final social review
+page shows every slide; publish consent covers the complete sequence, copy,
+channel, destination and time. Instagram creates inert carousel children and a
+parent, and publishes only through the existing approved executor. Other
+adapters without sequence support refuse. Legacy single-image posts retain
+their prior consent material.
+
+This is a delivery implementation, not an efficacy claim. Unadmitted corpus
+proposals remain hypotheses. Acceptance still requires human narrative choice,
+agreement with an elimination, applicable inspected corpus support, and human
+review of the rendered result. NeuroGraph persona and creative-outcome seams
+remain optional/unimplemented as requested. Hosted public image reads use the
+tenant-keyed working store; a future hosted git-only install must provide a
+trusted public tenant/repo resolver before adopting this asset route.

@@ -884,11 +884,6 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
-      templatePath: path.join(templateDir, "agents/app/surfaces/page.tsx"),
-      targetPath: path.join(targetDir, "agents/app/surfaces/page.tsx"),
-      overwrite: "skip",
-    },
-    {
       templatePath: path.join(templateDir, "agents/components/calendar/calendar-view.tsx"),
       targetPath: path.join(targetDir, "agents/components/calendar/calendar-view.tsx"),
       overwrite: "skip",
@@ -1684,21 +1679,6 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
-      templatePath: path.join(templateDir, "agents/src/mastra/tools/offer-design.ts"),
-      targetPath: path.join(targetDir, "agents/src/mastra/tools/offer-design.ts"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(templateDir, "agents/src/mastra/tools/offer-performance.ts"),
-      targetPath: path.join(targetDir, "agents/src/mastra/tools/offer-performance.ts"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(templateDir, "agents/src/mastra/tools/offer-review.ts"),
-      targetPath: path.join(targetDir, "agents/src/mastra/tools/offer-review.ts"),
-      overwrite: "skip",
-    },
-    {
       templatePath: path.join(templateDir, "agents/src/mastra/tools/semantics.ts"),
       targetPath: path.join(targetDir, "agents/src/mastra/tools/semantics.ts"),
       overwrite: "skip",
@@ -1792,6 +1772,72 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/app/review/storyboard/[id]/page.tsx"),
       targetPath: path.join(targetDir, "agents/app/review/storyboard/[id]/page.tsx"),
+      overwrite: "skip",
+    },
+    // Current runtime additions from the offers package.
+    {
+      templatePath: path.join(templateDir, "agents/app/offers/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/offers/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/attribution-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/attribution-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/artifacts.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/artifacts.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/repo.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/repo.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/register-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/register-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/decision.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/decision.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/gates.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/gates.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/tools.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/tools.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/manifest.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/manifest.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/platform-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/platform-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/offers.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/offers.ts"),
       overwrite: "skip",
     },
   ];

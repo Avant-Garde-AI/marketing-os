@@ -1624,3 +1624,8 @@ the original TRD SHA-256 is
 These identify the supplied inputs; the archived Markdown copies may normalize
 terminal newlines. Neither source is rewritten to imply it originally contained
 the corrections or the measured corpus findings in this plan.
+
+
+## Runtime delivery checkpoint (2026-09-27)
+
+The first source-backed still realization, durable human selection, ordered immutable social assets, full-carousel review and publish consent are implemented. See [the delivery runtime](plans/storyboard-harness/DELIVERY-RUNTIME-2026-09-27.md) for the exact operator path and current limits. Corpus admission, generated imagery/motion/spend adapters, persona MCP and creative-outcome integration retain the boundaries described above. Deployment/test evidence must not be presented as a human approval or an engagement-efficacy result.

@@ -252,7 +252,7 @@ importers:
     dependencies:
       '@avant-garde/design-loop':
         specifier: ^0.1.0
-        version: 0.1.0
+        version: 0.1.0(supports-color@7.2.0)
       '@avant-garde/skill-kit':
         specifier: workspace:*
         version: link:../../skill-kit
@@ -265,13 +265,13 @@ importers:
         version: 22.19.15
       tsup:
         specifier: ^8.0.2
-        version: 8.5.1(postcss@8.5.8)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
+        version: 8.5.1(postcss@8.5.8)(supports-color@7.2.0)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.9.0)
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
       vitest:
         specifier: ^2.0.0
-        version: 2.1.9(@types/node@22.19.15)
+        version: 2.1.9(@types/node@22.19.15)(supports-color@7.2.0)
 
   packages/skills/social-media:
     dependencies:
@@ -3060,11 +3060,11 @@ packages:
 
 snapshots:
 
-  '@avant-garde/design-loop@0.1.0':
+  '@avant-garde/design-loop@0.1.0(supports-color@7.2.0)':
     dependencies:
       zod: 3.25.76
     optionalDependencies:
-      '@modelcontextprotocol/sdk': 1.29.0(zod@3.25.76)
+      '@modelcontextprotocol/sdk': 1.29.0(supports-color@7.2.0)(zod@3.25.76)
       pixelmatch: 6.0.0
       playwright: 1.60.0
       pngjs: 7.0.0

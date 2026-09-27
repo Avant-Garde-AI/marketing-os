@@ -149,6 +149,7 @@ export function nextPost(
   // Changing authored content requires the runtime to realize and review again.
   if (existing?.renderedSequence && MATERIAL_FIELDS.some((field) => JSON.stringify(existing[field] ?? null) !== JSON.stringify(next[field] ?? null))) {
     delete next.renderedSequence;
+    delete next.designSurface;
     next.status = "proposed";
   }
 
@@ -164,7 +165,7 @@ export function nextPost(
       delete next.approval;
       // Back to the last honest state: the creative is still bound, so
       // asset_ready — the card re-arms from there.
-      next.status = next.designSurface ? "asset_ready" : "proposed";
+      next.status = next.designSurface || next.renderedSequence ? "asset_ready" : "proposed";
       delete next.scheduledAt;
       if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
       consentCleared = true;

@@ -10,12 +10,17 @@ export function socialAssetPath(digest: string): string {
   return `social/assets/${digest}.jpeg.b64`;
 }
 
+export function validateSocialAssetBase(base: string): void {
+  const url = new URL(base);
+  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash || url.port ||
+      url.hostname === "localhost" || !url.hostname.includes(".") || /^\d+\.\d+\.\d+\.\d+$/.test(url.hostname) || url.hostname.includes(":"))
+    throw new Error("Immutable social assets require a public HTTPS deployment URL");
+}
+
 /** Content addressed bytes are tenant scoped. The route verifies the full hash on every read. */
 export async function saveSocialImage(repo: StoreRepo, shop: string, bytes: Uint8Array, base: string) {
   if (!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)) throw new Error("Invalid tenant shop");
-  const publicBase = new URL(base);
-  if (publicBase.protocol !== "https:" || publicBase.username || publicBase.password || publicBase.search || publicBase.hash)
-    throw new Error("Immutable social assets require a public HTTPS deployment URL");
+  validateSocialAssetBase(base);
   if (bytes[0] !== 0xff || bytes[1] !== 0xd8) throw new Error("Social asset must be a JPEG");
   const sha256 = imageDigest(bytes);
   const path = socialAssetPath(sha256);

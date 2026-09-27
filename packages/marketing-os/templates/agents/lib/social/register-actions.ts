@@ -17,6 +17,7 @@ import { registerAction } from "../actions/registry";
 import { getDesignSurfaceAdapter, isDesignSurfacesConfigured } from "../design-surfaces/config";
 import { syncPostIndex } from "./index-sync";
 import { getTenant } from "../tenant-context";
+import { socialReviewLink } from "./review-links";
 import type { SocialPost } from "./types";
 
 /**
@@ -84,6 +85,7 @@ export function socialActionDeps(): SocialActionDeps {
     repo: socialRepo,
     adapterFor: (channel) => adapterFor(channel),
     assetUrl: socialAssetUrl,
+    reviewUrl: (post) => socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
     surfaceRevision: socialSurfaceRevision,
     onPostSaved,
   };

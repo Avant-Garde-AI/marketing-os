@@ -27,6 +27,13 @@ describe("ordered realized assets", () => {
   const p=post(); const action=createSocialActions({repo:{readFile:async()=>serializePost(p),writeFile:async()=>{},list:async()=>[]},assetUrl:()=>{throw Error("legacy used");},adapterFor:()=>({channel:"threads",publish:async()=>({platformId:"",permalink:""})})}).schedulePost;
   await expect(action.preview({postId:p.id,scheduledAt:"2099-01-01T00:00:00Z"})).rejects.toThrow("does not support");
  });
+ it("opens the full sequence review from schedule and immediate publish previews", async () => {
+  const p=post(); const review="https://console.example.com/review/social/test";
+  const actions=createSocialActions({repo:{readFile:async()=>serializePost(p),writeFile:async()=>{},list:async()=>[]},assetUrl:()=>slide(1).url,reviewUrl:()=>review,adapterFor:()=>({channel:"instagram",publish:async()=>({platformId:"",permalink:""}),publishSequence:async()=>({platformId:"",permalink:""})})});
+  const scheduled=await actions.schedulePost.preview({postId:p.id,scheduledAt:"2099-01-01T00:00:00Z"});
+  expect(scheduled.previewUrl).toBe(review); expect(scheduled.summary).toContain("all 2 ordered slides");
+  expect((await actions.publishPost.preview({postId:p.id})).previewUrl).toBe(review);
+ });
  it("creates inert children then parent in order, never publishes from container helper", async () => {
   const calls: {path:string,params:URLSearchParams}[]=[];
   vi.stubGlobal("fetch",vi.fn(async (url: URL, init: RequestInit) => {

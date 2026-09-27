@@ -54,6 +54,8 @@ export interface SocialActionDeps {
    * design-surface export route). Throws when the post has no surface bound.
    */
   assetUrl: (post: SocialPost) => string;
+  /** Human review of every slide and the complete caption (runtime signed link). */
+  reviewUrl?: (post: SocialPost) => string;
   /**
    * Current Penpot revision (revn) of the post's bound Design Surface — the
    * canvas-edit detector (spec 23 `edited` fallback): edits bump the revn
@@ -237,13 +239,13 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
         warnings.push(`reschedules from ${post.scheduledAt} — the previous approval is replaced`);
       }
       return {
-        summary: `Publish to ${post.channel} at ${p.scheduledAt} — the cron ships it with no second touch. The card image IS the final creative.`,
+        summary: `Publish to ${post.channel} at ${p.scheduledAt} — the cron ships it with no second touch. ${post.renderedSequence ? `Open Preview and review all ${post.renderedSequence.slides.length} ordered slides and the complete caption before approving.` : "Open Preview to inspect the final creative."}`,
         rows: [
           ...baseRows(post),
           { label: "Publish time", value: p.scheduledAt },
           { label: "Undo", value: "social.cancel_post any time before publish" },
         ],
-        previewUrl: asset,
+        previewUrl: post.renderedSequence ? deps.reviewUrl?.(post) ?? asset : asset,
         ...(warnings.length ? { warnings } : {}),
         previewHash: hashMaterial({ kind: "social.schedule_post", material: publishMaterial(scheduled) }),
       } satisfies ActionPreview;
@@ -313,7 +315,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
           { label: "Publish time", value: "immediately on approval" },
           { label: "Undo", value: "none after publish (delete on-platform manually)" },
         ],
-        previewUrl: asset,
+        previewUrl: post.renderedSequence ? deps.reviewUrl?.(post) ?? asset : asset,
         ...(post.status === "failed" && post.failure
           ? { warnings: [`retries a failed publish (last error: ${post.failure})`] }
           : {}),

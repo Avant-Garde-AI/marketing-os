@@ -22,6 +22,7 @@ const transitionSchema = z
     observableChange: text,
     operation: z.enum([
       "addition",
+      "replacement",
       "removal",
       "reveal",
       "reframe",

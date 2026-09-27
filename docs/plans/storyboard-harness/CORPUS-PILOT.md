@@ -102,6 +102,16 @@ example of beat 2 adding something beat 1 did not. The model's language of a
 and its `addition` operation underdescribes replacement of the focal product.
 Those are review findings, not verified pattern labels.
 
+The first result exposed a vocabulary omission: `addition` did not distinguish
+a new focal product replacing the previous one. A v2 schema/prompt revision
+added `replacement` with a concrete decision rule. A bounded re-run of this
+same carousel labeled both adjacent changes as replacements and described
+continuity as black-and-white runner **photos** plus the orange line, avoiding
+the stronger single-photograph claim. This one correction supports retaining
+`replacement` as a provisional observation term; it does not validate the
+whole taxonomy or prove engagement effects. The revised unreviewed ledger is
+stored beside the first under `v2-replacement-ledger.jsonl`.
+
 This one post proves the acquisition-to-v2 path can carry ordered real slides;
 it does not establish a reliable narrative taxonomy, comparative performance
 or human approval of a new storyboard. Likes/comments were retained in the
@@ -248,6 +258,50 @@ The CLI uses the active gcloud account; it captures a short-lived access token i
 memory and passes it only to Google's Vertex endpoint. `gcloud auth login` and
 Application Default Credentials are distinct, so this pilot does not assume that
 signing into gcloud populated ADC. Never print or persist the token.
+
+## Bounded source recovery and sequence calibration — 2026-09-24
+
+The reusable recovery path now binds a one-post Apify adapter, allowlisted CDN
+media mirror, content-addressed GCS writer, and an explicit `--execute` CLI.
+The frozen source slice still contains 24 carousels; this run selected three
+specific entries by index, each with a $0.50 actor-run ceiling. It did **not**
+start a 24-post batch. Provider responses, media bytes, snapshots and extraction
+ledgers are private research objects under
+`gs://arthaus-creative-corpus/instagram-organic/2026-09-24/`.
+
+| Post / source occurrence | Acquisition | V2 extraction | Observed sequence, pending review |
+| --- | --- | --- | --- |
+| `DTbusF1GO7X` / `kevinruss` | 3/3 ordered images; first bounded operator probe | 3 observations, 2 transitions, 3 beats | Merch focal item changes shirt → hoodie → accessories while an orange route motif continues. The initial `addition` labels were revised to `replacement` after checking the pixels. |
+| `DPukaNjEnC2` / `teaganwh` | 6/6 ordered images; actual owner `jessenarens`, source artist verified in `coauthorProducers` | 6 observations, 5 transitions, 6 beats | Gallery tour moves across walls and then reframes one sculpture. The model first hit `MAX_TOKENS` with a 4,096 output cap; an 8,192-cap retry completed from the same verified snapshot. |
+| `DQ9rwsbCcfB` / `pascalblanche` | 10/10 ordered images | 10 observations, 9 transitions, 4 beats | Book showcase moves from spine and cover details to interior spreads. Four beats cover ten slides, supporting the distinction between a slide and a narrative beat. |
+
+The medium post originally failed an owner-only attribution check. A read-only
+inspection of the completed provider run showed the requested artist as a
+coauthor, not the owning account. The adapter now accepts an exact owner or
+explicit coauthor match, stores both roles in the snapshot, and rejects a mere
+tag. The same provider dataset was replayed for that post after the correction;
+no second paid actor run was needed. Its first reusable GCS upload also exposed
+an OS temp-directory permission assumption, corrected by staging inside the
+caller-owned private cache.
+
+The three extracted sequences are **schema-valid and unreviewed**, not three
+approved creative patterns. I visually checked selected slides and found the
+medium gallery-tour description plausible. The long model output describes
+black rectangles over book art as "censorship bars" and calls the sequence
+"unboxing-style" although no packaging is visible in the checked slides;
+those are interpretive overreaches for a human reviewer to adjudicate. No
+engagement metric was supplied to the vision passes, and these examples do not
+establish that any transition causes performance. Human review, an intentionally
+ordinary/weak contrast sample, and a held-out set still precede clustering or
+pattern admission. The [sequence review packet](SEQUENCE-REVIEW-2026-09-24.md)
+places the three proposed arcs and disputed readings next to their source posts.
+
+The local manifests are `/private/tmp/storyboard-recovery-v2-{medium,long}-manifest.json`;
+the v2 ledgers are `/private/tmp/storyboard-{medium,long}-v2-ledger.jsonl` and
+copies under each post's private GCS prefix. `snapshot.json` in GCS omits local
+cache paths; cross-session rehydration is still required before another model
+run. The recovery CLI does not orchestrate videos, mixed-media carousels,
+concurrent workers or the complete corpus.
 
 Outputs are local research artifacts. They do not update store context, genome,
 posts or publish consent. Reviewed pattern admission and merchant-facing writes

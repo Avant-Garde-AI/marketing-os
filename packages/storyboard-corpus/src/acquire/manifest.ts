@@ -51,6 +51,8 @@ export const corpusSnapshotSchema = z
         postId: text,
         url: z.string().url().optional(),
         account: text.optional(),
+        ownerAccount: text.optional(),
+        attribution: z.enum(["owner", "coauthor"]).optional(),
         publishedAt: z.string().datetime().optional(),
       })
       .strict(),

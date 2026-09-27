@@ -671,6 +671,39 @@ One extracted sequence cannot justify a reusable pattern, outcome claim or
 counted genome update. The bounded recovery run and its limitations are in the
 pilot report.
 
+### 10.11 Observation vocabulary correction — 2026-09-24
+
+The first carousel showed that `addition` is too coarse when a focal product
+disappears and another occupies its role while a route motif persists. V2 now
+has `replacement` as a separate observable transition operation. A re-run of
+that same post used it for both shirt-to-hoodie and hoodie-to-accessories
+changes and described the runner photos without asserting they are one
+continuous photograph. This revises the *observation vocabulary*, not the
+creative thesis: it remains provisional pending diverse carousel review.
+
+### 10.12 Recovery attribution and sequence units — 2026-09-24
+
+The next frozen carousel exposed an attribution distinction that the first
+recovery contract missed. `DPukaNjEnC2` appeared in the `teaganwh` occurrence,
+but the fresh provider record names `jessenarens` as owner and `teaganwh` as an
+explicit coauthor. Exact shortcode plus owner-only equality would falsely
+reject it; accepting any tagged artist would be too loose. The recovery
+adapter now requires the source handle to match either the owner or a recorded
+coauthor. `CorpusSnapshot v2` retains the source occurrence, actual owner and
+attribution role separately, with the raw provider response as order and
+attribution evidence.
+
+Complete 6- and 10-slide carousels were then extracted from actual ordered
+pixels. The six-slide gallery tour changes wall views and later reframes a
+sculpture; the ten-slide book showcase moves from exterior details to interior
+spreads. The latter produced ten slide observations and four proposed narrative
+beats. A presentation unit and a beat therefore cannot be forced into a 1:1
+mapping. This is a concrete calibration example for the plan's many-to-many
+realization map, not a validated story archetype. All three carousel outputs
+remain unreviewed; the book output also uses unsupported intent language
+("unboxing-style" and "censorship bars") that a reviewer must correct or
+reject. The pilot report records exact artifacts and failure/retry history.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

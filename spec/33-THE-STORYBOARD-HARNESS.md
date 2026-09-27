@@ -1134,3 +1134,12 @@ The transport wire version is the string literal `planning-v1`. Gemini rejected
 a numeric literal converted to an enum before generation; its schema enum
 values must be strings. This compatibility correction changes no need
 decision or public IR field and adds no model retry.
+
+The wire-compatible production rehearsal completed its full technical contract,
+but manual review found two critic authority errors: selectively treating an
+expression's three-role recipe as a hard beat count, and claiming an unlisted
+word was literally banned while also rejecting honest placement advice. Critic
+guidance now separates recipes from hard needs, literal bans from taste
+categories, and recommendations from factual room/fit claims. The store's
+draft concept explicitly permits an earned two-beat reveal. No verdict is
+rewritten after output; this remains guidance rather than a calibrated judge.

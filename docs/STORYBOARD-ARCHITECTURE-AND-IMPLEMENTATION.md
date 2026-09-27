@@ -1663,3 +1663,12 @@ typed compilation, output choices are scoped to the selected concept, and older
 reviews that omitted this voice require a new plan. This consumes reusable
 writing guidance without serving uncounted layouts or granting performance
 authority. It does not replace the planned corpus admission and taste evaluation.
+
+Production planning now uses an internal versioned provider transport with
+required need-ID-keyed assessments, including optional unmet/unknown needs.
+Validated model-authored values project losslessly into the unchanged public
+storyboard array. This avoids omitted array members without defaulting decisions
+or adding retries. Durable reads compare brand wrappers using the planning
+schema's outer-whitespace trim; actual brand content and exact source pins still
+invalidate stale material. These are runtime reliability corrections, not proof
+of comparative creative quality.

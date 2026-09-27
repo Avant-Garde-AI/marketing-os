@@ -1109,3 +1109,23 @@ rejected, not shortened or approved after generation. Planner guidance now
 explicitly prefers the shortest complete arc and allows an earned two-beat
 reveal, placing remaining caption/room advice on its last meaningful beat.
 An extra beat must earn new information; slide count is not narrative quality.
+
+
+Production need-assessment transport correction: the provider omitted an optional
+need from every response despite the full assessment array's exact-length rule.
+Planning now uses an internal version-1 transport with a required
+`needAssessmentsById` object for selected concepts. Every exact configured need
+ID is a required property, including optional needs that are unmet or unknown.
+Values contain only model-authored `{met, sourceRefs, reason}`. Strict validation
+refuses omitted/foreign keys, extra identity fields and duplicate context IDs.
+
+A dedicated decoder projects validated values into the unchanged public
+`needAssessments` array in concept order. It changes representation only: no
+assessment, boolean, citation or explanation is populated or repaired after
+model output. Required needs retain their grounding gate; optional unmet needs
+remain explicit. No retries, additional model calls or Zod transform effects
+were added. The model adapter still receives native object schemas, which expose
+required properties even where a schema description omits array length rules.
+As with normal parsed JSON objects, duplicate raw property occurrences are not
+observable after parsing; the duplicate guard applies to configured need IDs,
+and foreign/extra fields are rejected by the transport schema.

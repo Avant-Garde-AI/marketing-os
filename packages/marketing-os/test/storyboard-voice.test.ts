@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { bindConceptVoice } from "../templates/agents/lib/storyboard/voice";
 import type { PlanningContext } from "../templates/agents/lib/storyboard/schemas";
 import type { PlanningConcept } from "../templates/agents/lib/storyboard/graph-context";
+import { persistStoryboardReview, readStoryboardReview, storyboardContentHash } from "../templates/agents/lib/storyboard/reviews";
 
 const base: PlanningContext = { brand: { source: "brand.md", content: "Keep writing concrete" }, facts: [], patterns: [], priorPosts: [], assets: [] };
 const concept: PlanningConcept = { id: "a-detail", premise: "Notice a detail", payoff: "Understand its context", status: "draft", needs: [], expressions: { carousel: {} }, voice: { copyFormulaRefs: ["notice-and-explain"], hook: "Ask what changed" } };
@@ -31,7 +32,7 @@ describe("concept voice acquisition", () => {
   it("binds only declared writing definitions with the acquired genome receipt, without importing uncounted layouts", async () => {
     const result = await bindConceptVoice(base, concept, repo(genome));
     const hash = createHash("sha256").update(genome).digest("hex");
-    expect(result.sources).toEqual([{ path: "social/reference/genome.md", hash }]);
+    expect(result.sources).toEqual([{ path: "social/reference/genome.md", hash: storyboardContentHash(genome) }]);
     expect(result.context.copyFormulas?.map((formula) => formula.id)).toEqual(["notice-and-explain"]);
     const definition = result.context.copyFormulas![0]!;
     expect(definition.source).toBe(`copy-formulas:${hash}`);
@@ -63,5 +64,18 @@ describe("concept voice acquisition", () => {
     const after = await bindConceptVoice(base, concept, repo(genome.replace("visible detail", "verified material detail")));
     expect(before.sources[0]!.hash).not.toBe(after.sources[0]!.hash);
     expect(before.context.copyFormulas![0]!.source).not.toBe(after.context.copyFormulas![0]!.source);
+  });
+  it("round-trips an acquired voice through durable review reads and refuses subsequent source edits", async () => {
+    const files = new Map<string, string>([["social/reference/genome.md", genome]]);
+    const store = { readFile: async (path: string) => files.get(path) ?? null,
+      writeFile: async (path: string, content: string) => { files.set(path, content); } };
+    const bound = await bindConceptVoice(base, concept, store);
+    const artifact = await persistStoryboardReview({ repo: store, tenant: "test.myshopify.com", brief: "Synthetic persistence check",
+      context: bound.context, sources: bound.sources, review: { status: "no-survivor", reviewHash: "a".repeat(64),
+        options: ["a", "b", "c"].map(id => ({ storyboard: { id, format: "single" as const, premise: "Persistence fixture", payoff: "No accepted creative", beats: [{ id: "one", role: "payoff" as const, assertion: "Test fixture", brief: { shows: "Test", feels: "Test", avoid: ["production use"], sourcing: "generated" as const }, evidence: [{ claim: "Writing guidance", origin: "owner" as const, source: bound.context.copyFormulas![0]!.source }] }], continuity: [] }, verdicts: [{ kill: true, reason: "Synthetic persistence fixture" }], evidenceStatus: "hypothesis" as const, status: "eliminated" as const })),
+        modelCalls: 0, imageryCalls: 0, missing: [] } });
+    await expect(readStoryboardReview(store, artifact.reviewId, artifact.reviewHash, { tenant: artifact.tenant })).resolves.toEqual(artifact);
+    files.set("social/reference/genome.md", genome + "\nEdited guidance");
+    await expect(readStoryboardReview(store, artifact.reviewId, artifact.reviewHash, { tenant: artifact.tenant })).rejects.toThrow("Planning source changed");
   });
 });

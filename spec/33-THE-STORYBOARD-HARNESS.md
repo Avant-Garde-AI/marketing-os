@@ -1089,3 +1089,9 @@ populate missing voice or infer formula definitions from prose. Only the
 selected formula's structural rules apply; requirements from a different
 formula are not imported. Universal brand and factual constraints still bind,
 and real conflicts must be reported rather than silently reconciled.
+
+The runtime genome binding uses the existing durable review content-hash
+convention for `sources[].hash`; its raw-byte SHA remains the formula receipt
+identifier. Mixing those conventions makes an unchanged acquired source fail
+review reads. A save/read/edit regression now covers this seam: unchanged
+guidance loads, and edited guidance requires a fresh plan.

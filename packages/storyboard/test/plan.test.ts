@@ -197,3 +197,23 @@ describe("narrative judgment contract", () => {
     expect(shape.localFindings.unwrap().element.shape.beatId.options).toEqual(["setup", "turn"]);
   });
 });
+
+
+it("sends two-beat setup→payoff candidates to independent critique rather than treating role labels as quality", async () => {
+  const twoBeat = { ...structuredClone(story), beats: story.beats.map((beat, i) => ({ ...structuredClone(beat), role: i ? "payoff" as const : "setup" as const })) };
+  const alternatives = { storyboards: [twoBeat, { ...structuredClone(twoBeat), id: "two" }, { ...structuredClone(twoBeat), id: "three" }] };
+  const judged: string[] = [];
+  const review = await planStoryboards("Detail to context", context, model((task, data) => {
+    if (task === "plan-storyboards") return alternatives;
+    const candidate = (data as { storyboard: Storyboard }).storyboard;
+    judged.push(candidate.id);
+    return { wholeStory: { kill: candidate.id === "two", score: 0.6, reason: candidate.id === "two"
+      ? "The second beat repeats the framed-object assertion; it needs a different reader discovery"
+      : "The changed viewing distance resolves the edge question" } };
+  }));
+  expect(judged).toEqual(["one", "two", "three"]);
+  expect(review.modelCalls).toBe(4);
+  expect(review.options[1]?.status).toBe("eliminated");
+  expect(review.options[1]?.verdicts[0]?.reason).toContain("repeats");
+  expect(review.options[0]?.storyboard.beats.map((beat) => beat.role)).toEqual(["setup", "payoff"]);
+});

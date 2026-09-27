@@ -227,6 +227,10 @@ slide carousel that runs setup → setup → setup is a catalogue, and naming th
 roles catches the simplest structural failure. The narrative critic must still
 judge the meaning. Planning now requires `transition.change`, `why`, and
 `patternRefs` on every beat after the first; unsupported moves remain hypotheses.
+A two-beat setup → payoff can combine its turn and resolution in the second
+beat. A complete incoming transition admits that shape to independent critique
+without requiring another slide or a renamed role; it does not establish that
+the change has narrative value.
 
 ### 2.2 The VisualBrief is instruction, not geometry
 
@@ -1029,3 +1033,15 @@ Generated/either branches retain their existing flexibility, including generated
 single-image planning with no source assets. Structural validation independently
 refuses missing store bindings and still durations when inspecting prior reviews.
 The public IR is unchanged, and no fields are populated after the model returns.
+
+
+Production two-beat arc correction: the structural role rule rejected all
+setup→payoff pairs even when the payoff combined a real reveal and resolution.
+That rule confused a role label with narrative meaning. A two-beat setup→payoff
+now proceeds to independent critique when its second beat carries a complete,
+nonempty incoming transition. The first beat still omits a transition; all-setup
+sequences and longer setup-only chains ending in payoff retain their existing
+structural rejection. The implementation neither inserts a redundant middle
+slide nor renames returned beats. Structural admission establishes a candidate
+arc shape, never proof of story quality: semantic change, unsupported placement
+claims, fidelity and swipe value remain the independent critic/human's judgment.

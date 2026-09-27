@@ -301,8 +301,9 @@ places the three proposed arcs and disputed readings next to their source posts.
 The local manifests are `/private/tmp/storyboard-recovery-v2-{medium,long}-manifest.json`;
 the v2 ledgers are `/private/tmp/storyboard-{medium,long}-v2-ledger.jsonl` and
 copies under each post's private GCS prefix. `snapshot.json` in GCS omits local
-cache paths; cross-session rehydration is still required before another model
-run. The recovery CLI does not orchestrate videos, mixed-media carousels,
+cache paths. Cross-session rehydration is now available for named ready still
+carousels through `storyboard-corpus-rehydrate`. The recovery CLI does not
+orchestrate videos, mixed-media carousels,
 concurrent workers or the complete corpus.
 
 ## Lower-tier contrast and extraction reliability — 2026-09-24
@@ -352,3 +353,22 @@ new still cases and the mixed-media hold.
 Outputs are local research artifacts. They do not update store context, genome,
 posts or publish consent. Reviewed pattern admission and merchant-facing writes
 continue through their existing governed paths.
+
+## Cross-session media rehydration — 2026-09-24
+
+The private `candidate.json` objects now form a handoff from acquisition to a
+later extraction worker. A bounded rehydration command reads only explicitly
+named posts from one private GCS prefix, rejects a candidate whose snapshot
+points elsewhere, verifies source identity and each content-addressed SHA-256
+image, and creates a mode-0600 local v2 manifest. It has no Apify, Instagram or
+model call. At most three posts and an aggregate byte ceiling are required;
+mixed/video and incomplete snapshots are refused. This is a local worker seam,
+not a production queue or a broad corpus backfill.
+
+A fresh-cache check rehydrated `DcOzDxkkkUT` from
+`gs://arthaus-creative-corpus/instagram-organic/2026-09-24/recovery-v2/`.
+The command reported one ready candidate, and the v2 CLI dry run reported one
+source-complete, locally available post. No extraction model was called in this
+check. The output remains private under
+`/private/tmp/storyboard-rehydration-live-20260924/ready.json` and is not a
+counted pattern.

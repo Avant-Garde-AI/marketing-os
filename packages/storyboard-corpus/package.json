@@ -23,6 +23,10 @@
     "./cli-recover": {
       "types": "./dist/cli-recover.d.ts",
       "default": "./dist/cli-recover.js"
+    },
+    "./cli-rehydrate": {
+      "types": "./dist/cli-rehydrate.d.ts",
+      "default": "./dist/cli-rehydrate.js"
     }
   },
   "files": [
@@ -46,7 +50,8 @@
   "bin": {
     "storyboard-corpus": "./dist/cli.js",
     "storyboard-corpus-v2": "./dist/cli-v2.js",
-    "storyboard-corpus-recover": "./dist/cli-recover.js"
+    "storyboard-corpus-recover": "./dist/cli-recover.js",
+    "storyboard-corpus-rehydrate": "./dist/cli-rehydrate.js"
   },
   "engines": {
     "node": ">=20.0.0"

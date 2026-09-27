@@ -104,6 +104,11 @@ a route motif; the medium gallery sequence changes views then moves to a
 sculpture detail; the long book sequence maps ten slides to four proposed beats.
 These are unreviewed observations, not admitted patterns. Reusable bounded
 Apify/CDN/GCS recovery now exists, including explicit owner/coauthor evidence.
+Named ready still carousels can now be rehydrated from those private GCS
+candidates in a later worker, with identity and checksum verification and no
+scraper or model call; a fresh-cache rehearsal succeeded for the two-slide
+art-to-shirt case. This is still a bounded local handoff, not a production
+queue or corpus backfill.
 These increments advance WP03 and WP04 but do not meet either work package's
 exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results

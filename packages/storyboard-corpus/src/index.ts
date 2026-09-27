@@ -89,6 +89,7 @@ export const ledgerRowSchema = z.object({
     "incomplete",
     "extraction-failed",
     "extracted",
+    "observed",
     "unclustered",
   ]),
   inputHash: text,
@@ -134,6 +135,15 @@ export const ledgerRowSchema = z.object({
     .optional(),
   snapshotRef: text.optional(),
   snapshotDigest: text.optional(),
+  observationHash: text.optional(),
+  observation: z.unknown().optional(),
+  observationUsage: z
+    .object({
+      inputTokens: z.number().int().nonnegative().optional(),
+      outputTokens: z.number().int().nonnegative().optional(),
+      thinkingTokens: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
 });
 export type LedgerRow = z.infer<typeof ledgerRowSchema>;
 

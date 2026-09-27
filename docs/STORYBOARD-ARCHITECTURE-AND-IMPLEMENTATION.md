@@ -109,6 +109,17 @@ exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results
 and remaining acquisition limits.
 
+The next bounded contrast slice raised the count to five source-complete still
+carousels (30 slides), while one six-child mixed image/video post remains
+ineligible for still-only extraction. A B-tier art-to-shirt sequence is a useful
+artwork-to-product presentation example; a C-tier wedding stationery sequence
+requires a relevance decision before joining an artist-focused library. Real
+annotation failures also motivated a validated pixel-stage checkpoint, so
+caption-only changes no longer repeat image calls. Explicit Vertex response
+schemas improved long-sequence field validity, but the model still interpreted
+black rectangles as censorship without source support. WP04 therefore needs
+an evidence-support review, not just schema-valid JSON, before pattern admission.
+
 The live three-single-image pilot inspected actual pixels with
 `gemini-3.1-pro-preview`: 3/3 valid results, 4,444 reported input tokens and 761
 output tokens, with no thinking-token field returned. Resume reused the results.

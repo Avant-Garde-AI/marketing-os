@@ -64,6 +64,21 @@ describe("carousel recovery", () => {
     expect(snapshot.identity.occurrenceAliases).toEqual(["artist:abc"]);
   });
 
+  it("passes the source caption beside the snapshot for a later labeled interpretation", async () => {
+    const result = await recoverCarousel(
+      source,
+      {
+        fetchPost: async () => ({
+          ...(await provider.fetchPost(source)),
+          caption: "Artist describes the piece",
+        }),
+      },
+      mirror
+    );
+    expect(result.caption).toBe("Artist describes the piece");
+    expect(result.snapshot).not.toHaveProperty("caption");
+  });
+
   it("does not mirror a provider response for another shortcode", async () => {
     let called = false;
     const result = await recoverCarousel(

@@ -60,6 +60,15 @@ describe("durable storyboard selection", () => {
     await expect(readStoryboardReview(f.repo,f.review.reviewId,f.review.reviewHash,f.current)).rejects.toThrow("changed");
     expect(() => storyboardReviewPath("../other")).toThrow();
   });
+  it("revalidates a previously reviewable option against current structure and grounding", async () => {
+    const f = await fixture();
+    // Historical critic flags are evidence, not an exemption from current gates.
+    const option = f.review.review.options[0]!;
+    option.storyboard = { ...option.storyboard, beats: [{ ...option.storyboard.beats[0]!, assertion: "" }] };
+    expect(() => selectedReviewOption(f.review, f.params)).toThrow("current planning validation");
+    option.storyboard = { ...storyboard, beats: [{ ...storyboard.beats[0]!, evidence: [{claim:"Paper",origin:"data",source:"unavailable"}] }] };
+    expect(() => selectedReviewOption(f.review, f.params)).toThrow("unavailable source");
+  });
   it("hashes object content independent of key insertion order", () => {
     expect(storyboardContentHash({b:2,a:1})).toBe(storyboardContentHash({a:1,b:2}));
   });

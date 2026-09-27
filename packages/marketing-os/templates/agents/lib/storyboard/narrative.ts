@@ -31,6 +31,13 @@ function isBlank(s: string | undefined): boolean {
   return !s || !s.trim();
 }
 
+function aspectRatio(aspect: string): number | undefined {
+  const parts = aspect.split(":").map(Number);
+  if (parts.length !== 2 || parts.some((n) => !Number.isFinite(n) || n <= 0)) return undefined;
+  const ratio = parts[0]! / parts[1]!;
+  return Number.isFinite(ratio) && ratio > 0 ? ratio : undefined;
+}
+
 /**
  * Does the arc turn?
  *
@@ -75,6 +82,16 @@ export function validateStoryboard(storyboard: Storyboard): Problem[] {
       "beats",
       `${storyboard.format} takes ${bounds.min}–${bounds.max} beats, got ${storyboard.beats.length}`,
     );
+  }
+
+  if (storyboard.beats[0]?.transition !== undefined) {
+    fail("beats.0.transition", "the first beat has no preceding beat; transitions describe the incoming change, not the next beat");
+  }
+  if (storyboard.format === "carousel" && storyboard.beats.some((beat) => beat.brief?.aspect !== undefined)) {
+    const ratios = storyboard.beats.map((beat) => beat.brief?.aspect === undefined ? undefined : aspectRatio(beat.brief.aspect));
+    if (ratios.some((ratio) => ratio === undefined) || ratios.some((ratio) => Math.abs(ratio! - ratios[0]!) > 1e-9)) {
+      fail("beats.brief.aspect", "carousel beats must declare one consistent board aspect; changing source crops does not change slide dimensions");
+    }
   }
 
   const seen = new Set<string>();
@@ -147,6 +164,9 @@ function validateBrief(beat: Beat, at: string): Problem[] {
         "state what would ruin this beat",
       fatal: false,
     });
+  }
+  if (brief.aspect !== undefined && aspectRatio(brief.aspect) === undefined) {
+    out.push({ field: `${at}.brief.aspect`, detail: "aspect must be a positive width:height ratio", fatal: true });
   }
   if (brief.seconds !== undefined && brief.seconds <= 0) {
     out.push({ field: `${at}.brief.seconds`, detail: "seconds must be positive", fatal: true });

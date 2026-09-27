@@ -128,12 +128,19 @@ Each option must have a distinct premise and narrative mechanism, not a palette
 swap or renamed role labels. One may build on an observed move, one reverse its
 sequence, and one use a different reader question; do not invent evidence to
 fill those slots. Compare against prior posts. Write what each beat asserts and
-what the next beat changes. Cite only supplied fact source keys and pattern IDs.
+what it changes relative to its preceding beat. Cite only supplied fact source keys and pattern IDs.
 Assertions must be supported by the cited facts, not merely share their topic.
 Research and brand-derived patterns are hypotheses; they never acquire counts.
-Every beat after the first needs transition.change, why, and patternRefs (empty
-when unsupported). Preserve exact asset refs. Use existing framed renders only
-as framed objects; mockup-input requires a verified bare-artwork master. Unknown
+Omit transition from the first beat because there is no preceding beat. Every
+later beat needs transition.change, why, and patternRefs (empty when unsupported).
+A transition is INCOMING: it describes the change from the preceding beat to
+THIS beat's actual assertion and visual brief, never a plan for the next beat.
+The final beat still names its incoming change; "end of sequence" is not a
+change in what the reader sees or learns. Before returning, compare each
+transition with the adjacent briefs and correct any one-beat offset.
+All carousel beats must declare the same board aspect (for example 4:5);
+source crops can differ within that consistent board. Preserve exact asset refs.
+Use existing framed renders only as framed objects; mockup-input requires a verified bare-artwork master. Unknown
 assets cannot be claimed to be bare. Bind continuity to available fixed assets
 or reference frames. When a content concept is supplied, keep its exact conceptId,
 reader payoff and hard needs. Provide needAssessments for every need: exact needId,

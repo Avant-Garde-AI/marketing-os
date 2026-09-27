@@ -973,3 +973,33 @@ uses explicit low Gemini 3 thinking, and bounds planner/critic output at
 three-candidate requirement are unchanged; partial or budget-exhausted output
 fails rather than acquiring fabricated defaults. There remain at most four
 provider calls and no imagery calls. See the delivery runtime checkpoint.
+
+
+Production narrative-critic correction: a generic array of verdicts allowed the
+model to return only beat findings and omit its whole-story decision. The critic
+now requires a provider-visible `wholeStory: {kill, reason, score}` object, with
+no subject IDs. Optional `localFindings` require an exact beat ID from the
+current storyboard and prohibit image candidate IDs. The internal model output
+is normalized to the existing public `Verdict[]`; missing whole-story decisions
+or foreign subjects still fail closed. No endorsement is inferred from local
+findings, no elimination quota is imposed, and the one-call critique budget is
+unchanged.
+
+
+The same live inspection exposed outgoing transitions shifted one beat forward,
+including a terminal "end of sequence" in place of the payoff's incoming
+change, and square details followed by portrait carousel slides. Transitions
+now explicitly mean the change from the preceding beat into THIS beat's actual
+assertion and visual brief; the first beat must omit one. The deterministic
+validator refuses first-beat transitions and inconsistent carousel board ratios.
+If a carousel specifies any board aspect it must specify an equivalent ratio
+for every beat; legacy arcs with all aspects omitted retain their adapter-time
+choice. Source crops may differ within that shared canvas. Semantic alignment
+of adjacent assertions/briefs/transitions remains the independent critic's job,
+with explicit rejection instructions rather than brittle prose matching.
+Video narrative beats are not constrained to carousel board uniformity; motion
+realization remains separately unavailable in the first adapter.
+
+Selection also revalidates the candidate against the current structural and
+source-grounding gates. Previously persisted reviewable flags remain audit
+material; they do not exempt an old candidate from corrected constraints.

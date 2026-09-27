@@ -142,3 +142,46 @@ describe("validateStoryboard", () => {
     expect(fatalProblems(validateStoryboard(storyboard({ premise: "" }))).some((p) => p.field === "premise")).toBe(true);
   });
 });
+
+
+it("rejects an outgoing transition on the first beat from the live planning failure", () => {
+  const sb = storyboard({ format: "carousel", beats: [
+    beat({ id: "detail", role: "setup", transition: { change: "Expand the crop next", why: "Reveal context", patternRefs: [] } }),
+    beat({ id: "whole", role: "turn", transition: { change: "Detail to full work", why: "Recontextualize the detail", patternRefs: [] } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(sb)).some((p) => p.field === "beats.0.transition")).toBe(true);
+});
+
+it("rejects a square detail followed by a portrait payoff before a shared-size carousel is selected", () => {
+  const sb = storyboard({ format: "carousel", beats: [
+    beat({ id: "detail", role: "setup", brief: { ...beat().brief, aspect: "1:1" } }),
+    beat({ id: "whole", role: "turn", brief: { ...beat().brief, aspect: "4:5" } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(sb)).some((p) => p.field === "beats.brief.aspect")).toBe(true);
+});
+
+it("allows different source crops within the same carousel board ratio, including equivalent ratios", () => {
+  const sb = storyboard({ format: "carousel", beats: [
+    beat({ id: "detail", role: "setup", brief: { ...beat().brief, shows: "A tight crop", aspect: "4:5" } }),
+    beat({ id: "whole", role: "turn", brief: { ...beat().brief, shows: "The whole object", aspect: "1080:1350" } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(sb))).toEqual([]);
+});
+
+it("refuses partially specified or malformed carousel aspects without filling missing dimensions", () => {
+  for (const aspect of [undefined, "4:0", "landscape"]) {
+    const sb = storyboard({ format: "carousel", beats: [
+      beat({ id: "detail", role: "setup", brief: { ...beat().brief, aspect: "4:5" } }),
+      beat({ id: "whole", role: "turn", brief: { ...beat().brief, ...(aspect === undefined ? {} : { aspect }) } }),
+    ] });
+    expect(fatalProblems(validateStoryboard(sb)).some((p) => p.field === "beats.brief.aspect")).toBe(true);
+  }
+});
+
+it("does not impose carousel board uniformity on video narrative beats", () => {
+  const sb = storyboard({ format: "video", beats: [
+    beat({ id: "detail", role: "setup", brief: { ...beat().brief, aspect: "1:1" } }),
+    beat({ id: "whole", role: "turn", brief: { ...beat().brief, aspect: "4:5" } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(sb))).toEqual([]);
+});

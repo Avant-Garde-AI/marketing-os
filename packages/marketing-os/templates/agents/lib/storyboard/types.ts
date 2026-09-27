@@ -76,7 +76,7 @@ export interface VisualBrief {
    */
   avoid: string[];
   sourcing: Sourcing;
-  /** Board aspect this beat is composed for, e.g. "4:5", "1:1", "9:16". */
+  /** Board aspect, e.g. "4:5", "1:1", "9:16". Carousel boards share one ratio; source crops can differ. */
   aspect?: string;
   /** A store image is not necessarily bare art. Usage is checked against the asset inventory. */
   asset?: { ref: string; use: "as-is" | "detail-crop" | "mockup-input" };
@@ -122,7 +122,7 @@ export interface Beat {
    * the validator should be able to find it.
    */
   assertion: string;
-  /** What this beat changes from the preceding beat; references are pattern IDs, not invented counts. */
+  /** Incoming change from the preceding beat to THIS beat. Omit on the first beat; never describe the next beat. References are pattern IDs, not invented counts. */
   transition?: { change: string; why: string; patternRefs: string[] };
   brief: VisualBrief;
   /** Copy that appears ON the surface for this beat, if any. */

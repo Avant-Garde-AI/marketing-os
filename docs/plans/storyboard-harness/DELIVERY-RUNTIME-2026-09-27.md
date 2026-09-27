@@ -66,3 +66,12 @@ including a provider `length` finish reason even if recovered JSON parses.
 No missing candidate, continuity or evidence field is fabricated to repair a
 response. Thinking-budget truncation is a hypothesis, not a confirmed diagnosis
 of the original response. Live retest results belong in the store checkpoint.
+
+A successful structured production run then exposed two semantic/realization
+mismatches: outgoing transition descriptions and mixed carousel board ratios.
+Transitions now have an explicit incoming meaning; the first beat cannot carry
+one. Carousel aspects are structurally checked for one ratio when specified.
+The narrative critic requires a separate provider-visible `wholeStory` judgment
+and checks transition alignment with adjacent briefs. Selection re-runs current
+structural and source-grounding gates even for older reviewable flags. A stored
+critique result never exempts a candidate from current buildability checks.

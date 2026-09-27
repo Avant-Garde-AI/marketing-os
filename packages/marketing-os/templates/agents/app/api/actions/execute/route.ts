@@ -25,6 +25,7 @@ import "../../../../lib/social/register-actions";
 import "../../../../lib/email/register-actions";
 import "../../../../lib/storyboard/register-actions";
 import "../../../../lib/storyboard/realization";
+import "../../../../lib/offers/register-actions";
 
 export const maxDuration = 120;
 

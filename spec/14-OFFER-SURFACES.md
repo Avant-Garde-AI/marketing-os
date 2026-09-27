@@ -4,6 +4,7 @@
 > **Owner:** Marketing OS core
 > **Depends on:** 11-HOSTED-PATH (platform app, App Proxy, pooled runtime), 13-CONSOLE-DESIGN-RETROFIT (approval widget, GenUI chat), design-loop (gates, capture, traces), 12-Store-MCP (semantic layer)
 > **First target:** Arthaus (canary), then template default.
+> **AMENDED by [32-OFFER-AGENT.md](./32-OFFER-AGENT.md) (2026-09-11):** Part I (the Storefront Surfaces framework) stands as written. **Part II (the Offer Agent) and §2.4 (console placement) are superseded** — the agent is repackaged as a skill pack in the email/social shape, `Surfaces` becomes `Offers` in the console, D3 is refined to deploy-then-record against repo artifacts, and §1.5's "no ESP sync" is reversed. Read 32 for the current product shape.
 
 ---
 

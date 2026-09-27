@@ -1,6 +1,7 @@
 /** Bind a concept's writing guidance from the tenant's real reference artifact. */
 import { createHash } from "node:crypto";
 import { GENOME_PATH, parseGenome } from "../social/reference";
+import { storyboardContentHash } from "./reviews";
 import type { PlanningContext } from "./schemas";
 import type { PlanningConcept } from "./graph-context";
 
@@ -22,5 +23,5 @@ export async function bindConceptVoice(base: PlanningContext, concept: PlanningC
   return { context: { ...base,
     facts: [...base.facts.filter((fact) => fact.source !== source), { source, content: JSON.stringify(guidance) }],
     copyFormulas: [...(base.copyFormulas ?? []).filter((formula) => !refs.includes(formula.id)), ...formulas],
-  }, sources: [{ path: GENOME_PATH, hash: sha }] };
+  }, sources: [{ path: GENOME_PATH, hash: storyboardContentHash(raw) }] };
 }

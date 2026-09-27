@@ -67,3 +67,60 @@ describe("acquired graph context compilation", () => {
     expect(review.options.every((option) => option.evidenceStatus === "hypothesis")).toBe(true);
   });
 });
+
+
+const voicedConcept: PlanningConcept = { ...concept, voice: { copyFormulaRefs: ["curatorial-question"], hook: "Ask what changes when the detail is seen in context" } };
+const voicedBase: PlanningContext = { ...base,
+  facts: [{ source: "voice:acquired-receipt", content: "Acquired creative structure; no performance claim" }],
+  copyFormulas: [{ id: "curatorial-question", source: "voice:acquired-receipt", definition: "One viewing question, then one concrete contextual observation" }],
+};
+
+describe("acquired concept voice", () => {
+  it("preserves voice and acquired formula definitions in structured planning context", () => {
+    const context = compileGraphPlanningContext(voicedBase, voicedConcept, packet, "store-a");
+    expect(context.concept?.voice).toEqual(voicedConcept.voice);
+    expect(context.copyFormulas).toEqual(voicedBase.copyFormulas);
+    expect(context.facts.some((fact) => fact.source === context.copyFormulas![0]!.source)).toBe(true);
+    expect(context.patterns).toEqual([]);
+  });
+  it("requires acquired definitions instead of treating a configured ID as enough", () => {
+    expect(() => compileGraphPlanningContext(base, voicedConcept, packet, "store-a")).toThrow("unavailable copy formula definition");
+    expect(() => compileGraphPlanningContext({ ...voicedBase, copyFormulas: [{ ...voicedBase.copyFormulas![0]!, definition: " " }] }, voicedConcept, packet, "store-a")).toThrow();
+    expect(() => compileGraphPlanningContext({ ...voicedBase, copyFormulas: [{ ...voicedBase.copyFormulas![0]!, source: "voice:unacquired" }] }, voicedConcept, packet, "store-a")).toThrow("unavailable definition source");
+  });
+  it("refuses duplicate definitions and configured references", () => {
+    expect(() => compileGraphPlanningContext({ ...voicedBase, copyFormulas: [...voicedBase.copyFormulas!, ...voicedBase.copyFormulas!] }, voicedConcept, packet, "store-a")).toThrow("duplicate IDs");
+    expect(() => compileGraphPlanningContext(voicedBase, { ...voicedConcept, voice: { copyFormulaRefs: ["curatorial-question", "curatorial-question"] } }, packet, "store-a")).toThrow("duplicate copy formula references");
+  });
+  it("does not borrow a formula's provenance from new catalog receipts", () => {
+    const unacquired = { ...base, copyFormulas: [{ ...voicedBase.copyFormulas![0]!, source: "catalog:1" }] };
+    expect(() => compileGraphPlanningContext(unacquired, voicedConcept, packet, "store-a")).toThrow("unavailable definition source");
+  });
+  it("independently rejects missing or foreign formula refs in saved-review grounding", () => {
+    const context = compileGraphPlanningContext(voicedBase, voicedConcept, packet, "store-a");
+    expect(checkGrounding(story(), context).some((verdict) => verdict.kill && verdict.reason.includes("copy formula"))).toBe(true);
+    expect(checkGrounding({ ...story(), copyFormulaRef: "generic-description" }, context).some((verdict) => verdict.kill && verdict.reason.includes("copy formula"))).toBe(true);
+    expect(checkGrounding({ ...story(), copyFormulaRef: "curatorial-question" }, context)).toEqual([]);
+    expect(checkGrounding({ ...story(), copyFormulaRef: "curatorial-question" }, { ...context, copyFormulas: [] }).some((verdict) => verdict.kill && verdict.reason.includes("unavailable"))).toBe(true);
+  });
+});
+
+
+it("refuses old compact contexts that dropped configured voice from the acquired concept fact", () => {
+  const compiled = compileGraphPlanningContext(voicedBase, voicedConcept, packet, "store-a");
+  const { voice: _voice, ...legacyConcept } = compiled.concept!;
+  const legacy = { ...compiled, concept: legacyConcept };
+  const wrong = { ...compiled, concept: { ...compiled.concept!, voice: { copyFormulaRefs: ["generic-description"] } } };
+  for (const saved of [legacy, wrong]) {
+    expect(checkGrounding({ ...story(), copyFormulaRef: "curatorial-question" }, saved).some((verdict) => verdict.kill && verdict.reason.includes("Concept voice was not compiled"))).toBe(true);
+  }
+  expect(checkGrounding({ ...story(), copyFormulaRef: "curatorial-question" }, compiled)).toEqual([]);
+});
+
+it("does not infer voice from generic prose facts or concepts without a configured formula", () => {
+  const compiled = compileGraphPlanningContext(base, concept, packet, "store-a");
+  const generic = { ...compiled, facts: compiled.facts.map((fact) => fact.source === compiled.concept!.source
+    ? { ...fact, content: "A curatorial question might be interesting" } : fact) };
+  expect(checkGrounding(story(), compiled)).toEqual([]);
+  expect(checkGrounding(story(), generic)).toEqual([]);
+});

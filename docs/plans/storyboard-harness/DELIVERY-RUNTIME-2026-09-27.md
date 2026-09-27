@@ -84,3 +84,12 @@ incoming transition reaches independent critique because the reveal may combine
 a turn and its resolution. No structural pass establishes narrative quality,
 and no missing field or role is repaired after model generation. Live findings
 and corrections remain in the production checkpoint.
+
+
+For a concept with voice formula references, the runtime acquires only those
+writing definitions from its real store genome and pins that artifact in the
+review. The typed concept retains its hook and configured formula IDs; planning
+requires an exact choice and the critic reads its actual definition. Missing or
+ambiguous definitions fail before graph/model calls. Writing guidance does not
+admit zero-evidence layouts or supply counted performance evidence. Older
+reviews that omitted a voice declared in their source concept require replanning.

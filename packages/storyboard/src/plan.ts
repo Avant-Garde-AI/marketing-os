@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createNarrativeCritic, type StoryModel } from "./critics";
 import { fatalProblems, validateStoryboard } from "./narrative";
-import { planningContextSchema, storyboardSchema, type PlanningContext } from "./schemas";
+import { copyFormulaProblems, planningContextSchema, storyboardSchema, type PlanningContext } from "./schemas";
 import type { Storyboard, Verdict } from "./types";
 
 export interface StoryOption {
@@ -32,6 +32,10 @@ export function checkGrounding(story: Storyboard, context: PlanningContext): Ver
   const sources = new Set([context.brand.source, ...context.facts.map((f) => f.source)]);
   const patterns = new Map(context.patterns.map((p) => [p.id, p]));
   const assets = new Map(context.assets.map((a) => [a.ref, a]));
+  verdicts.push(...copyFormulaProblems(context).map((reason) => fail(reason)));
+  const configuredFormulas = context.concept?.voice?.copyFormulaRefs ?? [];
+  if (configuredFormulas.length && (!story.copyFormulaRef || !configuredFormulas.includes(story.copyFormulaRef)))
+    verdicts.push(fail("Storyboard must use an exact copy formula configured by the selected content concept"));
   if (context.concept && story.conceptId !== context.concept.id)
     verdicts.push(fail("Storyboard must instantiate the selected content concept"));
   if (context.concept && !context.concept.formats.includes(story.format))
@@ -152,6 +156,14 @@ is satisfied. Refuse unsupported needs rather than inventing rooms or process.
 When subjects are supplied, every option must name unique subjectHandles from
 that exact list and use only their corresponding catalog artwork assets for
 featured works. Do not substitute graph aliases or an unavailable work.
+Follow the selected concept's voice.hook and one of its declared copyFormulaRefs.
+Use that exact formula ID as copyFormulaRef and its acquired definition to shape
+on-slide copy and caption; do not substitute a generic formula or merely name a
+formula without following it. Apply the selected formula's structure, not a
+different formula's requirements. Universal brand and factual rules remain
+binding; report a real conflict instead of inventing a compromise or ignoring it.
+These are creative rules subordinate to brand,
+not factual claims or counted evidence that an arc performs well.
 Copy and assertions remain subject to the existing claims
 guard. Do not compose, generate, save, schedule, or publish anything.`;
 
@@ -214,8 +226,12 @@ function planningResponseSchema(context: PlanningContext) {
         subjectHandles: z.array(z.enum(context.subjects.map((subject) => subject.handle) as [string, ...string[]])).min(1).max(6),
       })
     : withConcept;
+  const configuredFormulas = context.concept?.voice?.copyFormulaRefs ?? [];
+  const withVoice = configuredFormulas.length
+    ? scoped.extend({ copyFormulaRef: z.enum(configuredFormulas as [string, ...string[]]) })
+    : scoped;
   const formats = [...new Set(context.concept?.formats ?? ["single", "carousel", "video"] as const)];
-  const variants = formats.map((format) => scoped.extend({
+  const variants = formats.map((format) => withVoice.extend({
     format: z.literal(format), beats: z.array(beatForFormat(format)).min(1).max(10),
   }));
   const storyboard = variants.length === 1
@@ -236,6 +252,8 @@ export async function planStoryboards(
   if (!brief.trim() || brief.length > 12000)
     throw new Error("Brief must contain 1–12000 characters");
   const context = planningContextSchema.parse(rawContext);
+  const voiceProblems = copyFormulaProblems(context);
+  if (voiceProblems.length) throw new Error(voiceProblems.join("; "));
   for (const key of [context.patterns.map((p) => p.id), context.assets.map((a) => a.ref)]) {
     if (new Set(key).size !== key.length) throw new Error("Context IDs must be unique");
   }

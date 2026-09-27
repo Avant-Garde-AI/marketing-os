@@ -47,11 +47,67 @@ attempts. An explicit response shape then yielded 3/3 schema-valid outputs;
 these are calibration attempts, not a reliability rate. Provider-reported usage
 for the final three outputs was 6,474 input, 1,755 output and 3,000 thinking
 tokens across both passes. This is neither a price estimate nor a reconciled
-invoice. The local probe has resumable records outside Git, but v2 is not yet
-wired to the production pilot CLI/ledger. No recovered carousel or video was
+invoice. The first local probe's resumable records stayed outside Git; the
+snapshot-ledger CLI was added the following day. No recovered carousel or video was
 available to test a real between-beat transition, and no cluster or pattern was
 admitted. The next calibration must pair complete recovered carousels with
 human judgments of what each adjacent slide actually changes.
+
+### V2 snapshot-ledger run — 2026-09-24
+
+`storyboard-corpus-v2` now runs the staged extractor from a `CorpusSnapshot v2`
+manifest through a local, single-writer JSONL ledger. It checks source
+completeness, local bytes against stored SHA-256 hashes, ordered refs and model
+output. The dry run does not call a model or obtain an access token. A matching
+successful input resumes without another model call; engagement-only metric
+changes do not invalidate it. The v1 CLI remains available separately.
+
+The three saved field-cohort single images above were wrapped in explicit
+single-image snapshots with original source metadata and the existing GCS image
+objects as durable references. The local manifest and pixels stayed outside
+Git. The dry run found 3/3 complete and locally available. The executed run
+wrote three ready rows and three extracted rows; each output held one grounded
+observation, zero adjacent transitions and `review.state = unreviewed`. Running
+the exact command again left the ledger at six rows, demonstrating cached
+resume. Provider-reported usage for the executed three was 6,456 input, 1,814
+output and 3,138 thinking tokens across both passes.
+
+Two initial annotations still added irrelevant missing-audio caveats to static
+images. A tightened annotation prompt was re-probed on those two images: 2/2
+schema-valid and neither repeated that caveat. This small correction is not a
+semantic accuracy rate.
+
+### First complete carousel — 2026-09-24
+
+A one-post, capped `apify/instagram-scraper` probe fetched the first frozen
+carousel, `kevinruss / DTbusF1GO7X`. The returned post identity matched the
+source, and its `childPosts` contained the expected three ordered, distinct
+child IDs. Each fresh CDN image decoded as JPEG; the original provider response,
+all three bytes, a ready snapshot and the v2 ledger were mirrored under
+`gs://arthaus-creative-corpus/instagram-organic/2026-09-24/recovery-pilot/DTbusF1GO7X/`.
+The durable snapshot has source order evidence, object references and SHA-256
+checksums. Local paths and pixels were kept outside Git. The source was visually
+inspected slide by slide before interpretation.
+
+The v2 CLI dry-run classified the snapshot as complete and locally available.
+One executed call yielded three observations, two adjacent transitions, three
+beats and `review.state = unreviewed`. The visible move is a merch sequence:
+T-shirts on slide 1, a hoodie on slide 2, hats and bumper stickers on slide 3.
+Provider-reported usage for this two-call extraction was 5,575 input, 2,604
+output and 1,748 thinking tokens; these counts are not a reconciled invoice.
+An orange route line and black-and-white running imagery connect the slides;
+the line begins at a green dot and ends at a checkered flag. That is a concrete
+example of beat 2 adding something beat 1 did not. The model's language of a
+"single continuous photograph" may overstate continuity in a photo collage,
+and its `addition` operation underdescribes replacement of the focal product.
+Those are review findings, not verified pattern labels.
+
+This one post proves the acquisition-to-v2 path can carry ordered real slides;
+it does not establish a reliable narrative taxonomy, comparative performance
+or human approval of a new storyboard. Likes/comments were retained in the
+snapshot but not sent to either model pass. A repeatable, bounded source
+provider and media-mirror adapter is still being built from the observed
+response shape before the remaining frozen slice can run.
 
 ## Direct inventory and correction
 

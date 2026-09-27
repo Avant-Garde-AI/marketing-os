@@ -44,8 +44,9 @@ narrative gives mechanism, optional hook/payoff, continuity and limitations.
 An inferred reader state is explicitly a hypothesis. A static image may imply
 a story spatially without fabricating a sequence. Report weak/no narrative
 honestly. Do not assert that any move caused engagement or that a viewer actually
-felt the intended emotion. Do not invent visible details. Return JSON in this
-exact shape:
+felt the intended emotion. Do not invent visible details. For single-image or
+carousel stills, do not invent a missing-audio or missing-transcript limitation;
+those coverage limits apply only to video. Return JSON in this exact shape:
 {"beats":[{"id":"b0","supportingObservationIds":["o0"],
 "function":"presentation","informationAdded":"what the reader learns",
 "claimRefs":[]}],"transitionInterpretations":[],

@@ -55,9 +55,31 @@ changes, transition readings and narrative beats separate, with exact source
 references and unreviewed status. `createVertexV2Stages()` sends actual decoded
 image bytes to the first pass and uses a text-only second pass. The v2 adapter
 has bounded request size, output and time, and safe provider diagnostics.
-It has not yet been connected to the durable CLI ledger or a recovered carousel;
-the current CLI still runs v1. The [v2 calibration findings](../../docs/plans/storyboard-harness/CORPUS-PILOT.md)
+The original CLI still runs v1, and v2 has not yet run on a recovered carousel.
+The [v2 calibration findings](../../docs/plans/storyboard-harness/CORPUS-PILOT.md)
 cover three complete single-image posts only.
+
+The `storyboard-corpus-v2` CLI now accepts a JSON array of
+`{ snapshotRef, snapshot, caption? }`, where `snapshot` is a complete
+`CorpusSnapshot v2` and every actual child has a durable `objectRef`, SHA-256
+checksum and readable local mirror path. It verifies readiness against the
+snapshot, then verifies every file checksum before a model call. The ordinary
+dry run checks local file presence, not checksum; `--execute` writes the JSONL
+ledger and performs full verification. For example:
+
+```sh
+node dist/cli-v2.js --manifest /tmp/ready-snapshots.json \
+  --out /tmp/v2-ledger.jsonl --run-id v2-pilot-001 \
+  --project arthaus-us --model YOUR_VISION_MODEL --max-posts 3
+# Add --execute to run the bounded selection.
+```
+
+The v2 ledger resumes successful exact inputs without another model call.
+Engagement-only metric edits do not invalidate extraction; a caption, media
+checksum, coverage or prompt change does. The runner is still local and
+single-writer. It accepts complete still-image singles and carousels, not mixed
+media or video yet; those are separate acquisition and annotation slices.
+The source provider and durable carousel mirror remain to be implemented.
 
 The executable needs `gcloud` on its inherited PATH. In environments where the
 shell finds it but child processes do not, prepend the SDK `bin` directory to

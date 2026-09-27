@@ -1,3 +1,4 @@
+/** Vendored from packages/storyboard. Update the canonical source first. */
 /**
  * Explore → critique → eliminate (spec 33 §4, criterion 5).
  *

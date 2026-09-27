@@ -1,7 +1,8 @@
 # 33 — The Storyboard Harness
 
-> **Status:** TRD — scaffold committed, architecture deliberately unfinished. This
-> document and `packages/storyboard/` exist to be argued with.
+> **Status:** Implementation in progress — planning and model-backed critics
+> implemented; live corpus extraction, imagery dispatch and human acceptance
+> remain outstanding. §10 records the architecture decisions and their limits.
 > **Supersedes, in effect:** the compose half of 24-SOCIAL-MEDIA-AGENT and the
 > archetype half of 29-POST-CONCEPTS. Neither is deleted; both become inputs.
 > **Depends on:** 22-BRAND-SOUL (brand.md is truth), 23-DESIGN-SURFACES-PENPOT
@@ -205,9 +206,12 @@ A `Beat` has a `role` in the arc (`setup`, `tension`, `turn`, `payoff`,
 `coda`), an `assertion` — the one thing this beat says, in a sentence a human
 can disagree with — and only then a `VisualBrief`.
 
-Ordering beats by narrative role rather than by index is deliberate. A three
+The beats array supplies order; role labels describe each beat’s job. They do
+not by themselves prove that a semantic turn occurred. A three
 slide carousel that runs setup → setup → setup is a catalogue, and naming the
-roles makes that visible to a validator instead of only to a reader.
+roles catches the simplest structural failure. The narrative critic must still
+judge the meaning. Planning now requires `transition.change`, `why`, and
+`patternRefs` on every beat after the first; unsupported moves remain hypotheses.
 
 ### 2.2 The VisualBrief is instruction, not geometry
 
@@ -224,6 +228,12 @@ structured and MANDATORY, and it is what gets handed to a generator:
 a framed render on a 2048² canvas, so feeding one to the mockup engine yields a
 frame inside a frame. A brief that says "bare artwork required" lets the
 pipeline REFUSE rather than produce nonsense.
+
+**Correction:** `sourcing: store-asset` alone cannot distinguish a master from a
+framed render. `VisualBrief.asset` now names both the ref and intended use
+(`as-is`, `detail-crop`, `mockup-input`). The planning inventory declares its
+kind and verification source. Mockup input requires a verified bare master;
+framed renders remain usable as framed objects or honest crops, never as masters.
 
 ### 2.3 Continuity binds frames, not prompts
 
@@ -246,7 +256,7 @@ one checker among several rather than the only one.
 
 ---
 
-## 3. The orchestrator ⟨DESIGN — the part to argue about⟩
+## 3. The orchestrator — original design questions (decisions in §10)
 
 This is the piece most likely to be wrong in this draft, and the reason the
 scaffold is being pushed before it is finished.
@@ -330,7 +340,7 @@ for what that looks like.
 What must not continue is the current state: four rectangle lists serving as a
 design system, with nothing telling a reader which of them were counted.
 
-## 4. Critique ⟨BUILD — interfaces only in this scaffold⟩
+## 4. Critique (implementation update in §10)
 
 Two critics, deliberately separate, because they fail differently.
 
@@ -365,7 +375,7 @@ interface, not a rewrite. **No Penpot type may appear in `packages/storyboard`.*
 
 ---
 
-## 6. What this scaffold deliberately does NOT do
+## 6. What the original scaffold deliberately did NOT do
 
 Stated plainly so the next reader does not mistake intent for progress:
 
@@ -448,3 +458,126 @@ framed render on a 2048² canvas, so feeding one to the mockup engine yields a
 frame inside a frame. Until bare artwork masters are reachable, a better
 harness produces better-composed pictures of the wrong thing. Treat it as a
 precondition, not a detail.
+
+
+## 10. Architecture decisions — first implementation, 2026-09-19
+
+### 10.1 Decomposition and novelty (questions 1 and 2)
+
+Use explicit sequential stages within the existing Mastra runtime: grounded
+context → three arc proposals → independent narrative/novelty critiques → human
+review. Each model call uses a fresh tool-less Mastra Agent, with no shared memory
+or authority to write. This avoids creative delegation becoming write authority.
+`social_storyboard_plan` is a read/proposal tool and returns the complete review
+material without saving artifacts. No Atelier dependency is added.
+
+The planner varies the reader question, order and narrative mechanism rather
+than only the layout. The critic sees all three proposals plus up to twelve
+recent posts and must call out repetition. Constraint variation proposes novelty;
+the independent critic judges whether it earns attention while preserving brand
+rules. Neither a high score nor a role named `turn` proves that it works.
+
+### 10.2 Branching and budget (question 3)
+
+Branch three textual arcs first (one bounded planning call, at most three critic
+calls). Stop at human review, with zero imagery calls. A review hash binds the
+brief, context and verdicts; it is a content digest, **not authorization**.
+
+After selection, the intended imagery budget is two alternatives per beat, with
+an explicit quoted total and at most one targeted repair per failed beat. Every
+Veo render must quote no more than $2. Reserve spend before dispatch, including
+failed attempts, and require renewed review if the arc or quoted budget changes.
+That dispatcher is **not implemented in this PR**; the existing Action gate must
+own authorization. The count-only `exploreStoryboard` utility cannot enforce a
+dollar limit and must not be exposed as a model-callable spending path. Its calls
+counter reports candidate slots reserved, not confirmed provider billing.
+
+### 10.3 Knowledge and evidence (question 4)
+
+For the first version use a small, reviewed tenant-owned context manifest at
+`social/reference/storyboard-context.json`: fact sources, asset inventory, at
+most six relevant patterns and twelve recent posts. Refresh brand instructions
+from the current tenant on each invocation. Fail on oversized input instead of
+silently truncating evidence. Semantic retrieval can replace manifest selection
+once a validated library exists; adding a vector store before that would hide
+how little evidence is available.
+
+Counted patterns carry concrete post refs, ordered beat indices, distinct media
+refs and observations. The exemplar count is the number of **unique posts**, not
+frames, captions, or model confidence. Researched/brand-derived patterns have
+sources but no count; the schema rejects extra count fields. A reference lookup
+checks existence, while the critic checks whether it supports the proposed move.
+The manifest remains a reviewed trust boundary: a model cannot certify its own
+pixel inspection by inventing media refs. Current code does not authenticate GCS
+objects or claim that an extractor has actually run.
+
+When evidence is thin, retain the idea as a hypothesis and show the missing
+acceptance criterion. `social_genome_read` separately defaults to n≥1; explicitly
+requesting n=0 exposes uncounted hypotheses with a warning.
+
+### 10.4 Corpus pipeline (question 5 — decided design, not executed)
+
+Run a resumable offline batch alongside the interactive harness. The unit of
+extraction is the **whole post**, including ordered carousel images or ordered
+video samples, caption and capture-time engagement. Beats are child observations,
+not independent posts. Single images remain useful without being counted as arcs.
+
+1. Inventory stable post IDs, handles and existing GCS objects. Keep every input
+   in a run ledger: ready, media-expired, incomplete, extraction-failed, extracted
+   or unclustered. Never silently discard the quarantine.
+2. Rehydrate expired media from the held handles, reconcile by stable post ID,
+   and persist pixels plus checksums/capture times. A failed fetch is missing
+   evidence, not an invitation to infer an image from a caption.
+3. Send complete posts to an operator-configured frontier vision model. Extract
+   visual treatment, each beat’s role and observable change, cross-beat bindings,
+   and the narrative mechanism. Preserve geometry as a separate feature. For
+   video, retain sample timestamps and mark incomplete motion observations.
+4. Cluster **after** extraction, using visual/treatment and narrative-transition
+   features. Keep rare structures and outliers searchable rather than forcing
+   them into the two largest layout clusters. This preserves stories whose first
+   image looks alike but whose later moves differ.
+5. Review cluster exemplars and counterexamples. Emit patterns with unique member
+   post IDs, observations and versioned model/prompt/input hashes. Engagement is
+   descriptive, normalized within comparable artist/format/time cohorts; it is
+   not proof that a transition caused performance.
+6. Report acquisition completeness, parse success and cluster coverage against
+   explicit denominators. Repair the ad lane’s 66 quarantined records separately;
+   do not mix paid and organic performance signals or lower thresholds silently.
+
+GCS execution was attempted but blocked by expired Google authentication. No
+organic pixels were inspected in this implementation, no fresh counts are claimed,
+and this design has not yet earned a claim of better corpus yield.
+
+### 10.5 Critics (question 6)
+
+The narrative critic is a model-backed editor over the whole arc, all alternatives,
+source context and recent history. It returns a whole-story judgment and optional
+beat findings. The visual critic receives actual image attachments alongside the
+brief, full arc and brand context; it returns exactly one scored judgment per
+candidate, grounded in a visible detail. Video decoding/sampling and a final
+rendered-sequence continuity review are still integration work.
+
+Structured outputs are validated. Empty responses, foreign IDs, omitted candidate
+judgments, unexplained judgments and model errors fail closed. The exploration
+utility also refuses incomplete candidate batches and includes unvisited beats in
+`emptyBeats` when a budget truncates exploration. No critic is forced to reject a
+fixed fraction: if all survive, the review records that the elimination acceptance
+criterion has not been demonstrated.
+
+These are real model-call implementations with deterministic contract tests, not
+validated taste. Human agreement with an actual rejection remains required. The
+existing claims guard still governs saving; Action gate, review links and publish
+consent are unchanged. The new planning path does not save a post or mark it ready.
+
+### 10.6 Remaining acceptance work
+
+- Restore corpus credentials, execute a small visual extraction pilot, inspect
+  its outputs, then expand with measured coverage and quarantine recovery.
+- Supply bare-master provenance or choose the framed-object route deliberately.
+- Prepare the store context manifest and select a configured vision-capable
+  `STORYBOARD_MODEL`; run the planning tool and get human agreement on an arc and
+  the elimination reasons before any imagery spend.
+- Implement approved imagery quoting/dispatch, targeted repair and final sequence
+  critique through the existing gate, then compose through the renderer seam.
+- Port tested changes into the store console in a reviewable PR. No hosted-runtime
+  divergence or live store deployment is authorized by a planning result.

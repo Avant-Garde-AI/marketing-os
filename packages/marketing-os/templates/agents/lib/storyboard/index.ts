@@ -1,3 +1,4 @@
+/** Vendored from packages/storyboard. Update the canonical source first. */
 /**
  * The Storyboard Harness (spec 33).
  *

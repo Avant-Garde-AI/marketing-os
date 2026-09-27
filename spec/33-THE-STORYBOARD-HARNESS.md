@@ -850,6 +850,32 @@ critic correction. The [ownership record](../docs/plans/storyboard-harness/OWNER
 documents implemented seams and planned corpus projection/admission. The
 companion store PR does not deploy runtime code or activate concepts.
 
+### 10.20 Transition proposals, admission and bounded retrieval — 2026-09-26
+
+`@avant-garde/storyboard-corpus/library` now supplies a transition-only
+proposal/review/compiler seam. Proposals preserve post/account and hashed source
+lineage, adjacent media/observation locators, visible change, separate narrative
+interpretation and limitations. They issue no evidence count. A versioned review
+must bind the exact proposal hash and confirm visible change, interpretation and
+domain fit per admitted exemplar. A required external authority verifier must
+validate the reviewer record; strings/digests alone grant no admission.
+
+Compilation holds unreviewed/rejected/unsupported proposals and derives unique
+post/account counts only from admitted members. Retrieval is scope-bound, limited
+to six explicit IDs and accepts only a frozen in-process authority-compiled
+library; serialized/model-supplied snapshots must be recompiled. Selected output
+uses the current planner's transition shape. Its legacy `fromBeat`/`toBeat`
+locators represent source presentation ordinals, not inferred beat grouping.
+
+Two real Arthaus transitions were normalized into separate store-owned proposals
+without additional model/scraper calls. Owner/coauthor attribution came from
+recovery manifests. Both remain unreviewed, so the store snapshot has zero
+admitted patterns. Five contract tests and the 91-test corpus suite pass, along
+with typecheck/build. Production authenticated review, loader/planner wiring,
+single-image treatment support and graph/search projection remain open. The
+[contract record](../docs/plans/storyboard-harness/PATTERN-ADMISSION-CONTRACT.md)
+states these limits; no successful extraction activates a pattern or post.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

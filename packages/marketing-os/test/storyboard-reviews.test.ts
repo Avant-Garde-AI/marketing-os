@@ -45,6 +45,14 @@ describe("durable storyboard selection", () => {
     f.files.set("social/reference/storyboard-context.json","edited sources");
     await expect(readSelectedStoryboard(f.repo,f.review.reviewId,f.review.reviewHash,f.current)).rejects.toThrow("Planning source changed");
   });
+  it("compares live brand wrappers using the same outer-whitespace normalization as saved planning context", async () => {
+    const f = await fixture();
+    const wrapped = { ...f.current, brand: `\n\n${f.current.brand}\n` };
+    await expect(readStoryboardReview(f.repo, f.review.reviewId, f.review.reviewHash, wrapped)).resolves.toEqual(f.review);
+    await persistStoryboardSelection(f.repo, f.review, f.params);
+    await expect(readSelectedStoryboard(f.repo, f.review.reviewId, f.review.reviewHash, wrapped)).resolves.toMatchObject({ storyboard });
+    await expect(readStoryboardReview(f.repo, f.review.reviewId, f.review.reviewHash, { ...wrapped, brand: "Editorial  restraint" })).rejects.toThrow("Brand context changed");
+  });
   it("rejects review context or selection tampering and unsafe IDs", async () => {
     const f = await fixture();
     await persistStoryboardSelection(f.repo,f.review,f.params);

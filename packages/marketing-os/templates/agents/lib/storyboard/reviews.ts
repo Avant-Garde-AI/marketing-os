@@ -42,7 +42,7 @@ export async function readStoryboardReview(repo: Repo, reviewId: string, expecte
   const a = artifactSchema.parse(JSON.parse(raw));
   if (!current.tenant || a.tenant !== current.tenant || a.reviewId !== reviewId) throw new Error("Storyboard review tenant or identity mismatch");
   if (a.reviewHash !== expectedHash || storyboardContentHash(reviewMaterial(a)) !== a.reviewHash || storyboardContentHash(a.context) !== a.contextHash) throw new Error("Storyboard review or context changed; plan and approve again");
-  if (current.brand !== undefined && current.brand !== a.context.brand.content) throw new Error("Brand context changed; plan and approve again");
+  if (current.brand !== undefined && current.brand.trim() !== a.context.brand.content) throw new Error("Brand context changed; plan and approve again");
   for (const source of a.sources) {
     const rawSource = await repo.readFile(source.path);
     if ((rawSource === null ? null : storyboardContentHash(rawSource)) !== source.hash) throw new Error(`Planning source changed: ${source.path}; plan and approve again`);

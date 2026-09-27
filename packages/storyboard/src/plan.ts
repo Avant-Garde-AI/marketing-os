@@ -141,6 +141,10 @@ THIS beat's actual assertion and visual brief, never a plan for the next beat.
 The final beat still names its incoming change; "end of sequence" is not a
 change in what the reader sees or learns. Before returning, compare each
 transition with the adjacent briefs and correct any one-beat offset.
+Use the shortest complete arc. A two-beat carousel can earn its turn and payoff
+in the detail-to-context reveal. Do not append an unchanged full-artwork slide
+just to deliver remaining caption or room advice; place that copy on the last
+meaningful beat. Each extra beat must earn its own information gain.
 Duration seconds are allowed only for video beats, never single or carousel
 still images. A store-asset brief must include its exact acquired asset.ref and
 explicit use (as-is, detail-crop or verified master mockup-input).

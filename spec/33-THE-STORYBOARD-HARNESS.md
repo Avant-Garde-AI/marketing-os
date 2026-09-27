@@ -965,3 +965,11 @@ review of the rendered result. NeuroGraph persona and creative-outcome seams
 remain optional/unimplemented as requested. Hosted public image reads use the
 tenant-keyed working store; a future hosted git-only install must provide a
 trusted public tenant/repo resolver before adopting this asset route.
+
+Production model correction: the initial live graph planner returned an incomplete
+structured object. The runtime now describes the full required output shape,
+uses explicit low Gemini 3 thinking, and bounds planner/critic output at
+24,000/8,000 tokens with SDK/processor retries disabled. The schema and complete
+three-candidate requirement are unchanged; partial or budget-exhausted output
+fails rather than acquiring fabricated defaults. There remain at most four
+provider calls and no imagery calls. See the delivery runtime checkpoint.

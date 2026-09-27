@@ -17,6 +17,11 @@ import { defineConfig } from "vitest/config";
  * end-to-end lane, and neither pretends to be the other.
  */
 export default defineConfig({
+  resolve: {
+    // Adapter unit tests use a deliberately inert SDK stand-in. The CLI does
+    // not depend on Mastra; generated consoles install the real SDK.
+    alias: { "@mastra/core/agent": new URL("./test/fixtures/mastra-agent.ts", import.meta.url).pathname },
+  },
   test: {
     include: ["test/**/*.test.ts"],
     exclude: ["test/integration.test.ts", "**/node_modules/**"],

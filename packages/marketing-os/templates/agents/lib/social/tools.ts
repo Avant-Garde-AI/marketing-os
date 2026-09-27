@@ -375,7 +375,7 @@ const genomeReadInput = z.object({
     .int()
     .nonnegative()
     .optional()
-    .describe("Drop archetypes distilled from fewer than N exemplars"),
+    .describe("Minimum counted exemplars; defaults to 1. Set 0 explicitly to include uncounted research or brand hypotheses."),
 });
 
 const genomeReadOutput = z.object({
@@ -513,7 +513,7 @@ export function createSocialTools(
         "Prefer a well-evidenced archetype (higher n) and say which one you used and why. When available is false, compose brand-only exactly as you would otherwise — a missing genome is normal, never an error.",
       inputSchema: genomeReadInput,
       outputSchema: genomeReadOutput,
-      execute: async ({ board, channel, pillar, minEvidence }) => {
+      execute: async ({ board, channel, pillar, minEvidence = 1 }) => {
         const query: GenomeQuery = {
           ...(channel ? { channel } : {}),
           ...(pillar ? { pillar } : {}),
@@ -529,14 +529,16 @@ export function createSocialTools(
         }
         const ranked = rankArchetypes(
           genome,
-          minEvidence !== undefined ? { minEvidence } : {},
+          { minEvidence },
         );
         if (ranked.length === 0) {
           return {
             available: false,
-            note: `The genome has no archetype meeting minEvidence=${minEvidence} — compose brand-only, or retry with a lower threshold.`,
+            note: `The genome has no archetype meeting minEvidence=${minEvidence} — compose brand-only. Set minEvidence=0 explicitly only to inspect uncounted hypotheses.`,
             domain: genome.domain,
             distilledAt: genome.distilledAt,
+            ...(genome.register ? { register: genome.register } : {}),
+            ...(genome.copyFormulas ? { copyFormulas: genome.copyFormulas } : {}),
           };
         }
         const ageDays = Math.max(
@@ -545,6 +547,9 @@ export function createSocialTools(
         );
         return {
           available: true,
+          ...(ranked.some((a) => a.evidence.n === 0)
+            ? { note: "Includes explicitly requested uncounted hypotheses (n=0). These are not observed corpus patterns." }
+            : {}),
           domain: genome.domain,
           distilledAt: genome.distilledAt,
           ageDays,

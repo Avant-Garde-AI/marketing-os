@@ -205,6 +205,29 @@ describe("social_genome_read", () => {
     expect(out.domain).toBe("framed-art-retail");
   });
 
+  it("does not silently serve the five uncounted layouts as observed patterns", async () => {
+    const uncounted = { ...quoteOverlay, evidence: { n: 0 } };
+    const repo = memoryRepo({ [GENOME_PATH]: serializeGenome(genome({ archetypes: [fullBleed, uncounted] })) });
+    const tool = createSocialTools(repo).social_genome_read;
+    const normal = await tool.execute({ board });
+    expect(normal.archetypes?.map((a) => a.id)).toEqual([fullBleed.id]);
+    const explicit = await tool.execute({ board, minEvidence: 0 });
+    expect(explicit.archetypes).toHaveLength(2);
+    expect(explicit.note).toMatch(/uncounted hypotheses/);
+    expect(explicit.archetypes?.find((a) => a.id === uncounted.id)?.evidence.n).toBe(0);
+  });
+
+  it("keeps honest register and copy guidance when all layouts are uncounted", async () => {
+    const repo = memoryRepo({ [GENOME_PATH]: serializeGenome(genome({
+      archetypes: [{ ...quoteOverlay, evidence: { n: 0 } }],
+    })) });
+    const out = await createSocialTools(repo).social_genome_read.execute({ board });
+    expect(out.available).toBe(false);
+    expect(out.note).toContain("minEvidence=1");
+    expect(out.register?.doNot).toEqual(["neon gradients"]);
+    expect(out.copyFormulas).toHaveLength(1);
+  });
+
   it("defaults to the repo-backed corpus with no explicit binding", async () => {
     const repo = memoryRepo({ [GENOME_PATH]: serializeGenome(genome()) });
     const out = await createSocialTools(repo).social_genome_read.execute({ board });

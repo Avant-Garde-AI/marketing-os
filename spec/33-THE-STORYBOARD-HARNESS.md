@@ -312,9 +312,11 @@ cluster-size threshold to find two patterns is reporting weakness accurately;
 the honest response is to raise yield, not to re-scrape.
 
 Until then the orchestrator has no template knowledge worth having, and
-`social_genome_read` should refuse to serve a zero-evidence archetype unless
-explicitly asked for — which is what would have stopped this document's author
-using five of them.
+`social_genome_read` now defaults to `minEvidence: 1` and refuses to serve a
+zero-evidence archetype unless explicitly asked for with `minEvidence: 0` — which is what would have stopped this document's author
+using five of them. Explicit inclusion returns an uncounted-hypothesis warning.
+When no archetypes qualify, honest register and copy guidance remain available;
+`available: false` means no eligible layout, not that the prose disappeared.
 
 ### 3.1b Retirement remains an option
 

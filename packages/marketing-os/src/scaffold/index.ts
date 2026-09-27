@@ -181,11 +181,6 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
-      templatePath: path.join(templateDir, "agents/tailwind.config.ts"),
-      targetPath: path.join(targetDir, "agents/tailwind.config.ts"),
-      overwrite: "skip",
-    },
-    {
       templatePath: path.join(templateDir, "agents/postcss.config.mjs"),
       targetPath: path.join(targetDir, "agents/postcss.config.mjs"),
       overwrite: "skip",
@@ -365,37 +360,6 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/components/chat/gen-ui.tsx"),
       targetPath: path.join(targetDir, "agents/components/chat/gen-ui.tsx"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(templateDir, "agents/components/nav.tsx"),
-      targetPath: path.join(targetDir, "agents/components/nav.tsx"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(templateDir, "agents/components/header.tsx.hbs"),
-      targetPath: path.join(targetDir, "agents/components/header.tsx"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(
-        templateDir,
-        "agents/components/skill-card.tsx"
-      ),
-      targetPath: path.join(targetDir, "agents/components/skill-card.tsx"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(templateDir, "agents/components/pr-card.tsx"),
-      targetPath: path.join(targetDir, "agents/components/pr-card.tsx"),
-      overwrite: "skip",
-    },
-    {
-      templatePath: path.join(
-        templateDir,
-        "agents/components/metric-card.tsx"
-      ),
-      targetPath: path.join(targetDir, "agents/components/metric-card.tsx"),
       overwrite: "skip",
     },
     {
@@ -697,6 +661,1184 @@ async function prepareFiles(
         ".github/workflows/marketing-os-review.yml"
       ),
       overwrite: "prompt",
+    },
+    // Explicit runtime coverage: no store artifacts, credentials, or config.
+    {
+      templatePath: path.join(templateDir, "agents/.mcp.json"),
+      targetPath: path.join(targetDir, "agents/.mcp.json"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/CLAUDE.md"),
+      targetPath: path.join(targetDir, "agents/CLAUDE.md"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/actions/execute/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/actions/execute/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/admin/migrate/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/admin/migrate/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/brand-image/[id]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/brand-image/[id]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/conversations/[id]/messages/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/conversations/[id]/messages/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/conversations/[id]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/conversations/[id]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/conversations/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/conversations/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/cron/email/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/cron/email/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/cron/offer-review/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/cron/offer-review/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/cron/research/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/cron/research/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/cron/social/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/cron/social/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/design-surfaces/export/[fileId]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/design-surfaces/export/[fileId]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/design-surfaces/studio-session/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/design-surfaces/studio-session/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/email/asset/[id]/[name]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/asset/[id]/[name]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/email/headline/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/headline/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/email/preview/[id]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/preview/[id]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/email/review-notes/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/review-notes/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/klaviyo/connect-key/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/klaviyo/connect-key/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/mcp/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/mcp/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/offers/deploy/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/offers/deploy/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/offers/reallocate/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/offers/reallocate/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/proposals/dispatch/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/proposals/dispatch/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/skill-enablements/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/skill-enablements/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/review-notes/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/review-notes/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/surfaces/capture/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/surfaces/capture/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/surfaces/events/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/surfaces/events/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/surfaces/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/surfaces/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/auth/callback/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/auth/callback/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/brand/[slug]/file/[kind]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/brand/[slug]/file/[kind]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/brand/[slug]/llms.txt/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/brand/[slug]/llms.txt/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/brand/[slug]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/brand/[slug]/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/brand/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/brand/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/calendar/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/calendar/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/email/campaigns/[id]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/email/campaigns/[id]/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/email/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/email/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/playbooks/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/playbooks/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/review/email/[id]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/review/email/[id]/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/review/email/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/review/email/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/review/social/[id]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/review/social/[id]/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/review/social/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/review/social/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/social/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/social/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/social/posts/[id]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/social/posts/[id]/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/studio/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/studio/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/calendar/calendar-view.tsx"),
+      targetPath: path.join(targetDir, "agents/components/calendar/calendar-view.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/copy-link.tsx"),
+      targetPath: path.join(targetDir, "agents/components/copy-link.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/email/campaign-performance.tsx"),
+      targetPath: path.join(targetDir, "agents/components/email/campaign-performance.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/email/performance.tsx"),
+      targetPath: path.join(targetDir, "agents/components/email/performance.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/review/email-review.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/email-review.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/review/social-review.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/social-review.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/ui/avatar.tsx"),
+      targetPath: path.join(targetDir, "agents/components/ui/avatar.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/ui/dropdown-menu.tsx"),
+      targetPath: path.join(targetDir, "agents/components/ui/dropdown-menu.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/actions/gate-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/actions/gate-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/actions/hash.ts"),
+      targetPath: path.join(targetDir, "agents/lib/actions/hash.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/actions/registry.ts"),
+      targetPath: path.join(targetDir, "agents/lib/actions/registry.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/actions/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/actions/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/broker-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/broker-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/calendar.ts"),
+      targetPath: path.join(targetDir, "agents/lib/calendar.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/calendar/console-data.ts"),
+      targetPath: path.join(targetDir, "agents/lib/calendar/console-data.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/calendar/review-routes.ts"),
+      targetPath: path.join(targetDir, "agents/lib/calendar/review-routes.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/calendar/routes.ts"),
+      targetPath: path.join(targetDir, "agents/lib/calendar/routes.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/connector-auth.ts"),
+      targetPath: path.join(targetDir, "agents/lib/connector-auth.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/cron-frame.ts"),
+      targetPath: path.join(targetDir, "agents/lib/cron-frame.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/adapter.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/adapter.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/compose.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/compose.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/config.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/config.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/cookie-domain.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/cookie-domain.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/dtcg.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/dtcg.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/library-source.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/library-source.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/library.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/library.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/materialize.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/materialize.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/penpot-library.d.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/penpot-library.d.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/rpc.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/rpc.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/surface.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/surface.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/tenancy.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/tenancy.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/design-surfaces/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/design-surfaces/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/assemble.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/assemble.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/compose.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/compose.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/css.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/css.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/extract.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/extract.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/index.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/invariants.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/invariants.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/renderers.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/renderers.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email-assembly/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email-assembly/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/artifacts.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/artifacts.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/artist-profile.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/artist-profile.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/assemble.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/assemble.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/audience.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/audience.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/console-data.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/console-data.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/discount-refs.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/discount-refs.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/enablement.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/enablement.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/hero.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/hero.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/index-sync.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/index-sync.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/instructions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/instructions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/klaviyo-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/klaviyo-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/leaning-mockups.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/leaning-mockups.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/plan.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/plan.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/product-prices.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/product-prices.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/register-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/register-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/repo.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/repo.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/retrospective.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/retrospective.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/review-links.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/review-links.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/review-note-shape.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/review-note-shape.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/review-notes.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/review-notes.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/segment-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/segment-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/segments.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/segments.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/tools.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/tools.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/wall-sets.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/wall-sets.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/ga4.ts"),
+      targetPath: path.join(targetDir, "agents/lib/ga4.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/imagery/palette.ts"),
+      targetPath: path.join(targetDir, "agents/lib/imagery/palette.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/imagery/resolve.ts"),
+      targetPath: path.join(targetDir, "agents/lib/imagery/resolve.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/mcp/zod-schema.ts"),
+      targetPath: path.join(targetDir, "agents/lib/mcp/zod-schema.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/migrations/bundled.ts"),
+      targetPath: path.join(targetDir, "agents/lib/migrations/bundled.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/migrations/run.ts"),
+      targetPath: path.join(targetDir, "agents/lib/migrations/run.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/platform-db.ts"),
+      targetPath: path.join(targetDir, "agents/lib/platform-db.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/proxy-auth.ts"),
+      targetPath: path.join(targetDir, "agents/lib/proxy-auth.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/review/note-shape.ts"),
+      targetPath: path.join(targetDir, "agents/lib/review/note-shape.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/review/notes.ts"),
+      targetPath: path.join(targetDir, "agents/lib/review/notes.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/shopify/discount-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/shopify/discount-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-kit/action.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-kit/action.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-kit/front-matter.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-kit/front-matter.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-kit/index.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-kit/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-kit/provenance.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-kit/provenance.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-kit/repo.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-kit/repo.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/skill-kit/tool.ts"),
+      targetPath: path.join(targetDir, "agents/lib/skill-kit/tool.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/archetype-surface.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/archetype-surface.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/artifacts.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/artifacts.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/authoring.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/authoring.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/catalog-subjects.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/catalog-subjects.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/channels/index.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/channels/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/channels/instagram.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/channels/instagram.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/channels/refresh.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/channels/refresh.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/channels/threads.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/channels/threads.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/claims.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/claims.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/concept-tools.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/concept-tools.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/concepts.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/concepts.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/console-data.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/console-data.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/graph-subjects.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/graph-subjects.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/index-sync.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/index-sync.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/instructions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/instructions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/palette.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/palette.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/projection.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/projection.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/reference.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/reference.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/register-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/register-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/repo.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/repo.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/resolve.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/resolve.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/review-links.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/review-links.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/scaffold.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/scaffold.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/surface-style.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/surface-style.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/tools.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/tools.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/store-repo/app-auth.ts"),
+      targetPath: path.join(targetDir, "agents/lib/store-repo/app-auth.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/store-repo/assets.ts"),
+      targetPath: path.join(targetDir, "agents/lib/store-repo/assets.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/store-repo/github.ts"),
+      targetPath: path.join(targetDir, "agents/lib/store-repo/github.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/store-repo/index.ts"),
+      targetPath: path.join(targetDir, "agents/lib/store-repo/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/critics.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/critics.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/explore.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/explore.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/graph-context.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/graph-context.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/index.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/narrative.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/narrative.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/plan.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/plan.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/schemas.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/schemas.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/tenant-context.ts"),
+      targetPath: path.join(targetDir, "agents/lib/tenant-context.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/public/apple-touch-icon.png"),
+      targetPath: path.join(targetDir, "agents/public/apple-touch-icon.png"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/public/favicon.ico"),
+      targetPath: path.join(targetDir, "agents/public/favicon.ico"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/public/icon-512.png"),
+      targetPath: path.join(targetDir, "agents/public/icon-512.png"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/backfill-artifacts-to-git.ts"),
+      targetPath: path.join(targetDir, "agents/scripts/backfill-artifacts-to-git.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/bundle-migrations.mjs"),
+      targetPath: path.join(targetDir, "agents/scripts/bundle-migrations.mjs"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/agents/brand-definition-agent.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/agents/brand-definition-agent.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/brand/candidates.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/brand/candidates.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/brand/deep-research.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/brand/deep-research.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/brand/portal.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/brand/portal.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/brand/store.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/brand/store.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/compile.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/compile.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/default-model.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/default-model.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/index.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/introspect.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/introspect.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/mcp-prompts.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/mcp-prompts.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/mcp-resources.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/mcp-resources.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/ga4-plan.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/ga4-plan.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/index.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/index.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/klaviyo-plan.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/klaviyo-plan.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/shopify-plan.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/shopify-plan.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/time.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/time.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/types.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/query/validate.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/query/validate.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/semantics/types.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/semantics/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/storyboard-model.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/storyboard-model.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tenant-storage.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tenant-storage.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/actions.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/brand-design.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/brand-design.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/brand-soul.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/brand-soul.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/chart-tools.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/chart-tools.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/design-library.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/design-library.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/design-surfaces.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/design-surfaces.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/email-authoring.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/email-authoring.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/email.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/email.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/external-mcp.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/external-mcp.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/imagery.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/imagery.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/semantics.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/semantics.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/social-compose.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/social-compose.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/social-graph.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/social-graph.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/social.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/social.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/storyboard.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/storyboard.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/00000000000001_init_marketing_os.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/00000000000001_init_marketing_os.sql"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/00000000000002_user_signup_trigger.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/00000000000002_user_signup_trigger.sql"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/008_email_review_notes.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/008_email_review_notes.sql"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/009_pack_social.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/009_pack_social.sql"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/010_pack_social_group_key.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/010_pack_social_group_key.sql"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/011_review_notes.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/011_review_notes.sql"),
+      overwrite: "skip",
+    },
+    // Empty surface defaults on fresh installs; existing store config is preserved.
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/reviews.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/reviews.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/config/surfaces.json"),
+      targetPath: path.join(targetDir, "agents/config/surfaces.json"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/config/surfaces.example.json"),
+      targetPath: path.join(targetDir, "agents/config/surfaces.example.json"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/assets/[shop]/[name]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/assets/[shop]/[name]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/assets.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/assets.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/realization.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/realization.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/storyboard/register-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/storyboard/register-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/review/storyboard/[id]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/review/storyboard/[id]/page.tsx"),
+      overwrite: "skip",
+    },
+    // Current runtime additions from the offers package.
+    {
+      templatePath: path.join(templateDir, "agents/app/offers/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/offers/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/attribution-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/attribution-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/artifacts.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/artifacts.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/repo.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/repo.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/register-actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/register-actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/types.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/types.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/decision.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/decision.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/gates.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/gates.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/actions.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/actions.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/tools.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/tools.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/manifest.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/manifest.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/platform-client.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/platform-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/offers.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/offers.ts"),
+      overwrite: "skip",
     },
   ];
 

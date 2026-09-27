@@ -146,7 +146,7 @@ describe("social_concept_instantiate", () => {
         {
           subjectId: "25654-we-dont-talk",
           label: "We Don't Talk About That",
-          assessments: [{ needId: "visible-technique", met: true, evidence: "ink and pencil linework" }],
+          assessments: [{ needId: "visible-technique", met: true, evidence: "ink and pencil linework", sourceRef: "catalog:25654-we-dont-talk" }],
         },
         {
           subjectId: "10192-cela",
@@ -169,7 +169,7 @@ describe("social_concept_instantiate", () => {
       conceptId: "how-it-was-made",
       n: 1,
       candidates: [
-        { subjectId: "a", assessments: [{ needId: "visible-technique", met: true, evidence: "pen" }] },
+        { subjectId: "a", assessments: [{ needId: "visible-technique", met: true, evidence: "pen", sourceRef: "asset:a" }] },
       ],
     });
     expect(out.format).toBe("carousel");
@@ -186,12 +186,12 @@ describe("social_concept_instantiate", () => {
       candidates: [
         {
           subjectId: "a",
-          assessments: [{ needId: "visible-technique", met: true, evidence: "visible pen strokes" }],
+          assessments: [{ needId: "visible-technique", met: true, evidence: "visible pen strokes", sourceRef: "asset:a" }],
         },
       ],
     });
     expect(out.plans[0]!.grounding).toEqual([
-      { needId: "visible-technique", evidence: "visible pen strokes" },
+      { needId: "visible-technique", evidence: "visible pen strokes", sourceRef: "asset:a" },
     ]);
     expect(out.plans[0]!.thinOn).toEqual(["medium-known"]);
   });
@@ -202,7 +202,7 @@ describe("social_concept_instantiate", () => {
       n: 1,
       format: "video",
       candidates: [
-        { subjectId: "a", assessments: [{ needId: "visible-technique", met: true, evidence: "pen" }] },
+        { subjectId: "a", assessments: [{ needId: "visible-technique", met: true, evidence: "pen", sourceRef: "asset:a" }] },
       ],
     });
     expect(out.ok).toBe(false);
@@ -216,10 +216,22 @@ describe("social_concept_instantiate", () => {
       conceptId: "how-it-was-made",
       n: 1,
       candidates: [
-        { subjectId: "a", assessments: [{ needId: "visible-technqiue", met: true, evidence: "typo" }] },
+        { subjectId: "a", assessments: [{ needId: "visible-technqiue", met: true, evidence: "typo", sourceRef: "asset:a" }] },
       ],
     });
     expect(out.produced).toBe(0);
     expect(out.rejected[0]!.unmet).toEqual(["visible-technique"]);
+  });
+
+  it("refuses an asserted need without a checkable source reference", async () => {
+    const out = await tools().social_concept_instantiate.execute({
+      conceptId: "how-it-was-made",
+      n: 1,
+      candidates: [
+        { subjectId: "a", assessments: [{ needId: "visible-technique", met: true, evidence: "pen strokes" }] },
+      ],
+    });
+    expect(out.produced).toBe(0);
+    expect(out.rejected[0]?.unmet).toContain("visible-technique");
   });
 });

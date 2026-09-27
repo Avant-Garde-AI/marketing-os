@@ -33,6 +33,35 @@ export function checkGrounding(story: Storyboard, context: PlanningContext): Ver
   const sources = new Set([context.brand.source, ...context.facts.map((f) => f.source)]);
   const patterns = new Map(context.patterns.map((p) => [p.id, p]));
   const assets = new Map(context.assets.map((a) => [a.ref, a]));
+  if (context.concept && story.conceptId !== context.concept.id)
+    verdicts.push(fail("Storyboard must instantiate the selected content concept"));
+  if (context.concept && !context.concept.formats.includes(story.format))
+    verdicts.push(fail("Storyboard format is absent or blocked in the selected content concept"));
+  if (context.concept) {
+    const assessments = story.needAssessments ?? [];
+    if (new Set(assessments.map((a) => a.needId)).size !== assessments.length ||
+        assessments.some((a) => !context.concept!.needs.some((need) => need.id === a.needId)))
+      verdicts.push(fail("Content need assessments contain duplicate or unknown need IDs"));
+    for (const need of context.concept.needs) {
+      const assessment = assessments.find((a) => a.needId === need.id);
+      if (need.required && (!assessment?.met || !assessment.sourceRefs.length || assessment.sourceRefs.some((ref) => !sources.has(ref))))
+        verdicts.push(fail(`Required content need '${need.id}' is unmet or lacks available source evidence`));
+    }
+  }
+  if (context.subjects?.length) {
+    const chosen = story.subjectHandles ?? [];
+    if (!chosen.length || new Set(chosen).size !== chosen.length)
+      verdicts.push(fail("Name unique exact catalog subject handles for this option"));
+    for (const handle of chosen)
+      if (!context.subjects.some((subject) => subject.handle === handle))
+        verdicts.push(fail(`Storyboard selected an unavailable catalog subject: ${handle}`));
+    for (const beat of story.beats) {
+      const binding = beat.brief.asset;
+      if (binding && context.subjects.some((subject) => subject.assetRef === binding.ref) &&
+          !context.subjects.some((subject) => subject.assetRef === binding.ref && chosen.includes(subject.handle)))
+        verdicts.push(fail("Beat uses a catalog artwork outside this option's selected subjects", beat.id));
+    }
+  }
   for (const [i, beat] of story.beats.entries()) {
     for (const evidence of beat.evidence) {
       if (!evidence.source || !sources.has(evidence.source)) {
@@ -106,7 +135,15 @@ Every beat after the first needs transition.change, why, and patternRefs (empty
 when unsupported). Preserve exact asset refs. Use existing framed renders only
 as framed objects; mockup-input requires a verified bare-artwork master. Unknown
 assets cannot be claimed to be bare. Bind continuity to available fixed assets
-or reference frames. Copy and assertions remain subject to the existing claims
+or reference frames. When a content concept is supplied, keep its exact conceptId,
+reader payoff and hard needs. Provide needAssessments for every need: exact needId,
+met, sourceRefs and a concrete reason. Missing facts must be met:false, never a
+confident yes with a generic citation. A graph search match does not establish that a need
+is satisfied. Refuse unsupported needs rather than inventing rooms or process.
+When subjects are supplied, every option must name unique subjectHandles from
+that exact list and use only their corresponding catalog artwork assets for
+featured works. Do not substitute graph aliases or an unavailable work.
+Copy and assertions remain subject to the existing claims
 guard. Do not compose, generate, save, schedule, or publish anything.`;
 
 /**
@@ -124,6 +161,12 @@ export async function planStoryboards(
   for (const key of [context.patterns.map((p) => p.id), context.assets.map((a) => a.ref)]) {
     if (new Set(key).size !== key.length) throw new Error("Context IDs must be unique");
   }
+  if (context.subjects) {
+    const sources = new Set(context.facts.map((f) => f.source));
+    if (new Set(context.subjects.map((s) => s.handle)).size !== context.subjects.length ||
+        context.subjects.some((s) => !context.assets.some((a) => a.ref === s.assetRef) || s.sourceRefs.some((ref) => !sources.has(ref))))
+      throw new Error("Catalog subject context lacks unique acquired sources or assets");
+  }
   for (const pattern of context.patterns) {
     if (
       pattern.basis === "counted" &&
@@ -139,6 +182,7 @@ export async function planStoryboards(
       instruction: PLAN,
       data: { brief, context },
       schema,
+      ...(context.subjects?.length ? { images: context.subjects.map((subject) => ({ label: `catalog:${subject.handle}`, url: subject.assetRef })) } : {}),
     })
   );
   if (new Set(planned.storyboards.map((s) => s.id)).size !== 3)

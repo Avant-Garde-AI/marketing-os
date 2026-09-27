@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -60,6 +60,26 @@ describe("the scaffolded store builds", () => {
     // A guard on the parser, not the scaffold: if the regex stops matching,
     // every other assertion here passes vacuously and the suite goes quiet.
     expect(files.length).toBeGreaterThan(30);
+  });
+
+  it("ships every runtime module, including unimported Next routes and tools", () => {
+    const copied = new Set(files);
+    const missing: string[] = [];
+    for (const root of ["app", "components", "lib", "src", "scripts", "public"]) {
+      for (const rel of readdirSync(path.join(templateRoot, root), { recursive: true })) {
+        const entry = `${root}/${rel}`;
+        // Ignore directories and documentation; route files need no import to
+        // participate in Next's build, so import closure alone is insufficient.
+        if (!/\.(?:tsx?|css|mjs|sh|png|ico)(?:\.hbs)?$/.test(entry)) continue;
+        const target = entry.replace(/\.hbs$/, "");
+        if (!copied.has(target)) missing.push(target);
+      }
+    }
+    expect(missing.sort()).toEqual([]);
+  });
+
+  it("has an existing source for every scaffold target", () => {
+    expect(files.filter((rel) => !templateFileFor(rel))).toEqual([]);
   });
 
   it("has no import that the scaffolded set cannot resolve", () => {

@@ -231,6 +231,29 @@ export function serializeCalendar(calendar: SocialCalendar): string {
 // social/posts/{id}/post.md
 // ---------------------------------------------------------------------------
 
+/** Runtime-rendered material, validated on every artifact read. */
+export const renderedSequenceSchema = z.object({
+  version: z.literal(1),
+  storyboardId: z.string().min(1),
+  storyboardHash: z.string().regex(/^[a-f0-9]{64}$/),
+  reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
+  slides: z.array(z.object({
+    beatId: z.string().min(1), boardName: z.string().min(1),
+    url: z.string().url().refine((value) => {
+      const u = new URL(value);
+      return u.protocol === "https:" && !u.username && !u.password && !u.hash && !u.search && !u.port &&
+        u.hostname.includes(".") && !u.hostname.endsWith(".") && !/\.(local|localhost|internal)$/i.test(u.hostname) &&
+        !/^(localhost|127\.|0\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|\[)/i.test(u.hostname) &&
+        /\.jpe?g$/i.test(u.pathname);
+    }, "must be a public HTTPS JPEG URL"),
+    sha256: z.string().regex(/^[a-f0-9]{64}$/),
+    width: z.number().int().positive(), height: z.number().int().positive(),
+  }).strict()).min(1).max(10),
+}).strict().refine((sequence) => {
+  const unique = (key: "beatId" | "boardName" | "url") => new Set(sequence.slides.map((slide) => slide[key])).size === sequence.slides.length;
+  return unique("beatId") && unique("boardName") && unique("url");
+}, "slides must have unique beat ids, board names and immutable URLs");
+
 const postFrontMatterSchema = z.object({
   id: z.string().min(1),
   channel: z.string().min(1),
@@ -247,6 +270,7 @@ const postFrontMatterSchema = z.object({
   copy: z.string().min(1).describe("The caption text"),
   copyFormulaRef: z.string().optional().describe("brand.md copy formula ref"),
   assetRefs: z.array(z.string()).describe("Repo-relative asset paths"),
+  renderedSequence: renderedSequenceSchema.optional(),
   // Explicit, first-class: the front-matter schemas STRIP unknown keys on
   // parse (zod object default), so anything not named here would be silently
   // dropped by a load→save round-trip.
@@ -305,6 +329,7 @@ export function parsePost(raw: string): SocialPost {
   if (fm.groupId !== undefined) post.groupId = fm.groupId;
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
+  if (fm.renderedSequence !== undefined) post.renderedSequence = fm.renderedSequence;
   if (fm.designSurface !== undefined) post.designSurface = fm.designSurface;
   if (fm.approval !== undefined) post.approval = fm.approval;
   if (fm.platform !== undefined) post.platform = fm.platform;
@@ -319,6 +344,7 @@ export function serializePost(post: SocialPost): string {
   fm.copy = post.copy;
   if (post.copyFormulaRef !== undefined) fm.copyFormulaRef = post.copyFormulaRef;
   fm.assetRefs = post.assetRefs;
+  if (post.renderedSequence !== undefined) fm.renderedSequence = renderedSequenceSchema.parse(post.renderedSequence);
   if (post.designSurface !== undefined) fm.designSurface = post.designSurface;
   fm.targetLink = post.targetLink;
   fm.provenance = post.provenance;
@@ -370,6 +396,7 @@ export function linkDesignToPost(post: SocialPost, ref: DesignSurfaceRef): Socia
     ...(ref.pageId !== undefined ? { pageId: ref.pageId } : {}),
   };
   const next: SocialPost = { ...post, designSurface };
+  if (JSON.stringify(post.designSurface ?? null) !== JSON.stringify(designSurface)) delete next.renderedSequence;
 
   if (post.status === "proposed" || post.status === "approved") {
     next.status = "asset_ready";

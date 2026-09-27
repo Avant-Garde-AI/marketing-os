@@ -46,9 +46,8 @@ export interface Evidence {
 /**
  * May this beat's imagery be invented?
  *
- * Exists because of a live, unfixed defect: every Arthaus product image is a
- * framed render on a 2048² canvas, so handing one to the mockup engine yields a
- * frame inside a frame. A beat that needs bare artwork must be able to REFUSE
+ * A catalog render can already contain a frame; feeding it to a mockup engine
+ * can create a frame inside a frame. A beat that needs a verified master must REFUSE
  * rather than quietly produce nonsense (spec 33 §2.2).
  */
 export const SOURCING = ["generated", "store-asset", "either"] as const;
@@ -142,6 +141,10 @@ export interface Storyboard {
   id: string;
   /** The concept this instantiates, when it came from one (spec 29). */
   conceptId?: string;
+  /** Exact catalog subjects selected for this option when planning from a graph packet. */
+  subjectHandles?: string[];
+  /** Explicit content-contract assessment; model proposals remain subject to independent critique and human review. */
+  needAssessments?: Array<{ needId: string; met: boolean; sourceRefs: string[]; reason: string }>;
   format: StoryboardFormat;
   /**
    * The arc in one sentence — what a reader takes away. Written BEFORE the

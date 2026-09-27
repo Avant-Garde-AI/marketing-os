@@ -13,7 +13,7 @@
  */
 
 import { loadPostGroup } from "@/lib/social/console-data";
-import { postThumbnailUrl } from "@/lib/social/projection";
+import { postReviewAssets } from "@/lib/social/projection";
 import { socialSheetLink, ttlRemaining, verifyLink } from "@/lib/social/review-links";
 import { listNotes } from "@/lib/review/notes";
 import { runWithTenant } from "@/lib/tenant-context";
@@ -141,13 +141,14 @@ export default async function SocialReviewRoom({
         style={{
           display: "grid",
           gap: "1.5rem",
-          gridTemplateColumns: `repeat(auto-fit, minmax(${group.posts.length > 1 ? "300px" : "420px"}, 1fr))`,
+          gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${group.posts.length > 1 ? "300px" : "420px"}), 1fr))`,
         }}
       >
         {group.posts.map(({ post, studioPath }) => {
-          const src = postThumbnailUrl(post, publicUrl);
+          const assets = postReviewAssets(post, publicUrl);
+          const sequence = post.renderedSequence;
           return (
-            <article key={post.id} style={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
+            <article key={post.id} style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(0,0,0,0.08)", fontSize: "0.8rem" }}>
                 <strong>{post.channel}</strong>
                 <span style={{ opacity: 0.65 }}>
@@ -157,13 +158,54 @@ export default async function SocialReviewRoom({
                   {post.status}
                 </span>
               </div>
-              {src ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={src}
-                  alt={`${post.channel} creative for ${post.id}`}
-                  style={{ width: "100%", aspectRatio: aspectFor(post.channel), objectFit: "contain", background: "#f4f2ef", display: "block" }}
-                />
+              {assets.length > 0 ? (
+                <section aria-label={`${post.channel} creative sequence`}>
+                  {sequence && (
+                    <div style={{ padding: "0.85rem", background: "#f4f2ef", fontSize: "0.8rem", lineHeight: 1.5, overflowWrap: "anywhere" }}>
+                      <strong>{assets.length} slide{assets.length === 1 ? "" : "s"} · publication order</strong>
+                      <p style={{ margin: "0.25rem 0 0" }}>Storyboard: {sequence.storyboardId}</p>
+                      <p style={{ margin: "0.25rem 0 0" }}>These rendered slides are the final creative for review.</p>
+                      <details style={{ marginTop: "0.5rem" }}>
+                        <summary>Render provenance</summary>
+                        <dl style={{ marginBottom: 0 }}>
+                          <dt>Storyboard hash</dt>
+                          <dd style={{ margin: "0 0 0.5rem", fontFamily: "monospace" }}>{sequence.storyboardHash}</dd>
+                          <dt>Review hash</dt>
+                          <dd style={{ margin: 0, fontFamily: "monospace" }}>{sequence.reviewHash}</dd>
+                        </dl>
+                      </details>
+                    </div>
+                  )}
+                  <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                    {assets.map((src, index) => {
+                      const slide = sequence?.slides[index];
+                      return (
+                        <li key={`${index}-${src}`} style={{ borderTop: index > 0 ? "1px solid rgba(0,0,0,0.12)" : undefined }}>
+                          <figure style={{ margin: 0 }}>
+                            <figcaption style={{ padding: "0.65rem 0.85rem", fontSize: "0.8rem", lineHeight: 1.5, overflowWrap: "anywhere" }}>
+                              <strong>Slide {index + 1} of {assets.length}</strong>
+                              {slide && <span> · {slide.boardName}<br />Beat: {slide.beatId}</span>}
+                            </figcaption>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={src}
+                              alt={`${post.channel} slide ${index + 1} of ${assets.length}${slide ? `: ${slide.boardName} (beat ${slide.beatId})` : ` for ${post.id}`}`}
+                              width={slide?.width}
+                              height={slide?.height}
+                              style={{ width: "100%", height: "auto", aspectRatio: slide ? `${slide.width} / ${slide.height}` : aspectFor(post.channel), objectFit: "contain", background: "#f4f2ef", display: "block" }}
+                            />
+                            {slide && (
+                              <details style={{ padding: "0.5rem 0.85rem", fontSize: "0.75rem", overflowWrap: "anywhere" }}>
+                                <summary>Slide provenance · {slide.width} × {slide.height}</summary>
+                                <p style={{ fontFamily: "monospace", marginBottom: 0 }}>SHA-256: {slide.sha256}</p>
+                              </details>
+                            )}
+                          </figure>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </section>
               ) : (
                 <div
                   style={{
@@ -179,7 +221,7 @@ export default async function SocialReviewRoom({
                 </div>
               )}
               <div style={{ padding: "0.85rem" }}>
-                <p style={{ whiteSpace: "pre-wrap", fontSize: "0.92rem", lineHeight: 1.5, margin: 0 }}>{post.copy}</p>
+                <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: "0.92rem", lineHeight: 1.5, margin: 0 }}>{post.copy}</p>
                 <p style={{ fontSize: "0.8rem", marginTop: "0.6rem", opacity: 0.75, wordBreak: "break-all" }}>
                   → {post.targetLink}
                 </p>

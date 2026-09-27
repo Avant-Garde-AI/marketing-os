@@ -1,8 +1,12 @@
 # 33 — The Storyboard Harness
 
+> **Forward plan:** [Creative core architecture and implementation](../docs/STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md)
+> consolidates the research, current code, corpus findings, contracts, evaluation
+> gates and work packages. This spec preserves the diagnosis and implementation history.
+
 > **Status:** Implementation in progress — planning and model-backed critics
-> implemented; live corpus extraction, imagery dispatch and human acceptance
-> remain outstanding. §10 records the architecture decisions and their limits.
+> implemented; a three-single-image corpus pilot succeeded. Arc extraction,
+> imagery dispatch and human acceptance remain outstanding. §10 records the architecture decisions and their limits.
 > **Supersedes, in effect:** the compose half of 24-SOCIAL-MEDIA-AGENT and the
 > archetype half of 29-POST-CONCEPTS. Neither is deleted; both become inputs.
 > **Depends on:** 22-BRAND-SOUL (brand.md is truth), 23-DESIGN-SURFACES-PENPOT
@@ -95,10 +99,21 @@ This is the material a NARRATIVE harness actually needs — 524 multi-frame post
 by working artists, with a performance signal attached — and layout-synth never
 touched it. It went to the researched-dossier lane and came back as prose.
 
-**One decay to plan around:** the organic records store Instagram CDN
-`imageUrl`s, which expire. Sampled 2026-09-19: **403 Forbidden**. Metadata,
-captions and engagement survive; the pixels need re-pulling before anything can
-be clustered visually.
+**Correction from direct bucket inspection, 2026-09-19:** the table above is
+only the 40-artist pilot. `instagram-organic/2026-09-01/field-cohort/` also
+contains 504 account records, 6,958 post rows (6,947 unique shortcodes), and
+6,927 saved JPEG objects. Its rows comprise 1,337 `Image`, 3,020 `Sidecar` and
+2,601 `Video` records. This broader cohort includes adjacent accounts; it must
+not be described as 504 verified working artists.
+
+The blanket claim that all organic pixels need re-pulling was wrong. The field
+cohort has durable images. However, its records contain only one `imageFile`
+per post, no carousel children and no video stream: a saved cover cannot prove
+an arc. Inventory matching finds 1,332 single-image rows with saved pixels;
+32 rows across all formats lack a saved-image reference. Deduplicate by post identity
+before counting evidence. Expiring CDN URLs remain an acquisition problem for
+missing slides and video, not a reason to discard the saved single images.
+See §10.7 and the pilot report for execution and coverage limits.
 
 ### 0.2 Creative intent died in prose
 
@@ -544,9 +559,9 @@ not independent posts. Single images remain useful without being counted as arcs
    explicit denominators. Repair the ad lane’s 66 quarantined records separately;
    do not mix paid and organic performance signals or lower thresholds silently.
 
-GCS execution was attempted but blocked by expired Google authentication. No
-organic pixels were inspected in this implementation, no fresh counts are claimed,
-and this design has not yet earned a claim of better corpus yield.
+GCS authentication and read access were restored on 2026-09-19. Direct inventory
+corrected the acquisition assumptions in §0.5. A single-image extraction pilot
+does not establish carousel transitions or better full-corpus yield.
 
 ### 10.5 Critics (question 6)
 
@@ -571,8 +586,8 @@ consent are unchanged. The new planning path does not save a post or mark it rea
 
 ### 10.6 Remaining acceptance work
 
-- Restore corpus credentials, execute a small visual extraction pilot, inspect
-  its outputs, then expand with measured coverage and quarantine recovery.
+- Validate the small visual extraction pilot, recover complete carousel/video
+  media, then expand with measured coverage and quarantine recovery.
 - Supply bare-master provenance or choose the framed-object route deliberately.
 - Prepare the store context manifest and select a configured vision-capable
   `STORYBOARD_MODEL`; run the planning tool and get human agreement on an arc and
@@ -581,3 +596,372 @@ consent are unchanged. The new planning path does not save a post or mark it rea
   critique through the existing gate, then compose through the renderer seam.
 - Port tested changes into the store console in a reviewable PR. No hosted-runtime
   divergence or live store deployment is authorized by a planning result.
+
+
+### 10.7 Offline execution pilot
+
+`packages/storyboard-corpus` implements a separate whole-post extraction runner,
+append-only local ledger and explicit Vertex pixel adapter. The CLI dry-runs by
+default and requires a model, project and post cap before `--execute`. It is not
+an Atelier dependency or a new write path in the interactive agent. Changes to
+media bytes, caption, model, prompt or extractor version invalidate resume; every
+failed attempt remains visible, including provider usage when available.
+
+The extraction schema retains per-image observations, transitions, treatment and
+continuity. It does not emit counted patterns: clustering and admission follow
+visual review. Video inputs are timestamped image samples with limited coverage,
+never a poster silently treated as a whole video. The field-cohort normalizer
+audits complete single images separately from
+carousel/video covers. Acquisition is operator-controlled and the local input
+manifest is explicit. Three real single-image extractions succeeded on 2026-09-20;
+that result validates pixel transport and basic treatment extraction, not arcs.
+
+**Inventory verified:** the larger field cohort and its saved pixels exist.
+The normalized complete-post lane accepts verified `Image` records; `Sidecar`
+and `Video` covers remain explicitly incomplete and require reacquisition.
+Clustering single-image treatments can proceed independently, but it cannot
+supply evidence for between-beat narrative moves.
+See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the bounded pilot sequence.
+
+### 10.8 Staged v2 extraction calibration — 2026-09-23
+
+The new `packages/storyboard-corpus` v2 contract implements the planned split
+between pixel-grounded observation and narrative interpretation. The first
+model call receives ordered media bytes with no caption or engagement. The
+second receives validated observations plus the caption as labeled context,
+still without engagement. Exact media order, adjacent transition references,
+beat support and claim-source references are checked. Output remains unreviewed.
+At that checkpoint, the pure acquisition contract could classify incomplete
+media, but the v2 model adapter had not yet been bound to the durable CLI
+ledger or run on a recovered carousel. It did not establish an observed arc
+pattern.
+
+Three complete single-image posts passed a bounded live v2 probe on 2026-09-23.
+The model distinguished three comic covers _within one image_ from a carousel,
+described a painterly city scene, and recognized a hand/stylus making-process
+presentation. The city annotation also emitted an irrelevant audio limitation,
+and fine OCR remains uncertain. Schema validity is not semantic approval: the
+next evidence gate is human review of complete recovered carousel transitions.
+Measured prompts, failures and usage are in the pilot report.
+
+### 10.9 Snapshot-ledger execution — 2026-09-24
+
+The v2 adapter now has a separate local CLI and resumable ledger. It accepts
+only ready `CorpusSnapshot v2` records with local mirrored image children,
+checks their source order and byte checksums, then records output as unreviewed.
+It does not scrape a post, infer missing carousel slides or publish a pattern.
+The original v1 CLI is preserved. A measured three-single-image ledger run
+completed, and a repeat produced no additional ledger rows. Two targeted
+re-probes showed that an explicit still-image instruction removed irrelevant
+audio caveats from those examples; human judgment and real carousel transitions
+remained the next validation gate at that checkpoint. See the pilot report for
+counts and limits.
+
+### 10.10 First source-complete carousel — 2026-09-24
+
+One frozen original-cohort carousel was recovered with exact post identity and
+three ordered child IDs. The provider response, mirrored pixels and a complete
+snapshot are durable research objects. V2 observed two adjacent changes in the
+actual slides: T-shirts give way to a hoodie, then hats and stickers, with an
+orange running-route line linking the presentation from start dot to finish
+flag. This is the first direct corpus example of a second beat doing something
+new. The output remains **unreviewed**: a possible overstatement of continuous
+photography and coarse `addition` transition labels need human adjudication.
+One extracted sequence cannot justify a reusable pattern, outcome claim or
+counted genome update. The bounded recovery run and its limitations are in the
+pilot report.
+
+### 10.11 Observation vocabulary correction — 2026-09-24
+
+The first carousel showed that `addition` is too coarse when a focal product
+disappears and another occupies its role while a route motif persists. V2 now
+has `replacement` as a separate observable transition operation. A re-run of
+that same post used it for both shirt-to-hoodie and hoodie-to-accessories
+changes and described the runner photos without asserting they are one
+continuous photograph. This revises the *observation vocabulary*, not the
+creative thesis: it remains provisional pending diverse carousel review.
+
+### 10.12 Recovery attribution and sequence units — 2026-09-24
+
+The next frozen carousel exposed an attribution distinction that the first
+recovery contract missed. `DPukaNjEnC2` appeared in the `teaganwh` occurrence,
+but the fresh provider record names `jessenarens` as owner and `teaganwh` as an
+explicit coauthor. Exact shortcode plus owner-only equality would falsely
+reject it; accepting any tagged artist would be too loose. The recovery
+adapter now requires the source handle to match either the owner or a recorded
+coauthor. `CorpusSnapshot v2` retains the source occurrence, actual owner and
+attribution role separately, with the raw provider response as order and
+attribution evidence.
+
+Complete 6- and 10-slide carousels were then extracted from actual ordered
+pixels. The six-slide gallery tour changes wall views and later reframes a
+sculpture; the ten-slide book showcase moves from exterior details to interior
+spreads. The latter produced ten slide observations and four proposed narrative
+beats. A presentation unit and a beat therefore cannot be forced into a 1:1
+mapping. This is a concrete calibration example for the plan's many-to-many
+realization map, not a validated story archetype. All three carousel outputs
+remain unreviewed; the book output also uses unsupported intent language
+("unboxing-style" and "censorship bars") that a reviewer must correct or
+reject. The pilot report records exact artifacts and failure/retry history.
+
+### 10.13 Reliability and relevance correction — 2026-09-24
+
+The next contrast slice showed that child-byte completeness is not semantic
+media completeness. A six-child artist carousel included a video at ordinal 1;
+all six originals were mirrored, but the post remains ineligible for still-only
+v2 extraction until temporal, audio and transcript coverage are represented.
+Another two-slide example moves from isolated geometric artwork to its use on
+a shirt. That is an observed art-to-product recontextualization; pixels do not
+establish whether the shirt was manufactured or is a mockup. A nine-slide
+wedding-stationery case is source-complete and narratively structured, yet its
+relevance to Arthaus artist storytelling remains uncertain and its visual text
+has inconsistencies. Artist tier and engagement rank alone are insufficient
+corpus-admission criteria.
+
+Caption belongs beside the source snapshot as labeled interpretation context,
+not in the pixel observation call. A real caption-only re-run reused a validated
+`observed` stage checkpoint and paid only for annotation. The checkpoint is
+bound to ordered media checksums, coverage, source, model and observation
+prompt; caption and annotation-prompt changes cannot invalidate pixel facts.
+The ten-slide book also exposed repeated JSON shape errors. Both v2 model
+passes now request explicit structured output and still enforce local schema,
+locator and claim checks. One measured recheck succeeded structurally, while
+the model still inferred "censorship" from black rectangles. Structural output
+validity is therefore not evidence support or human approval. Corpus
+interpretations need an independent support review before pattern admission.
+
+### 10.14 Cross-session handoff correction — 2026-09-24
+
+The acquired source snapshot and caption-context candidate can now be restored
+from private GCS by a later worker. The worker names 1–3 post shortcodes under
+one explicit prefix, sets a byte ceiling, and verifies source identity and
+content-addressed image checksums before writing a local v2 manifest. Dry run
+does not access GCS. A fresh-cache rehearsal restored the two-slide
+`DcOzDxkkkUT` still carousel and the v2 CLI recognized it as locally ready,
+without a scraper or model call. This closes the **local cross-session media
+handoff** gap only. It does not make video, mixed-media, worker scheduling,
+semantic review or full-corpus extraction complete.
+
+### 10.15 Content-archetype correction — 2026-09-25
+
+The useful corpus output is not a copied layout or a list of transition verbs.
+It is a reviewed, repeatable **content argument**: reader question, graph-backed
+subject requirements, information gained at each beat, allowed variation,
+refusal cases and provenance. Existing Post Concepts (spec 29) and store-owned
+`social/concepts/*.md` are the authoring surface; the genome remains a later
+layout input. Andy Westface's art-to-shirt change can inform a transition
+vocabulary, but it is not an Arthaus post archetype. No current concept is
+proven to drive Arthaus engagement. Corpus-relative engagement can prioritize
+review; observed Arthaus outcomes are required to validate a series.
+
+The [content-archetype decision record](../docs/plans/storyboard-harness/CONTENT-ARCHETYPE-SYSTEM.md)
+sets the graph/catalog grounding contract, candidate series, corpus evidence
+standard and next product acceptance loop. The social pack now instructs
+concept-first subject selection and requires a checkable source reference on
+each satisfied concept need. This is a first guard, not the finished Picasso
+MCP adapter or a complete graph-to-storyboard integration.
+
+### 10.16 Read-only graph subject packet — 2026-09-25
+
+The first Picasso-to-catalog seam now invokes the tenant's enabled concept and
+facet reads, then resolves at most six exact graph-discovered handles against
+current Shopify data. It returns normalized, tenant-bound evidence receipts,
+usable subject facts and explicit rejected handles. Active Online Store
+listing and current image are eligibility checks; stock availability remains
+unknown. Facet lookup aliases never substitute another catalog product. No
+model, imagery provider, artifact write or publishing action is called.
+
+This closes the **tested read adapter** gap, not graph-to-storyboard
+acceptance. Semantic concept needs, same-call planner binding, durable review,
+and deployment parity are still open. A live Picasso query and facet read,
+replayed through the collector with a fresh Shopify read, returned two usable
+subjects and rejected a third for a missing public product page. The
+[decision record](../docs/plans/storyboard-harness/CONTENT-ARCHETYPE-SYSTEM.md)
+records those limits and the next thin product loop.
+
+### 10.17 Concept and acquired subjects bound to planning — 2026-09-25
+
+The template's `social_graph_storyboard_plan` now reads one store-owned concept,
+acquires graph/catalog subjects and compiles them into the planner context in
+the same server-side call. It accepts no caller-supplied subject packet. The
+provider-neutral compiler pins the concept contents, allowed formats, required
+needs, tenant and acquired receipts into the review context. Catalog images are
+sent to both planning and independent narrative critique; no imagery is generated.
+
+Every candidate names its selected handles and assesses the concept's needs
+with reasons and source references. Structural grounding eliminates changed
+concepts, blocked formats, unknown/substituted subjects and missing required
+need assessments or references. These checks establish inspectability, not
+whether a referenced fact actually proves a semantic need: the critic and human
+must review that. Catalog imagery retains unknown asset classification unless
+already verified; a graph match cannot authorize a room, scale, process claim
+or bare-artwork mockup. Missing admitted pattern context yields hypotheses.
+
+Four compiler/planner integration tests cover tenant/source binding, unsupported
+candidates and image delivery to planner and critics. The storyboard suite has
+36 passing tests; package typecheck/build and targeted template tool typecheck
+pass. This is implemented and tested source, not a deployed or creatively
+accepted result. No live graph-grounded board has been generated yet: the
+store environment lacks explicit `STORYBOARD_MODEL` configuration. Durable human
+review, runtime/scaffold/MCP exposure parity, corpus admission and the blind
+creative comparison remain open. The read-only tool changes no approval authority.
+
+### 10.18 Live core rehearsal and critic comparison correction — 2026-09-26
+
+Fresh graph/catalog acquisition and a local Vertex transport produced three
+detail/reveal boards from actual catalog pixels. The current board was mistakenly
+included among its comparison alternatives; live critics treated that as a
+duplicate or emitted verdicts for alternatives. Exclude self from comparisons
+and explicitly scope narrative verdicts to the selected board. Preserve the
+existing fail-closed protocol validation. The integration test now checks that
+each critic receives only the other two boards.
+
+Re-running only critics retained one board and rejected two for brand-copy
+violations. These are advisory judgments awaiting human agreement; protocol
+failures do not count as creative elimination. All boards remain hypotheses and
+share the same detail/full mechanic. No corpus pattern was admitted, no imagery
+was generated and no publication occurred. The offline Vertex probe is not a
+deployed Mastra/MCP-tool acceptance test. Model/provider failures, token usage,
+source scope, saved comparison and next acceptance steps are recorded in the
+[live review](../docs/plans/storyboard-harness/LIVE-STORYBOARD-REVIEW-2026-09-26.md).
+
+### 10.19 Three ownership layers — 2026-09-26
+
+Separate A: portable deep-agent planning/critique/review mechanisms; B: store
+brand, catalog/art-graph bindings, editorial concepts and creative runs; and
+C: social dataset schemas, observation/transition vocabulary, exemplar lineage
+and reviewed domain knowledge. The generated template distributes A and C
+contracts, not a store's approved recipes or graph naming conventions. Actual
+corpus assets and private/domain reference libraries retain their scoped data
+owner; a graph projection does not replace source artifacts or admission review.
+
+The shared subject collector now defaults to exact identity and accepts only
+explicit integration-supplied facet aliases. Runtime tools read them from the
+tenant's versioned `social/reference/art-graph.json` for the selected enabled
+connection. Remove inferred `-old`/`-no-frame` stripping; it was an Arthaus
+implementation detail. Facet aliases never change catalog identity. Missing
+config uses exact handles; malformed config fails closed. Tests cover default
+identity, connection isolation and configured alias validation.
+
+Detailed Arthaus candidate series and the live comparison move to marketplace
+`agents/social/research/storyboard-harness/`, with its mapping in
+`agents/social/reference/`. Core keeps architecture, contracts and the generic
+critic correction. The [ownership record](../docs/plans/storyboard-harness/OWNERSHIP-AND-DATA-CONTRACTS.md)
+documents implemented seams and planned corpus projection/admission. The
+companion store PR does not deploy runtime code or activate concepts.
+
+### 10.20 Transition proposals, admission and bounded retrieval — 2026-09-26
+
+`@avant-garde/storyboard-corpus/library` now supplies a transition-only
+proposal/review/compiler seam. Proposals preserve post/account and hashed source
+lineage, adjacent media/observation locators, visible change, separate narrative
+interpretation and limitations. They issue no evidence count. A versioned review
+must bind the exact proposal hash and confirm visible change, interpretation and
+domain fit per admitted exemplar. A required external authority verifier must
+validate the reviewer record; strings/digests alone grant no admission.
+
+Compilation holds unreviewed/rejected/unsupported proposals and derives unique
+post/account counts only from admitted members. Retrieval is scope-bound, limited
+to six explicit IDs and accepts only a frozen in-process authority-compiled
+library; serialized/model-supplied snapshots must be recompiled. Selected output
+uses the current planner's transition shape. Its legacy `fromBeat`/`toBeat`
+locators represent source presentation ordinals, not inferred beat grouping.
+
+Two real Arthaus transitions were normalized into separate store-owned proposals
+without additional model/scraper calls. Owner/coauthor attribution came from
+recovery manifests. Both remain unreviewed, so the store snapshot has zero
+admitted patterns. Five contract tests and the 91-test corpus suite pass, along
+with typecheck/build. Production authenticated review, loader/planner wiring,
+single-image treatment support and graph/search projection remain open. The
+[contract record](../docs/plans/storyboard-harness/PATTERN-ADMISSION-CONTRACT.md)
+states these limits; no successful extraction activates a pattern or post.
+
+## 11. Research and TRD reconciliation — 2026-09-20
+
+The supplied narrative/storyboard research and Atelier sub-module TRD validate
+the plan-first premise while expanding the target architecture. The first
+implementation built a useful middle slice: grounded beat-level storyboards,
+independent critique and human review before pixels. The production target adds
+an upstream immutable Creative Schema and separates narrative plans from
+shot-level Storyboard IRs and governed render handoffs.
+
+The core package remains renderer-independent and Mastra remains the Marketing
+OS harness. Atelier is a protocol reference, not a dependency. Deterministic
+structural checks gate hard constraints; model-based narrative and visual editors
+remain advisory until measured against human pairwise judgments. A performance
+critic, taste adapters and outcome-driven taxonomy updates are later gated
+capabilities, not properties the current implementation may claim.
+
+The corpus extraction contract will be revised before scale to separate visible
+frame observations, adjacent transitions and grounded narrative annotations.
+The three-image pilot proved transport and provenance, not the target narrative
+ontology. Full reconciliation, current-component disposition and the execution
+sequence are recorded in
+`docs/plans/storyboard-harness/TRD-RECONCILIATION.md`.
+
+## 12. Comprehensive implementation plan — 2026-09-20
+
+The [core plan](../docs/STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md) is the
+canonical forward architecture. It preserves Mastra, renderer independence,
+counted-evidence semantics and existing approval authority. Proposed contract
+revisions remain planned until implemented with their tests and migrations.
+
+It corrects three oversimplifications in the earlier reconciliation: beats and
+presentation units need an explicit realization map rather than exactly one beat
+per shot; counted single-image treatment evidence is distinct from sequence
+evidence; and literature-specific judge percentages do not establish release
+thresholds for this product. Human preference, structural validity and measured
+outcomes retain separate contracts and evaluation gates.
+
+The plan includes the offline acquisition/annotation/library pipeline, online
+creative/review/render workflow, dependency and storage boundaries, budget and
+failure recovery, research experiments, implementation work packages, migration
+and rollout strategy, and traceability to the supplied TRD. Its first acceptance
+milestone remains a human-approved, evidence-supported Arthaus arc with an agreed
+candidate rejection before imagery spend, followed by governed realization.
+
+NeuroGraph is an optional joint-deployment integration: persona/scenario context
+primarily arrives over MCP from the customer agent, while proprietary Creative
+Review skills, tools and models own creative outcome assessment. Reserve distinct
+ports and leave both implementations empty for now. Missing integrations remain
+explicitly unavailable; the social agent retains independent planning and human
+review. Predictions and simulated responses are not observed business outcomes,
+and neither integration changes existing approval authority.
+# Runtime delivery checkpoint — 2026-09-27
+
+The client-owned scaffold now persists a tenant-bound narrative review at
+`social/storyboards/{reviewId}/review.json`. Its content hash binds the brief,
+context, three alternatives, critique, source artifact hashes and tenant. The
+signed `/review/storyboard/{reviewId}` page is a read-only shortlist. Possession
+of its URL is never approval authority.
+
+`storyboard.select` uses the existing Action gate to record a surviving option
+and human agreement with a real eliminated alternative's critique. Context,
+brand or source-artifact changes refuse selection/realization. A record of a
+model recommendation alone never becomes a selected storyboard.
+
+The first realization adapter is deliberately source-backed still imagery.
+`social_storyboard_realization_prepare` reads reviewed Shopify source bytes and
+prepares explicit beat layouts/crops with source hashes. The governed
+`social.storyboard_realize` action composes one Penpot board per beat, exports
+each in exact order, verifies dimensions, and persists full-hash JPEGs through
+the tenant's StoreRepo. Source image coordinates are explicit; resizing
+contains rather than silently cropping or stretching. A crop of a framed
+render remains a derived crop, never a bare master or mockup input. Generated
+imagery, mockup inputs and motion refuse until separately quoted adapters exist.
+
+The post's `renderedSequence` stores storyboard/review hashes and ordered
+`{beatId, boardName, url, sha256, width, height}` slides. The final social review
+page shows every slide; publish consent covers the complete sequence, copy,
+channel, destination and time. Instagram creates inert carousel children and a
+parent, and publishes only through the existing approved executor. Other
+adapters without sequence support refuse. Legacy single-image posts retain
+their prior consent material.
+
+This is a delivery implementation, not an efficacy claim. Unadmitted corpus
+proposals remain hypotheses. Acceptance still requires human narrative choice,
+agreement with an elimination, applicable inspected corpus support, and human
+review of the rendered result. NeuroGraph persona and creative-outcome seams
+remain optional/unimplemented as requested. Hosted public image reads use the
+tenant-keyed working store; a future hosted git-only install must provide a
+trusted public tenant/repo resolver before adopting this asset route.

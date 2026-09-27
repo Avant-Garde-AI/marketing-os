@@ -12,6 +12,8 @@ const text = z.string().trim().min(1);
 export const storyboardSchema = z.object({
   id: text,
   conceptId: text.optional(),
+  subjectHandles: z.array(text).min(1).max(6).optional(),
+  needAssessments: z.array(z.object({ needId: text, met: z.boolean(), sourceRefs: z.array(text), reason: text })).max(20).optional(),
   format: z.enum(STORYBOARD_FORMATS),
   premise: text,
   payoff: text,
@@ -94,6 +96,12 @@ export const planningContextSchema = z.object({
       })
     )
     .max(40),
+  concept: z.object({
+    id: text, source: text, premise: text, payoff: text,
+    needs: z.array(z.object({ id: text, description: text, required: z.boolean() })).max(20),
+    formats: z.array(z.enum(STORYBOARD_FORMATS)).min(1),
+  }).optional(),
+  subjects: z.array(z.object({ handle: text, assetRef: text, sourceRefs: z.array(text).min(2) })).max(6).optional(),
 });
 export type PlanningContext = z.infer<typeof planningContextSchema>;
 export type NarrativePattern = z.infer<typeof patternSchema>;

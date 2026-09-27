@@ -17,6 +17,7 @@ import { registerAction } from "../actions/registry";
 import { getDesignSurfaceAdapter, isDesignSurfacesConfigured } from "../design-surfaces/config";
 import { syncPostIndex } from "./index-sync";
 import { getTenant } from "../tenant-context";
+import { socialReviewLink } from "./review-links";
 import type { SocialPost } from "./types";
 
 /**
@@ -30,6 +31,7 @@ export function socialAssetUrl(post: SocialPost): string {
   if (!base) {
     throw new Error("MOS_AGENTS_PUBLIC_URL not configured — cannot build a public asset URL for publishing");
   }
+  if (post.renderedSequence) return post.renderedSequence.slides[0].url;
   if (!post.designSurface) {
     throw new Error(
       `post "${post.id}" has no Design Surface bound — compose the creative and link it (social_link_design) before publishing`,
@@ -49,7 +51,7 @@ export function socialAssetUrl(post: SocialPost): string {
  * genuinely dead canvas fails the publish at asset-fetch, visibly.
  */
 export async function socialSurfaceRevision(post: SocialPost): Promise<number | null> {
-  if (!post.designSurface || !isDesignSurfacesConfigured()) return null;
+  if (post.renderedSequence || !post.designSurface || !isDesignSurfacesConfigured()) return null;
   try {
     const structure = await getDesignSurfaceAdapter().getFileStructure(post.designSurface.fileId);
     return structure.revn;
@@ -83,6 +85,7 @@ export function socialActionDeps(): SocialActionDeps {
     repo: socialRepo,
     adapterFor: (channel) => adapterFor(channel),
     assetUrl: socialAssetUrl,
+    reviewUrl: (post) => socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
     surfaceRevision: socialSurfaceRevision,
     onPostSaved,
   };

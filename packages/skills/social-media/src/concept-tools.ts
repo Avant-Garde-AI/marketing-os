@@ -169,6 +169,7 @@ const candidateInput = z.object({
           .string()
           .optional()
           .describe("What you actually checked. This travels into the output for review."),
+        sourceRef: z.string().trim().min(1).optional().describe("Checkable graph result, catalog handle/record, or asset reference that supports a met need."),
       }),
     )
     .describe(
@@ -205,7 +206,7 @@ const instantiateOutput = z.object({
       copyFormulaRefs: z.array(z.string()),
       hook: z.string().optional(),
       thinOn: z.array(z.string()).describe("Soft needs unmet — the instance is real but thinner"),
-      grounding: z.array(z.object({ needId: z.string(), evidence: z.string() })),
+      grounding: z.array(z.object({ needId: z.string(), evidence: z.string(), sourceRef: z.string() })),
     }),
   ),
   rejected: z.array(z.object({ subjectId: z.string(), unmet: z.array(z.string()) })),
@@ -384,7 +385,7 @@ export function createConceptTools(repo: SocialRepo): ConceptTools {
       id: "social_concept_instantiate",
       description:
         "Ask a concept for N grounded instances — the 'give me three or four in this idea' step. Returns PLANS (per-subject frame directions, archetypes and copy formulas), not posts; writing a post artifact stays with the authoring tools. " +
-        "You must supply candidate subjects WITH their needs assessed — the pack does not judge whether a specific work satisfies 'visible technique', because that is a judgement about this store's own catalogue. State, per need, whether you checked and what you found. " +
+        "You must supply candidate subjects WITH their needs assessed — the pack does not judge whether a specific work satisfies 'visible technique', because that is a judgement about this store's own catalogue. A met need requires both an explanation and a checkable sourceRef from the graph, catalog, or asset record; an unsupported yes counts as unmet. " +
         "A need you do not assess counts as UNMET. This is the point: it returns fewer instances rather than inventing, and tells you the shortfall. If you asked for five and it returns three, the answer is three — widen the candidate pool or relax the concept, and NEVER fill the gap with subjects that missed a required need. " +
         "Each frame's instruction already includes the concept's continuity constants, so hand it to an image or video backend verbatim.",
       inputSchema: instantiateInput,
@@ -467,7 +468,8 @@ export function createConceptTools(repo: SocialRepo): ConceptTools {
             // An assessment naming a need the concept does not have is dropped
             // rather than counted: it cannot satisfy anything, and silently
             // crediting it would let a typo pass as grounding.
-            return need ? [{ need, met: a.met, ...(a.evidence ? { evidence: a.evidence } : {}) }] : [];
+            // A confident yes with no checkable source is not an assessment.
+            return need ? [{ need, met: a.met && Boolean(a.evidence?.trim()) && Boolean(a.sourceRef?.trim()), ...(a.evidence ? { evidence: a.evidence } : {}) }] : [];
           }),
         }));
         const selection = selectSubjects(concept, fits, n);
@@ -475,7 +477,7 @@ export function createConceptTools(repo: SocialRepo): ConceptTools {
         const evidenceBySubject = new Map(
           candidates.map((c) => [
             c.subjectId,
-            c.assessments.filter((a) => a.evidence).map((a) => ({ needId: a.needId, evidence: a.evidence! })),
+            c.assessments.filter((a) => needById.has(a.needId) && a.met && a.evidence?.trim() && a.sourceRef?.trim()).map((a) => ({ needId: a.needId, evidence: a.evidence!, sourceRef: a.sourceRef! })),
           ]),
         );
 

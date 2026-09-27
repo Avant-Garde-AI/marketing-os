@@ -1,0 +1,201 @@
+# From corpus patterns to repeatable art content
+
+**Decision record, 2026-09-25.** This corrects the immediate priority of the
+[core architecture](../../STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md).
+The product is a system that can repeatedly make distinctive, useful social
+posts from real catalog artworks and graph relationships. A sound extraction
+pipeline is an input to that system, not its output.
+
+## The unit we are building
+
+A **content archetype** is a repeatable reader-facing argument. It defines a
+question or tension, the information gained at each beat, the graph/catalog
+facts needed to instantiate it, the circumstances in which it must refuse,
+and what can vary across runs. It is more specific than a content pillar and
+more abstract than a finished post. A layout archetype only arranges pixels.
+A corpus transition such as `reveal` or `comparison` is a reusable move inside
+an archetype, not a complete reason to publish. An individual artist's merch
+carousel can teach us an art-to-product change without becoming an Arthaus
+posting recipe.
+
+The existing [Post Concepts](../../../spec/29-POST-CONCEPTS.md) and
+`social/concepts/*.md` are the right **store-owned authoring surface** for this
+unit. Their premise, reader payoff, needs, expressions, continuity and cadence
+should evolve; do not create a second competing template store. The current
+four Arthaus concepts are brand-derived drafts with `evidence.n = 0`. They are
+ideas to test, not corpus-proven or engagement-proven formats. The layout genome
+remains a later rendering input and cannot stand in for the content library.
+
+An instantiated archetype should carry these linked records:
+
+| Record | Required content | Authority |
+| --- | --- | --- |
+| Archetype revision | Premise, reader payoff, hook, beat roles, hard/soft needs, allowed variations, refusal rules, cadence | Reviewed store artifact |
+| Subject packet | Exact artwork handles, artist IDs, graph query/tool and result refs, relevant facets/edges, catalog availability and rights | Graph for discovery/facets; current catalog for product truth |
+| Storyboard | Beat-level new information, visible assets or feasible asset instructions, factual claims, transition, continuity and variant rationale | Planner proposal, then human choice |
+| Evidence ledger | Original inspected post IDs and slide locators; reviewer corrections; separately, observed outcome tests | Corpus and measurement records, never model assertion |
+
+Graph retrieval must be a **read-only capability port** bound to the tenant's
+enabled connection. Picasso is the first integration, not a base-agent dependency. A tool result is not authority merely because
+the agent says it queried the graph: the packet needs resolvable result IDs or
+source refs and catalog handles. `explore_concept` and `faceted_discovery` can
+find subjects; `get_artwork_facets` can support visual descriptions;
+`recommend_similar` and `concept_walk` can propose relationships;
+`ask_concierge` can suggest context but its free text cannot replace a facet,
+catalog record or reviewed artist claim. Availability, dimensions, current
+images and product links come from the catalog at plan/dispatch time. If a
+required fact or image is absent, the archetype refuses that subject. No graph
+result may make a framed render into a bare-artwork master.
+
+The native `shopify-get-products` read is too thin for that join: it
+returns ID, title, status and image/variant counts, but not handle, asset URL,
+dimensions, price or inventory. The next adapter must extend a tenant-scoped
+catalog **read** or use an existing equivalent; it must not treat the graph's
+cached product fields as current commerce truth. Current `sourceRef` strings
+are caller-supplied and only enforce an inspectable assertion. The adapter
+must resolve and pin real MCP/catalog receipts before claiming verification.
+
+### First read adapter — 2026-09-25
+
+`collectGraphSubjects()` and the template's `social_graph_subjects` read tool
+now acquire a bounded packet directly from the current tenant's enabled graph
+connection and Shopify client. A caller selects an enabled connection prefix
+and concept, with at most six subjects. The adapter invokes only
+`explore_concept` and `get_artwork_facets`, then joins **exact** returned handles
+to current Shopify products. Facet aliases are now explicit store configuration, scoped to the selected
+connection; no suffix convention is inferred or catalog identity changed.
+Discovery, facets and catalog results each return a tenant-bound, timestamped,
+hashed receipt with their normalized evidence. They are request-local records,
+not persisted reference artifacts or review decisions.
+
+The new catalog reader uses the shared tenant-scoped Shopify client. It reads
+title, status, Online Store URL and an actual `MediaImage` URL, rejects unexpected
+handles and surfaces provider errors. The collector rejects absent facets,
+missing/inactive products, missing public product pages or images. A video
+preview is not accepted as artwork pixels. Shopify exposes product listing and
+media fields in its [Admin Product contract](https://shopify.dev/docs/api/admin-graphql/latest/objects/Product);
+this adapter still reports **inventory availability unknown** and supplies no
+dimensions, verified masters or artist-process facts.
+
+Five graph-packet tests and six catalog-reader tests cover alias preservation,
+current product fields, unavailable inputs, tenant-separated receipts and
+provider failures. A read-only live rehearsal also listed all eight Picasso
+tools, fetched three `calm and contemplative` results and their facets, then
+replayed those saved graph responses through the collector with a fresh
+Shopify read. `bm33` and `sun-leaf-abstract-botanical-mid-century` had current
+active product records, Online Store URLs and images. `explore-4-old` was
+rejected for a missing public product page. The request-local packet is private
+at `/private/tmp/storyboard-graph-live-20260925/packet.json`; no post was created.
+One discovery result's recorded mood was `happy`, so the query itself cannot
+prove a semantic need for calm. Semantic Post Concept needs still require
+assessment; this tool does not infer them from a match.
+The independent `social_concept_instantiate` path still accepts caller source
+assertions. The same-call planning path below acquires its own packet instead.
+Persistent receipts, an authenticated review and generated/hosted/store
+deployment parity remain open.
+
+### Same-call concept-to-storyboard path — 2026-09-25
+
+`social_graph_storyboard_plan` reads an existing store concept, current brand
+instructions and optional reviewed pattern context, acquires current graph and
+catalog evidence, then calls the three-candidate planner. The core compiler is
+provider-neutral; acquisition stays in the runtime. No client/model-supplied
+packet is accepted. Concept contents, permitted formats, selected subjects and
+receipts enter the context bound to the review hash. Existing catalog pixels
+are delivered to the planner and each independent narrative critique.
+
+Candidates must name exact selected handles and assess required concept needs
+with reasons and source refs. Changed concepts, blocked formats, substituted
+subjects, missing required assessments and unknown refs fail structural
+grounding. A reference can still be semantically insufficient: a graph result
+for calm with a `happy` mood is not proof of calm. Independent critique and
+human review must reject unsupported readings. The packet does not provide
+verified scale, room imagery, process documentation, inventory or bare masters.
+Unsupported needs must remain unmet; ordinary catalog renders cannot enter
+mockups as verified bare artwork.
+
+Four integration tests verify compiler binding, refusal and pixel delivery;
+the 36-test storyboard suite, typecheck/build and targeted runtime tool
+typecheck pass. A live planner run has not occurred: the current store
+environment lacks an explicit `STORYBOARD_MODEL` provider/model setting. No
+imagery or publishing is performed. Draft concept status remains visible;
+missing admitted patterns produces hypotheses, never counted evidence. The
+current two graph reads support facet discovery only; relationship series
+still need acquired `recommend_similar`/`concept_walk` paths before qualification.
+
+The [2026-09-26 live core rehearsal](LIVE-STORYBOARD-REVIEW-2026-09-26.md)
+has since produced three detail/reveal boards using a local Vertex transport.
+One remains reviewable after a critic comparison correction; two fail brand
+copy checks. All remain hypotheses. This is a concrete human-review input,
+not deployed same-call tool acceptance, corpus admission or proof of diversity.
+
+## Store-specific candidate series
+
+Tenant premises, named subjects, cadence and examples belong in the store's
+`agents/social/` artifacts. Arthaus's proposed series have moved to
+[`marketplace/agents/social/research/storyboard-harness/CONTENT-ARCHETYPES.md`](https://github.com/Arthaus-Inc/marketplace/blob/main/agents/social/research/storyboard-harness/CONTENT-ARCHETYPES.md)
+(companion ownership PR; available on main after merge). No store candidates
+are shipped as shared default archetypes. The reusable definition is a reader
+question, information-changing beats, required inputs, refusal conditions and
+variation axes; actual concept instances are authored and reviewed per store.
+
+## How the corpus can support or reject these
+
+The corpus should answer two separate questions: **what repeatable information
+move is observable?** and **whether this implementation earns attention for
+our audience?** Five unreviewed carousels cannot answer either at release
+quality. First, review exact slide changes and correct unsupported readings.
+Then recover a stratified, in-domain sample with both strong and ordinary posts
+across account tiers, formats and artists. Extract visible sequence structure
+blind to engagement; cluster by reader question, subject relationship and beat
+change, not by visual similarity alone. Inspect original posts and outliers for
+each proposed cluster. Store post-level counts only for inspected members and
+keep the source accounts separate so one prolific artist cannot masquerade as
+cross-artist replication.
+
+Recorded likes/comments permit **candidate prioritization**, ideally compared
+within account and similar publication conditions. They do not identify why a
+post performed, estimate reach, or establish that an archetype will drive
+engagement for Arthaus. Mark a series `observed-structure` only after inspected
+cross-post support; mark `validated-for-Arthaus` only after a predeclared
+Arthaus test on published posts. Before that, `brand-hypothesis` is honest.
+Do not turn a model's inferred purpose into a counted pattern.
+
+The first product evaluation is deliberately smaller than full automation:
+instantiate two eligible subjects per candidate series; produce multiple
+storyboard variants with one eliminated for a reviewable reason; compare them
+blindly against the current social agent's output before imagery spend. A
+reviewer rates reader interest, beat-2 information gain, factual/visual
+grounding, brand fit and variation across subjects. Record the original
+graph/catalog packet, pattern refs and rejection reasons. Only selected boards
+continue to imagery. Later, use a balanced calendar with explicit format,
+audience, timing and subject controls, predeclared primary measures such as
+saves/shares per reached account, and observed Instagram outcomes to update
+the series. Track creative diversity and repetition as guardrails. No offline
+engagement prediction replaces the live test.
+
+## Implementation order from this checkpoint
+
+1. **Concept-first agent behavior.** Make the agent read the store's standing
+   concepts before choosing a layout. Require graph/catalog source refs for
+   subject and need assessments; fail closed when connected graph data is
+   unavailable. Keep the existing Action gate.
+2. **Thin graph-to-board seam.** Add a typed read-only subject packet and an
+   adapter around enabled Picasso MCP tools. Resolve catalog handles and assets
+   separately. Bind an instantiated Post Concept to the storyboard planner;
+   preserve archetype ID, revision, subject refs, beat changes and all rejected
+   options in the review packet. No direct model-callable write.
+3. **Relevant corpus calibration.** Review the five extracted still sequences,
+   treat the merch case as a transition example only, and sample more artist
+   and art-retail content by reader argument rather than follower rank alone.
+   Cheap workers perform bounded recovery/normalization; frontier vision handles
+   difficult interpretation; humans admit patterns.
+4. **Creative acceptance before scale.** Run the blind storyboard comparison,
+   then a governed first post with verified assets. Only after that build the
+   batch worker, larger pattern library and automated archetype rotation.
+
+The graph and Creative Review/NeuroGraph boundaries are distinct. Picasso is
+the connected **artwork discovery** source here. A future customer NeuroGraph
+persona MCP can inform audience context; the optional Creative Review adapter
+can assess outcome hypotheses. Both remain optional and neither grants a
+publishing authority or supplies observed engagement.

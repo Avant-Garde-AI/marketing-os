@@ -20,6 +20,7 @@ import { emailTools } from "@/src/mastra/tools/email";
 import { emailAuthoringTools } from "@/src/mastra/tools/email-authoring";
 import { actionTools } from "@/src/mastra/tools/actions";
 import { socialTools } from "@/src/mastra/tools/social";
+import { storyboardTools } from "@/src/mastra/tools/storyboard";
 import { designLibraryTools } from "@/src/mastra/tools/design-library";
 import { designSurfaceTools } from "@/src/mastra/tools/design-surfaces";
 import { mirrorTools } from "@/lib/mcp/zod-schema";
@@ -31,7 +32,7 @@ import {
 import { PROMPTS, getPrompt } from "@/src/mastra/semantics/mcp-prompts";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const PROTOCOL_VERSION = "2025-06-18";
 
@@ -56,6 +57,8 @@ Email & campaigns — this store's own record, not a pooled copy:
 - klaviyo_performance_read for a raw Klaviyo window; email_campaign_retrospective for a single campaign judged against this store's OWN other sends (a rate alone cannot be called good or bad — read the verdict bands and caveats it returns, do not recompute your own threshold).
 - email_review_notes / email_review_notes_resolve for what reviewers said.
 - email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Nothing reachable here executes a write; sending happens only through this store's own governed approval flow.
+
+Storyboards: social_graph_storyboard_plan returns three durable independently critiqued arcs and a read-only reviewUrl. Human selection uses storyboard.select through the existing Action gate, then explicit per-beat layouts use social_storyboard_realization_prepare and social.storyboard_realize. No token or hash authorizes selection or publishing. Final review shows the entire immutable slide sequence. Unsupported generation/motion/mockups fail closed.
 
 Social & content — the same shape as email: author here, review in the console, publish only through the approval gate:
 - Read before you write: social_calendar_read for a month's plan, social_post_read for one post. Absence of a calendar is not evidence nothing is planned — posts are real artifacts whether or not a slot points at them. (There is no social_strategy_read; social/strategy.md lives in the store repo.)
@@ -179,6 +182,7 @@ function socialToolDefs(): ToolDef[] {
   return [
     ...mirrorTools(socialTools, [
       "social_calendar_read",
+      "social_graph_subjects",
       "social_post_read",
       "social_genome_read",
       "social_concept_list",
@@ -196,6 +200,7 @@ function socialToolDefs(): ToolDef[] {
       "social_review_notes",
       "social_review_notes_resolve",
     ]),
+    ...mirrorTools(storyboardTools, ["social_graph_storyboard_plan", "social_storyboard_plan", "social_storyboard_review_read", "social_storyboard_realization_prepare"]),
     ...mirrorTools(designLibraryTools, ["check_design_library", "publish_design_library"]),
     ...mirrorTools(designSurfaceTools, [
       "compose_design_surface",

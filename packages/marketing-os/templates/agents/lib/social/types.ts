@@ -159,7 +159,18 @@ export interface PostPlatformResult {
   publishedAt: string;
 }
 
+export interface RenderedSocialSequence {
+  version: 1;
+  storyboardId: string;
+  storyboardHash: string;
+  reviewHash: string;
+  /** Immutable JPEG renders, in exact approved publication order. */
+  slides: { beatId: string; boardName: string; url: string; sha256: string; width: number; height: number }[];
+}
+
 export interface SocialPost {
+  /** Only the runtime realization path supplies this field; never model authoring input. */
+  renderedSequence?: RenderedSocialSequence;
   id: string;
   channel: string;
   /**
@@ -216,6 +227,7 @@ export interface SocialPost {
  */
 export interface SocialChannelAdapter {
   channel: string;
+  publishSequence?: (post: SocialPost, assetUrls: string[]) => Promise<{ platformId: string; permalink: string }>;
   /**
    * Publish the post with `assetUrl` as its creative — a PUBLIC image URL the
    * platform fetches (the design-surface export route). Must throw with a

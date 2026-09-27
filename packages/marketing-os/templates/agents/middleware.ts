@@ -53,6 +53,7 @@ export async function middleware(request: NextRequest) {
     // session, and verified in-route by its own token (spec 26 ⟨BUILD⟩ 5).
     // `/review/` below already covers the social room + sheet pages.
     request.nextUrl.pathname.startsWith("/api/social/review-notes") ||
+    request.nextUrl.pathname.startsWith("/api/social/assets/") ||
     request.nextUrl.pathname.startsWith("/review/")
   ) {
     return response;

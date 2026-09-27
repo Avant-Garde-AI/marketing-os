@@ -66,6 +66,7 @@ export {
   type SequenceExpression, type SingleExpression, type SubjectFit,
 } from "./concepts";
 export { createConceptTools, type ConceptTools } from "./concept-tools";
+export * from "./graph-subjects";
 export {
   checkColorClaims,
   colorClaimsIn,
@@ -161,3 +162,6 @@ export const requires = { providers: [], scopes: ["social:publish"] } as const;
 export const actions = ["social.schedule_post", "social.publish_post", "social.cancel_post"] as const;
 
 export { POSTS_DIR, listPostIds } from "./artifacts";
+
+export { renderedSequenceSchema } from "./artifacts";
+export { postReviewAssets } from "./projection";

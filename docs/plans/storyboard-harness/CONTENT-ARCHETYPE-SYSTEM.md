@@ -123,6 +123,12 @@ missing admitted patterns produces hypotheses, never counted evidence. The
 current two graph reads support facet discovery only; relationship series
 still need acquired `recommend_similar`/`concept_walk` paths before qualification.
 
+The [2026-09-26 live core rehearsal](LIVE-STORYBOARD-REVIEW-2026-09-26.md)
+has since produced three detail/reveal boards using a local Vertex transport.
+One remains reviewable after a critic comparison correction; two fail brand
+copy checks. All remain hypotheses. This is a concrete human-review input,
+not deployed same-call tool acceptance, corpus admission or proof of diversity.
+
 ## Candidate Arthaus series to test
 
 These are **design hypotheses**, not admitted findings. They are deliberately

@@ -51,6 +51,11 @@ describe("acquired graph context compilation", () => {
     const review = await planStoryboards("Explain a real detail", context, {
       generate: async (request) => {
         images.push(request.images);
+        if (request.task === "narrative-critique") {
+          const data = request.data as { storyboard: Storyboard; alternatives: Storyboard[] };
+          expect(data.alternatives).toHaveLength(2);
+          expect(data.alternatives.every((other) => other.id !== data.storyboard.id)).toBe(true);
+        }
         return request.schema.parse(request.task === "plan-storyboards"
           ? { storyboards: [story(), { ...story(), id: "two" }, { ...story(), id: "three" }] }
           : { verdicts: [{ kill: false, score: 0.6, reason: "Fixture only; human visual support review remains open" }] });

@@ -125,6 +125,12 @@ provide sourced required-need assessments. References do not prove semantic
 support; critic and human review still decide that. This path has integration
 tests but no live model rehearsal yet (explicit `STORYBOARD_MODEL` is absent).
 Persistent review, deployment parity and pattern admission remain open.
+The [first live core rehearsal](plans/storyboard-harness/LIVE-STORYBOARD-REVIEW-2026-09-26.md)
+subsequently produced three hypothesis boards via a local Vertex transport and
+exposed a critic self-comparison bug, corrected with the implementation. One
+board survives advisory critique; the other two fail brand-copy checks. This
+does not establish creative diversity, human acceptance, deployed provider
+support or engagement efficacy.
 These increments advance WP03 and WP04 but do not meet either work package's
 exit gate. See the
 [pilot report](plans/storyboard-harness/CORPUS-PILOT.md) for measured results

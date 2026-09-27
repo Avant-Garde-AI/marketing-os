@@ -1,3 +1,4 @@
+import { planningTransportFixtureV1 } from "./planning-transport-fixture";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { planStoryboards } from "../src/plan";
@@ -38,7 +39,7 @@ function plans(first = story()) { return { storyboards: [first, { ...story(), id
 function model(output: unknown, capture?: (schema: z.ZodTypeAny) => void): StoryModel {
   return { generate: async (request) => {
     if (request.task === "plan-storyboards") capture?.(request.schema);
-    return request.schema.parse(request.task === "plan-storyboards" ? output : {
+    return request.schema.parse(request.task === "plan-storyboards" ? planningTransportFixtureV1(output) : {
       wholeStory: { kill: false, score: 0.7, reason: "The context changes the reading of the detail" },
     });
   } };
@@ -54,8 +55,9 @@ describe("context-scoped planner output schema", () => {
     expect(shape.conceptId.value).toBe(context.concept!.id);
     expect(shape.conceptId.isOptional()).toBe(false);
     expect(shape.subjectHandles.element.options).toEqual(["current-work"]);
-    expect(shape.needAssessments.element.shape.needId.options).toEqual(["legible-detail"]);
-    expect(shape.needAssessments.element.shape.sourceRefs.element.options).toEqual(["brand:current", "graph:acquired-digest", "catalog:acquired-digest"]);
+    expect(Object.keys(shape.needAssessmentsById.shape)).toEqual(["legible-detail"]);
+    expect(shape.needAssessmentsById.shape["legible-detail"].isOptional()).toBe(false);
+    expect(shape.needAssessmentsById.shape["legible-detail"].shape.sourceRefs.element.options).toEqual(["brand:current", "graph:acquired-digest", "catalog:acquired-digest"]);
     expect(shape.beats.element.shape.evidence.element.shape.source.options).toEqual(["brand:current", "graph:acquired-digest", "catalog:acquired-digest"]);
     const storeBrief = shape.beats.element.shape.brief.optionsMap.get("store-asset");
     expect(storeBrief.shape.asset.isOptional()).toBe(false);
@@ -97,7 +99,7 @@ describe("context-scoped planner output schema", () => {
     boards.storyboards.forEach((board) => { board.beats[1]!.transition!.patternRefs = []; });
     await planStoryboards("An unsupported hypothesis", noPatterns, model(boards, (value) => { schema = value; }));
     boards.storyboards[0]!.beats[1]!.transition!.patternRefs = ["detail-to-context"];
-    expect(() => schema!.parse(boards)).toThrow();
+    expect(() => schema!.parse(planningTransportFixtureV1(boards))).toThrow();
   });
 
   it("preserves generated single-image planning with no acquired assets or patterns", async () => {
@@ -115,7 +117,7 @@ describe("context-scoped planner output schema", () => {
     expect(review.options.every((option) => option.status === "reviewable")).toBe(true);
     const withInventedAsset = structuredClone(output);
     withInventedAsset.storyboards[0]!.beats[0]!.brief.asset = { ref: "asset:fiction", use: "as-is" };
-    expect(() => schema!.parse(withInventedAsset)).toThrow();
+    expect(() => schema!.parse(planningTransportFixtureV1(withInventedAsset))).toThrow();
   });
 
   it("retains valid video durations for a separately quoted motion adapter", async () => {
@@ -162,7 +164,7 @@ describe("context-scoped copy voice", () => {
     let schema: z.ZodTypeAny | undefined;
     const observed: unknown[] = [];
     const review = await planStoryboards("Read a real detail", voiced, { generate: async (request) => {
-      if (request.task === "plan-storyboards") { schema = request.schema; return request.schema.parse(output); }
+      if (request.task === "plan-storyboards") { schema = request.schema; return request.schema.parse(planningTransportFixtureV1(output)); }
       const data = request.data as { context: PlanningContext; storyboard: Storyboard };
       observed.push({ definition: data.context.copyFormulas?.[0]?.definition, voice: data.context.concept?.voice, ref: data.storyboard.copyFormulaRef });
       return request.schema.parse({ wholeStory: { kill: false, score: 0.7, reason: "The viewing question resolves through the actual context" } });
@@ -176,7 +178,7 @@ describe("context-scoped copy voice", () => {
     for (const ref of [undefined, "generic-description"]) {
       const invalid = structuredClone(output);
       invalid.storyboards[0]!.copyFormulaRef = ref;
-      expect(() => schema!.parse(invalid)).toThrow();
+      expect(() => schema!.parse(planningTransportFixtureV1(invalid))).toThrow();
     }
   });
   it("fails before any model call when configured definitions or provenance are unavailable", async () => {
@@ -185,5 +187,68 @@ describe("context-scoped copy voice", () => {
     await expect(planStoryboards("A real detail", { ...voiced, copyFormulas: [] }, neverCalled)).rejects.toThrow("unavailable copy formula definition");
     await expect(planStoryboards("A real detail", { ...voiced, copyFormulas: [{ ...voiced.copyFormulas![0]!, source: "brand:foreign" }] }, neverCalled)).rejects.toThrow("unavailable definition source");
     expect(called).toBe(false);
+  });
+});
+
+describe("need assessment transport v1", () => {
+  const withOptionalNeed: PlanningContext = { ...context, concept: { ...context.concept!, needs: [
+    ...context.concept!.needs, { id: "related-work", required: false, description: "A related work if one is acquired" },
+  ] } };
+  type NeedValue = Omit<NonNullable<Storyboard["needAssessments"]>[number], "needId">;
+  type Transport = { transportVersion: 1; storyboards: Array<Omit<Storyboard, "needAssessments"> & { needAssessmentsById: Record<string, NeedValue> }> };
+  function authored(): Transport {
+    const output = plans();
+    output.storyboards.forEach((board) => {
+      board.needAssessments!.push({ needId: "related-work", met: false, sourceRefs: [], reason: "No related catalog work was acquired; leave the optional pairing unmet" });
+    });
+    return planningTransportFixtureV1(output) as Transport;
+  }
+  function transportModel(output: Transport, capture?: (schema: z.ZodTypeAny) => void): StoryModel {
+    return { generate: async (request) => {
+      if (request.task === "plan-storyboards") { capture?.(request.schema); return request.schema.parse(output); }
+      return request.schema.parse({ wholeStory: { kill: false, score: 0.7, reason: "The source detail changes its reading in context" } });
+    } };
+  }
+  it("requires optional need keys and losslessly projects every authored value to the public IR", async () => {
+    const output = authored();
+    let schema: z.ZodTypeAny | undefined;
+    const review = await planStoryboards("Read the real detail", withOptionalNeed, transportModel(output, (value) => { schema = value; }));
+    const shape = (schema as z.AnyZodObject).shape.storyboards.element.shape.needAssessmentsById.shape;
+    expect(Object.keys(shape)).toEqual(["legible-detail", "related-work"]);
+    expect(shape["related-work"].isOptional()).toBe(false);
+    expect(review.modelCalls).toBe(4);
+    expect(review.options[0]?.storyboard.needAssessments).toEqual([
+      { needId: "legible-detail", ...output.storyboards[0]!.needAssessmentsById["legible-detail"]! },
+      { needId: "related-work", ...output.storyboards[0]!.needAssessmentsById["related-work"]! },
+    ]);
+    expect(review.options[0]?.storyboard).not.toHaveProperty("needAssessmentsById");
+    expect(review).not.toHaveProperty("transportVersion");
+  });
+  it("fails on omitted optional keys instead of inventing an unmet assessment or retrying", async () => {
+    const output = authored();
+    delete output.storyboards[0]!.needAssessmentsById["related-work"];
+    let calls = 0;
+    await expect(planStoryboards("Read the real detail", withOptionalNeed, transportModel(output, () => { calls++; }))).rejects.toThrow();
+    expect(calls).toBe(1);
+  });
+  it("rejects foreign need keys and extra identity fields in assessment values", async () => {
+    const output = authored();
+    let schema: z.ZodTypeAny | undefined;
+    await planStoryboards("Read the real detail", withOptionalNeed, transportModel(output, (value) => { schema = value; }));
+    const foreign = structuredClone(output);
+    foreign.storyboards[0]!.needAssessmentsById["unconfigured-room"] = { met: false, sourceRefs: [], reason: "Not acquired" };
+    expect(() => schema!.parse(foreign)).toThrow();
+    const duplicateIdentity = structuredClone(output);
+    Object.assign(duplicateIdentity.storyboards[0]!.needAssessmentsById["related-work"]!, { needId: "legible-detail" });
+    expect(() => schema!.parse(duplicateIdentity)).toThrow();
+    const oldArray = structuredClone(output);
+    Object.assign(oldArray.storyboards[0]!, { needAssessments: [{ needId: "related-work", met: false, sourceRefs: [], reason: "Old transport shape" }] });
+    expect(() => schema!.parse(oldArray)).toThrow();
+  });
+  it("rejects duplicate context IDs before calling the model rather than overwriting object keys", async () => {
+    const duplicated = { ...withOptionalNeed, concept: { ...withOptionalNeed.concept!, needs: [...withOptionalNeed.concept!.needs, withOptionalNeed.concept!.needs[0]!] } };
+    let calls = 0;
+    await expect(planStoryboards("Read a detail", duplicated, transportModel(authored(), () => { calls++; }))).rejects.toThrow("need IDs must be unique");
+    expect(calls).toBe(0);
   });
 });

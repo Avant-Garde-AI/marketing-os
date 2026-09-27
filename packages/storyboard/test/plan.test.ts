@@ -1,3 +1,4 @@
+import { planningTransportFixtureV1 } from "./planning-transport-fixture";
 import { describe, expect, it } from "vitest";
 import { checkGrounding, planStoryboards } from "../src/plan";
 import { createNarrativeCritic, createVisualCritic, type StoryModel } from "../src/critics";
@@ -41,7 +42,7 @@ const story: Storyboard = {
   continuity: [{ what: "the work", binding: "fixed-asset", ref: "asset:framed" }],
 };
 function model(handler: (task: string, data: unknown) => unknown): StoryModel {
-  return { generate: async (request) => request.schema.parse(handler(request.task, request.data)) };
+  return { generate: async (request) => request.schema.parse(request.task === "plan-storyboards" ? planningTransportFixtureV1(handler(request.task, request.data)) : handler(request.task, request.data)) };
 }
 const plans = { storyboards: [story, { ...story, id: "two" }, { ...story, id: "three" }] };
 

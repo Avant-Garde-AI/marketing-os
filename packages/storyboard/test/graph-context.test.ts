@@ -1,3 +1,4 @@
+import { planningTransportFixtureV1 } from "./planning-transport-fixture";
 import { describe, expect, it } from "vitest";
 import { compileGraphPlanningContext, type PlanningConcept, type SubjectPlanningPacket } from "../src/graph-context";
 import { checkGrounding, planStoryboards } from "../src/plan";
@@ -57,7 +58,7 @@ describe("acquired graph context compilation", () => {
           expect(data.alternatives.every((other) => other.id !== data.storyboard.id)).toBe(true);
         }
         return request.schema.parse(request.task === "plan-storyboards"
-          ? { storyboards: [story(), { ...story(), id: "two" }, { ...story(), id: "three" }] }
+          ? planningTransportFixtureV1({ storyboards: [story(), { ...story(), id: "two" }, { ...story(), id: "three" }] })
           : { wholeStory: { kill: false, score: 0.6, reason: "Fixture only; human visual support review remains open" } });
       },
     });

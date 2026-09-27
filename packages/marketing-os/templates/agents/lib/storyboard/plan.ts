@@ -154,8 +154,12 @@ source crops can differ within that consistent board. Preserve exact asset refs.
 Use existing framed renders only as framed objects; mockup-input requires a verified bare-artwork master. Unknown
 assets cannot be claimed to be bare. Bind continuity to available fixed assets
 or reference frames. When a content concept is supplied, keep its exact conceptId,
-reader payoff and hard needs. Provide needAssessments for every need: exact needId,
-met, sourceRefs and a concrete reason. Missing facts must be met:false, never a
+reader payoff and hard needs. Return planning transportVersion:1. For every concept need, provide a required
+needAssessmentsById property keyed by its exact need ID, containing met,
+sourceRefs and a concrete reason. Optional needs still require an authored
+assessment, including when unmet or unknown; never omit their keys. Do not
+return the IR needAssessments array in the transport. Missing facts must be
+met:false, never a
 confident yes with a generic citation. A graph search match does not establish that a need
 is satisfied. Refuse unsupported needs rather than inventing rooms or process.
 When subjects are supplied, every option must name unique subjectHandles from
@@ -178,7 +182,7 @@ guard. Do not compose, generate, save, schedule, or publish anything.`;
  * Deterministic grounding still validates identities, bindings and hard needs;
  * semantic support of a claim remains the independent critic/human's judgment.
  */
-function planningResponseSchema(context: PlanningContext) {
+function planningTransportSchemaV1(context: PlanningContext) {
   const source = z.enum([...new Set([context.brand.source, ...context.facts.map((fact) => fact.source)])] as [string, ...string[]]);
   const baseBeat = storyboardSchema.shape.beats.element;
   const patternRefs = context.patterns.length
@@ -216,15 +220,18 @@ function planningResponseSchema(context: PlanningContext) {
         }))
       : storyboardSchema.shape.continuity.length(0),
   });
-  const need = storyboardSchema.shape.needAssessments.unwrap().element.extend({ sourceRefs: z.array(source) });
+  const need = storyboardSchema.shape.needAssessments.unwrap().element.omit({ needId: true }).extend({ sourceRefs: z.array(source) }).strict();
   const needs = context.concept?.needs ?? [];
+  if (new Set(needs.map((item) => item.id)).size !== needs.length)
+    throw new Error("Content concept need IDs must be unique");
+  // Required exact keys are visible to provider schemas. An array length
+  // cannot tell a model that an optional need still needs an assessment.
+  const needShape = Object.fromEntries(needs.map((item) => [item.id, need]));
   const withConcept = context.concept
-    ? scopedBase.extend({
+    ? scopedBase.omit({ needAssessments: true }).extend({
         conceptId: z.literal(context.concept.id),
-        needAssessments: needs.length
-          ? z.array(need.extend({ needId: z.enum(needs.map((item) => item.id) as [string, ...string[]]) })).length(needs.length)
-          : z.array(need).length(0),
-      })
+        needAssessmentsById: z.object(needShape).strict(),
+      }).strict()
     : scopedBase;
   const scoped = context.subjects?.length
     ? withConcept.extend({
@@ -242,7 +249,29 @@ function planningResponseSchema(context: PlanningContext) {
   const storyboard = variants.length === 1
     ? variants[0]!
     : z.discriminatedUnion("format", variants as [typeof variants[number], ...typeof variants[number][]]);
-  return z.object({ storyboards: z.array(storyboard).length(3) });
+  return z.object({ transportVersion: z.literal(1), storyboards: z.array(storyboard).length(3) }).strict();
+}
+
+/**
+ * Decode validated transport v1 without creating assessments or repairing
+ * omitted keys. The model authored every value; only the exact property key
+ * becomes the IR needId. Public review/hash material remains Storyboard[].
+ */
+function projectPlanningTransportV1(
+  transport: z.infer<ReturnType<typeof planningTransportSchemaV1>>,
+  context: PlanningContext
+): { storyboards: Storyboard[] } {
+  return { storyboards: transport.storyboards.map((candidate) => {
+    if (!context.concept) return storyboardSchema.parse(candidate);
+    if (!("needAssessmentsById" in candidate)) throw new Error("Planning transport lacks concept need assessments");
+    const { needAssessmentsById, ...story } = candidate;
+    const needAssessments = context.concept.needs.map((need) => {
+      const authored = needAssessmentsById[need.id];
+      if (!authored) throw new Error(`Planning transport omitted need assessment: ${need.id}`);
+      return { needId: need.id, ...authored };
+    });
+    return storyboardSchema.parse({ ...story, needAssessments });
+  }) };
 }
 
 /**
@@ -276,8 +305,8 @@ export async function planStoryboards(
       throw new Error(`Pattern ${pattern.id} lacks distinct, ordered visual observations`);
     }
   }
-  const schema = planningResponseSchema(context);
-  const planned = schema.parse(
+  const schema = planningTransportSchemaV1(context);
+  const transport = schema.parse(
     await model.generate({
       task: "plan-storyboards",
       instruction: PLAN,
@@ -286,6 +315,7 @@ export async function planStoryboards(
       ...(context.subjects?.length ? { images: context.subjects.map((subject) => ({ label: `catalog:${subject.handle}`, url: subject.assetRef })) } : {}),
     })
   );
+  const planned = projectPlanningTransportV1(transport, context);
   if (new Set(planned.storyboards.map((s) => s.id)).size !== 3)
     throw new Error("Planner returned duplicate storyboard IDs");
   const critic = createNarrativeCritic(model, context, planned.storyboards);

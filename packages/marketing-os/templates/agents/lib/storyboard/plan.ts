@@ -138,6 +138,9 @@ THIS beat's actual assertion and visual brief, never a plan for the next beat.
 The final beat still names its incoming change; "end of sequence" is not a
 change in what the reader sees or learns. Before returning, compare each
 transition with the adjacent briefs and correct any one-beat offset.
+Duration seconds are allowed only for video beats, never single or carousel
+still images. A store-asset brief must include its exact acquired asset.ref and
+explicit use (as-is, detail-crop or verified master mockup-input).
 All carousel beats must declare the same board aspect (for example 4:5);
 source crops can differ within that consistent board. Preserve exact asset refs.
 Use existing framed renders only as framed objects; mockup-input requires a verified bare-artwork master. Unknown
@@ -168,16 +171,29 @@ function planningResponseSchema(context: PlanningContext) {
   const assetRef = context.assets.length
     ? z.enum(context.assets.map((asset) => asset.ref) as [string, ...string[]])
     : undefined;
-  const brief = assetRef
-    ? baseBeat.shape.brief.extend({ asset: baseBeat.shape.brief.shape.asset.unwrap().extend({ ref: assetRef }).optional() })
-    : baseBeat.shape.brief.omit({ asset: true }).strict();
-  const beat = baseBeat.extend({
-    evidence: z.array(baseBeat.shape.evidence.element.extend({ source })).min(1),
-    transition: baseBeat.shape.transition.unwrap().extend({ patternRefs }).optional(),
-    brief,
-  });
+  function beatForFormat(format: Storyboard["format"]) {
+    // These are alternatives in the provider schema, not refinements checked
+    // only after output. A store-asset brief always has a concrete binding;
+    // still briefs have no duration key to quietly turn them into motion.
+    const baseBrief = format === "video" ? baseBeat.shape.brief : baseBeat.shape.brief.omit({ seconds: true });
+    const asset = assetRef ? baseBeat.shape.brief.shape.asset.unwrap().extend({ ref: assetRef }) : undefined;
+    const brief = asset
+      ? z.discriminatedUnion("sourcing", [
+          baseBrief.extend({ sourcing: z.literal("store-asset"), asset }).strict(),
+          baseBrief.extend({ sourcing: z.literal("generated"), asset: asset.optional() }).strict(),
+          baseBrief.extend({ sourcing: z.literal("either"), asset: asset.optional() }).strict(),
+        ])
+      : z.discriminatedUnion("sourcing", [
+          baseBrief.omit({ asset: true }).extend({ sourcing: z.literal("generated") }).strict(),
+          baseBrief.omit({ asset: true }).extend({ sourcing: z.literal("either") }).strict(),
+        ]);
+    return baseBeat.extend({
+      evidence: z.array(baseBeat.shape.evidence.element.extend({ source })).min(1),
+      transition: baseBeat.shape.transition.unwrap().extend({ patternRefs }).optional(),
+      brief,
+    });
+  }
   const scopedBase = storyboardSchema.extend({
-    beats: z.array(beat).min(1).max(10),
     continuity: assetRef
       ? z.array(storyboardSchema.shape.continuity.element.extend({
           binding: z.enum(["reference-frame", "fixed-asset"]), ref: assetRef,
@@ -189,7 +205,6 @@ function planningResponseSchema(context: PlanningContext) {
   const withConcept = context.concept
     ? scopedBase.extend({
         conceptId: z.literal(context.concept.id),
-        format: z.enum(context.concept.formats as [Storyboard["format"], ...Storyboard["format"][]]),
         needAssessments: needs.length
           ? z.array(need.extend({ needId: z.enum(needs.map((item) => item.id) as [string, ...string[]]) })).length(needs.length)
           : z.array(need).length(0),
@@ -200,7 +215,14 @@ function planningResponseSchema(context: PlanningContext) {
         subjectHandles: z.array(z.enum(context.subjects.map((subject) => subject.handle) as [string, ...string[]])).min(1).max(6),
       })
     : withConcept;
-  return z.object({ storyboards: z.array(scoped).length(3) });
+  const formats = [...new Set(context.concept?.formats ?? ["single", "carousel", "video"] as const)];
+  const variants = formats.map((format) => scoped.extend({
+    format: z.literal(format), beats: z.array(beatForFormat(format)).min(1).max(10),
+  }));
+  const storyboard = variants.length === 1
+    ? variants[0]!
+    : z.discriminatedUnion("format", variants as [typeof variants[number], ...typeof variants[number][]]);
+  return z.object({ storyboards: z.array(storyboard).length(3) });
 }
 
 /**

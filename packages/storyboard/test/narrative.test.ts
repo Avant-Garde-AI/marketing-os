@@ -17,6 +17,7 @@ function beat(over: Partial<Beat> = {}): Beat {
       feels: "gallery-editorial, unhurried",
       avoid: ["wide lens", "low angle"],
       sourcing: "store-asset",
+      asset: { ref: "handle:a-hug-in-the-garden-1", use: "as-is" },
     },
     evidence: [{ claim: "Title and artist from the product record", origin: "data" }],
     ...over,
@@ -184,4 +185,25 @@ it("does not impose carousel board uniformity on video narrative beats", () => {
     beat({ id: "whole", role: "turn", brief: { ...beat().brief, aspect: "4:5" } }),
   ] });
   expect(fatalProblems(validateStoryboard(sb))).toEqual([]);
+});
+
+
+it("refuses source-backed briefs without a binding before realizing a prior review", () => {
+  const sb = storyboard();
+  delete sb.beats[0]!.brief.asset;
+  expect(fatalProblems(validateStoryboard(sb)).some((problem) => problem.field.endsWith("brief.asset"))).toBe(true);
+});
+
+it("refuses motion durations on still formats while preserving video durations", () => {
+  for (const format of ["single", "carousel"] as const) {
+    const sb = storyboard({ format, beats: format === "single"
+      ? [beat({ brief: { ...beat().brief, seconds: 3 } })]
+      : [beat({ id: "setup", role: "setup", brief: { ...beat().brief, seconds: 3 } }), beat({ id: "turn", role: "turn" })] });
+    expect(fatalProblems(validateStoryboard(sb)).some((problem) => problem.field.endsWith("brief.seconds"))).toBe(true);
+  }
+  const video = storyboard({ format: "video", beats: [
+    beat({ id: "setup", role: "setup", brief: { ...beat().brief, seconds: 3 } }),
+    beat({ id: "turn", role: "turn", brief: { ...beat().brief, seconds: 4 } }),
+  ] });
+  expect(fatalProblems(validateStoryboard(video))).toEqual([]);
 });

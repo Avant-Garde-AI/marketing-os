@@ -26,6 +26,18 @@ for the next beat. Reject outgoing or one-beat-offset descriptions, a claimed
 full-work reveal when this beat still shows a partial crop, and terminal no-ops
 such as "end of sequence" in place of an actual incoming change. Name the
 mismatched beat and what needs correction. The first beat has no transition.
+Scope each brief's avoid list to THAT beat. Do not carry a previous beat's
+avoidance into the next beat unless a continuity constant explicitly requires it.
+For an avoidance finding, quote the violated item from the current beat's brief;
+"avoid the full landscape" does not forbid showing part of its ground plane.
+brief.aspect is the OUTPUT BOARD aspect, not the shape of a source crop or its
+image rectangle. Crops and their placements are specified during realization;
+a landscape detail can sit on a portrait board. Do not infer that a 4:5 board
+makes a particular crop impossible. Without explicit crop coordinates or a
+verified geometry check, describe a suspected framing problem as uncertainty or
+request a locator, rather than assert mathematical impossibility from prose.
+Compare information gain across alternatives: a new starting detail alone does
+not make a different story if it asks and resolves the same reader question.
 For a single image evaluate the
 implied before/after. Compare with recent posts and the alternative proposals; identify repeated moves
 and alternatives that are the same story with different wording.

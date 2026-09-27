@@ -1045,3 +1045,16 @@ structural rejection. The implementation neither inserts a redundant middle
 slide nor renames returned beats. Structural admission establishes a candidate
 arc shape, never proof of story quality: semantic change, unsupported placement
 claims, fidelity and swipe value remain the independent critic/human's judgment.
+
+
+Production critic-scope correction: a live critic rejected a proposed crop by
+applying the setup's avoidance list to the turn and equating the output board
+aspect with the crop aspect. Those are different contracts. Each avoidance rule
+is local to its beat unless an explicit continuity constant makes it global;
+partial landscape is not forbidden by "avoid the full landscape". Source crops
+and image rectangles may differ from the board ratio. Without explicit crop
+coordinates or verified geometry, critique must report framing uncertainty
+instead of claiming a mathematically impossible crop. Alternative comparison
+still examines information gain rather than merely different starting details.
+This corrects critic guidance, not calibration evidence; fresh live review and
+human agreement remain necessary. The earlier critique is retained as diagnostic.

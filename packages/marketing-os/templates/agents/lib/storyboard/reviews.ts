@@ -2,7 +2,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { planningContextSchema, storyboardSchema, type PlanningContext } from "./schemas";
-import type { StoryReview } from "./plan";
+import { checkGrounding, type StoryReview } from "./plan";
+import { fatalProblems, validateStoryboard } from "./narrative";
 import type { Storyboard } from "./types";
 
 type Repo = { readFile(path: string): Promise<string | null>; writeFile(path: string, content: string): Promise<void> };
@@ -53,6 +54,11 @@ export function selectedReviewOption(a: DurableStoryboardReview, p: StoryboardSe
   if (a.reviewHash !== p.reviewHash || a.reviewId !== p.reviewId || a.review.status !== "awaiting-human-review") throw new Error("Review is not eligible for selection");
   const option = a.review.options.find((o) => o.storyboard.id === p.storyboardId);
   if (!option || option.status !== "reviewable" || option.verdicts.some((v) => v.kill)) throw new Error("Selected storyboard did not survive independent critique");
+  const currentProblems = [
+    ...fatalProblems(validateStoryboard(option.storyboard)).map((p) => `${p.field}: ${p.detail}`),
+    ...checkGrounding(option.storyboard, a.context).filter((v) => v.kill).map((v) => v.reason),
+  ];
+  if (currentProblems.length) throw new Error(`Selected storyboard fails current planning validation; plan and approve again: ${currentProblems.join("; ")}`);
   const eliminated = a.review.options.find((o) => o.storyboard.id === p.eliminatedStoryboardId);
   if (!p.affirmSelectedCandidate || !eliminated || eliminated.storyboard.id === option.storyboard.id || eliminated.status !== "eliminated" || !eliminated.verdicts.some((v) => v.kill && v.reason === p.eliminationReason)) throw new Error("Affirm the selected candidate and agree with an exact critic elimination reason for another option");
   return option;

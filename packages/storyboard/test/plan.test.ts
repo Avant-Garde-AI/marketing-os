@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkGrounding, planStoryboards } from "../src/plan";
-import { createVisualCritic, type StoryModel } from "../src/critics";
+import { createNarrativeCritic, createVisualCritic, type StoryModel } from "../src/critics";
 import { patternSchema, type PlanningContext } from "../src/schemas";
 import type { Storyboard } from "../src/types";
 
@@ -54,16 +54,14 @@ describe("planning before spend", () => {
         if (task === "plan-storyboards") return plans;
         const id = (data as { storyboard: Storyboard }).storyboard.id;
         return {
-          verdicts: [
-            {
+          wholeStory: {
               kill: id === "two",
               score: 0.6,
               reason:
                 id === "two"
                   ? "The edge repeats the first assertion; it does not earn a swipe"
                   : "The edge directs attention to the boundary",
-            },
-          ],
+          },
         };
       })
     );
@@ -79,7 +77,7 @@ describe("planning before spend", () => {
     const out = await planStoryboards(
       "A post",
       context,
-      model((task) => (task === "plan-storyboards" ? plans : { verdicts: [] }))
+      model((task) => (task === "plan-storyboards" ? plans : { localFindings: [] }))
     );
     expect(out.status).toBe("no-survivor");
   });
@@ -154,4 +152,48 @@ describe("visual critic", () => {
 
 it("does not let research carry a counted evidence field", () => {
   expect(() => patternSchema.parse({ id: "research", basis: "researched", move: "detail", rationale: "A hypothesis", sources: ["dossier.md"], evidence: { n: 5 } })).toThrow();
+});
+
+
+describe("narrative judgment contract", () => {
+  const judgment = { kill: false, score: 0.7, reason: "The edge changes the viewing question" };
+  it("requires a distinct whole-story judgment and normalizes local findings into public verdicts", async () => {
+    const critic = createNarrativeCritic(model(() => ({
+      wholeStory: judgment,
+      localFindings: [{ ...judgment, kill: true, beatId: "turn", reason: "The turn copy repeats setup" }],
+    })), context);
+    expect(await critic.critique(story)).toEqual([
+      judgment, { ...judgment, kill: true, beatId: "turn", reason: "The turn copy repeats setup" },
+    ]);
+  });
+  it("allows a complete whole-story decision without optional local findings", async () => {
+    expect(await createNarrativeCritic(model(() => ({ wholeStory: judgment })), context).critique(story)).toEqual([judgment]);
+  });
+  it("rejects local-only responses rather than inferring a whole-story endorsement", async () => {
+    await expect(createNarrativeCritic(model(() => ({
+      localFindings: [{ ...judgment, beatId: "turn" }],
+    })), context).critique(story)).rejects.toThrow();
+  });
+  it("rejects IDs in the whole-story decision instead of stripping them", async () => {
+    for (const ids of [{ beatId: "turn" }, { candidateId: "image-a" }]) {
+      await expect(createNarrativeCritic(model(() => ({ wholeStory: { ...judgment, ...ids } })), context).critique(story)).rejects.toThrow();
+    }
+  });
+  it("requires local beat IDs to be available and refuses image candidate IDs", async () => {
+    for (const ids of [{}, { beatId: "foreign" }, { beatId: "turn", candidateId: "image-a" }]) {
+      await expect(createNarrativeCritic(model(() => ({ wholeStory: judgment, localFindings: [{ ...judgment, ...ids }] })), context).critique(story)).rejects.toThrow();
+    }
+  });
+  it("exposes the whole-story field and exact beat options in the provider schema, not only in prose", async () => {
+    let schema: unknown;
+    const critic = createNarrativeCritic({ generate: async (request) => {
+      schema = request.schema;
+      return request.schema.parse({ wholeStory: judgment });
+    } }, context);
+    await critic.critique(story);
+    const shape = (schema as any).shape;
+    expect(shape.wholeStory.isOptional()).toBe(false);
+    expect(shape.wholeStory.shape).not.toHaveProperty("beatId");
+    expect(shape.localFindings.unwrap().element.shape.beatId.options).toEqual(["setup", "turn"]);
+  });
 });

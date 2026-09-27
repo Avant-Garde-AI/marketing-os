@@ -58,7 +58,7 @@ describe("acquired graph context compilation", () => {
         }
         return request.schema.parse(request.task === "plan-storyboards"
           ? { storyboards: [story(), { ...story(), id: "two" }, { ...story(), id: "three" }] }
-          : { verdicts: [{ kill: false, score: 0.6, reason: "Fixture only; human visual support review remains open" }] });
+          : { wholeStory: { kill: false, score: 0.6, reason: "Fixture only; human visual support review remains open" } });
       },
     });
     expect(images).toHaveLength(4);

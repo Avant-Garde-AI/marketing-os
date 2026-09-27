@@ -69,6 +69,20 @@ Formats a concept does not support are absent, not empty. "This idea does not wo
 
 Step 4's `conceptRef` is what makes the loop learnable later: outcomes attach to concepts, so the store finds out which ideas work, not merely which posts did.
 
+### 3.1 Grounding correction — 2026-09-25
+
+The implemented `social_concept_instantiate` currently returns **plans**, not
+persisted post artifacts. Its caller supplies candidate subjects and per-need
+assessments; it does not retrieve the graph or catalog itself. A `met: true`
+assessment now requires a nonempty explanation and `sourceRef` (graph result,
+catalog record/handle, or asset reference) to qualify. Missing source is an
+unmet need. The returned plan carries both values. This makes unsupported
+booleans visible and rejectable, but a caller-supplied string is not a verified
+graph receipt. The graph adapter must later resolve those references against
+actual tenant-scoped MCP results and current catalog data before a plan becomes
+a reviewed storyboard. Do not describe the current concept tool as an automated
+catalog selector or claim that its plans are published posts.
+
 ## 4. Authoring new concepts ⟨BUILD⟩
 
 `social_concept_propose(observation)` — the session the user described: *sit down, look at what the market is doing, come up with new ones.*

@@ -1,6 +1,6 @@
 # Creative core: narrative, storyboard, and corpus architecture
 
-**Version:** 1.0 · **Date:** 2026-09-20 · **Status:** implementation and research plan.
+**Version:** 1.1 · **Date:** 2026-09-27 · **Status:** staged implementation and research plan; the source-backed still runtime is deployed, broader research and adapters remain open.
 
 This is the canonical forward plan for Marketing OS's creative core. It covers
 single images, carousels, and short videos from source evidence to reviewed
@@ -79,7 +79,7 @@ statements of our infrastructure. Section 15 records the evidence actually check
 
 ## 2. Verified starting point
 
-Local implementation baseline: `b397330` atop corpus commit `405459a`. These are
+Historical 2026-09-20 implementation baseline: `b397330` atop corpus commit `405459a`. For current runtime status, see the delivery checkpoint at the end of this document. These are
 branch artifacts, not a claim that the work is deployed or merged to `main`.
 
 | Area | Implemented or observed | Still missing |
@@ -1328,7 +1328,7 @@ when evidence warrants it. No small pilot alone is a general efficacy claim.
 | R2 Beat/unit representation | Annotate stills, multi-panel single images, carousels and videos using 1:1 versus realization mapping | Coverage, forced/invented beats, reviewer correction count | Keep many-to-many mapping if it avoids false narrative units; reduce complexity if unnecessary in a format |
 | R3 Grounded extraction | Same complete posts: joint v1-style prose vs staged observations/annotation; pixel-only vs caption-assisted context; shuffled-order adversarial condition | Critical visual hallucinations, locator accuracy, true information changes, cost and review effort | Choose lowest-cost configuration that preserves grounded transition interpretation; do not scale a plausible-prose winner |
 | R4 Representation/clustering | Tags/nearest-neighbor baseline vs narrative+visual multi-view grouping; with/without geometry; account-held-out retrieval | Human grouping coherence, relevant-neighbor precision, cluster stability, outlier utility, artist dominance | Keep useful views only; refuse coverage-only optimization and retain unclustered records |
-| R5 Planning decomposition | Current joint-three completion vs independent K=3/4/6; direct board vs plan-then-board; same token/cost envelope | Blind set preference, distinct mechanisms, feasibility, latency/cost | Select K and stage topology from frontier of quality/diversity/cost; K=4 remains default until measured |
+| R5 Planning decomposition | Current joint-three completion vs independent K=3/4/6; direct board vs plan-then-board; same token/cost envelope | Blind set preference, distinct mechanisms, feasibility, latency/cost | Select K and stage topology from quality/diversity/cost; the joint K=3 pilot remains bounded until this comparison is measured |
 | R6 Control and retrieval | Hard rules fixed; vary soft strength, example selection, no-exemplar branch and retrieval count | Brand/strategy violations, creative diversity, reviewer preference | Calibrate qualitative strength bands; no fictitious dimension-level temperature controls |
 | R7 Critic and repair | No editor vs rubric-based independent editor; same model vs different critic; full rewrite vs patch-only on seeded defects | Human agreement, valid findings, regression in untouched units, successful repairs | Use advisory criticism with measured limits; prefer patch repair unless clear evidence favors another bounded policy |
 | R8 Taste conditioning | Brand rules only vs curated retrieval vs reference conditioning | On-brand paired preference, source copying, diversity and useful surprise | Add complexity only when held-out brand reviewers prefer it; adapters are optional follow-up |
@@ -1629,3 +1629,29 @@ the corrections or the measured corpus findings in this plan.
 ## Runtime delivery checkpoint (2026-09-27)
 
 The first source-backed still realization, durable human selection, ordered immutable social assets, full-carousel review and publish consent are implemented. The bounded production pilot uses three narrative alternatives; this does not complete the planned 3/4/6 candidate-count evaluation. See [the delivery runtime](plans/storyboard-harness/DELIVERY-RUNTIME-2026-09-27.md) for the exact operator path and current limits. Corpus admission, generated imagery/motion/spend adapters, persona MCP and creative-outcome integration retain the boundaries described above. Deployment/test evidence must not be presented as a human approval or an engagement-efficacy result.
+
+
+### Shipped behavior versus acceptance evidence
+
+Core PRs #78–#83 and Arthaus runtime PRs #156, #158–#162 implement and correct
+the first source-backed delivery path. Production validation exposed incomplete
+model output, inconsistent transition direction/board dimensions, invented
+reference aliases, absent image bindings, still/video confusion and an overly
+narrow two-beat role rule. Corrections landed in core and its store port; failed
+reviews remain diagnostic records rather than selected creative.
+
+| Boundary | Implemented | Acceptance still required |
+| --- | --- | --- |
+| Planning | Joint three-option source-grounded planner; independent whole-story critics; exact acquired IDs; still/video and asset constraints; meaningful two-beat reveals can reach critique | Human preference and elimination agreement; independent K=3/4/6 and topology comparison |
+| Human choice | Durable context/source-bound review and selection contracts; read-only signed narrative review; existing governed selection Action; old reviews revalidated | A real authenticated human selection; deployment is not selection |
+| Still delivery | Explicit source/crop layouts; governed realization Action; immutable ordered JPEGs; full-sequence final review; consent invalidation | Accepted-storyboard realization and whole-sequence human review. The live two-board renderer fixture verifies plumbing only |
+| Corpus knowledge | Ordered recovery/extraction receipts, proposal and admission contracts; explicit uncounted hypotheses | Review and admit corpus moves; broaden contrast samples/calibration, evaluate clustering/retrieval, then scale. Zero admitted patterns in the production pilot |
+| Other adapters | Explicit unsupported behavior and optional integration seams | Quoted generated imagery, motion, verified-master mockups, visual variant/sequence QA, persona MCP and proprietary outcome adapters |
+
+The exact deployments, failed and successful live runs, immutable asset checks
+and remaining acceptance gates are recorded in the store's
+`agents/social/research/storyboard-harness/PRODUCTION-CHECKPOINT-2026-09-27.md`.
+The [operator path](plans/storyboard-harness/DELIVERY-RUNTIME-2026-09-27.md)
+preserves story selection before imagery and separate publishing consent.
+Research and the supplied TRD continue to guide experiments; no dataset-wide
+extraction, proven engagement lift or learned performance model is claimed here.

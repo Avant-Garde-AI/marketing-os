@@ -110,21 +110,32 @@ const manifestVariantSchema = z.object({
   }),
 });
 
+const offerTargetingSchema = z.object({
+  devices: z.array(z.enum(["desktop", "mobile"])).optional(),
+  referrerContains: z.array(z.string()).optional(),
+  utmSources: z.array(z.string()).optional(),
+  countries: z.array(z.string()).optional(),
+  returningOnly: z.boolean().optional(),
+});
+
 export const offerManifestSchema = z.object({
   id: z.string(),
   type: z.literal("offer"),
-  placement: z.enum(["corner-card", "overlay"]),
+  placement: z.enum(["corner-card", "overlay", "takeover"]),
   trigger: z.object({
-    kind: z.literal("delay"),
+    kind: z.enum(["delay", "exit-intent"]),
     seconds: z.number(),
     suppressAfterDismissDays: z.number(),
     maxPerSession: z.number(),
   }),
+  teaser: z.object({ enabled: z.boolean() }).optional(),
   audience: z.object({
     newVisitorsOnly: z.boolean(),
     excludeSubscribed: z.boolean(),
     pages: z.array(z.enum(["home", "collection", "product", "cart"])),
+    targeting: offerTargetingSchema.optional(),
   }),
+  schedule: z.object({ from: z.string(), to: z.string() }).optional(),
   experiment: z.object({
     id: z.string(),
     policy: z.enum(["fixed", "thompson"]),

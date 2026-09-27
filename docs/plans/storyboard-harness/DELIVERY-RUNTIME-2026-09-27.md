@@ -12,7 +12,8 @@ No production social publishing is part of the implementation test.
    tool-less and output bounded; the planner/critics make at most four calls.
 2. Open the returned narrative `reviewUrl`. Compare all alternatives and their
    elimination reasons, evidence status, beat changes, copy and source bindings.
-3. Propose `storyboard.select` through the existing gate. The authenticated
+3. Propose `storyboard.select` through the existing gate using `propose_action`
+   from chat or the authenticated MCP endpoint. The authenticated
    human approves the exact review/candidate and agrees a real elimination
    reason. No public URL can perform this step. No image generation happens.
 4. Author a proposed SocialPost through `social_post_upsert` with bound facts.

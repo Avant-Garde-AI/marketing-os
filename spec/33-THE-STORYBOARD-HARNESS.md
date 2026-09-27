@@ -1003,3 +1003,16 @@ realization remains separately unavailable in the first adapter.
 Selection also revalidates the candidate against the current structural and
 source-grounding gates. Previously persisted reviewable flags remain audit
 material; they do not exempt an old candidate from corrected constraints.
+
+
+Production contextual-schema correction: the next live planner confused a
+concept's source hash with its ID and invented friendly catalog citation aliases.
+The bounded planning response schema now exposes the acquired context's exact
+concept ID, allowed formats, fact/brand source keys, need IDs, catalog handles,
+asset/continuity refs and pattern IDs as literals/enums. No-pattern contexts
+require empty transition references; no-asset contexts cannot fabricate source
+bindings but may still propose generated single images. The reusable public IR
+is unchanged. Invalid references fail before independent critique rather than
+being repaired after generation. Existing structural, grounding, claims and
+human gates remain: valid identifiers only establish reference identity, not
+semantic support for an assertion or evidence of creative effectiveness.

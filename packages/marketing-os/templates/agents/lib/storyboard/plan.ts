@@ -154,6 +154,56 @@ Copy and assertions remain subject to the existing claims
 guard. Do not compose, generate, save, schedule, or publish anything.`;
 
 /**
+ * Provider-visible identifiers are the acquired context's exact keys. The
+ * public IR stays reusable; this response schema narrows its refs for one run.
+ * Deterministic grounding still validates identities, bindings and hard needs;
+ * semantic support of a claim remains the independent critic/human's judgment.
+ */
+function planningResponseSchema(context: PlanningContext) {
+  const source = z.enum([...new Set([context.brand.source, ...context.facts.map((fact) => fact.source)])] as [string, ...string[]]);
+  const baseBeat = storyboardSchema.shape.beats.element;
+  const patternRefs = context.patterns.length
+    ? z.array(z.enum(context.patterns.map((pattern) => pattern.id) as [string, ...string[]]))
+    : z.array(z.string()).length(0);
+  const assetRef = context.assets.length
+    ? z.enum(context.assets.map((asset) => asset.ref) as [string, ...string[]])
+    : undefined;
+  const brief = assetRef
+    ? baseBeat.shape.brief.extend({ asset: baseBeat.shape.brief.shape.asset.unwrap().extend({ ref: assetRef }).optional() })
+    : baseBeat.shape.brief.omit({ asset: true }).strict();
+  const beat = baseBeat.extend({
+    evidence: z.array(baseBeat.shape.evidence.element.extend({ source })).min(1),
+    transition: baseBeat.shape.transition.unwrap().extend({ patternRefs }).optional(),
+    brief,
+  });
+  const scopedBase = storyboardSchema.extend({
+    beats: z.array(beat).min(1).max(10),
+    continuity: assetRef
+      ? z.array(storyboardSchema.shape.continuity.element.extend({
+          binding: z.enum(["reference-frame", "fixed-asset"]), ref: assetRef,
+        }))
+      : storyboardSchema.shape.continuity.length(0),
+  });
+  const need = storyboardSchema.shape.needAssessments.unwrap().element.extend({ sourceRefs: z.array(source) });
+  const needs = context.concept?.needs ?? [];
+  const withConcept = context.concept
+    ? scopedBase.extend({
+        conceptId: z.literal(context.concept.id),
+        format: z.enum(context.concept.formats as [Storyboard["format"], ...Storyboard["format"][]]),
+        needAssessments: needs.length
+          ? z.array(need.extend({ needId: z.enum(needs.map((item) => item.id) as [string, ...string[]]) })).length(needs.length)
+          : z.array(need).length(0),
+      })
+    : scopedBase;
+  const scoped = context.subjects?.length
+    ? withConcept.extend({
+        subjectHandles: z.array(z.enum(context.subjects.map((subject) => subject.handle) as [string, ...string[]])).min(1).max(6),
+      })
+    : withConcept;
+  return z.object({ storyboards: z.array(scoped).length(3) });
+}
+
+/**
  * Mastra stage body: one bounded planning call, then three independent critiques.
  * Returns review material only. It has no imagery service or write capability.
  */
@@ -182,7 +232,7 @@ export async function planStoryboards(
       throw new Error(`Pattern ${pattern.id} lacks distinct, ordered visual observations`);
     }
   }
-  const schema = z.object({ storyboards: z.array(storyboardSchema).length(3) });
+  const schema = planningResponseSchema(context);
   const planned = schema.parse(
     await model.generate({
       task: "plan-storyboards",

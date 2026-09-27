@@ -111,6 +111,12 @@ export function validateStoryboard(storyboard: Storyboard): Problem[] {
       );
     }
     problems.push(...validateBrief(beat, at));
+    if (storyboard.format !== "video" && beat.brief?.seconds !== undefined) {
+      fail(`${at}.brief.seconds`, "duration is allowed only for video beats; a single or carousel image cannot request motion");
+    }
+    if (beat.brief?.sourcing === "store-asset" && !beat.brief.asset) {
+      fail(`${at}.brief.asset`, "store-asset sourcing requires an explicit source asset binding");
+    }
 
     if (!beat.evidence?.length) {
       warn(

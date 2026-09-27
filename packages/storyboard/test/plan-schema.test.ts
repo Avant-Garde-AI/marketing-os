@@ -57,7 +57,10 @@ describe("context-scoped planner output schema", () => {
     expect(shape.needAssessments.element.shape.needId.options).toEqual(["legible-detail"]);
     expect(shape.needAssessments.element.shape.sourceRefs.element.options).toEqual(["brand:current", "graph:acquired-digest", "catalog:acquired-digest"]);
     expect(shape.beats.element.shape.evidence.element.shape.source.options).toEqual(["brand:current", "graph:acquired-digest", "catalog:acquired-digest"]);
-    expect(shape.beats.element.shape.brief.shape.asset.unwrap().shape.ref.options).toEqual([context.assets[0]!.ref]);
+    const storeBrief = shape.beats.element.shape.brief.optionsMap.get("store-asset");
+    expect(storeBrief.shape.asset.isOptional()).toBe(false);
+    expect(storeBrief.shape.asset.shape.ref.options).toEqual([context.assets[0]!.ref]);
+    expect(storeBrief.shape).not.toHaveProperty("seconds");
     expect(shape.beats.element.shape.transition.unwrap().shape.patternRefs.element.options).toEqual(["detail-to-context"]);
     expect(shape.continuity.element.shape.ref.options).toEqual([context.assets[0]!.ref]);
   });
@@ -72,6 +75,8 @@ describe("context-scoped planner output schema", () => {
     ["unacquired need evidence alias", (board) => { board.needAssessments![0]!.sourceRefs = ["catalog:current-work"]; }],
     ["format blocked by the concept", (board) => { board.format = "video"; }],
     ["graph alias used as selected catalog subject", (board) => { board.subjectHandles = ["current-work-old"]; }],
+    ["missing store-asset binding", (board) => { delete board.beats[0]!.brief.asset; }],
+    ["still carousel requests motion", (board) => { board.beats[0]!.brief.seconds = 3; }],
     ["unacquired asset URL", (board) => { board.beats[0]!.brief.asset!.ref = "https://cdn.shopify.com/other-artwork.jpg"; }],
     ["unavailable continuity reference", (board) => { board.continuity[0]!.ref = "asset:invented"; }],
     ["unknown pattern ID", (board) => { board.beats[1]!.transition!.patternRefs = ["detail-reveal-alias"]; }],
@@ -111,6 +116,28 @@ describe("context-scoped planner output schema", () => {
     const withInventedAsset = structuredClone(output);
     withInventedAsset.storyboards[0]!.beats[0]!.brief.asset = { ref: "asset:fiction", use: "as-is" };
     expect(() => schema!.parse(withInventedAsset)).toThrow();
+  });
+
+  it("retains valid video durations for a separately quoted motion adapter", async () => {
+    const videoContext = { ...context, concept: { ...context.concept!, formats: ["video" as const] } };
+    const video = story();
+    video.format = "video";
+    video.beats.forEach((beat) => { beat.brief.seconds = 4; });
+    const output = { storyboards: [video, { ...structuredClone(video), id: "two" }, { ...structuredClone(video), id: "three" }] };
+    const review = await planStoryboards("A future video arc", videoContext, model(output));
+    expect(review.modelCalls).toBe(4);
+    expect(review.options.every((option) => option.storyboard.beats.every((beat) => beat.brief.seconds === 4))).toBe(true);
+  });
+
+  it("rejects rather than strips duration from a generated single", async () => {
+    const noAssets: PlanningContext = { brand: context.brand, facts: [], assets: [], patterns: [], priorPosts: [] };
+    const board: Storyboard = { id: "one", format: "single", premise: "An original editorial image", payoff: "One image", continuity: [],
+      beats: [{ id: "one-frame", role: "payoff", assertion: "Current brand direction",
+        evidence: [{ claim: "Current direction", origin: "brand", source: context.brand.source }],
+        brief: { shows: "An original composition", feels: "Quiet", avoid: ["Invented existing artwork"], sourcing: "generated", seconds: 3 } }],
+    };
+    await expect(planStoryboards("A still", noAssets, model({ storyboards: [board, { ...board, id: "two" }, { ...board, id: "three" }] }))).rejects.toThrow();
+    expect(board.beats[0]!.brief.seconds).toBe(3);
   });
 
   it("retains deterministic unmet-hard-need rejection when all identifiers are valid", async () => {

@@ -1016,3 +1016,16 @@ is unchanged. Invalid references fail before independent critique rather than
 being repaired after generation. Existing structural, grounding, claims and
 human gates remain: valid identifiers only establish reference identity, not
 semantic support for an assertion or evidence of creative effectiveness.
+
+
+Production realization-schema correction: exact identifiers alone still allowed
+source-backed briefs to omit their asset binding and still carousels to request
+motion durations. Planner output now uses format-specific storyboard branches
+and sourcing-specific visual brief branches. `store-asset` requires its exact
+acquired `{ref, use}` binding; contexts without assets cannot choose that branch.
+Single/carousel briefs prohibit `seconds` and refuse it rather than strip it.
+Video retains positive duration support for a future separately quoted adapter.
+Generated/either branches retain their existing flexibility, including generated
+single-image planning with no source assets. Structural validation independently
+refuses missing store bindings and still durations when inspecting prior reviews.
+The public IR is unchanged, and no fields are populated after the model returns.

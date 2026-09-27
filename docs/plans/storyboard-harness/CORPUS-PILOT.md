@@ -22,6 +22,37 @@ The first [24-carousel recovery slice](RECOVERY-SLICE-2026-09-23.md) is frozen
 from the original source metadata, with expected child counts and acquisition
 checks recorded before any provider run.
 
+## V2 staged extraction calibration — 2026-09-23
+
+The v2 code now separates a pixel-only observation pass from a narrative
+annotation pass. The first pass receives real ordered image bytes and no caption
+or engagement. The second receives the validated observations and caption as
+labeled context, but no engagement. Schema and reference checks reject media
+omitted relative to the supplied post input, changed order, unsupported beat
+citations and invented claim references. Acquisition readiness must be checked
+separately against the source snapshot before v2 is called.
+Results remain `unreviewed` until a human checks both stages against the media.
+
+A bounded local probe used `gemini-3.1-pro-preview` on the same three complete
+single-image posts shown below. All three final outputs passed the v2 schema:
+
+| Post          | Grounded observation                                      | Narrative annotation and review note                                                                                                                           |
+| ------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DcfQ9hZm0bu` | Three comic covers within **one** static image            | Spatial catalog presentation, not three carousel beats. Small printed codes in the OCR still need careful human verification.                                  |
+| `Dbg1Bb8SCIm` | Painted city street, pink sky, bare trees and pedestrians | Caption adds a seasonal reading. The inferred feeling is labeled as a hypothesis; an irrelevant audio limitation shows that semantic review remains necessary. |
+| `DcWG8Bxxlcm` | Hand and stylus over tablet line art                      | A making-process presentation with caption-based promotional context, not a claim that unseen work stages or audience outcomes occurred.                       |
+
+The strict initial prompt produced malformed or wrong-shaped JSON on three
+attempts. An explicit response shape then yielded 3/3 schema-valid outputs;
+these are calibration attempts, not a reliability rate. Provider-reported usage
+for the final three outputs was 6,474 input, 1,755 output and 3,000 thinking
+tokens across both passes. This is neither a price estimate nor a reconciled
+invoice. The local probe has resumable records outside Git, but v2 is not yet
+wired to the production pilot CLI/ledger. No recovered carousel or video was
+available to test a real between-beat transition, and no cluster or pattern was
+admitted. The next calibration must pair complete recovered carousels with
+human judgments of what each adjacent slide actually changes.
+
 ## Direct inventory and correction
 
 The bucket contains more than the original 40-artist pilot. Downloaded metadata

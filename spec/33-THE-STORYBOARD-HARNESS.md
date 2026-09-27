@@ -623,6 +623,26 @@ Clustering single-image treatments can proceed independently, but it cannot
 supply evidence for between-beat narrative moves.
 See `docs/plans/storyboard-harness/CORPUS-PILOT.md` for the bounded pilot sequence.
 
+### 10.8 Staged v2 extraction calibration — 2026-09-23
+
+The new `packages/storyboard-corpus` v2 contract implements the planned split
+between pixel-grounded observation and narrative interpretation. The first
+model call receives ordered media bytes with no caption or engagement. The
+second receives validated observations plus the caption as labeled context,
+still without engagement. Exact media order, adjacent transition references,
+beat support and claim-source references are checked. Output remains unreviewed.
+The pure acquisition contract can classify incomplete media, but the v2 model
+adapter has not yet been bound to the durable CLI ledger or run on a recovered
+carousel. It therefore does not establish an observed arc pattern.
+
+Three complete single-image posts passed a bounded live v2 probe on 2026-09-23.
+The model distinguished three comic covers _within one image_ from a carousel,
+described a painterly city scene, and recognized a hand/stylus making-process
+presentation. The city annotation also emitted an irrelevant audio limitation,
+and fine OCR remains uncertain. Schema validity is not semantic approval: the
+next evidence gate is human review of complete recovered carousel transitions.
+Measured prompts, failures and usage are in the pilot report.
+
 ## 11. Research and TRD reconciliation — 2026-09-20
 
 The supplied narrative/storyboard research and Atelier sub-module TRD validate

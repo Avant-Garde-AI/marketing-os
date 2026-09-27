@@ -44,6 +44,21 @@ that contract. It checks exact post identity, child order and expected count,
 then retains failed child mirrors as explicit gaps. A source provider adapter
 and durable blob writer are still required for a live recovery run.
 
+`analyzePostV2()` is the staged extraction contract for media supplied from a
+complete snapshot. The caller must first verify acquisition readiness; the
+analyzer checks the supplied ordered media against the supplied post input,
+not against Instagram itself.
+The pixel pass receives ordered media without caption or engagement; the
+interpretation pass receives grounded observations and the caption as labeled
+context, still without engagement. It keeps visible observations, adjacent
+changes, transition readings and narrative beats separate, with exact source
+references and unreviewed status. `createVertexV2Stages()` sends actual decoded
+image bytes to the first pass and uses a text-only second pass. The v2 adapter
+has bounded request size, output and time, and safe provider diagnostics.
+It has not yet been connected to the durable CLI ledger or a recovered carousel;
+the current CLI still runs v1. The [v2 calibration findings](../../docs/plans/storyboard-harness/CORPUS-PILOT.md)
+cover three complete single-image posts only.
+
 The executable needs `gcloud` on its inherited PATH. In environments where the
 shell finds it but child processes do not, prepend the SDK `bin` directory to
 PATH before starting the CLI. Do not repeat OAuth sign-in for a PATH error.

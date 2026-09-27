@@ -9,10 +9,11 @@
  * experiment-integrity bug, not a cosmetic one.
  */
 
-import type { OfferManifest, OfferTargeting, OfferVariantContent } from "./types";
+import type { OfferManifest, OfferManifestVariant, OfferTargeting, OfferVariantContent } from "./types";
 
 export interface CompileOfferManifestInput {
   surfaceSlug: string;
+  title?: string;
   placement?: "corner-card" | "overlay" | "takeover";
   /** delay (default) or exit-intent — see OfferManifest.trigger's doc. */
   triggerKind?: "delay" | "exit-intent";
@@ -26,7 +27,13 @@ export interface CompileOfferManifestInput {
   targeting?: OfferTargeting;
   /** ISO datetimes. Both required together, or omit entirely. */
   schedule?: { from: string; to: string };
+  /** Brand tokens (colors, fonts) merged over the neutral defaults. Without
+   * these every offer rendered in the same neutral card regardless of brand. */
+  style?: Partial<OfferManifestVariant["style"]>;
 }
+
+/** The store's own Shopify CDN — the only image origin an offer may use. */
+export const OFFER_IMAGE_ORIGIN = "https://cdn.shopify.com/";
 
 const DEFAULT_STYLE = {
   bg: "#ffffff",
@@ -41,6 +48,14 @@ export function compileOfferManifest(input: CompileOfferManifestInput): OfferMan
   const variantKeys = Object.keys(input.variants ?? {}).slice(0, 2);
   if (variantKeys.length === 0) {
     throw new Error("At least one variant is required.");
+  }
+  for (const [k, v] of Object.entries(input.variants)) {
+    if (v.imageSrc && !v.imageSrc.startsWith(OFFER_IMAGE_ORIGIN)) {
+      throw new Error(
+        `variant "${k}": imageSrc must be on the store's Shopify CDN (${OFFER_IMAGE_ORIGIN}…) — ` +
+          `the storefront runtime makes no third-party requests. Got "${v.imageSrc}".`,
+      );
+    }
   }
   const controlWeight = input.controlWeight ?? 0.34;
   const share = (1 - controlWeight) / variantKeys.length;
@@ -73,7 +88,7 @@ export function compileOfferManifest(input: CompileOfferManifestInput): OfferMan
     variants: Object.fromEntries(
       variantKeys.map((k) => [
         k,
-        { content: input.variants[k]!, style: { ...DEFAULT_STYLE } },
+        { content: input.variants[k]!, style: { ...DEFAULT_STYLE, ...(input.style ?? {}) } },
       ]),
     ),
     consent: { capturesEmail: true as const },
@@ -83,6 +98,7 @@ export function compileOfferManifest(input: CompileOfferManifestInput): OfferMan
   if (teaserOn) manifest.teaser = { enabled: true };
   if (input.targeting) manifest.audience.targeting = input.targeting;
   if (input.schedule) manifest.schedule = input.schedule;
+  if (input.title) manifest.title = input.title;
 
   return manifest;
 }

@@ -7,7 +7,7 @@
  */
 
 export * from "./types";
-export { compileOfferManifest } from "./manifest";
+export { compileOfferManifest, OFFER_IMAGE_ORIGIN } from "./manifest";
 export type { CompileOfferManifestInput } from "./manifest";
 export { gateOfferContent } from "./gates";
 export type { OfferGateResult } from "./gates";

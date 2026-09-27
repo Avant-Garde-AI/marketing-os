@@ -120,4 +120,50 @@ describe("compileOfferManifest", () => {
       expect(m.schedule).toBeUndefined();
     });
   });
+
+  describe("rich takeover: imagery, brand tokens", () => {
+    const rich = {
+      ...variant,
+      headlineAccent: "you're working on.",
+      points: "Gallery walls by room|First look at new work|Framing notes",
+      decline: "No thanks, just browsing",
+      imageSrc: "https://cdn.shopify.com/s/files/1/2196/4605/files/collection-quiet-earth-hero.jpg",
+      imageAlt: "A living room with a set of three prints above a linen sofa",
+      imageFocus: "72% 35%",
+      imageCaption: "Quiet Earth — a set of three",
+    };
+
+    it("carries the offer's human title into the manifest", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_welcome", title: "Welcome", variants: { v1: rich } });
+      expect(m.title).toBe("Welcome");
+    });
+
+    it("carries the rich content fields through untouched", () => {
+      const m = compileOfferManifest({ surfaceSlug: "ofr_welcome", placement: "takeover", variants: { v1: rich } });
+      expect(m.variants.v1!.content).toEqual(rich);
+    });
+
+    it("refuses an image that is not on the store's Shopify CDN", () => {
+      expect(() =>
+        compileOfferManifest({
+          surfaceSlug: "ofr_welcome",
+          variants: { v1: { ...rich, imageSrc: "https://images.example.com/room.jpg" } },
+        }),
+      ).toThrow(/Shopify CDN/);
+    });
+
+    it("merges brand tokens over the neutral defaults", () => {
+      const m = compileOfferManifest({
+        surfaceSlug: "ofr_welcome",
+        variants: { v1: variant },
+        style: { bg: "#F5F2ED", accent: "#B07D4F", fontDisplay: "'Playfair Display', Georgia, serif" },
+      });
+      expect(m.variants.v1!.style).toMatchObject({
+        bg: "#F5F2ED",
+        accent: "#B07D4F",
+        fontDisplay: "'Playfair Display', Georgia, serif",
+        ink: "#1a1a1a", // untouched default
+      });
+    });
+  });
 });

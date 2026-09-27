@@ -51,12 +51,51 @@ const offerToolDeps = {
 const variantContentSchema = z.object({
   eyebrow: z.string().optional(),
   headline: z.string().min(4).max(80),
+  headlineAccent: z
+    .string()
+    .max(60)
+    .optional()
+    .describe("Optional second headline beat, set in the display italic on its own line."),
   body: z.string().min(10).max(240),
+  points: z
+    .string()
+    .max(160)
+    .optional()
+    .describe('Up to three short value lines separated by "|". Concrete, not superlative.'),
   placeholder: z.string().default("Email address"),
   cta: z.string().min(2).max(30),
   success: z.string().min(4).max(120),
   consent: z.string().min(10).max(200),
+  decline: z
+    .string()
+    .max(40)
+    .optional()
+    .describe('A quiet, respectful one-tap decline ("No thanks, just browsing"). Never shaming.'),
+  imageSrc: z
+    .string()
+    .optional()
+    .describe("Takeover image. MUST be on the store's own CDN (https://cdn.shopify.com/…) — use the store's room/lifestyle photography."),
+  imageAlt: z.string().max(160).optional(),
+  imageFocus: z.string().max(20).optional().describe('CSS object-position for the crop, e.g. "72% 35%".'),
+  imageCaption: z.string().max(60).optional().describe("Small caption over the image — what the room or set is."),
 });
+
+const styleSchema = z
+  .object({
+    bg: z.string().optional(),
+    ink: z.string().optional(),
+    ink2: z.string().optional(),
+    accent: z.string().optional(),
+    line: z.string().optional(),
+    font: z.string().optional(),
+    fontDisplay: z.string().optional(),
+    fontMono: z.string().optional(),
+  })
+  .optional()
+  .describe(
+    "Brand tokens from DESIGN.md / the storefront: colors and the font families the storefront actually loads. " +
+      "Without these the offer renders in a neutral default.",
+  );
 
 export const proposeOffer = createTool({
   id: "propose_offer",
@@ -105,6 +144,7 @@ export const proposeOffer = createTool({
       .object({ from: z.string(), to: z.string() })
       .optional()
       .describe("ISO datetimes — a campaign window, e.g. Black Friday. Omit for an always-on offer."),
+    style: styleSchema,
   }),
   outputSchema: z.object({
     proposalId: z.string(),
@@ -126,6 +166,7 @@ export const proposeOffer = createTool({
     const variants = inputData.variants as Record<string, OfferVariantContent>;
     const surface = compileOfferManifest({
       surfaceSlug: inputData.surfaceSlug,
+      title: inputData.title,
       placement: inputData.placement,
       triggerKind: inputData.triggerKind,
       triggerSeconds: inputData.triggerSeconds,
@@ -135,6 +176,7 @@ export const proposeOffer = createTool({
       teaser: inputData.teaser,
       targeting: inputData.targeting,
       schedule: inputData.schedule,
+      style: inputData.style,
     });
 
     const gates = gateOfferContent(variants as unknown as Record<string, Record<string, string>>);

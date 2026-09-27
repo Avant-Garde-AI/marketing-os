@@ -41,11 +41,30 @@ export type OfferRepo = StoreRepo;
 export interface OfferVariantContent {
   eyebrow?: string;
   headline: string;
+  /** Rendered on its own line in the display face's italic — the editorial
+   * second beat of a headline ("Art for the room / you're working on."). */
+  headlineAccent?: string;
   body: string;
+  /** Up to three short value lines, "|"-separated. Kept a flat string so the
+   * dark-pattern gate scans it like every other field. */
+  points?: string;
   placeholder?: string;
   cta: string;
   success: string;
   consent: string;
+  /** A quiet one-tap decline under the form. Never shaming — the gate's
+   * confirmshame patterns apply to it like any other copy. */
+  decline?: string;
+  /** Takeover imagery. MUST be on the store's own Shopify CDN
+   * (https://cdn.shopify.com/…): the runtime makes no third-party requests,
+   * and compileOfferManifest, the platform validator and the runtime each
+   * refuse anything else. */
+  imageSrc?: string;
+  imageAlt?: string;
+  /** CSS object-position, e.g. "72% 35%" — where the crop should hold. */
+  imageFocus?: string;
+  /** A small caption over the image — what the room/set is. */
+  imageCaption?: string;
 }
 
 export interface OfferManifestVariant {
@@ -56,7 +75,12 @@ export interface OfferManifestVariant {
     ink2: string;
     accent: string;
     line: string;
+    /** Body face. "inherit" takes the theme's body font. */
     font: string;
+    /** Headline face — pass the storefront's own display font by name. */
+    fontDisplay?: string;
+    /** Eyebrow/caption face. */
+    fontMono?: string;
   };
 }
 
@@ -80,6 +104,9 @@ export interface OfferTargeting {
 export interface OfferManifest {
   id: string;
   type: "offer";
+  /** The human name the agent gave the offer — what the merchant sees in the
+   * admin instead of the slug. Ignored by the storefront runtime. */
+  title?: string;
   placement: "corner-card" | "overlay" | "takeover";
   trigger: {
     /** exit-intent (OF3): desktop mouseout-toward-chrome; mobile has no

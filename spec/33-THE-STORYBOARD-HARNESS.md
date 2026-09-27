@@ -1095,3 +1095,17 @@ convention for `sources[].hash`; its raw-byte SHA remains the formula receipt
 identifier. Mixing those conventions makes an unchanged acquired source fail
 review reads. A save/read/edit regression now covers this seam: unchanged
 guidance loads, and edited guidance requires a fresh plan.
+
+Brand drift comparison also uses the planning schema's outer-whitespace trim
+on live brand instructions. The production Brand Soul wrapper begins with
+blank lines; those are already trimmed in persisted context. Actual content
+and internal whitespace changes remain invalidating, and source artifact pins
+still hash exact acquired content. A review/selection read regression covers
+unchanged wrapped instructions and refusal of changed rules.
+
+The acquired-voice live rehearsal produced three terminal holds: a full-image
+reveal followed by the same image with remaining copy. All were retained as
+rejected, not shortened or approved after generation. Planner guidance now
+explicitly prefers the shortest complete arc and allows an earned two-beat
+reveal, placing remaining caption/room advice on its last meaningful beat.
+An extra beat must earn new information; slide count is not narrative quality.

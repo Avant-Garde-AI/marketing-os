@@ -146,9 +146,42 @@ async function igPermalink(accessToken: string, mediaId: string): Promise<string
   }
 }
 
+/** Create all inert children and the inert carousel parent in approved order. */
+export async function igCreateCarouselContainer(
+  accessToken: string, userId: string, input: { imageUrls: string[]; caption: string },
+): Promise<string> {
+  if (input.imageUrls.length < 2 || input.imageUrls.length > 10) throw new Error("Instagram carousel requires 2..10 slides");
+  const children: string[] = [];
+  for (const imageUrl of input.imageUrls) {
+    const child = await graph<{ id: string }>(`/${userId}/media`, {
+      method: "POST", params: { image_url: imageUrl, is_carousel_item: "true", access_token: accessToken },
+    });
+    if (!child.id) throw new Error("Instagram returned no child container id");
+    await igWaitForContainer(accessToken, child.id);
+    children.push(child.id);
+  }
+  const parent = await graph<{ id: string }>(`/${userId}/media`, {
+    method: "POST", params: { media_type: "CAROUSEL", children: children.join(","), caption: input.caption, access_token: accessToken },
+  });
+  if (!parent.id) throw new Error("Instagram returned no carousel container id");
+  return parent.id;
+}
+
 export function createInstagramAdapter(tokens: ChannelTokenSource): SocialChannelAdapter {
   return {
     channel: "instagram",
+    async publishSequence(post, assetUrls) {
+      if (!post.renderedSequence || JSON.stringify(assetUrls) !== JSON.stringify(post.renderedSequence.slides.map((slide) => slide.url))) {
+        throw new Error("Instagram ordered assets must match the reviewed rendered sequence");
+      }
+      if (assetUrls.length === 1) return this.publish(post, assetUrls[0]);
+      const token = await tokens.accessToken("instagram");
+      const userId = await igResolveUserId(token);
+      const containerId = await igCreateCarouselContainer(token, userId, { imageUrls: assetUrls, caption: post.copy });
+      await igWaitForContainer(token, containerId);
+      const platformId = await igPublishContainer(token, userId, containerId);
+      return { platformId, permalink: await igPermalink(token, platformId) };
+    },
     async publish(post: SocialPost, assetUrl: string): Promise<{ platformId: string; permalink: string }> {
       const token = await tokens.accessToken("instagram");
       const userId = await igResolveUserId(token);

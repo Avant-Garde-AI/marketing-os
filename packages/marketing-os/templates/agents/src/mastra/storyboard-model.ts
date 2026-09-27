@@ -21,6 +21,7 @@ export function createMastraStoryModel(model: AgentConfig["model"]): StoryModel 
       const response = await agent.generate([{ role: "user", content }], {
         structuredOutput: { schema: request.schema },
         maxSteps: 1,
+        modelSettings: { maxOutputTokens: 12000 },
       });
       return request.schema.parse(response.object);
     },

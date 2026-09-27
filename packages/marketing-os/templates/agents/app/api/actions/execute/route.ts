@@ -23,6 +23,8 @@ import { runWithTenant } from "../../../../lib/tenant-context";
 // invisible to this one).
 import "../../../../lib/social/register-actions";
 import "../../../../lib/email/register-actions";
+import "../../../../lib/storyboard/register-actions";
+import "../../../../lib/storyboard/realization";
 
 export const maxDuration = 120;
 
@@ -50,16 +52,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "shop and storeSlug required" }, { status: 400 });
   }
 
-  const action = getAction(body.kind);
-  if (!action) {
-    return NextResponse.json({ error: `no action registered for kind "${body.kind}"` }, { status: 404 });
-  }
-
-  const parsed = action.paramsSchema.safeParse(body.params);
-  if (!parsed.success) {
-    return NextResponse.json({ error: `invalid params: ${parsed.error.message}` }, { status: 400 });
-  }
-
   try {
     const result = await runWithTenant(
       {
@@ -68,6 +60,10 @@ export async function POST(req: NextRequest) {
         storeSlug: body.storeSlug,
       },
       async () => {
+        const action = getAction(body.kind!);
+        if (!action) throw new Error(`no action registered for kind "${body.kind}"`);
+        const parsed = action.paramsSchema.safeParse(body.params);
+        if (!parsed.success) throw new Error(`invalid params: ${parsed.error.message}`);
         // Preview-hash recheck (defense in depth): the gate already refuses
         // stale nonces; recomputing here catches a gate/runtime version skew
         // where preview material changed shape.

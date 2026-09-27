@@ -27,6 +27,8 @@ import { proposeToGate } from "../../../lib/actions/gate-client";
 // for its own data.
 import "../../../lib/email/register-actions";
 import "../../../lib/social/register-actions";
+import "../../../lib/storyboard/register-actions";
+import "../../../lib/storyboard/realization";
 
 export const proposeActionTool = createTool({
   id: "propose_action",

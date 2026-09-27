@@ -30,6 +30,7 @@ export function socialAssetUrl(post: SocialPost): string {
   if (!base) {
     throw new Error("MOS_AGENTS_PUBLIC_URL not configured — cannot build a public asset URL for publishing");
   }
+  if (post.renderedSequence) return post.renderedSequence.slides[0].url;
   if (!post.designSurface) {
     throw new Error(
       `post "${post.id}" has no Design Surface bound — compose the creative and link it (social_link_design) before publishing`,
@@ -49,7 +50,7 @@ export function socialAssetUrl(post: SocialPost): string {
  * genuinely dead canvas fails the publish at asset-fetch, visibly.
  */
 export async function socialSurfaceRevision(post: SocialPost): Promise<number | null> {
-  if (!post.designSurface || !isDesignSurfacesConfigured()) return null;
+  if (post.renderedSequence || !post.designSurface || !isDesignSurfacesConfigured()) return null;
   try {
     const structure = await getDesignSurfaceAdapter().getFileStructure(post.designSurface.fileId);
     return structure.revn;

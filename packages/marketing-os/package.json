@@ -39,6 +39,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.0.0",
     "@types/validate-npm-package-name": "^4.0.2",
+    "sharp": "^0.34.5",
     "tsup": "^8.0.2",
     "tsx": "^4.7.0",
     "typescript": "^5.7.0",

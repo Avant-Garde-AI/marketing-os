@@ -84,6 +84,13 @@ export function socialReviewLink(shop: string, groupKey: string, ttlDays = DEFAU
   return mint("review", `/review/social/${encodeURIComponent(groupKey)}`, shop, groupKey, ttlDays);
 }
 
+/** Read-only narrative shortlist. Its token never grants selection or spend authority. */
+export function socialStoryboardReviewLink(shop: string, reviewId: string, reviewHash: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
+  const link = mint("review", `/review/storyboard/${encodeURIComponent(reviewId)}`, shop, `storyboard:${reviewId}`, ttlDays);
+  const url = new URL(link.url); url.searchParams.set("hash", reviewHash);
+  return { ...link, url: url.toString() };
+}
+
 /** The month sheet — every group planned for a month. */
 export function socialSheetLink(shop: string, month: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
   return mint("sheet", "/review/social", shop, month, ttlDays);

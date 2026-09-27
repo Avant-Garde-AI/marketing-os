@@ -80,7 +80,7 @@ export function schedulingGaps(post: SocialPost): string[] {
   const missing: string[] = [];
   if (!post.copy.trim()) missing.push("copy (the caption)");
   if (!post.targetLink.trim()) missing.push("targetLink");
-  if (!post.designSurface) {
+  if (!post.designSurface && !post.renderedSequence) {
     missing.push(
       "creative (compose_design_surface with kind 'social.post', then social_link_design)",
     );
@@ -146,6 +146,12 @@ export function nextPost(
   if (input.body !== undefined) next.body = input.body;
   if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
 
+  // Changing authored content requires the runtime to realize and review again.
+  if (existing?.renderedSequence && MATERIAL_FIELDS.some((field) => JSON.stringify(existing[field] ?? null) !== JSON.stringify(next[field] ?? null))) {
+    delete next.renderedSequence;
+    next.status = "proposed";
+  }
+
   // D2: did this edit change what would actually ship?
   let consentCleared = false;
   if (existing?.approval) {
@@ -158,7 +164,7 @@ export function nextPost(
       delete next.approval;
       // Back to the last honest state: the creative is still bound, so
       // asset_ready — the card re-arms from there.
-      next.status = "asset_ready";
+      next.status = next.designSurface ? "asset_ready" : "proposed";
       delete next.scheduledAt;
       if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
       consentCleared = true;

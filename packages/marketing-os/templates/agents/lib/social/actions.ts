@@ -122,6 +122,7 @@ export function publishMaterial(post: SocialPost): Record<string, unknown> {
     targetLink: post.targetLink,
     assetRefs: post.assetRefs,
     designSurface: post.designSurface ?? null,
+    ...(post.renderedSequence ? { renderedSequence: post.renderedSequence } : {}),
     scheduledAt: post.scheduledAt ?? null,
   };
 }
@@ -148,7 +149,7 @@ export async function verifyScheduleConsent(
   if (post.approval.hash !== approvalHash(post)) {
     return { ok: false, reason: "publish material changed since approval" };
   }
-  if (post.approval.surfaceRevn != null && deps.surfaceRevision) {
+  if (!post.renderedSequence && post.approval.surfaceRevn != null && deps.surfaceRevision) {
     const current = await deps.surfaceRevision(post);
     if (current != null && current !== post.approval.surfaceRevn) {
       return {
@@ -173,16 +174,26 @@ function requirePublishable(post: SocialPost, allowed: string[]): void {
           : ""),
     );
   }
-  if (!post.designSurface) {
+  if (!post.designSurface && !post.renderedSequence) {
     throw new Error(
       `post "${post.id}" has no Design Surface bound — it is not asset_ready. Compose the creative (compose_design_surface, kind "social.post") and link it (social_link_design) first.`,
     );
   }
 }
 
+function publishAssets(deps: SocialActionDeps, post: SocialPost): string[] {
+  if (post.renderedSequence) {
+    const adapter = deps.adapterFor(post.channel);
+    if (!adapter.publishSequence) throw new Error(`${post.channel} does not support ordered rendered sequences`);
+    return post.renderedSequence.slides.map((slide) => slide.url);
+  }
+  return [deps.assetUrl(post)];
+}
+
 function baseRows(post: SocialPost): { label: string; value: string }[] {
   return [
     { label: "Channel", value: post.channel },
+    ...(post.renderedSequence ? [{ label: "Slides", value: `${post.renderedSequence.slides.length} in order: ${post.renderedSequence.slides.map((slide, index) => `${index + 1}. ${slide.boardName}`).join(" → ")}` }] : []),
     { label: "Caption", value: post.copy.length > 120 ? `${post.copy.slice(0, 117)}…` : post.copy },
     { label: "Link", value: post.targetLink },
   ];
@@ -218,7 +229,8 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
           `scheduledAt ${p.scheduledAt} is in the past — use social.publish_post to publish now`,
         );
       }
-      const asset = deps.assetUrl(post); // throws when unresolvable — publish would too
+      const assets = publishAssets(deps, post);
+      const asset = assets[0]!; // throws when unresolvable — publish would too
       const scheduled: SocialPost = { ...post, scheduledAt: p.scheduledAt };
       const warnings: string[] = [];
       if (post.status === "scheduled" && post.scheduledAt !== p.scheduledAt) {
@@ -247,6 +259,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
         };
       }
       requirePublishable(post, ["asset_ready", "scheduled"]);
+      publishAssets(deps, post);
       const scheduled: SocialPost = { ...post, scheduledAt: p.scheduledAt, status: "scheduled" };
       delete scheduled.failure;
       // The consent record the cron re-verifies (D2). Hash covers the post's
@@ -254,7 +267,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
       // which the gate guarantees matches the previewed state (nonce). The
       // canvas revision pins the creative's PIXELS at approval time — edits
       // bump it without changing the binding, so hash alone can't see them.
-      const surfaceRevn = (await deps.surfaceRevision?.(scheduled)) ?? null;
+      const surfaceRevn = scheduled.renderedSequence ? null : (await deps.surfaceRevision?.(scheduled)) ?? null;
       scheduled.approval = {
         hash: approvalHash(scheduled),
         at: new Date().toISOString(),
@@ -291,7 +304,8 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
       const post = await loadPost(deps.repo, p.postId);
       requirePublishable(post, ["asset_ready", "scheduled", "failed"]);
       deps.adapterFor(post.channel); // unsupported channel fails at preview, not after approval
-      const asset = deps.assetUrl(post);
+      const assets = publishAssets(deps, post);
+      const asset = assets[0]!;
       return {
         summary: `Publish to ${post.channel} NOW — live the moment this is approved. The card image IS the final creative.`,
         rows: [
@@ -318,9 +332,12 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
       }
       requirePublishable(post, ["asset_ready", "scheduled", "failed"]);
       const adapter = deps.adapterFor(post.channel);
-      const asset = deps.assetUrl(post);
+      const assets = publishAssets(deps, post);
+      const asset = assets[0]!;
       try {
-        const { platformId, permalink } = await adapter.publish(post, asset);
+        const { platformId, permalink } = post.renderedSequence
+          ? await adapter.publishSequence!(post, assets)
+          : await adapter.publish(post, asset);
         const published: SocialPost = {
           ...post,
           status: "published",

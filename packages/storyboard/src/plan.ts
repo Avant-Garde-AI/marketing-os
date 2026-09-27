@@ -153,7 +153,7 @@ source crops can differ within that consistent board. Preserve exact asset refs.
 Use existing framed renders only as framed objects; mockup-input requires a verified bare-artwork master. Unknown
 assets cannot be claimed to be bare. Bind continuity to available fixed assets
 or reference frames. When a content concept is supplied, keep its exact conceptId,
-reader payoff and hard needs. Return planning transportVersion:1. For every concept need, provide a required
+reader payoff and hard needs. Return planning transportVersion:"planning-v1". For every concept need, provide a required
 needAssessmentsById property keyed by its exact need ID, containing met,
 sourceRefs and a concrete reason. Optional needs still require an authored
 assessment, including when unmet or unknown; never omit their keys. Do not
@@ -248,7 +248,7 @@ function planningTransportSchemaV1(context: PlanningContext) {
   const storyboard = variants.length === 1
     ? variants[0]!
     : z.discriminatedUnion("format", variants as [typeof variants[number], ...typeof variants[number][]]);
-  return z.object({ transportVersion: z.literal(1), storyboards: z.array(storyboard).length(3) }).strict();
+  return z.object({ transportVersion: z.literal("planning-v1"), storyboards: z.array(storyboard).length(3) }).strict();
 }
 
 /**

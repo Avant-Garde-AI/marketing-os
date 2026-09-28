@@ -102,9 +102,11 @@ Neither is needed to pretend these temporary recipes are empirically proven.
 Official MCP endpoint: `https://mcp.higgsfield.ai/mcp`. It requires OAuth and
 uses the signed-in account's credits; developer API billing is separate.
 Actual tenant registry inspection on 2026-09-28 found Store and Picasso
-Concierge only. The current Marketing OS connector accepts none/static bearer,
-not OAuth; exact provider tool schemas require connection. No live generation
-was performed for this change.
+Concierge only. The platform now supports the official Higgsfield OAuth connection with
+PKCE, one-use state, Vault credential storage and read-only tool re-checking
+(`marketing-os-app` PR #18). Live public-client registration succeeded. The
+Arthaus account still needs owner consent before its tool schemas can be
+inspected. No live generation was performed.
 
 Sources: [MCP overview](https://higgsfield.ai/creator-hub/help-center/integrations/what-is-higgsfield-mcp),
 [agent connection](https://higgsfield.ai/creator-hub/help-center/integrations/how-do-i-connect-higgsfield-to-ai-agent),
@@ -122,6 +124,28 @@ This release does not yet meet that acceptance. The follow-up motion review
 contract now validates MP4/poster receipts, hashes them with final copy, shows
 user-controlled loop playback and a direct asset link, and blocks scheduling or
 publishing until a video channel adapter exists. Actual generation, trusted asset
-binding and automated Reels publication remain unimplemented. Three verified
-flat sources are recorded in the store pilot inventory; more variety is needed.
+binding and automated Reels publication remain unimplemented. The store inventory has expanded from three to twelve verified
+flat sources. The larger-pool rehearsal plans twelve slots, but includes repeated
+artworks/groups and needs editorial review before it is a production schedule.
 Account connection work lives in the platform repository (`docs/HIGGSFIELD-MCP.md`).
+
+
+## As-built launch checkpoint
+
+| Capability | State |
+| --- | --- |
+| Full-artwork sources | Twelve active catalog works verified against AMS originals and inspected flat derivatives; automatic scoped upload/resolution still to build |
+| Monthly planning | Twelve new slots, 6/3/3 recipe mix, source-compatible groups, current catalog/graph facts, existing post protection and repeat warnings |
+| Copy | Current brand and concept formulas plus cited writing facts and three pilot caption treatments; final month captions are not yet authored |
+| Paid Higgsfield connection | OAuth implemented and deployed; owner account consent pending |
+| Final video review | MP4/poster/source receipt validation, approval hashing, playback and direct asset link implemented; no generated clip bound yet |
+| Generation execution | Provider schema inspection, quoted Action, job persistence/reconciliation, source transfer and output verification remain to build |
+| Publishing | Existing still/sequence gate retained; video scheduling and publishing explicitly refuse until the video adapter exists |
+
+Core implementation: PRs #92 (recipes), #93 (video review), #94 (coherent groups).
+Store implementation/data: marketplace PRs #171, #172, #173 and #174. Platform
+OAuth: marketing-os-app PR #18. The account connection is the next external
+dependency. After consent: inspect actual tools and quotes, implement the
+governed execution adapter, accept one loop/home/world pilot each, then run a
+budgeted monthly batch and send final assets plus captions to the existing review
+page. None of the planning artifacts constitutes imagery-spend or publish consent.

@@ -68,6 +68,8 @@ export {
 export { createConceptTools, type ConceptTools } from "./concept-tools";
 export * from "./graph-subjects";
 export * from "./production-recipes";
+export * from "./generation-jobs";
+export * from "./generation-plan";
 export {
   checkColorClaims,
   colorClaimsIn,

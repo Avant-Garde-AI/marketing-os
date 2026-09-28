@@ -168,9 +168,22 @@ export interface RenderedSocialSequence {
   slides: { beatId: string; boardName: string; url: string; sha256: string; width: number; height: number }[];
 }
 
+/** A trusted renderer's immutable video and poster receipt, never model-authored. */
+export interface RenderedSocialVideo {
+  version: 1;
+  storyboardId: string;
+  storyboardHash: string;
+  reviewHash: string;
+  sources: { ref: string; sha256: string }[];
+  video: { url: string; sha256: string; mimeType: "video/mp4"; width: number; height: number; durationMs: number };
+  poster: { url: string; sha256: string; width: number; height: number };
+}
+
 export interface SocialPost {
   /** Only the runtime realization path supplies this field; never model authoring input. */
   renderedSequence?: RenderedSocialSequence;
+  /** Only a trusted runtime renderer supplies this field; never model authoring input. */
+  renderedVideo?: RenderedSocialVideo;
   id: string;
   channel: string;
   /**

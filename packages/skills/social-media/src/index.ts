@@ -164,5 +164,5 @@ export const actions = ["social.schedule_post", "social.publish_post", "social.c
 
 export { POSTS_DIR, listPostIds } from "./artifacts";
 
-export { renderedSequenceSchema } from "./artifacts";
+export { renderedSequenceSchema, renderedVideoSchema } from "./artifacts";
 export { postReviewAssets } from "./projection";

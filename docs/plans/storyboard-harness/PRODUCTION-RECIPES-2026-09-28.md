@@ -111,5 +111,10 @@ caption, traceable source/provenance, spend receipt and working review link.
 The loop repeats cleanly; all three scene artworks remain faithful. The contact
 sheet exposes all failures and repeated directions. A human accepts the pilot
 and final creative, and separate channel approval precedes publication.
-This release does not yet meet that acceptance: OAuth, high-resolution source
-acquisition, job execution, motion review and Reels support remain to implement.
+This release does not yet meet that acceptance. The follow-up motion review
+contract now validates MP4/poster receipts, hashes them with final copy, shows
+user-controlled loop playback and a direct asset link, and blocks scheduling or
+publishing until a video channel adapter exists. Actual generation, trusted asset
+binding and automated Reels publication remain unimplemented. Three verified
+flat sources are recorded in the store pilot inventory; more variety is needed.
+Account connection work lives in the platform repository (`docs/HIGGSFIELD-MCP.md`).

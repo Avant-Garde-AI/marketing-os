@@ -33,6 +33,18 @@ function fakePlatform(): OfferPlatformClient & {
       reallocated.push({ id, mode, opts });
       return { ok: true, surfaceId: id };
     },
+    async startAudit() {
+      return { jobId: "job_audit" };
+    },
+    async startDesign() {
+      return { jobId: "job_design" };
+    },
+    async getJob() {
+      return { status: "QUEUED" };
+    },
+    async latestAudit() {
+      return null;
+    },
   };
 }
 

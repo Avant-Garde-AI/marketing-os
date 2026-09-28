@@ -1,6 +1,6 @@
 # 34 — The Offer Design Harness: beat the popup they already have
 
-> **Status:** Draft for decision — 2026-09-28. Decisions H1–H4 (§9) open.
+> **Status:** Decided 2026-09-28 (H1–H4, §9). Build not started; OH0 + OH2 first.
 > **Extends:** 32-OFFER-AGENT (pack, manifest, runtime, gate, the $15 wedge). Nothing in 32 is
 > reversed; §5 of 32 (parity) and §8 (standing loop) are re-sequenced around this spec's harness.
 > **Reuses:** 33-THE-STORYBOARD-HARNESS (concept → critique → bounded repair), `@avant-garde/design-loop`
@@ -308,17 +308,20 @@ a graded incumbent and a beautiful challenger on their own store is the whole pi
 
 ---
 
-## 9. Decisions (Garrett)
+## 9. Decisions (Garrett, 2026-09-28)
 
 - **H1 — Free tier gets the audit and a previewable challenger, not a live offer.** One concept
-  set per month on free. Alternative: audit only, challenger on Starter.
+  set per month on free; going live is Starter. *(Audit-only free tier considered, rejected: the
+  challenger on their own store is the pitch.)*
 - **H2 — Head-to-head suppresses the merchant's other popup for challenger-arm visitors.** It
   touches another vendor's widget on the merchant's own store, with their approval, per arm.
-  Alternative: sequential (alternating-week) tests only — safer, much weaker evidence.
+  Klaviyo forms first, one vendor at a time; a vendor we cannot cleanly observe falls back to a
+  sequential test and the card says so. *(Sequential-only considered, rejected as too weak.)*
 - **H3 — Personalisation boundary:** incentive may vary by coarse disclosed context and by
-  zero-party answers; never by inferred individual price sensitivity.
-- **H4 — Bandit objective:** capture rate (fast, today) vs net revenue per visitor (right, 30-day
-  lag). Proposed: capture rate drives reallocation; net revenue decides winners and next concepts.
+  zero-party answers; never by inferred individual price sensitivity. *(Adopted as proposed.)*
+- **H4 — Bandit objective: capture rate reallocates, net revenue decides.** Capture rate moves
+  traffic day to day; net revenue per visitor (30-day lag, discount cost netted) declares winners
+  and seeds the next concept set.
 
 ## 10. Open questions
 

@@ -11,6 +11,11 @@
  * which POSTs to app/api/offers/deploy. It shares `compileOfferManifest` and
  * `gateOfferContent` with every other binding, which is where the actual
  * duplication risk (weight math, the gate invocation) used to live.
+ *
+ * Spec 34 adds the design harness's agent-facing half — audit_current_offer,
+ * design_offer_challengers, get_offer_job — vendored unchanged. They only
+ * enqueue/read platform jobs; the harness's result reaches the merchant as
+ * an approval card, never as a write from this deployment.
  */
 
 import { createTool } from "@mastra/core/tools";
@@ -18,7 +23,13 @@ import { z } from "zod";
 import type { z as zod } from "zod";
 import { compileOfferManifest } from "../../../lib/offers/manifest";
 import { gateOfferContent } from "../../../lib/offers/gates";
-import { createReviewOfferExperimentTool, createChartOfferPerformanceTool } from "../../../lib/offers/tools";
+import {
+  createReviewOfferExperimentTool,
+  createChartOfferPerformanceTool,
+  createAuditCurrentOfferTool,
+  createDesignOfferChallengersTool,
+  createGetOfferJobTool,
+} from "../../../lib/offers/tools";
 import { offerPlatformClient, unavailable } from "../../../lib/offers/platform-client";
 import { offerAttributionClient } from "../../../lib/offers/attribution-client";
 import type { SkillToolDefinition } from "../../../lib/skill-kit";
@@ -200,3 +211,14 @@ export const proposeOffer = createTool({
 
 export const reviewOfferExperiment = toMastraTool(createReviewOfferExperimentTool(offerToolDeps));
 export const chartOfferPerformance = toMastraTool(createChartOfferPerformanceTool(offerToolDeps));
+
+// ---------------------------------------------------------------------------
+// audit_current_offer + design_offer_challengers + get_offer_job (spec 34) —
+// vendored pack tools over the platform's harness jobs
+// ---------------------------------------------------------------------------
+
+const offerJobToolDeps = { platform: offerPlatformClient, onUnavailable: unavailable };
+
+export const auditCurrentOffer = toMastraTool(createAuditCurrentOfferTool(offerJobToolDeps));
+export const designOfferChallengers = toMastraTool(createDesignOfferChallengersTool(offerJobToolDeps));
+export const getOfferJob = toMastraTool(createGetOfferJobTool(offerJobToolDeps));

@@ -10,7 +10,14 @@ import { ga4Tools } from "../tools/ga4-reporting";
 import { metaAdsTools } from "../tools/meta-ads";
 import { semanticTools } from "../tools/semantics";
 import { chartTools } from "../tools/chart-tools";
-import { chartOfferPerformance, proposeOffer, reviewOfferExperiment } from "../tools/offers";
+import {
+  auditCurrentOffer,
+  chartOfferPerformance,
+  designOfferChallengers,
+  getOfferJob,
+  proposeOffer,
+  reviewOfferExperiment,
+} from "../tools/offers";
 import { getExternalMcpTools, getExternalMcpInstructions } from "../tools/external-mcp";
 import { brandSoulTools } from "../tools/brand-soul";
 import { designSurfaceTools } from "../tools/design-surfaces";
@@ -76,6 +83,9 @@ const baseMarketingTools = {
   chartOfferPerformance,
   proposeOffer,
   reviewOfferExperiment,
+  auditCurrentOffer,
+  designOfferChallengers,
+  getOfferJob,
   ...semanticTools,
   ...brandSoulTools,
   ...designSurfaceTools,
@@ -196,6 +206,15 @@ Generative UI (the console renders your tool results as components):
   voice, always include consent text. It renders an approval card with the
   design-loop gates; deploys only on merchant Approve. Never fake urgency or
   scarcity — it is rejected mechanically.
+- To IMPROVE, REPLACE, or TEST the popup / welcome offer the store already
+  runs, do not hand-author one: call audit_current_offer first (it grades the
+  current popup on desktop and mobile — report the grade and failing lines
+  with their numbers), then design_offer_challengers with the merchant's goal.
+  The harness renders and critiques challengers and sends the best two as an
+  approval card in Reviews with a storefront preview link. If a job is still
+  running, check it with get_offer_job. Be plain about plans: free covers the
+  audit and one challenger preview every 30 days; Starter ($15/month) puts a
+  challenger live, head-to-head against the current popup.
 - To review/optimize a running offer test, use review_offer_experiment — it
   renders a decision card; promotion and traffic shifts apply only when the
   merchant clicks. A nightly steward re-tunes surfaces already on the

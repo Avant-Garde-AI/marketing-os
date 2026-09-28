@@ -142,6 +142,252 @@ export interface OfferManifest {
 }
 
 // ---------------------------------------------------------------------------
+// Manifest v2 (spec 34 §2 / OH1) — steps of closed-set blocks on a named
+// composition. v1 above (no `version` field, flat `content`) keeps rendering
+// unchanged; the runtime and every validator branch on `version === "2"`.
+// ---------------------------------------------------------------------------
+
+export type Placement = "corner-card" | "overlay" | "takeover";
+export type CompositionId = "split-image" | "full-bleed-image" | "editorial-type" | "card";
+
+export type Block =
+  | { kind: "eyebrow"; text: string }
+  /** `accent` is the italic second beat of the headline. */
+  | { kind: "headline"; text: string; accent?: string }
+  | { kind: "body"; text: string }
+  /** 1–3 items. */
+  | { kind: "points"; items: string[] }
+  /** `src` MUST be on https://cdn.shopify.com/. */
+  | {
+      kind: "image";
+      src: string;
+      alt: string;
+      focus?: string;
+      caption?: string;
+      mobile?: "keep" | "drop";
+    }
+  /** Single-select, 2–4 options, advances on pick. `answerKey` matches
+   * /^[a-z][a-z0-9_]{1,31}$/ — it becomes a profile property name. */
+  | {
+      kind: "choice";
+      question: string;
+      answerKey: string;
+      options: { value: string; label: string }[];
+    }
+  | { kind: "email"; placeholder?: string; cta: string }
+  /** Required in any step with `email`. Plain text — never a checkbox, so
+   * pre-checked consent is structurally impossible. */
+  | { kind: "consent"; text: string }
+  /** Required in every non-reward step when steps.length > 1. */
+  | { kind: "progress" }
+  /** Advances to the next step (a hook without a choice). */
+  | { kind: "cta"; label: string }
+  | {
+      kind: "reward";
+      mode: "message" | "code" | "picks";
+      headline: string;
+      body?: string;
+      /** Keyed by a choice option's `value`. `url` is a store-relative path. */
+      picks?: Record<string, { title: string; url: string; imageSrc?: string }[]>;
+      /** `href` is a store-relative path ("/collections/…") only. */
+      link?: { label: string; href: string };
+    }
+  /** A neutral text link. Gated like all copy, plus value-framing refusal. */
+  | { kind: "decline"; text: string };
+
+export type BlockKind = Block["kind"];
+
+export interface Step {
+  id: string;
+  kind: "hook" | "ask" | "reward";
+  blocks: Block[];
+}
+
+/** Per variant, never per person (spec 34 H3). */
+export interface Incentive {
+  type: "none" | "content" | "early-access" | "free-shipping" | "percent";
+  /** Percent points, for "percent". */
+  value?: number;
+  /** Defaults to "unique" when type is free-shipping | percent. */
+  codeMode?: "unique" | "shared";
+}
+
+export type TriggerSpec =
+  | { kind: "delay"; seconds: number }
+  | { kind: "exit-intent" }
+  | { kind: "scroll-dwell"; percent: number; dwellSeconds: number }
+  | { kind: "product-views"; views: number };
+
+export type ArchetypeId =
+  | "quiet-editorial"
+  | "zero-party-quiz"
+  | "learn-and-earn"
+  | "early-access"
+  | "threshold"
+  | "story";
+
+export interface VariantV2Style {
+  bg: string;
+  ink: string;
+  ink2: string;
+  accent: string;
+  line: string;
+  font: string;
+  fontDisplay?: string;
+  fontMono?: string;
+}
+
+export interface VariantV2 {
+  composition: CompositionId;
+  /** 1–3. */
+  steps: Step[];
+  style: VariantV2Style;
+  incentive?: Incentive;
+  /** OH6: per-arm trigger policy override. */
+  trigger?: TriggerSpec;
+  /** Provenance from the harness. */
+  archetype?: ArchetypeId;
+}
+
+export type IncumbentVendor =
+  | "klaviyo"
+  | "privy"
+  | "justuno"
+  | "optimonk"
+  | "wisepops"
+  | "sleeknote"
+  | "omnisend"
+  | "shopify-forms"
+  | "alia"
+  | "unknown";
+
+export type ArmKind = "control" | "variant" | "incumbent";
+
+export interface ArmV2 {
+  key: string;
+  weight: number;
+  kind?: ArmKind;
+  vendor?: IncumbentVendor;
+}
+
+export type CellDevice = "mobile" | "desktop";
+export type CellVisit = "new" | "returning";
+export type CellSource = "search" | "social" | "email" | "paid" | "direct" | "other";
+/** `${device}.${visit}.${source}` (spec 34 §5.3 / contract §2). */
+export type CellKey = `${CellDevice}.${CellVisit}.${CellSource}`;
+
+export interface OfferManifestV2 {
+  version: "2";
+  id: string;
+  type: "offer";
+  title?: string;
+  placement: Placement;
+  trigger: TriggerSpec & { suppressAfterDismissDays: number; maxPerSession: number };
+  /** Defaults to teaser-first for overlay/takeover. */
+  mobile?: { searchArrival: "teaser-first" | "as-desktop" };
+  teaser?: { enabled: boolean; label?: string };
+  audience: {
+    newVisitorsOnly: boolean;
+    excludeSubscribed: boolean;
+    pages: ("home" | "collection" | "product" | "cart")[];
+    targeting?: OfferTargeting;
+  };
+  schedule?: { from: string; to: string };
+  experiment: {
+    id: string;
+    policy: "fixed" | "thompson";
+    allocation: number;
+    /** Exactly one "control"; ≥1 variant; ≤1 incumbent. */
+    arms: ArmV2[];
+    /** OH6 per-cell weights; a missing cell falls back to `arms`. */
+    cells?: Partial<Record<CellKey, { key: string; weight: number }[]>>;
+  };
+  /** Keyed by variant arm key; incumbent/control have none. */
+  variants: Record<string, VariantV2>;
+  consent: { capturesEmail: true };
+}
+
+// ---------------------------------------------------------------------------
+// Preview diagnostics (contract §3) — what the runtime reports under
+// `?mos_diag=1`; the conformance critic reads it.
+// ---------------------------------------------------------------------------
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface DiagReport {
+  surfaceId: string;
+  arm: string;
+  step: number;
+  steps: number;
+  viewport: { w: number; h: number };
+  composition: CompositionId | "v1";
+  rects: { card: Rect; close?: Rect; cta?: Rect; input?: Rect; choices: Rect[]; decline?: Rect };
+  /** Card content clipped / scroll needed at this viewport. */
+  overflow: boolean;
+  contrast: {
+    role: "headline" | "body" | "cta" | "consent" | "decline";
+    fg: string;
+    bg: string;
+    ratio: number;
+  }[];
+  /** null = no image block. */
+  imageLoaded: boolean | null;
+  errors: string[];
+}
+
+// ---------------------------------------------------------------------------
+// Incumbent audit (spec 34 §4.1 / contract §7) — facts measured by the
+// render worker, graded by gradeOfferAudit (audit.ts).
+// ---------------------------------------------------------------------------
+
+export interface AuditFacts {
+  viewport: "mobile" | "desktop";
+  /** null = no popup found in 20 s. */
+  vendor: IncumbentVendor | null;
+  appeared: boolean;
+  timeToShowMs: number | null;
+  /** Dialog area / viewport area, 0–1. */
+  coversPct: number | null;
+  closeTarget: { w: number; h: number } | null;
+  ctaTarget: { w: number; h: number } | null;
+  ctaContrast: number | null;
+  hasImage: boolean;
+  hasConsentText: boolean;
+  stepCount: number | null;
+  incentiveText: string | null;
+  /** For the dark-pattern scan. */
+  visibleText: string;
+  closeVisibleAtFirstPaint: boolean | null;
+  vendorScriptKb: number | null;
+  renderId: string | null;
+}
+
+export interface RubricLine {
+  id: string;
+  label: string;
+  verdict: "pass" | "warn" | "fail" | "n/a";
+  detail: string;
+  viewport: "mobile" | "desktop" | "both";
+}
+
+export type OfferAuditGrade = "A" | "B" | "C" | "D" | "F" | "none";
+
+export interface OfferAuditReport {
+  vendor: IncumbentVendor | null;
+  grade: OfferAuditGrade;
+  score: number;
+  lines: RubricLine[];
+  facts: AuditFacts[];
+  summary: string;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
 // Experiment stats — the shape both platform.offers.stats reads flow through
 // ---------------------------------------------------------------------------
 
@@ -204,6 +450,34 @@ export interface OfferPlatformClient {
     mode: "pause" | "resume" | "retire" | "promote" | "thompson",
     opts?: { days?: number; winner?: string },
   ): Promise<{ ok: boolean; surfaceId: string; status?: string }>;
+  /** POST /api/offers/audit — enqueue an incumbent audit (free tier). */
+  startAudit(): Promise<{ jobId: string }>;
+  /**
+   * POST /api/offers/design — enqueue the design harness. Free tier is one
+   * run per 30 days; a binding MUST surface the platform's 409 quota
+   * refusal as `OfferQuotaError` (tools.ts) so the agent can say so plainly.
+   */
+  startDesign(goal: string, constraints?: OfferDesignConstraints): Promise<{ jobId: string }>;
+  /** GET /api/offers/jobs/:id. */
+  getJob(jobId: string): Promise<OfferJobState>;
+  /** GET /api/offers/audits/latest — null when the store was never audited. */
+  latestAudit(): Promise<OfferAuditReport | null>;
+}
+
+export interface OfferDesignConstraints {
+  placement?: Placement;
+  incentiveTypes?: Incentive["type"][];
+  margin?: { grossMarginPct: number; floorPct: number };
+}
+
+/** The platform job row, as `/api/offers/jobs/:id` reports it. `status` is
+ * the orchestrator's (QUEUED | RUNNING | SUCCEEDED | FAILED); readers
+ * compare case-insensitively (`offerJobPhase` in tools.ts). */
+export interface OfferJobState {
+  status: string;
+  progress?: unknown;
+  result?: unknown;
+  error?: string | null;
 }
 
 /** Shopify capture-tag attribution (customers tagged `<surfaceId>`,

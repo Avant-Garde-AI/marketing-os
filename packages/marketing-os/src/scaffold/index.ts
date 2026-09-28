@@ -1875,6 +1875,37 @@ async function prepareFiles(
       targetPath: path.join(targetDir, "agents/lib/offers/manifest.ts"),
       overwrite: "skip",
     },
+    // Spec 34: manifest v2, design-harness helpers, incumbent audit rubric.
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/schema-v2.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/schema-v2.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/manifest-v2.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/manifest-v2.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/gates-v2.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/gates-v2.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/harness.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/harness.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/audit.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/audit.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/offers/capture-tags.ts"),
+      targetPath: path.join(targetDir, "agents/lib/offers/capture-tags.ts"),
+      overwrite: "skip",
+    },
     {
       templatePath: path.join(templateDir, "agents/lib/offers/platform-client.ts"),
       targetPath: path.join(targetDir, "agents/lib/offers/platform-client.ts"),

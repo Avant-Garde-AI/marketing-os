@@ -177,7 +177,7 @@ and [#176](https://github.com/Arthaus-Inc/marketplace/pull/176) (middleware).
 Platform OAuth: marketing-os-app PR #18; governed execution:
 [#21](https://github.com/Avant-Garde-AI/marketing-os-app/pull/21).
 The account connection and production execution seam are deployed. Next:
-prepare and approve the Passion Flower loop proposal, generate and inspect its
+review and approve the waiting Passion Flower loop proposal, generate and inspect its
 actual output, then accept one loop, one real-home scene and one imagined-world
 scene before a budgeted month batch. Planning artifacts and the staged pilot
 source are neither imagery-spend nor publish consent.
@@ -232,9 +232,13 @@ that is not a post-upload quote, approval, charge or completed render.
 The execution path can now create a reviewable proposal, carry one approved
 source transfer and generation request through durable phases, and poll the
 provider without resubmitting an uncertain request. Draft video Reviews are
-available. No source upload, provider submission or credit spend has occurred
-for this pilot. The next concrete step is to prepare the proposal through the
-social generation tool and review its card before approval. Final immutable
+available. The authenticated Store MCP created one Passion Flower proposal in
+`awaiting_approval` with a 7.5-credit estimate and ceiling. Repeating prepare
+returned the same job and proposal; status read verified the waiting phase.
+The production runtime was READY at deployment
+`dpl_GBXuKZ2oucBHwWy212u3cYqXhUxg`. No source upload, provider submission
+or credit spend has occurred for this pilot. The next concrete step is human
+review of the approval card. Final immutable
 video asset binding, decoded artwork fidelity and loop-seam review, exact-source
 real-home and imagined-world scenes, the month batch, and Instagram Reels
 publishing remain open. The month is not ready.

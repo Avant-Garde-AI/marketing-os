@@ -160,20 +160,27 @@ Account connection work lives in the platform repository (`docs/HIGGSFIELD-MCP.m
 
 | Capability | State |
 | --- | --- |
-| Full-artwork sources | Twelve active catalog works verified against AMS originals and inspected flat derivatives; automatic scoped upload/resolution still to build |
+| Full-artwork sources | Twelve active catalog works verified against AMS originals and inspected flat derivatives; the Passion Flower pilot source is staged as content-addressed bytes and its complete composition is verified and padded before review |
 | Monthly planning | Twelve new slots, 6/3/3 recipe mix, source-compatible groups, current catalog/graph facts, existing post protection and repeat warnings |
 | Copy | Current brand and concept formulas plus cited writing facts and three pilot caption treatments; final month captions are not yet authored |
 | Paid Higgsfield connection | OAuth deployed and owner connected; 106 tools discovered; settings preflight verified |
 | Final video review | MP4/poster/source receipt validation, approval hashing, playback and direct asset link implemented; no generated clip bound yet |
-| Generation execution | Tool/model inspection complete; exact-request quote, Action, job persistence/reconciliation, source transfer and output verification remain to build |
+| Generation execution | Governed one-loop Action, exact post-upload quote check, durable job phases, single submission and status polling are implemented and deployed; no pilot upload, submission or credit spend has occurred |
 | Publishing | Existing still/sequence gate retained; video scheduling and publishing explicitly refuse until the video adapter exists |
 
-Core implementation: PRs #92 (recipes), #93 (video review), #94 (coherent groups).
-Store implementation/data: marketplace PRs #171, #172, #173 and #174. Platform
-OAuth: marketing-os-app PR #18. The account connection is complete. Next: implement the governed execution
-adapter and source-bound quote, accept one loop/home/world pilot each, then run a
-budgeted monthly batch and send final assets plus captions to the existing review
-page. None of the planning artifacts constitutes imagery-spend or publish consent.
+Core implementation: PRs #92 (recipes), #93 (video review), #94 (coherent groups),
+[#98](https://github.com/Avant-Garde-AI/marketing-os/pull/98) (portable job/input contract)
+and [#100](https://github.com/Avant-Garde-AI/marketing-os/pull/100) (service route middleware).
+Store implementation/data: marketplace PRs #171–#176, including
+[#175](https://github.com/Arthaus-Inc/marketplace/pull/175) (staged pilot)
+and [#176](https://github.com/Arthaus-Inc/marketplace/pull/176) (middleware).
+Platform OAuth: marketing-os-app PR #18; governed execution:
+[#21](https://github.com/Avant-Garde-AI/marketing-os-app/pull/21).
+The account connection and production execution seam are deployed. Next:
+prepare and approve the Passion Flower loop proposal, generate and inspect its
+actual output, then accept one loop, one real-home scene and one imagined-world
+scene before a budgeted month batch. Planning artifacts and the staged pilot
+source are neither imagery-spend nor publish consent.
 
 
 ## Live follow-through after account consent
@@ -201,7 +208,35 @@ estimates, not an approved spend ceiling, exact creative quote or quality claim.
 
 The platform's read-only `/api/broker/higgsfield/preflight` seam keeps OAuth
 credentials server-side, accepts no arbitrary tool or generation settings and
-forces cost-only requests. Its result is explicitly ineligible for approval:
-the final Action must bind the actual source bytes, creative and current quote.
+forces cost-only requests. Its result is explicitly ineligible for approval.
+The governed Action preview instead binds the verified source and prepared-image
+hashes, prompt, caption, fixed provider settings and a maximum credit ceiling.
+After human approval, its execute path uploads the prepared image, obtains the
+exact quote with the confirmed provider media ID, checks that quote against
+the approved ceiling and submits once. Unknown outcomes enter reconciliation
+without automatic resubmission.
+
+## Execution checkpoint after the connected pilot build
+
+As of 2026-09-28, the platform's governed one-loop executor and polling route
+are implemented on main (`marketing-os-app` PR #21, commit `50bda75`), migration
+`012` is applied, and the production deployment is READY
+(`dpl_F9d9m7TtZ9y5DXL1fDLQUanmhYNW`). Platform CI and 53 tests passed. The
+open-core contract and template (`marketing-os` PRs #98 and #100) and the
+Arthaus staged source and console (`marketplace` PRs #175 and #176) are merged.
+The Passion Flower pilot contains its verified full-artwork derivative, exact
+source hash, option-B caption, motion direction and contain/pad transform.
+The exact pilot prompt settings have a **preliminary 7.5-credit estimate**;
+that is not a post-upload quote, approval, charge or completed render.
+
+The execution path can now create a reviewable proposal, carry one approved
+source transfer and generation request through durable phases, and poll the
+provider without resubmitting an uncertain request. Draft video Reviews are
+available. No source upload, provider submission or credit spend has occurred
+for this pilot. The next concrete step is to prepare the proposal through the
+social generation tool and review its card before approval. Final immutable
+video asset binding, decoded artwork fidelity and loop-seam review, exact-source
+real-home and imagined-world scenes, the month batch, and Instagram Reels
+publishing remain open. The month is not ready.
 See [the platform connection/execution record](https://github.com/Avant-Garde-AI/marketing-os-app/blob/main/docs/HIGGSFIELD-MCP.md)
 for provider parameters, transport contracts and the remaining execution work.

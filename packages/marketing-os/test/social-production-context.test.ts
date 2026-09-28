@@ -21,21 +21,30 @@ status: draft
 ---
 Synthetic fixture.
 `;
-function deps(options: { otherTenant?: boolean; sources?: boolean; unrelated?: boolean; calendar?: string; existingPostIds?: string[] } = {}) {
+const reviewedSource = (handle: string) => ({ handle, ref: `asset:${handle}`, sha256: "a".repeat(64), width: 2048, height: 2048, verificationRef: `inspection:${handle}`, verifiedAt: "2026-09-28T00:00:00Z", composition: "full-unframed-artwork" });
+function deps(options: {
+  otherTenant?: boolean; sources?: boolean; unrelated?: boolean; calendar?: string; existingPostIds?: string[];
+  inventorySources?: unknown[]; graphHandles?: string[]; graphFailure?: boolean;
+  graphFacetOverrides?: Record<string, string[]>; catalogStatuses?: Record<string, string>;
+} = {}) {
   const files: Record<string, string> = {
     "social/production/recipes.json": JSON.stringify({ version: 1, recipes: [recipe], directions: { home: ["Reading room", "Dining room"] } }),
     "social/concepts/three-works.md": concept,
-    "social/production/artwork-sources.json": JSON.stringify({ version: 1, tenant: options.otherTenant ? "another.myshopify.com" : tenant, sources: options.sources ? ["a", "b", "c"].map(handle => ({ handle, ref: `asset:${handle}`, sha256: "a".repeat(64), width: 2048, height: 2048, verificationRef: `inspection:${handle}`, verifiedAt: "2026-09-28T00:00:00Z", composition: "full-unframed-artwork" })) : [] }),
+    "social/production/artwork-sources.json": JSON.stringify({ version: 1, tenant: options.otherTenant ? "another.myshopify.com" : tenant, sources: options.inventorySources ?? (options.sources ? ["a", "b", "c"].map(reviewedSource) : []) }),
   };
   if (options.calendar) files["social/calendar/2026-10.md"] = options.calendar;
   for (const id of options.existingPostIds ?? []) files[`social/posts/${id}/post.md`] = "existing post";
   return {
     tenant, brand: "Concrete observations; no invented artist facts.",
     repo: { readFile: async (path: string) => files[path] ?? null },
-    callGraph: async (op: "explore_concept" | "get_artwork_facets") => op === "explore_concept" ? {
-      results: ["a", "b", "c"].map(handle => ({ handle, title: handle, artist: "Synthetic artist" })),
-    } : { artworks: ["a", "b", "c"].map(handle => ({ handle, palette: [options.unrelated ? handle : "blue"], subject: [], mood: [], movement: [] })) },
-    readCatalog: async () => ["a", "b", "c"].map(handle => ({ handle, title: `Work ${handle}`, status: "ACTIVE", onlineStoreUrl: `https://example.com/products/${handle}`, imageUrl: `https://example.com/${handle}.jpg` })),
+    callGraph: async (op: "explore_concept" | "get_artwork_facets") => {
+      if (options.graphFailure) throw new Error("Graph returned duplicate invalid rows");
+      const handles = options.graphHandles ?? ["a", "b", "c"];
+      return op === "explore_concept" ? {
+        results: handles.map(handle => ({ handle, title: handle, artist: "Synthetic artist" })),
+      } : { artworks: handles.map(handle => ({ handle, palette: options.graphFacetOverrides?.[handle] ?? [options.unrelated ? handle : "blue"], subject: [], mood: [], movement: [] })) };
+    },
+    readCatalog: async (handles: string[]) => handles.map(handle => ({ handle, title: `Work ${handle}`, status: options.catalogStatuses?.[handle] ?? "ACTIVE", onlineStoreUrl: `https://example.com/products/${handle}`, imageUrl: `https://example.com/${handle}.jpg` })),
   };
 }
 const input = { month: "2026-10", count: 2, channel: "instagram", graphPrefix: "graph", graphQueries: ["blue"] };
@@ -102,5 +111,38 @@ describe("tenant production context", () => {
   it("labels dates as a calendar proposal when no month calendar exists", async () => {
     const plan = await planStoreProductionMonth(input, deps());
     expect(plan.calendarContext).toMatchObject({ status: "proposed-calendar", snapshotHash: null, selectedSlots: [] });
+  });
+  it("uses three reviewed sources when graph discovery fails, with catalog and inventory lineage", async () => {
+    const inventorySources = ["a", "b", "c"].map(handle => ({ ...reviewedSource(handle), artist: `Reviewed artist ${handle}`, visualFacts: ["A visible blue form"], facets: { palette: ["blue"] } }));
+    const plan = await planStoreProductionMonth(input, deps({ graphFailure: true, inventorySources }));
+    expect(plan.acquisitionFailures).toHaveLength(1);
+    expect(plan.summary.planned).toBe(2);
+    expect(plan.slots[0]?.subjectHandles).toEqual(["a", "b", "c"]);
+    expect(plan.slots[0]?.relationships[0]).toMatchObject({ facet: "palette", value: "blue", sourceRefs: expect.arrayContaining([expect.stringMatching(/^inventory:/), expect.stringMatching(/^catalog:/)]) });
+    expect(plan.curatedCatalogReceipts).toHaveLength(1);
+    expect(plan.curatedCatalogReceipts[0]?.kind).toBe("catalog");
+    expect(plan.slots[0]?.brief?.copyFacts.some(fact => fact.text.includes("visible blue form") && fact.sourceRefs[0]?.startsWith("inventory:"))).toBe(true);
+  });
+  it("fills the third work from reviewed inventory when graph yields only two", async () => {
+    const inventorySources = ["a", "b", "c"].map(handle => ({ ...reviewedSource(handle), facets: { palette: ["blue"] } }));
+    const plan = await planStoreProductionMonth(input, deps({ graphHandles: ["a", "b"], inventorySources }));
+    expect(plan.summary.planned).toBe(2);
+    expect(plan.slots[0]?.subjectHandles).toEqual(["a", "b", "c"]);
+    expect(plan.slots[0]?.brief?.subjects.find(subject => subject.handle === "c")?.sourceRefs).toEqual(expect.arrayContaining([expect.stringMatching(/^catalog:/), expect.stringMatching(/^inventory:/)]));
+  });
+  it("excludes an inactive reviewed product from the curated fallback", async () => {
+    const inventorySources = ["a", "b", "c"].map(handle => ({ ...reviewedSource(handle), facets: { palette: ["blue"] } }));
+    const plan = await planStoreProductionMonth(input, deps({ graphHandles: ["a", "b"], inventorySources, catalogStatuses: { c: "DRAFT" } }));
+    expect(plan.sourceFailures).toContainEqual({ handle: "c", reason: "Current catalog product is inactive" });
+    expect(plan.slots[0]?.subjectHandles).toEqual(["a", "b"]);
+    expect(plan.slots[0]?.status).toBe("blocked");
+  });
+  it("reports graph and reviewed visual conflicts without erasing either source", async () => {
+    const inventorySources = ["a", "b", "c"].map(handle => ({ ...reviewedSource(handle), facets: { palette: ["blue"] } }));
+    const plan = await planStoreProductionMonth(input, deps({ inventorySources, graphFacetOverrides: { a: ["red"] } }));
+    expect(plan.sourceWarnings).toContainEqual({ handle: "a", reason: expect.stringContaining("differs from acquired graph") });
+    expect(plan.slots[0]?.brief?.copyFacts.some(fact => fact.handle === "a" && fact.text.includes("Graph palette: red") && fact.sourceRefs.some(ref => ref.startsWith("graph:")))).toBe(true);
+    expect(plan.slots[0]?.brief?.copyFacts.some(fact => fact.handle === "a" && fact.text.includes("Operator-reviewed palette: blue") && fact.sourceRefs.some(ref => ref.startsWith("inventory:")))).toBe(true);
+    expect(plan.slots[0]?.relationships[0]).toMatchObject({ facet: "palette", value: "blue" });
   });
 });

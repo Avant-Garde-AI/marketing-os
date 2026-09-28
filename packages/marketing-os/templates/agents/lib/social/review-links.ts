@@ -91,6 +91,14 @@ export function socialStoryboardReviewLink(shop: string, reviewId: string, revie
   return { ...link, url: url.toString() };
 }
 
+/** Source-bound generation input preview; possession never permits provider spend. */
+export function socialGenerationReviewLink(shop: string, id: string, inputHash: string, githubRepo?: string | null, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
+  const link = mint("review", `/review/generation/${encodeURIComponent(id)}`, shop, `generation:${id}:${inputHash}:${githubRepo ?? ""}`, ttlDays);
+  const url = new URL(link.url); url.searchParams.set("hash", inputHash);
+  if (githubRepo) url.searchParams.set("repo", githubRepo);
+  return { ...link, url: url.toString() };
+}
+
 /** The month sheet — every group planned for a month. */
 export function socialSheetLink(shop: string, month: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
   return mint("sheet", "/review/social", shop, month, ttlDays);

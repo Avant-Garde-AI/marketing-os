@@ -93,6 +93,33 @@ the actual evidence; a grouping key alone is never a publishable claim.
 | Arthaus store | Recipe mix, room worlds, graph bindings, source inventory, voice, operator choices and results |
 | Dataset/reference lane | Corpus observations, exemplars, counted evidence and later pattern admission |
 
+## Portable pilot generation contract
+
+The social pack now exports `generationPlanSchema` for a store-owned pilot plan.
+Each source points to `social/production/sources/<original-sha256>.jpeg.b64`,
+names its verification receipt and decoded dimensions, and declares a
+1080×1920 `contain-pad` treatment. The runtime must re-read the file, verify
+the original bytes and dimensions, then hash the prepared image before an
+Action preview. The schema alone cannot verify bytes.
+
+`generation-jobs.ts` separates planned, quoted, approved, submitting,
+submitted, succeeded, failed and unknown phases. The platform's existing Action
+preview binds the pilot plan, prepared image hashes, exact provider settings
+and a maximum credit ceiling before source transfer. The single approved Action
+may upload those prepared bytes, record confirmed provider media IDs, obtain an
+exact cost-only quote, and submit only if the request is otherwise unchanged,
+the quote is current and its maximum is within that ceiling. The resulting
+quote hash and Action receipt are stored on the job; they are audit bindings,
+not another approval authority. A preliminary settings estimate is never an
+exact quote or authorization to spend above the ceiling.
+
+The platform must durably claim `submitting` before the spending call and save
+the provider request ID before polling. Any uncertain call enters `unknown`.
+Only read-only reconciliation may move an unknown job forward; the contract
+allows one submission attempt and has no automatic resubmit transition, even
+after quote expiry. New spend requires a new job and a new existing-Action
+approval. This contract imports no provider credentials or renderer.
+
 NeuroGraph persona context remains an optional customer-agent MCP port.
 CreativeOutcome remains the proprietary Creative Review port, unimplemented.
 Neither is needed to pretend these temporary recipes are empirically proven.

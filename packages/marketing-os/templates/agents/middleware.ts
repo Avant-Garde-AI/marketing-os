@@ -35,6 +35,9 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/admin/migrate") ||
     request.nextUrl.pathname.startsWith("/api/design-surfaces/export/") ||
     request.nextUrl.pathname.startsWith("/api/actions/execute") ||
+    // Service-only generation input verifies ACTIONS_GATE_SECRET in-route.
+    // Match this one path exactly; adjacent social routes still need sessions.
+    request.nextUrl.pathname === "/api/social/generation/input" ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
     // Campaign imagery, addressed by content hash and HMAC-tokened like the
     // preview. These URLs are embedded in assembled email HTML, so they must be

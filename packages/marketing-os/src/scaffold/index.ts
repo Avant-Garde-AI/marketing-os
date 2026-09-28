@@ -784,6 +784,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/app/api/social/generation/input/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/generation/input/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/api/social/review-notes/route.ts"),
       targetPath: path.join(targetDir, "agents/app/api/social/review-notes/route.ts"),
       overwrite: "skip",
@@ -856,6 +861,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/app/review/email/page.tsx"),
       targetPath: path.join(targetDir, "agents/app/review/email/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/review/generation/[id]/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/review/generation/[id]/page.tsx"),
       overwrite: "skip",
     },
     {
@@ -1299,6 +1309,16 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-input.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-input.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-plan.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-plan.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/production-recipes.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/production-recipes.ts"),
       overwrite: "skip",
@@ -1706,6 +1726,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/src/mastra/tools/social-compose.ts"),
       targetPath: path.join(targetDir, "agents/src/mastra/tools/social-compose.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/social-generation.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/social-generation.ts"),
       overwrite: "skip",
     },
     {

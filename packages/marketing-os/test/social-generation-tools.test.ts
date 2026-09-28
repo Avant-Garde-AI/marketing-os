@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { runWithTenant } from "../templates/agents/lib/tenant-context";
 import { socialGenerationTools } from "../templates/agents/src/mastra/tools/social-generation";
 
+// The CLI package does not install Mastra; generated consoles do.
+vi.mock("@mastra/core/tools", () => ({ createTool: (definition: unknown) => definition }));
+
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("social generation broker tools", () => {

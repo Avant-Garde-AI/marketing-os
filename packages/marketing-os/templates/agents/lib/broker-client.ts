@@ -46,7 +46,7 @@ const cache = new Map<string, BrokerToken>();
  * the worst failure this system has — it does not error, it succeeds against
  * somebody else's store.
  */
-function brokerHeaders(): Record<string, string> {
+export function brokerHeaders(): Record<string, string> {
   const tenant = getTenant();
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (HOSTED) {
@@ -133,7 +133,7 @@ export interface ChannelConnectionStatus {
   daysRemaining: number | null;
 }
 
-function apiBase(): string {
+export function apiBase(): string {
   const apiUrl = process.env.MARKETING_OS_API_URL;
   if (!apiUrl) {
     throw new BrokerError("MARKETING_OS_API_URL is not configured.", "NOT_CONFIGURED", 500);

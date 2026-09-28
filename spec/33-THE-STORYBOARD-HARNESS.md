@@ -1143,3 +1143,14 @@ guidance now separates recipes from hard needs, literal bans from taste
 categories, and recommendations from factual room/fit claims. The store's
 draft concept explicitly permits an earned two-beat reveal. No verdict is
 rewritten after output; this remains guidance rather than a calibrated judge.
+
+
+## Launch correction — temporary production recipes (2026-09-28)
+
+Owner-directed repeatable recipes may ship as explicit hypotheses before corpus
+admission. A source-preserving animation can use a cyclical micro-story
+(stillness → motion → return); do not force an unrelated reveal or extra slide
+into it. The new monthly planner returns source/copy briefs, not generated
+posts. Full-resolution source acquisition, quoted provider execution and motion
+delivery remain separate work; source-only realization must continue refusing
+unsupported generation. See [production recipe delivery](../docs/plans/storyboard-harness/PRODUCTION-RECIPES-2026-09-28.md).

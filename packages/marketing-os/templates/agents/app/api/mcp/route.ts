@@ -181,6 +181,7 @@ async function runMastra(tool: unknown, args: unknown): Promise<unknown> {
 function socialToolDefs(): ToolDef[] {
   return [
     ...mirrorTools(socialTools, [
+      "social_production_month_plan",
       "social_calendar_read",
       "social_graph_subjects",
       "social_post_read",

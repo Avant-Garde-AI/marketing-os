@@ -1299,6 +1299,21 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/production-recipes.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/production-recipes.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/src/mastra/tools/social-production.ts"),
+      targetPath: path.join(targetDir, "agents/src/mastra/tools/social-production.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/production-context.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/production-context.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/actions.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/actions.ts"),
       overwrite: "skip",

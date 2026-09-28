@@ -101,12 +101,11 @@ Neither is needed to pretend these temporary recipes are empirically proven.
 
 Official MCP endpoint: `https://mcp.higgsfield.ai/mcp`. It requires OAuth and
 uses the signed-in account's credits; developer API billing is separate.
-Actual tenant registry inspection on 2026-09-28 found Store and Picasso
-Concierge only. The platform now supports the official Higgsfield OAuth connection with
+The platform supports the official Higgsfield OAuth connection with
 PKCE, one-use state, Vault credential storage and read-only tool re-checking
-(`marketing-os-app` PR #18). Live public-client registration succeeded. The
-Arthaus account still needs owner consent before its tool schemas can be
-inspected. No live generation was performed.
+(`marketing-os-app` PR #18). The owner completed account consent and the authenticated server returned 106
+tools. Model contracts and cost-only preflights were inspected successfully; no
+live generation was performed.
 
 Sources: [MCP overview](https://higgsfield.ai/creator-hub/help-center/integrations/what-is-higgsfield-mcp),
 [agent connection](https://higgsfield.ai/creator-hub/help-center/integrations/how-do-i-connect-higgsfield-to-ai-agent),
@@ -137,15 +136,45 @@ Account connection work lives in the platform repository (`docs/HIGGSFIELD-MCP.m
 | Full-artwork sources | Twelve active catalog works verified against AMS originals and inspected flat derivatives; automatic scoped upload/resolution still to build |
 | Monthly planning | Twelve new slots, 6/3/3 recipe mix, source-compatible groups, current catalog/graph facts, existing post protection and repeat warnings |
 | Copy | Current brand and concept formulas plus cited writing facts and three pilot caption treatments; final month captions are not yet authored |
-| Paid Higgsfield connection | OAuth implemented and deployed; owner account consent pending |
+| Paid Higgsfield connection | OAuth deployed and owner connected; 106 tools discovered; settings preflight verified |
 | Final video review | MP4/poster/source receipt validation, approval hashing, playback and direct asset link implemented; no generated clip bound yet |
-| Generation execution | Provider schema inspection, quoted Action, job persistence/reconciliation, source transfer and output verification remain to build |
+| Generation execution | Tool/model inspection complete; exact-request quote, Action, job persistence/reconciliation, source transfer and output verification remain to build |
 | Publishing | Existing still/sequence gate retained; video scheduling and publishing explicitly refuse until the video adapter exists |
 
 Core implementation: PRs #92 (recipes), #93 (video review), #94 (coherent groups).
 Store implementation/data: marketplace PRs #171, #172, #173 and #174. Platform
-OAuth: marketing-os-app PR #18. The account connection is the next external
-dependency. After consent: inspect actual tools and quotes, implement the
-governed execution adapter, accept one loop/home/world pilot each, then run a
+OAuth: marketing-os-app PR #18. The account connection is complete. Next: implement the governed execution
+adapter and source-bound quote, accept one loop/home/world pilot each, then run a
 budgeted monthly batch and send final assets plus captions to the existing review
 page. None of the planning artifacts constitutes imagery-spend or publish consent.
+
+
+## Live follow-through after account consent
+
+The expanded inventory and coherent-group planner were verified together on the
+Arthaus production MCP on 2026-09-28: 12 planned, 0 blocked, 6/3/3 mix and the
+existing October 7 post preserved. The inventory SHA-256 was
+`22e27760f63c70cfa95da01f719a4556617fc4947917c1fe3ebd5b771e195217`.
+The botanical graph query returned duplicate handles and was rejected; source
+acquisition retained that diagnostic and used the curated live-catalog path.
+This is a successful fallback, not a clean graph-query result.
+
+Authenticated Higgsfield inspection established actual `start_image` and
+`end_image` roles for `kling3_0` and `wan3_0`, and `image_references` for
+`gpt_image_2_5`. Upload requires confirmed provider media IDs. No source upload
+or generation has happened. Same-image boundary references need a deliberate
+fit/padding step to keep the whole composition, and do not prove loop continuity.
+
+Cost-only settings preflights returned 7.5 credits for a 5-second standard silent
+Kling clip, 17.5 for a 5-second 1080p silent Wan clip, and 2.75 for a high-quality
+2K GPT Image 2.5 scene. One loop plus two scene images therefore starts at 13
+credits (23 with Wan); one output for each of the 12 planned slots starts at
+61.5 (121.5 with Wan), before retries or extra carousel views. These are planning
+estimates, not an approved spend ceiling, exact creative quote or quality claim.
+
+The platform's read-only `/api/broker/higgsfield/preflight` seam keeps OAuth
+credentials server-side, accepts no arbitrary tool or generation settings and
+forces cost-only requests. Its result is explicitly ineligible for approval:
+the final Action must bind the actual source bytes, creative and current quote.
+See [the platform connection/execution record](https://github.com/Avant-Garde-AI/marketing-os-app/blob/main/docs/HIGGSFIELD-MCP.md)
+for provider parameters, transport contracts and the remaining execution work.

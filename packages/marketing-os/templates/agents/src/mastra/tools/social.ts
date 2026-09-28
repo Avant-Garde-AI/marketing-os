@@ -21,6 +21,7 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { createSocialTools } from "../../../lib/social/tools";
 import { createConceptTools } from "../../../lib/social/concept-tools";
+import { socialProductionTools } from "./social-production";
 import { socialGraphSubjects } from "./social-graph";
 import { composePostFromArchetype, composePostKeyframes } from "./social-compose";
 import {
@@ -564,6 +565,7 @@ const socialChannelHealth = createTool({
 });
 
 export const socialTools = {
+  ...socialProductionTools,
   social_scaffold: socialScaffold,
   social_channel_health: socialChannelHealth,
   social_review_share: socialReviewShare,

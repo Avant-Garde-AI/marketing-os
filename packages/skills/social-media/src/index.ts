@@ -67,6 +67,7 @@ export {
 } from "./concepts";
 export { createConceptTools, type ConceptTools } from "./concept-tools";
 export * from "./graph-subjects";
+export * from "./production-recipes";
 export {
   checkColorClaims,
   colorClaimsIn,

@@ -1672,3 +1672,11 @@ or adding retries. Durable reads compare brand wrappers using the planning
 schema's outer-whitespace trim; actual brand content and exact source pins still
 invalidate stale material. These are runtime reliability corrections, not proof
 of comparative creative quality.
+
+
+### 2026-09-28 launch priority
+
+The owner now prioritizes repeatable artwork loops and three-work lifestyle
+scenes. [Production recipes](plans/storyboard-harness/PRODUCTION-RECIPES-2026-09-28.md)
+specifies the delivered planning slice and remaining source/OAuth/job/media
+work. This is the immediate shipping lane; the research roadmap remains open.

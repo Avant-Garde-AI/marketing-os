@@ -85,11 +85,12 @@ export function schedulingGaps(post: SocialPost): string[] {
   const missing: string[] = [];
   if (!post.copy.trim()) missing.push("copy (the caption)");
   if (!post.targetLink.trim()) missing.push("targetLink");
-  if (!post.designSurface && !post.renderedSequence) {
+  if (!post.designSurface && !post.renderedSequence && !post.renderedVideo) {
     missing.push(
       "creative (compose_design_surface with kind 'social.post', then social_link_design)",
     );
   }
+  if (post.renderedVideo) missing.push("Video publishing is not available yet");
   if (post.provenance.length === 0) missing.push("provenance (at least one claim with its origin)");
   return missing;
 }
@@ -152,8 +153,9 @@ export function nextPost(
   if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
 
   // Changing authored content requires the runtime to realize and review again.
-  if (existing?.renderedSequence && MATERIAL_FIELDS.some((field) => JSON.stringify(existing[field] ?? null) !== JSON.stringify(next[field] ?? null))) {
+  if ((existing?.renderedSequence || existing?.renderedVideo) && MATERIAL_FIELDS.some((field) => JSON.stringify(existing[field] ?? null) !== JSON.stringify(next[field] ?? null))) {
     delete next.renderedSequence;
+    delete next.renderedVideo;
     delete next.designSurface;
     next.status = "proposed";
   }
@@ -170,7 +172,7 @@ export function nextPost(
       delete next.approval;
       // Back to the last honest state: the creative is still bound, so
       // asset_ready — the card re-arms from there.
-      next.status = next.designSurface || next.renderedSequence ? "asset_ready" : "proposed";
+      next.status = next.designSurface || next.renderedSequence || next.renderedVideo ? "asset_ready" : "proposed";
       delete next.scheduledAt;
       if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
       consentCleared = true;

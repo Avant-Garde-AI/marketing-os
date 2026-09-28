@@ -125,6 +125,7 @@ export function publishMaterial(post: SocialPost): Record<string, unknown> {
     assetRefs: post.assetRefs,
     designSurface: post.designSurface ?? null,
     ...(post.renderedSequence ? { renderedSequence: post.renderedSequence } : {}),
+    ...(post.renderedVideo ? { renderedVideo: post.renderedVideo } : {}),
     scheduledAt: post.scheduledAt ?? null,
   };
 }
@@ -151,7 +152,7 @@ export async function verifyScheduleConsent(
   if (post.approval.hash !== approvalHash(post)) {
     return { ok: false, reason: "publish material changed since approval" };
   }
-  if (!post.renderedSequence && post.approval.surfaceRevn != null && deps.surfaceRevision) {
+  if (!post.renderedSequence && !post.renderedVideo && post.approval.surfaceRevn != null && deps.surfaceRevision) {
     const current = await deps.surfaceRevision(post);
     if (current != null && current !== post.approval.surfaceRevn) {
       return {
@@ -168,6 +169,9 @@ export async function verifyScheduleConsent(
  * clear message the approver (and the agent) needs when the post isn't ready.
  */
 function requirePublishable(post: SocialPost, allowed: string[]): void {
+  if (post.renderedVideo) {
+    throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
+  }
   if (!allowed.includes(post.status)) {
     throw new Error(
       `post "${post.id}" is "${post.status}" — only ${allowed.join("/")} posts can take this action` +
@@ -176,7 +180,7 @@ function requirePublishable(post: SocialPost, allowed: string[]): void {
           : ""),
     );
   }
-  if (!post.designSurface && !post.renderedSequence) {
+  if (!post.designSurface && !post.renderedSequence && !post.renderedVideo) {
     throw new Error(
       `post "${post.id}" has no Design Surface bound — it is not asset_ready. Compose the creative (compose_design_surface, kind "social.post") and link it (social_link_design) first.`,
     );
@@ -252,6 +256,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
     },
     async execute(p) {
       const post = await loadPost(deps.repo, p.postId);
+      if (post.renderedVideo) throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
       // Idempotent: already scheduled at exactly this time with a live consent.
       if (post.status === "scheduled" && post.scheduledAt === p.scheduledAt && post.approval) {
         return {
@@ -324,6 +329,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
     },
     async execute(p) {
       const post = await loadPost(deps.repo, p.postId);
+      if (post.renderedVideo) throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
       // Idempotent: a retry after a landed publish returns what exists.
       if (post.status === "published" && post.platform) {
         return {

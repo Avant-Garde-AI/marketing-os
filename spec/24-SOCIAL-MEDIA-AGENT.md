@@ -26,6 +26,23 @@ Spec 22 D1 pattern — **files are truth, DB is the index.**
 
 **Post lifecycle:** `proposed → approved → asset_ready → scheduled → published → measured` (+ `declined`, `cancelled`, `failed`). Approval is per spec 20; `asset_ready` gates on the spec 23 export.
 
+**Rendered video boundary.** A trusted runtime renderer may bind one immutable
+MP4 plus a poster to a post as `renderedVideo`. The receipt records each public
+HTTPS asset URL, SHA-256, dimensions, duration, storyboard and review hashes,
+and the source refs with their SHA-256 values. It is mutually exclusive with
+the existing ordered JPEG `renderedSequence`. Generic `social_post_upsert`
+cannot supply either receipt. The final social review page plays the video and
+shows its poster and provenance; the receipt participates in the publish
+material and consent hash. Editing the caption, link, channel, schedule time,
+or source asset refs clears the rendered receipt and re-arms approval. This is
+a representation and review contract only: `social.schedule_post` and
+`social.publish_post` explicitly refuse video until a governed video channel
+adapter exists. A video concept or a render receipt does not imply Instagram
+Reels or any other video publishing capability.
+The trusted renderer must verify media bytes against the receipt hashes and
+place both files at immutable public URLs before binding; schema validation
+alone cannot prove remote bytes will remain unchanged.
+
 ## 2. The agent: reads compose freely
 
 The planning intelligence, all ungated:

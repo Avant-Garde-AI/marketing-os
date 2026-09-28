@@ -187,7 +187,7 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
           const sourceRef = inventoryRef(source.handle, source.sha256);
           const current = subjects.get(source.handle);
           const graph = graphSubjects.get(source.handle);
-          const observedFacets = facetEvidence.get(source.handle) ?? Object.fromEntries(FACETS.map(facet => [facet, { values: [], sourceRefs: [] }])) as Record<Facet, {values: string[]; sourceRefs: string[]}>;
+          const observedFacets = facetEvidence.get(source.handle) ?? { palette: { values: [], sourceRefs: [] }, subject: { values: [], sourceRefs: [] }, movement: { values: [], sourceRefs: [] }, mood: { values: [], sourceRefs: [] } };
           for (const facet of FACETS) {
             const observed = source.facets?.[facet] ?? [];
             const graphValues = graph?.facets[facet] ?? [];

@@ -16,7 +16,7 @@ import { OfferQuotaError } from "./tools";
 import type {
   OfferAuditReport,
   OfferJobState,
-  OfferManifest,
+  AnyOfferManifest,
   OfferPlatformClient,
   OfferPlatformStatsResponse,
 } from "./types";
@@ -63,7 +63,7 @@ async function offerApi<T>(path: string, init?: { method?: "GET" | "POST"; body?
 }
 
 export const offerPlatformClient: OfferPlatformClient = {
-  async stageSurface(manifest: OfferManifest, status: "PAUSED" | "ACTIVE") {
+  async stageSurface(manifest: AnyOfferManifest, status: "PAUSED" | "ACTIVE") {
     return offerApi("/api/offers/surfaces", { method: "POST", body: { surface: manifest, status } });
   },
   async getStats(surfaceId: string, days: number) {

@@ -51,7 +51,8 @@ import {
   serializeOffer,
   serializeResults,
 } from "./artifacts";
-import { gateOfferContent } from "./gates";
+import { validateOfferManifest } from "./gates-v2";
+import { isOfferManifestV2, type AnyOfferManifest } from "./types";
 
 export interface OfferActionDeps {
   repo: OfferRepo;
@@ -83,6 +84,13 @@ async function appendResults(repo: OfferRepo, id: string, entry: OfferResultEntr
   await repo.writeFile(resultsPath(id), serializeResults(updated));
 }
 
+function formatOf(m: AnyOfferManifest): string {
+  if (!isOfferManifestV2(m)) return "single step (v1)";
+  return Object.entries(m.variants)
+    .map(([k, v]) => `${k}: ${v.steps.length}-step ${v.composition}${v.archetype ? ` (${v.archetype})` : ""}`)
+    .join(" · ");
+}
+
 // ---------------------------------------------------------------------------
 // offer.activate (medium) — approved -> active
 // ---------------------------------------------------------------------------
@@ -108,14 +116,12 @@ function activateOffer(deps: OfferActionDeps): Action<ActivateOfferParams> {
       // Defense in depth: the platform re-validates on POST too (spec 14
       // O4's own comment — "so the agent can fix its copy instead of being
       // rejected at the door" — applies equally to a stale re-approval).
-      const variantsById = Object.fromEntries(
-        Object.entries(p.manifest.variants).map(([k, v]) => [k, v.content as unknown as Record<string, string>]),
-      );
-      const gates = gateOfferContent(variantsById);
-      if (!gates.passed) {
-        throw new Error(
-          `offer.activate: content no longer passes the gates (${gates.darkPattern.findings.map((f) => f.message).join("; ") || "consent missing"})`,
-        );
+      // The same validator the platform runs on POST: v1 → shape, CDN
+      // images, consent + dark-pattern gate; v2 → every structural
+      // guarantee plus the full v2 copy gate.
+      const verdict = validateOfferManifest(p.manifest);
+      if (!verdict.ok) {
+        throw new Error(`offer.activate: content no longer passes the gates (${verdict.errors.join("; ")})`);
       }
       const arms = p.manifest.experiment.arms.map((a) => `${a.key} ${Math.round(a.weight * 100)}%`).join(" · ");
       return {
@@ -124,6 +130,7 @@ function activateOffer(deps: OfferActionDeps): Action<ActivateOfferParams> {
           { label: "Offer", value: p.id },
           { label: "Hypothesis", value: p.hypothesis },
           { label: "Placement", value: p.manifest.placement },
+          { label: "Format", value: formatOf(p.manifest) },
           { label: "Arms", value: arms },
           { label: "Consent", value: "present, gate-checked" },
         ],

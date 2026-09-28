@@ -111,6 +111,7 @@ export {
   offerPath,
   resultsPath,
   offerManifestSchema,
+  offerManifestV1Schema,
   parseStrategy,
   serializeStrategy,
   parseOffer,
@@ -127,4 +128,4 @@ export type {
   RetireOfferParams,
   ReallocateOfferParams,
 } from "./actions";
-export { instructions } from "./instructions";
+export { instructions, harnessInstructions } from "./instructions";

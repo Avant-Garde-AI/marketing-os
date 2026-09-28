@@ -26,7 +26,7 @@
  */
 
 import { checkDarkPatterns, type CaptureBundleRef } from "@avant-garde/design-loop";
-import { offerManifestSchema } from "./artifacts";
+import { offerManifestV1Schema } from "./artifacts";
 import { gateOfferContent, type OfferGateResult } from "./gates";
 import { OFFER_IMAGE_ORIGIN } from "./manifest";
 import { checkManifestV2Structure, percentCapFor, type MarginPolicy } from "./manifest-v2";
@@ -291,7 +291,7 @@ export function validateOfferManifest(
   const version = (input as { version?: unknown }).version;
 
   if (version === undefined) {
-    const parsed = offerManifestSchema.safeParse(input);
+    const parsed = offerManifestV1Schema.safeParse(input);
     if (!parsed.success) {
       return { ok: false, version: "1", errors: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) };
     }

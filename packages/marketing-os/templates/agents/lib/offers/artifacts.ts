@@ -22,7 +22,17 @@ import {
   validateFrontMatter as validate,
 } from "../skill-kit";
 import { z } from "zod";
-import type { Offer, OfferManifest, OfferResultEntry, OfferResults, OfferStatus, OfferStrategy } from "./types";
+import { offerManifestV2Schema } from "./schema-v2";
+import type {
+  AnyOfferManifest,
+  Offer,
+  OfferManifest,
+  OfferManifestV2,
+  OfferResultEntry,
+  OfferResults,
+  OfferStatus,
+  OfferStrategy,
+} from "./types";
 
 const ID_RE = /^[a-z0-9_-]{4,48}$/;
 
@@ -137,7 +147,8 @@ const offerTargetingSchema = z.object({
   returningOnly: z.boolean().optional(),
 });
 
-export const offerManifestSchema = z.object({
+/** The v1 wire shape only (no `version` field). */
+export const offerManifestV1Schema = z.object({
   id: z.string(),
   type: z.literal("offer"),
   title: z.string().optional(),
@@ -165,6 +176,20 @@ export const offerManifestSchema = z.object({
   variants: z.record(z.string(), manifestVariantSchema),
   consent: z.object({ capturesEmail: z.literal(true) }),
 }) satisfies z.ZodType<OfferManifest>;
+
+/**
+ * v1 OR v2 (spec 34) — what offer.md and `offer.activate` carry. SHAPE ONLY:
+ * the v2 structural guarantees and every copy gate are enforced by
+ * `validateOfferManifest` (gates-v2.ts), which `offer.activate`'s preview
+ * runs before anything is staged. v2 is tried first: it requires
+ * `version: "2"`, so a v1 manifest can never be mistaken for one, while a v2
+ * manifest always fails v1's shape (its variants carry `steps`, not
+ * `content`).
+ */
+export const offerManifestSchema = z.union([
+  offerManifestV2Schema.transform((m) => m as OfferManifestV2),
+  offerManifestV1Schema,
+]) satisfies z.ZodType<AnyOfferManifest, z.ZodTypeDef, unknown>;
 
 const offerFrontMatterSchema = z.object({
   id: z.string().regex(ID_RE),

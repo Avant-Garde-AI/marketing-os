@@ -7,7 +7,7 @@ import {
   offerJobPhase,
   type CreateOfferJobToolsDeps,
 } from "../src/tools";
-import { instructions } from "../src/instructions";
+import { harnessInstructions, instructions } from "../src/instructions";
 import type { OfferJobState, OfferPlatformClient } from "../src/types";
 
 function platform(jobs: OfferJobState[], over: Partial<OfferPlatformClient> = {}) {
@@ -156,5 +156,14 @@ describe("instructions", () => {
     expect(instructions).toMatch(/Never hand-author a multi-step \(v2\) offer/);
     expect(instructions).toMatch(/Free:/);
     expect(instructions).toMatch(/Starter \(\$15\/month\)/);
+  });
+
+  it("ships the harness block on its own for runtimes that gate the rest of the pack", () => {
+    expect(instructions).toContain(harnessInstructions);
+    expect(harnessInstructions).toMatch(/audit_current_offer/);
+    expect(harnessInstructions).toMatch(/design_offer_challengers/);
+    expect(harnessInstructions).toMatch(/get_offer_job/);
+    // Ungated block must not steer the model toward tools a free store lacks.
+    expect(harnessInstructions).not.toMatch(/propose_offer|review_offer_experiment|chart_offer_performance/);
   });
 });

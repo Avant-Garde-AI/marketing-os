@@ -297,6 +297,13 @@ export interface OfferManifestV2 {
   consent: { capturesEmail: true };
 }
 
+/** Either wire format. v1 has no `version` field; v2 has `version: "2"`. */
+export type AnyOfferManifest = OfferManifest | OfferManifestV2;
+
+export function isOfferManifestV2(m: AnyOfferManifest): m is OfferManifestV2 {
+  return (m as { version?: unknown }).version === "2";
+}
+
 // ---------------------------------------------------------------------------
 // Preview diagnostics (contract §3) — what the runtime reports under
 // `?mos_diag=1`; the conformance critic reads it.
@@ -421,8 +428,9 @@ export interface OfferPlatformStatsResponse {
  * Not a third-party broker call — see spec 32 §3; every binding talks to
  * the same first-party platform routes, just with different auth. */
 export interface OfferPlatformClient {
-  /** POST /api/offers/surfaces — stage or deploy a manifest at a status. */
-  stageSurface(manifest: OfferManifest, status: "PAUSED" | "ACTIVE"): Promise<{
+  /** POST /api/offers/surfaces — stage or deploy a manifest (v1 or v2) at a
+   * status. The platform validates either format on the way in. */
+  stageSurface(manifest: AnyOfferManifest, status: "PAUSED" | "ACTIVE"): Promise<{
     ok: boolean;
     surfaceId: string;
     status: string;
@@ -538,7 +546,8 @@ export interface Offer {
   /** Citation into brand.md — the persona signal this incentive answers. */
   personaRef?: string;
   status: OfferStatus;
-  manifest: OfferManifest;
+  /** v1 (propose_offer) or v2 (the design harness, spec 34). */
+  manifest: AnyOfferManifest;
   /** The compiled deploy's identity once activated — null before then. */
   experimentId: string | null;
   provenance: ProvenanceClaim[];

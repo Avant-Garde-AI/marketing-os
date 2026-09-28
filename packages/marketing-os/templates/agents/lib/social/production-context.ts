@@ -217,7 +217,15 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
           });
         }
       }
-      const plan = planProductionMonth({ month, count: requestedCount, channel: selectedChannel, recipes: config.recipes, subjects: [...subjects.values()], ...(existingSlots ? { existingSlots } : {}) });
+      const productionSubjects = [...subjects.values()].map(subject => {
+        const evidence = facetEvidence.get(subject.handle);
+        const groupingKeys = FACETS.flatMap(facet => {
+          const bound = evidence?.[facet];
+          return bound?.sourceRefs.length ? normalized(bound.values).map(value => `${facet}:${value}`) : [];
+        });
+        return { ...subject, groupingKeys };
+      });
+      const plan = planProductionMonth({ month, count: requestedCount, channel: selectedChannel, recipes: config.recipes, subjects: productionSubjects, ...(existingSlots ? { existingSlots } : {}) });
       const uses = new Map<string, number>();
       const slots = await Promise.all(plan.slots.map(async slot => {
         const ordinal = uses.get(slot.recipeId) ?? 0;
@@ -227,8 +235,8 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
         const recipe = config.recipes.find(r => r.id === slot.recipeId)!;
         const relationships = FACETS.flatMap(facet => {
           if (selected.length !== recipe.requiredDistinctSubjects) return [];
-          const values = selected[0]?.facets[facet].values ?? [];
-          return values.filter(value => selected.every(s => s.facets[facet].values.some(v => v.toLowerCase() === value.toLowerCase())))
+          const values = normalized(selected[0]?.facets[facet].values ?? []);
+          return values.filter(value => selected.every(s => normalized(s.facets[facet].values).includes(value)))
             .map(value => ({ facet, value, sourceRefs: [...new Set(selected.flatMap(s => s.facets[facet].sourceRefs))] }));
         });
         const blockedReasons = [...slot.blockedReasons];

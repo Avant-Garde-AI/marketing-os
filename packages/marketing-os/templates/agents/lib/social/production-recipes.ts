@@ -19,6 +19,8 @@ export const productionSubjectSchema = z.object({
   asset: z.object({ kind: z.enum(["full-master", "frame"]), ref: nonempty.max(1000), verificationRef: nonempty.max(1000).optional() }).strict().optional(),
   sourceRefs: z.array(nonempty.max(1000)).min(1).max(20),
   facts: z.array(z.object({ text: nonempty.max(500), sourceRefs: z.array(nonempty.max(1000)).min(1).max(20) }).strict()).max(30).optional(),
+  /** Opaque evidence-derived keys used only to form collection cohorts. */
+  groupingKeys: z.array(nonempty.max(400)).max(200).optional(),
 }).strict();
 export const productionMonthInputSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
@@ -46,6 +48,8 @@ export interface ProductionSubject {
   asset?: { kind: "full-master" | "frame"; ref: string; verificationRef?: string };
   sourceRefs: string[];
   facts?: Array<{ text: string; sourceRefs: string[] }>;
+  /** Shared keys supplied by the caller from acquired evidence, never copy claims. */
+  groupingKeys?: string[];
 }
 
 export interface ExistingProductionSlot {
@@ -169,6 +173,35 @@ function rotate(recipes: ProductionRecipe[], dates: string[], existing: Map<stri
   return rotation;
 }
 
+/** Choose a source-compatible group before subject rotation can mix unrelated works. */
+function collectionCohort(
+  masters: ProductionSubject[],
+  count: number,
+  useCount: Map<string, number>,
+): ProductionSubject[] | null {
+  const byKey = new Map<string, ProductionSubject[]>();
+  for (const subject of masters) {
+    for (const key of new Set(subject.groupingKeys ?? [])) {
+      const group = byKey.get(key) ?? [];
+      group.push(subject);
+      byKey.set(key, group);
+    }
+  }
+  let best: { subjects: ProductionSubject[]; reuse: number; key: string } | null = null;
+  for (const key of [...byKey.keys()].sort()) {
+    const group = byKey.get(key)!;
+    if (group.length < count) continue;
+    const selected = [...group].sort((a, b) =>
+      (useCount.get(a.handle) ?? 0) - (useCount.get(b.handle) ?? 0) ||
+      (a.handle < b.handle ? -1 : a.handle > b.handle ? 1 : 0),
+    ).slice(0, count);
+    const reuse = selected.reduce((sum, subject) => sum + (useCount.get(subject.handle) ?? 0), 0);
+    if (!best || reuse < best.reuse || (reuse === best.reuse && key < best.key))
+      best = { subjects: selected, reuse, key };
+  }
+  return best?.subjects ?? null;
+}
+
 function validate(input: ProductionMonthInput): number {
   const days = monthDays(input.month);
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 31 || input.count > days)
@@ -233,14 +266,18 @@ export function planProductionMonth(input: ProductionMonthInput): ProductionMont
       const bMaster = masterSubjects.includes(b) ? 0 : 1;
       return aMaster - bMaster || (useCount.get(a.handle) ?? 0) - (useCount.get(b.handle) ?? 0) || a.handle.localeCompare(b.handle);
     });
-    const selected = eligible
-      .slice(0, recipe.requiredDistinctSubjects);
+    const cohort = recipe.mechanic === "collection-scene"
+      ? collectionCohort(masterSubjects, recipe.requiredDistinctSubjects, useCount)
+      : null;
+    const selected = cohort ?? eligible.slice(0, recipe.requiredDistinctSubjects);
     const blockedReasons: string[] = [];
     if (selected.length < recipe.requiredDistinctSubjects)
       blockedReasons.push(`Requires ${recipe.requiredDistinctSubjects} distinct subjects; ${selected.length} supplied.`);
     const missingMasters = selected.filter((subject) => !masterSubjects.includes(subject));
     if (missingMasters.length)
       blockedReasons.push(`Verified full-master evidence is missing for: ${missingMasters.map((subject) => subject.handle).join(", ")}.`);
+    if (recipe.mechanic === "collection-scene" && !cohort)
+      blockedReasons.push(`No shared evidence grouping key connects ${recipe.requiredDistinctSubjects} distinct verified full-master subjects; curate a coherent set.`);
     const subjectHandles = selected.map((subject) => subject.handle);
     const reuseWarnings = selected.filter((subject) => (useCount.get(subject.handle) ?? 0) > 0)
       .map((subject) => `${subject.handle} is reused in this month; review repetition before production.`);

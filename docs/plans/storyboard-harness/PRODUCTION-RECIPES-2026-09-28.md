@@ -11,14 +11,21 @@ is itself generated content, approval, a seamless-loop guarantee or engagement
 proof.
 
 Implemented here: a pure recipe/month planner in the social pack; source-bound
-copy briefs; weighted recipe and subject rotation; blocked source slots that
-retain useful writing context; a tenant-bound `social_production_month_plan`
+copy briefs; weighted recipe and subject rotation; evidence-aware three-artwork
+cohorts; blocked source slots that retain useful writing context; a tenant-bound `social_production_month_plan`
 tool acquiring live graph/catalog receipts, reviewed source metadata and exact
 concept copy formulas. Stable IDs support retry reconciliation, not permission
 to overwrite prior posts. Defaults: 12 new proposed slots, mix 6/3/3. Existing occupied calendar
 rows/post IDs remain intact; plans use available planned dates or report an
 insufficient calendar. A missing calendar returns a proposal requiring review. No imagery
 calls, provider credential changes, scheduled timestamps or publishing writes.
+
+Scene cohorts share at least one normalized facet from current catalog or
+operator-reviewed source evidence. The planner rotates among eligible groups
+of three distinct verified artworks using source-bound grouping keys. If no
+coherent group is available, the slot stays blocked with its source and copy
+context. The runtime independently checks the selected relationship and cites
+the actual evidence; a grouping key alone is never a publishable claim.
 
 ## End-to-end delivery work
 

@@ -130,6 +130,17 @@ describe("tenant production context", () => {
     expect(plan.slots[0]?.subjectHandles).toEqual(["a", "b", "c"]);
     expect(plan.slots[0]?.brief?.subjects.find(subject => subject.handle === "c")?.sourceRefs).toEqual(expect.arrayContaining([expect.stringMatching(/^catalog:/), expect.stringMatching(/^inventory:/)]));
   });
+  it("plans a later coherent reviewed trio and emits its sourced relationship", async () => {
+    const inventorySources = ["a", "b", "c", "d", "e", "f"].map((handle, i) => ({
+      ...reviewedSource(handle), facets: { palette: [i < 3 ? `unrelated-${handle}` : "green"] },
+    }));
+    const plan = await planStoreProductionMonth(input, deps({ graphFailure: true, inventorySources }));
+    expect(plan.summary).toMatchObject({ planned: 2, blocked: 0 });
+    expect(plan.slots[0]?.subjectHandles).toEqual(["d", "e", "f"]);
+    expect(plan.slots[0]?.relationships).toContainEqual(expect.objectContaining({
+      facet: "palette", value: "green", sourceRefs: expect.arrayContaining([expect.stringMatching(/^inventory:/), expect.stringMatching(/^catalog:/)]),
+    }));
+  });
   it("excludes an inactive reviewed product from the curated fallback", async () => {
     const inventorySources = ["a", "b", "c"].map(handle => ({ ...reviewedSource(handle), facets: { palette: ["blue"] } }));
     const plan = await planStoreProductionMonth(input, deps({ graphHandles: ["a", "b"], inventorySources, catalogStatuses: { c: "DRAFT" } }));

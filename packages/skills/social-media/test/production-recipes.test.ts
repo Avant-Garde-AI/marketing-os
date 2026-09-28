@@ -10,6 +10,7 @@ const subjects: ProductionSubject[] = ["a", "b", "c", "d"].map((handle) => ({
   handle, artist: `Artist ${handle}`, sourceRefs: [`catalog:${handle}`],
   asset: { kind: "full-master", ref: `asset:${handle}`, verificationRef: `check:${handle}` },
   facts: [{ text: `Artwork ${handle} is by Artist ${handle}`, sourceRefs: [`graph:${handle}`] }],
+  groupingKeys: ["palette:blue"],
 }));
 const input: ProductionMonthInput = { month: "2026-10", count: 12, channel: "instagram", recipes, subjects };
 
@@ -49,6 +50,35 @@ describe("planProductionMonth", () => {
     expect(plan.slots[0]?.status).toBe("blocked");
     expect(plan.slots[0]?.subjectHandles).toEqual(["a", "b"]);
     expect(plan.slots[0]?.blockedReasons.join(" ")).toMatch(/3 distinct subjects/);
+  });
+
+  it("selects a later coherent triple instead of the first unrelated masters", () => {
+    const candidates = ["a", "b", "c", "d", "e", "f"].map((handle, i) => ({
+      ...subjects[0]!, handle, groupingKeys: [i < 3 ? `palette:unrelated-${handle}` : "palette:green"],
+    }));
+    const plan = planProductionMonth({ ...input, count: 1, recipes: [recipes[1]!], subjects: candidates });
+    expect(plan.slots[0]).toMatchObject({ status: "planned", subjectHandles: ["d", "e", "f"] });
+  });
+
+  it("rotates between coherent cohorts by reuse and remains deterministic", () => {
+    const candidates = ["a", "b", "c", "d", "e", "f"].map((handle, i) => ({
+      ...subjects[0]!, handle, groupingKeys: [i < 3 ? "palette:red" : "palette:blue"],
+    }));
+    const request = { ...input, count: 2, recipes: [recipes[1]!], subjects: candidates };
+    const plan = planProductionMonth(request);
+    expect(plan.slots.map(slot => slot.subjectHandles)).toEqual([["d", "e", "f"], ["a", "b", "c"]]);
+    expect(planProductionMonth(request)).toEqual(plan);
+  });
+
+  it("blocks an incoherent collection while retaining subjects and copy facts", () => {
+    const candidates = ["a", "b", "c"].map((handle) => ({
+      ...subjects[0]!, handle, groupingKeys: [`palette:${handle}`],
+    }));
+    const slot = planProductionMonth({ ...input, count: 1, recipes: [recipes[1]!], subjects: candidates }).slots[0]!;
+    expect(slot.status).toBe("blocked");
+    expect(slot.blockedReasons.join(" ")).toMatch(/No shared evidence grouping key/);
+    expect(slot.subjectHandles).toEqual(["a", "b", "c"]);
+    expect(slot.brief?.copyFacts).toHaveLength(3);
   });
 
   it("validates the month, count, duplicate identities, and weights", () => {

@@ -147,6 +147,7 @@ export default async function SocialReviewRoom({
         {group.posts.map(({ post, studioPath }) => {
           const assets = postReviewAssets(post, publicUrl);
           const sequence = post.renderedSequence;
+          const video = post.renderedVideo;
           return (
             <article key={post.id} style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(0,0,0,0.08)", fontSize: "0.8rem" }}>
@@ -159,7 +160,33 @@ export default async function SocialReviewRoom({
                 </span>
               </div>
               {assets.length > 0 ? (
-                <section aria-label={`${post.channel} creative sequence`}>
+                <section aria-label={`${post.channel} final creative`}>
+                  {video && (
+                    <div>
+                      <div style={{ padding: "0.85rem", background: "#f4f2ef", fontSize: "0.8rem", overflowWrap: "anywhere" }}>
+                        <strong>Rendered video · final creative for review</strong>
+                        <p>Storyboard: {video.storyboardId} · {(video.video.durationMs / 1000).toFixed(1)} seconds</p>
+                        <p>Video publishing is not available yet.</p>
+                        <details>
+                          <summary>Render provenance</summary>
+                          <p>Storyboard hash: <code>{video.storyboardHash}</code></p>
+                          <p>Review hash: <code>{video.reviewHash}</code></p>
+                          <p>Video SHA-256: <code>{video.video.sha256}</code></p>
+                          <p>Poster SHA-256: <code>{video.poster.sha256}</code></p>
+                          <p>{video.sources.length} source asset{video.sources.length === 1 ? "" : "s"} bound in the render receipt</p>
+                        </details>
+                      </div>
+                      <video controls loop playsInline preload="metadata" poster={video.poster.url}
+                        width={video.video.width} height={video.video.height}
+                        style={{ width: "100%", height: "auto", background: "#111", display: "block" }}>
+                        <source src={video.video.url} type={video.video.mimeType} />
+                        Your browser cannot play this video.
+                      </video>
+                      <p style={{ padding: "0.7rem 0.85rem", margin: 0, fontSize: "0.85rem" }}>
+                        <a href={video.video.url} target="_blank" rel="noopener noreferrer">Open or download video</a>
+                      </p>
+                    </div>
+                  )}
                   {sequence && (
                     <div style={{ padding: "0.85rem", background: "#f4f2ef", fontSize: "0.8rem", lineHeight: 1.5, overflowWrap: "anywhere" }}>
                       <strong>{assets.length} slide{assets.length === 1 ? "" : "s"} · publication order</strong>
@@ -176,7 +203,7 @@ export default async function SocialReviewRoom({
                       </details>
                     </div>
                   )}
-                  <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {!video && <ol style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {assets.map((src, index) => {
                       const slide = sequence?.slides[index];
                       return (
@@ -204,7 +231,7 @@ export default async function SocialReviewRoom({
                         </li>
                       );
                     })}
-                  </ol>
+                  </ol>}
                 </section>
               ) : (
                 <div

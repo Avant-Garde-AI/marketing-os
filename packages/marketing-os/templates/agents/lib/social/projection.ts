@@ -107,6 +107,7 @@ export function postMonth(post: SocialPost): string {
  * card, exactly as it does for an all-copy email.
  */
 export function postThumbnailUrl(post: SocialPost, publicUrl: string): string | undefined {
+  if (post.renderedVideo) return post.renderedVideo.poster.url;
   if (post.renderedSequence) return post.renderedSequence.slides[0]?.url;
   if (!post.designSurface) return undefined;
   const base = publicUrl.replace(/\/$/, "");
@@ -253,6 +254,7 @@ export function postIndexRow(post: SocialPost): SocialPostIndexRow {
 
 /** Exact publication order for review, with legacy single-image fallback. */
 export function postReviewAssets(post: SocialPost, publicUrl: string): string[] {
+  if (post.renderedVideo) return [post.renderedVideo.poster.url];
   if (post.renderedSequence) return post.renderedSequence.slides.map((slide) => slide.url);
   const thumbnail = postThumbnailUrl(post, publicUrl);
   return thumbnail ? [thumbnail] : [];

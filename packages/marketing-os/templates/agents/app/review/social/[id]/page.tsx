@@ -50,10 +50,10 @@ function aspectFor(channel: string): string {
 }
 
 function motionStatus(state: string): string {
-  if (state === "awaiting_approval") return "Awaiting generation approval";
+  if (state === "awaiting_approval") return "Ready to generate";
   if (["preparing", "submitting", "submitted"].includes(state)) return "Rendering in progress";
   if (state === "succeeded") return "Rendered · ready for fidelity and loop review";
-  if (state === "unknown") return "Submission needs reconciliation";
+  if (state === "unknown") return "Status needs checking";
   if (state === "failed") return "Generation stopped";
   if (state === "declined") return "Generation declined";
   return state;
@@ -87,9 +87,15 @@ function GenerationPanel({ job }: { job: GenerationReview }) {
       <p style={{ whiteSpace: "pre-wrap", fontSize: "0.9rem", lineHeight: 1.5 }}><strong>Caption</strong><br />{job.caption}</p>
       <p style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem", lineHeight: 1.5 }}><strong>Motion brief</strong><br />{job.prompt}</p>
       <p style={{ fontSize: "0.8rem" }}><a href={job.sourcePreviewUrl} target="_blank" rel="noopener noreferrer">Review source artwork and composition</a></p>
-      {job.errorCode && <p role="status" style={{ fontSize: "0.8rem", color: "#765b16" }}>Status: {job.errorCode}</p>}
+      {(job.state === "unknown" || job.state === "failed") && (
+        <p role="status" style={{ fontSize: "0.8rem", color: "#765b16" }}>
+          {job.state === "unknown"
+            ? "Generation status needs checking before another attempt."
+            : "Generation stopped before a usable video was ready."}
+        </p>
+      )}
       <p style={{ fontSize: "0.78rem", opacity: 0.7, marginBottom: 0 }}>
-        Review the full artwork, motion, and loop seam before using this asset. This room does not approve generation or publish a post.
+        Review the full artwork, motion, and loop seam. Leave feedback below. Publishing requires a separate approval.
       </p>
     </section>
   );

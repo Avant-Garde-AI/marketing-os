@@ -129,3 +129,8 @@ export type {
   ReallocateOfferParams,
 } from "./actions";
 export { instructions, harnessInstructions } from "./instructions";
+/** The design harness's pure half + the adapter shapes it runs on (see harness/index.ts). */
+export * as harness from "./harness/index";
+/** The render worker a host uploads into its sandbox (plain Node + playwright-core). Also
+ * importable as `@avant-garde/skill-offers/offer-render-worker.mjs` (e.g. with Vite's `?raw`). */
+export const OFFER_RENDER_WORKER_URL = new URL("./harness/offer-render-worker.mjs", import.meta.url);

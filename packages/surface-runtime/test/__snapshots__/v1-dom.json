@@ -1,0 +1,391 @@
+{
+ "mobile": [
+  {
+   "t": "style",
+   "a": [],
+   "c": [
+    "#:host{all:initial;font-family:inherit}*{box-sizing:border-box;margin:0;padding:0;border-radius:0}.card{font-family:var(--f,inherit);background:var(--bg,#fff);color:var(--ink,#1a1a1a);border:1px solid var(--line,rgba(0,0,0,.14));box-shadow:0 12px 32px -8px rgba(0,0,0,.16);padding:22px;max-width:340px;pointer-events:auto}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent,#6b6b6b);margin-bottom:10px}.h{font-size:19px;line-height:1.25;font-weight:500;margin-bottom:8px}.b{font-size:13.5px;line-height:1.5;color:var(--ink2,rgba(26,26,26,.72));margin-bottom:14px}.row{display:flex;gap:8px}input[type=email]{flex:1;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line,rgba(0,0,0,.2));background:transparent;color:inherit;min-width:0}input[type=email]:focus{outline:1px solid var(--accent,#1a1a1a);outline-offset:1px}button.cta{font:inherit;font-size:13.5px;font-weight:500;padding:10px 16px;cursor:pointer;border:0;background:var(--ink,#1a1a1a);color:var(--bg,#fff)}button.cta:disabled{opacity:.5}button.x{position:absolute;top:8px;right:8px;width:32px;height:32px;font-size:16px;line-height:1;cursor:pointer;border:0;background:transparent;color:var(--ink2,rgba(26,26,26,.6))}button.x:focus-visible,button.cta:focus-visible{outline:1px solid var(--accent,#1a1a1a);outline-offset:2px}.consent{font-size:10.5px;line-height:1.45;color:var(--ink2,rgba(26,26,26,.55));margin-top:10px}.ok{font-size:14px;line-height:1.5;padding:6px 0}.wrap{position:fixed;z-index:2147483000;pointer-events:none}.wrap.corner{right:20px;bottom:20px}.wrap.overlay,.wrap.takeover{inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,15,15,.45);pointer-events:auto}.wrap.takeover{background:rgba(15,15,15,.6)}.wrap.overlay .card{max-width:400px;position:relative}.wrap.takeover .card{max-width:480px;width:calc(100% - 32px);position:relative;max-height:calc(100vh - 48px);overflow:auto}.wrap.corner .card{position:relative}@media(max-width:480px){.wrap.corner{left:16px;right:16px;bottom:16px}.card{max-width:none}}.wrap.takeover{padding:24px;background:rgba(20,18,26,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}.wrap.takeover .card{padding:0;border:0;max-width:1040px;width:100%;max-height:calc(100vh - 48px);display:grid;grid-template-columns:1.08fr 1fr;overflow:hidden;box-shadow:0 40px 90px -24px rgba(0,0,0,.5)}.wrap.takeover .card:focus{outline:none}.wrap.takeover .card.noimg{grid-template-columns:1fr;max-width:560px}.media{position:relative;min-height:580px;background:var(--line,#ddd)}.media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}.media:after{content:'';position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(to top,rgba(0,0,0,.42),rgba(0,0,0,0));pointer-events:none}.cap{position:absolute;z-index:1;left:22px;bottom:20px;right:22px;font-family:var(--fm,ui-monospace,monospace);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.5)}.copy{padding:58px 54px 42px;display:flex;flex-direction:column;justify-content:center;overflow:auto;position:relative}.wrap.takeover .eyebrow{font-family:var(--fm,ui-monospace,monospace);font-size:11px;letter-spacing:.2em;margin-bottom:20px}.wrap.takeover .h{font-family:var(--fd,var(--f,Georgia,serif));font-size:42px;line-height:1.06;font-weight:500;letter-spacing:-.012em;margin-bottom:20px}.h .acc{display:block;font-style:italic;font-weight:400}.wrap.takeover .b{font-size:15.5px;line-height:1.62;margin-bottom:22px;max-width:40ch}.pts{list-style:none;margin:0 0 28px;padding:0}.pts li{font-size:14px;line-height:1.45;padding:10px 0;border-top:1px solid var(--line,rgba(0,0,0,.14));display:flex;gap:14px;align-items:center}.pts li:last-child{border-bottom:1px solid var(--line,rgba(0,0,0,.14))}.pts li:before{content:'';width:16px;height:1px;background:var(--accent,#1a1a1a);flex:none}.wrap.takeover input[type=email]{border:0;border-bottom:1px solid var(--ink,#1a1a1a);padding:12px 2px;font-size:15px}.wrap.takeover input[type=email]:focus{outline:none;border-bottom-color:var(--accent,#1a1a1a);box-shadow:0 1px 0 var(--accent,#1a1a1a)}.wrap.takeover button.cta{padding:13px 24px;font-size:14px;letter-spacing:.02em}.wrap.takeover .consent{margin-top:14px}.dec{margin-top:18px;align-self:flex-start;background:none;border:0;padding:4px 0;font:inherit;font-size:12.5px;color:var(--ink2,rgba(26,26,26,.6));text-decoration:underline;text-underline-offset:3px;cursor:pointer}.dec:focus-visible{outline:1px solid var(--accent,#1a1a1a);outline-offset:2px}.wrap.takeover button.x{top:12px;right:12px;width:40px;height:40px;font-size:22px;z-index:2}.wrap.takeover .ok{font-family:var(--fd,Georgia,serif);font-size:26px;line-height:1.3;padding:8px 0}@media(max-width:760px){.wrap.takeover{padding:0;align-items:stretch}.wrap.takeover .card{grid-template-columns:1fr;max-height:none;height:100%;max-width:none;overflow:auto;display:block}.media{min-height:0;height:28vh}.copy{padding:22px 24px 30px}.wrap.takeover .eyebrow{margin-bottom:12px}.wrap.takeover .h{font-size:29px;margin-bottom:12px}.wrap.takeover .b{font-size:15px;line-height:1.55;margin-bottom:14px}.pts{margin-bottom:18px}.pts li{padding:7px 0;font-size:13.5px}.wrap.takeover button.x{background:rgba(255,255,255,.85)}}@media(prefers-reduced-motion:no-preference){.wrap.takeover{animation:mosfade .3s ease both}.media img{animation:mosdrift 9s cubic-bezier(.16,1,.3,1) both}.copy>*{animation:mosrise .55s cubic-bezier(.16,1,.3,1) both}.copy>:nth-child(2){animation-delay:.06s}.copy>:nth-child(3){animation-delay:.12s}.copy>:nth-child(4){animation-delay:.18s}.copy>:nth-child(5){animation-delay:.24s}.copy>:nth-child(n+6){animation-delay:.3s}@keyframes mosfade{from{opacity:0}to{opacity:1}}@keyframes mosdrift{from{transform:scale(1.06)}to{transform:scale(1)}}@keyframes mosrise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}}@media(prefers-reduced-motion:no-preference){.card{animation:mosin .28s cubic-bezier(.16,1,.3,1) both}@keyframes mosin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}}"
+   ]
+  },
+  {
+   "t": "div",
+   "a": [
+    "class=wrap takeover",
+    "style=--bg:#f6f2ea;--ink:#1d1a17;--ink2:#5c554c;--accent:#9a4a2b;--line:rgba(29,26,23,.16);--f:-apple-system,BlinkMacSystemFont,\"Helvetica Neue\",Arial,sans-serif;--fd:\"Iowan Old Style\",\"Palatino Linotype\",Palatino,Georgia,serif;--fm:ui-monospace,\"SF Mono\",Menlo,monospace;"
+   ],
+   "c": [
+    {
+     "t": "div",
+     "a": [
+      "aria-label=Original work,",
+      "aria-modal=true",
+      "class=card",
+      "role=dialog",
+      "tabindex=-1"
+     ],
+     "c": [
+      {
+       "t": "button",
+       "a": [
+        "aria-label=Dismiss",
+        "class=x"
+       ],
+       "c": [
+        "#×"
+       ]
+      },
+      {
+       "t": "div",
+       "a": [
+        "class=media"
+       ],
+       "c": [
+        {
+         "t": "img",
+         "a": [
+          "alt=A framed colour-field painting above a gallery bench",
+          "decoding=async",
+          "src=https://cdn.shopify.com/s/files/1/0000/fixture/interior.jpg",
+          "style=object-position: 50% 40%;"
+         ],
+         "c": []
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=cap"
+         ],
+         "c": [
+          "#Mara Lind — Tidewater, 2026"
+         ]
+        }
+       ]
+      },
+      {
+       "t": "div",
+       "a": [
+        "class=copy"
+       ],
+       "c": [
+        {
+         "t": "div",
+         "a": [
+          "class=eyebrow"
+         ],
+         "c": [
+          "#Letters from the studio"
+         ]
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=h"
+         ],
+         "c": [
+          "#Original work,",
+          {
+           "t": "span",
+           "a": [
+            "class=acc"
+           ],
+           "c": [
+            "#before it’s shown."
+           ]
+          }
+         ]
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=b"
+         ],
+         "c": [
+          "#One letter a month: new pieces from our artists, a week before the public release."
+         ]
+        },
+        {
+         "t": "ul",
+         "a": [
+          "class=pts"
+         ],
+         "c": [
+          {
+           "t": "li",
+           "a": [],
+           "c": [
+            "#A first look at every release"
+           ]
+          },
+          {
+           "t": "li",
+           "a": [],
+           "c": [
+            "#Notes from the artists’ studios"
+           ]
+          },
+          {
+           "t": "li",
+           "a": [],
+           "c": [
+            "#No sales blasts. Leave anytime."
+           ]
+          }
+         ]
+        },
+        {
+         "t": "form",
+         "a": [],
+         "c": [
+          {
+           "t": "div",
+           "a": [
+            "class=row"
+           ],
+           "c": [
+            {
+             "t": "input",
+             "a": [
+              "aria-label=Email address",
+              "autocomplete=email",
+              "placeholder=Email address",
+              "required=",
+              "style=",
+              "type=email"
+             ],
+             "c": []
+            },
+            {
+             "t": "button",
+             "a": [
+              "class=cta",
+              "type=submit"
+             ],
+             "c": [
+              "#Join the list"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=consent"
+         ],
+         "c": [
+          "#By joining you agree to receive emails from Hollis & Vane. Unsubscribe anytime; see our privacy policy."
+         ]
+        },
+        {
+         "t": "button",
+         "a": [
+          "class=dec",
+          "type=button"
+         ],
+         "c": [
+          "#Not now"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "desktop": [
+  {
+   "t": "style",
+   "a": [],
+   "c": [
+    "#:host{all:initial;font-family:inherit}*{box-sizing:border-box;margin:0;padding:0;border-radius:0}.card{font-family:var(--f,inherit);background:var(--bg,#fff);color:var(--ink,#1a1a1a);border:1px solid var(--line,rgba(0,0,0,.14));box-shadow:0 12px 32px -8px rgba(0,0,0,.16);padding:22px;max-width:340px;pointer-events:auto}.eyebrow{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent,#6b6b6b);margin-bottom:10px}.h{font-size:19px;line-height:1.25;font-weight:500;margin-bottom:8px}.b{font-size:13.5px;line-height:1.5;color:var(--ink2,rgba(26,26,26,.72));margin-bottom:14px}.row{display:flex;gap:8px}input[type=email]{flex:1;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line,rgba(0,0,0,.2));background:transparent;color:inherit;min-width:0}input[type=email]:focus{outline:1px solid var(--accent,#1a1a1a);outline-offset:1px}button.cta{font:inherit;font-size:13.5px;font-weight:500;padding:10px 16px;cursor:pointer;border:0;background:var(--ink,#1a1a1a);color:var(--bg,#fff)}button.cta:disabled{opacity:.5}button.x{position:absolute;top:8px;right:8px;width:32px;height:32px;font-size:16px;line-height:1;cursor:pointer;border:0;background:transparent;color:var(--ink2,rgba(26,26,26,.6))}button.x:focus-visible,button.cta:focus-visible{outline:1px solid var(--accent,#1a1a1a);outline-offset:2px}.consent{font-size:10.5px;line-height:1.45;color:var(--ink2,rgba(26,26,26,.55));margin-top:10px}.ok{font-size:14px;line-height:1.5;padding:6px 0}.wrap{position:fixed;z-index:2147483000;pointer-events:none}.wrap.corner{right:20px;bottom:20px}.wrap.overlay,.wrap.takeover{inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,15,15,.45);pointer-events:auto}.wrap.takeover{background:rgba(15,15,15,.6)}.wrap.overlay .card{max-width:400px;position:relative}.wrap.takeover .card{max-width:480px;width:calc(100% - 32px);position:relative;max-height:calc(100vh - 48px);overflow:auto}.wrap.corner .card{position:relative}@media(max-width:480px){.wrap.corner{left:16px;right:16px;bottom:16px}.card{max-width:none}}.wrap.takeover{padding:24px;background:rgba(20,18,26,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}.wrap.takeover .card{padding:0;border:0;max-width:1040px;width:100%;max-height:calc(100vh - 48px);display:grid;grid-template-columns:1.08fr 1fr;overflow:hidden;box-shadow:0 40px 90px -24px rgba(0,0,0,.5)}.wrap.takeover .card:focus{outline:none}.wrap.takeover .card.noimg{grid-template-columns:1fr;max-width:560px}.media{position:relative;min-height:580px;background:var(--line,#ddd)}.media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}.media:after{content:'';position:absolute;left:0;right:0;bottom:0;height:34%;background:linear-gradient(to top,rgba(0,0,0,.42),rgba(0,0,0,0));pointer-events:none}.cap{position:absolute;z-index:1;left:22px;bottom:20px;right:22px;font-family:var(--fm,ui-monospace,monospace);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#fff;text-shadow:0 1px 10px rgba(0,0,0,.5)}.copy{padding:58px 54px 42px;display:flex;flex-direction:column;justify-content:center;overflow:auto;position:relative}.wrap.takeover .eyebrow{font-family:var(--fm,ui-monospace,monospace);font-size:11px;letter-spacing:.2em;margin-bottom:20px}.wrap.takeover .h{font-family:var(--fd,var(--f,Georgia,serif));font-size:42px;line-height:1.06;font-weight:500;letter-spacing:-.012em;margin-bottom:20px}.h .acc{display:block;font-style:italic;font-weight:400}.wrap.takeover .b{font-size:15.5px;line-height:1.62;margin-bottom:22px;max-width:40ch}.pts{list-style:none;margin:0 0 28px;padding:0}.pts li{font-size:14px;line-height:1.45;padding:10px 0;border-top:1px solid var(--line,rgba(0,0,0,.14));display:flex;gap:14px;align-items:center}.pts li:last-child{border-bottom:1px solid var(--line,rgba(0,0,0,.14))}.pts li:before{content:'';width:16px;height:1px;background:var(--accent,#1a1a1a);flex:none}.wrap.takeover input[type=email]{border:0;border-bottom:1px solid var(--ink,#1a1a1a);padding:12px 2px;font-size:15px}.wrap.takeover input[type=email]:focus{outline:none;border-bottom-color:var(--accent,#1a1a1a);box-shadow:0 1px 0 var(--accent,#1a1a1a)}.wrap.takeover button.cta{padding:13px 24px;font-size:14px;letter-spacing:.02em}.wrap.takeover .consent{margin-top:14px}.dec{margin-top:18px;align-self:flex-start;background:none;border:0;padding:4px 0;font:inherit;font-size:12.5px;color:var(--ink2,rgba(26,26,26,.6));text-decoration:underline;text-underline-offset:3px;cursor:pointer}.dec:focus-visible{outline:1px solid var(--accent,#1a1a1a);outline-offset:2px}.wrap.takeover button.x{top:12px;right:12px;width:40px;height:40px;font-size:22px;z-index:2}.wrap.takeover .ok{font-family:var(--fd,Georgia,serif);font-size:26px;line-height:1.3;padding:8px 0}@media(max-width:760px){.wrap.takeover{padding:0;align-items:stretch}.wrap.takeover .card{grid-template-columns:1fr;max-height:none;height:100%;max-width:none;overflow:auto;display:block}.media{min-height:0;height:28vh}.copy{padding:22px 24px 30px}.wrap.takeover .eyebrow{margin-bottom:12px}.wrap.takeover .h{font-size:29px;margin-bottom:12px}.wrap.takeover .b{font-size:15px;line-height:1.55;margin-bottom:14px}.pts{margin-bottom:18px}.pts li{padding:7px 0;font-size:13.5px}.wrap.takeover button.x{background:rgba(255,255,255,.85)}}@media(prefers-reduced-motion:no-preference){.wrap.takeover{animation:mosfade .3s ease both}.media img{animation:mosdrift 9s cubic-bezier(.16,1,.3,1) both}.copy>*{animation:mosrise .55s cubic-bezier(.16,1,.3,1) both}.copy>:nth-child(2){animation-delay:.06s}.copy>:nth-child(3){animation-delay:.12s}.copy>:nth-child(4){animation-delay:.18s}.copy>:nth-child(5){animation-delay:.24s}.copy>:nth-child(n+6){animation-delay:.3s}@keyframes mosfade{from{opacity:0}to{opacity:1}}@keyframes mosdrift{from{transform:scale(1.06)}to{transform:scale(1)}}@keyframes mosrise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}}@media(prefers-reduced-motion:no-preference){.card{animation:mosin .28s cubic-bezier(.16,1,.3,1) both}@keyframes mosin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}}"
+   ]
+  },
+  {
+   "t": "div",
+   "a": [
+    "class=wrap takeover",
+    "style=--bg:#f6f2ea;--ink:#1d1a17;--ink2:#5c554c;--accent:#9a4a2b;--line:rgba(29,26,23,.16);--f:-apple-system,BlinkMacSystemFont,\"Helvetica Neue\",Arial,sans-serif;--fd:\"Iowan Old Style\",\"Palatino Linotype\",Palatino,Georgia,serif;--fm:ui-monospace,\"SF Mono\",Menlo,monospace;"
+   ],
+   "c": [
+    {
+     "t": "div",
+     "a": [
+      "aria-label=Original work,",
+      "aria-modal=true",
+      "class=card",
+      "role=dialog"
+     ],
+     "c": [
+      {
+       "t": "button",
+       "a": [
+        "aria-label=Dismiss",
+        "class=x"
+       ],
+       "c": [
+        "#×"
+       ]
+      },
+      {
+       "t": "div",
+       "a": [
+        "class=media"
+       ],
+       "c": [
+        {
+         "t": "img",
+         "a": [
+          "alt=A framed colour-field painting above a gallery bench",
+          "decoding=async",
+          "src=https://cdn.shopify.com/s/files/1/0000/fixture/interior.jpg",
+          "style=object-position: 50% 40%;"
+         ],
+         "c": []
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=cap"
+         ],
+         "c": [
+          "#Mara Lind — Tidewater, 2026"
+         ]
+        }
+       ]
+      },
+      {
+       "t": "div",
+       "a": [
+        "class=copy"
+       ],
+       "c": [
+        {
+         "t": "div",
+         "a": [
+          "class=eyebrow"
+         ],
+         "c": [
+          "#Letters from the studio"
+         ]
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=h"
+         ],
+         "c": [
+          "#Original work,",
+          {
+           "t": "span",
+           "a": [
+            "class=acc"
+           ],
+           "c": [
+            "#before it’s shown."
+           ]
+          }
+         ]
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=b"
+         ],
+         "c": [
+          "#One letter a month: new pieces from our artists, a week before the public release."
+         ]
+        },
+        {
+         "t": "ul",
+         "a": [
+          "class=pts"
+         ],
+         "c": [
+          {
+           "t": "li",
+           "a": [],
+           "c": [
+            "#A first look at every release"
+           ]
+          },
+          {
+           "t": "li",
+           "a": [],
+           "c": [
+            "#Notes from the artists’ studios"
+           ]
+          },
+          {
+           "t": "li",
+           "a": [],
+           "c": [
+            "#No sales blasts. Leave anytime."
+           ]
+          }
+         ]
+        },
+        {
+         "t": "form",
+         "a": [],
+         "c": [
+          {
+           "t": "div",
+           "a": [
+            "class=row"
+           ],
+           "c": [
+            {
+             "t": "input",
+             "a": [
+              "aria-label=Email address",
+              "autocomplete=email",
+              "placeholder=Email address",
+              "required=",
+              "style=",
+              "type=email"
+             ],
+             "c": []
+            },
+            {
+             "t": "button",
+             "a": [
+              "class=cta",
+              "type=submit"
+             ],
+             "c": [
+              "#Join the list"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "t": "div",
+         "a": [
+          "class=consent"
+         ],
+         "c": [
+          "#By joining you agree to receive emails from Hollis & Vane. Unsubscribe anytime; see our privacy policy."
+         ]
+        },
+        {
+         "t": "button",
+         "a": [
+          "class=dec",
+          "type=button"
+         ],
+         "c": [
+          "#Not now"
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

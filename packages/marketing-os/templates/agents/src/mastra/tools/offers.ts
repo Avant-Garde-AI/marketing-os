@@ -51,7 +51,6 @@ const offerToolDeps = {
   platform: offerPlatformClient,
   attribution: offerAttributionClient,
   onUnavailable: unavailable,
-  defaultSurfaceId: "ofr_collectors_list_v1",
 };
 
 // ---------------------------------------------------------------------------

@@ -261,7 +261,7 @@ export function createAuditCurrentOfferTool(
           const job = await deps.platform.getJob(jobId);
           const phase = offerJobPhase(job.status);
           if (phase === "succeeded") {
-            return { jobId, status: phase, report: job.result, note: "Audit complete. Summarise the grade and the lines that failed, citing the measured numbers." };
+            return { jobId, status: phase, report: job.result, note: "Audit complete. Show it as the ```mos-offer-audit card (auditId from report.auditId), then summarise the grade and the lines that failed, citing the measured numbers." };
           }
           if (phase === "failed") {
             return {
@@ -327,7 +327,7 @@ export function createDesignOfferChallengersTool(
           jobId,
           status: "queued" as const,
           note:
-            "The harness is designing challengers now. The result arrives as an approval card in Reviews — " +
+            "The harness is designing challengers now — show the ```mos-offer-job card with this jobId so the merchant can watch it. The result arrives as an approval card in Reviews — " +
             "screenshots of each challenger beside the current popup, plus a preview link on the storefront. " +
             "Nothing reaches shoppers without approval, and going live needs the Starter plan.",
         };

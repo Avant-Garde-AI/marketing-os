@@ -6,9 +6,10 @@
 // prompts. Auth is a connector token (Authorization: Bearer mos_… or ?token=),
 // verified against the Marketing OS platform.
 
-import { extractToken, verifyConnectorToken } from "@/lib/connector-auth";
+import { extractToken, verifyConnectorToken, type ConnectorAuth } from "@/lib/connector-auth";
 import { verifyProxyHandoff } from "@/lib/proxy-auth";
 import { HOSTED, getTenant, runWithTenant, type TenantContext } from "@/lib/tenant-context";
+import { runWithGenerationActor } from "@/lib/social/generation-authority";
 import { runExploreSchema, runDescribeField } from "@/src/mastra/semantics/introspect";
 import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
@@ -56,7 +57,7 @@ Email & campaigns — this store's own record, not a pooled copy:
 - klaviyo_audiences_read / klaviyo_audience_explain for who a send reached — the second gives the actual rule behind an audience name, not just a count.
 - klaviyo_performance_read for a raw Klaviyo window; email_campaign_retrospective for a single campaign judged against this store's OWN other sends (a rate alone cannot be called good or bad — read the verdict bands and caveats it returns, do not recompute your own threshold).
 - email_review_notes / email_review_notes_resolve for what reviewers said.
-- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Nothing reachable here executes a write; sending happens only through this store's own governed approval flow.
+- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Sending happens only through this store's governed approval flow.
 
 Storyboards: social_graph_storyboard_plan returns three durable independently critiqued arcs and a read-only reviewUrl. Human selection uses storyboard.select through the existing Action gate, then explicit per-beat layouts use social_storyboard_realization_prepare and social.storyboard_realize. No token or hash authorizes selection or publishing. Final review shows the entire immutable slide sequence. Unsupported generation/motion/mockups fail closed.
 
@@ -70,6 +71,7 @@ Social & content — the same shape as email: author here, review in the console
 - social_post_upsert stages a post with its caption. Copy claims are checked against the artwork's own pixels and the store's own entities — a colour or an attribution the work does not support is REFUSED, not warned about. Supply boundFacts so the guard can do its job.
 - social_channel_health answers whether this store can publish AT ALL: it resolves the Instagram token, asks Instagram who it belongs to, and reports days remaining. Check it before scheduling — an expired token is indistinguishable from a broken integration by every other symptom. It returns no credential.
 - social_review_share mints the expiring link a human opens to review a month or a post group. It is feedback only and can never approve: possessing a link proves possession of a link, not identity. social_review_notes reads what they said.
+- social_generation_run may spend up to its explicit maximumCredits for one stored pilot ONLY when this request carries verified console authority or an MCP connector with generation:run scope. The platform checks the source, exact quote and ceiling through the existing Action gate and submits once; public review links do not authorize spend. social_generation_prepare remains a no-spend preview. Unknown outcomes are never automatically resubmitted.
 - Nothing here publishes. Scheduling and publishing go through propose_action (social.schedule_post / social.publish_post), where a human approves and the approval IS the consent the cron re-verifies before it ships.`;
 
 // ---------------------------------------------------------------------------
@@ -175,14 +177,15 @@ async function runMastra(tool: unknown, args: unknown): Promise<unknown> {
  * everyday authoring.
  *
  * Read the list as the loop it is: plan → concept → compose → bind → stage →
- * share for review. Publishing is not on it, and cannot be: writes leave this
- * endpoint only as proposals through propose_action.
+ * share for review. Publishing is not on it. The bounded generation run is an
+ * explicit exception for authenticated spend and still uses the Action gate.
  */
 function socialToolDefs(): ToolDef[] {
   return [
     ...mirrorTools(socialTools, [
       "social_production_month_plan",
       "social_generation_prepare",
+      "social_generation_run",
       "social_generation_status",
       "social_calendar_read",
       "social_graph_subjects",
@@ -725,6 +728,7 @@ function resolveTenantFromAuth(
   if (tokenAuth.valid && tokenAuth.shop && tokenAuth.storeSlug) {
     return { tenantId: tokenAuth.tenantId, shop: tokenAuth.shop, storeSlug: tokenAuth.storeSlug };
   }
+  if (tokenAuth.valid) return HOSTED ? null : getTenant();
   // Proxy handoff: shop travels in the router-signed header.
   const shop = req.headers.get("x-mos-proxy-shop");
   if (shop) {
@@ -739,7 +743,7 @@ export async function POST(req: Request) {
   // Auth: a connector token (Bearer or ?token=), OR a router-signed proxy
   // handoff (Shopify App Proxy path — Shopify's HMAC was verified upstream).
   const token = extractToken(req);
-  const tokenAuth = token ? await verifyConnectorToken(token) : { valid: false };
+  const tokenAuth: ConnectorAuth = token ? await verifyConnectorToken(token) : { valid: false };
   const authed = tokenAuth.valid || verifyProxyHandoff(req);
   if (!authed) {
     return Response.json(
@@ -769,7 +773,11 @@ export async function POST(req: Request) {
     return Response.json(rpcError(null, -32700, "Parse error"), { status: 400, headers: CORS_HEADERS });
   }
 
-  return runWithTenant(tenant, async () => {
+  const generationActor = tokenAuth.valid && tokenAuth.shop === tenant.shop && tokenAuth.connectorId &&
+    tokenAuth.scopes?.includes("generation:run")
+    ? { surface: "mcp_connector" as const, subject: `connector:${tokenAuth.connectorId}` }
+    : null;
+  return runWithTenant(tenant, () => runWithGenerationActor(generationActor, async () => {
     // Batch or single
     if (Array.isArray(payload)) {
       const responses = (await Promise.all(payload.map((m) => dispatch(m as RpcRequest, clientProtocol)))).filter(
@@ -784,5 +792,5 @@ export async function POST(req: Request) {
       return new Response(null, { status: 202, headers: CORS_HEADERS });
     }
     return Response.json(response, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
-  });
+  }));
 }

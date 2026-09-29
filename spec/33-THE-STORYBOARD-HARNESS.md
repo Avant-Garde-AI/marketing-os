@@ -1154,3 +1154,16 @@ into it. The new monthly planner returns source/copy briefs, not generated
 posts. Full-resolution source acquisition, quoted provider execution and motion
 delivery remain separate work; source-only realization must continue refusing
 unsupported generation. See [production recipe delivery](../docs/plans/storyboard-harness/PRODUCTION-RECIPES-2026-09-28.md).
+
+**Pilot authorization update, 2026-09-28 (implementation pending).** For one
+bounded, explicit generation request in an authenticated Shopify admin console
+or an MCP connection with the `generation:run` scope, the user's request is
+the authorization to execute the existing Action. A separate artwork
+preapproval is not required for this pilot. The runtime attests the verified
+actor, tenant, exact request body and timestamp to the platform; an agent tool
+argument, tenant name, background turn, public review token or read-only
+connector cannot supply that authority. The platform still checks the verified
+source, fixed settings, exact post-upload quote and approved credit ceiling,
+persists the single submission attempt, and reconciles an unknown outcome
+without automatic resubmission. The generated output goes to a signed,
+read-only one-page review; publishing remains a separate governed Action.

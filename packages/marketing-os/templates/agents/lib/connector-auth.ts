@@ -15,6 +15,7 @@ export interface ConnectorAuth {
   storeSlug?: string;
   scopes?: string[];
   label?: string;
+  connectorId?: string;
 }
 
 const cache = new Map<string, { result: ConnectorAuth; at: number }>();

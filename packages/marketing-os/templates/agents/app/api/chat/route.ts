@@ -1,6 +1,10 @@
 import { handleChatStream } from "@mastra/ai-sdk";
 import { createUIMessageStreamResponse } from "ai";
 import { mastra } from "@/src/mastra";
+import { createClient } from "@/lib/supabase/server";
+import { verifyChatHandoff, verifyConsoleAuthority } from "@/lib/proxy-auth";
+import { HOSTED, getTenant, runWithTenant, type TenantContext } from "@/lib/tenant-context";
+import { runWithGenerationActor, type GenerationActor } from "@/lib/social/generation-authority";
 
 /**
  * Chat endpoint — AI SDK v6 UIMessage stream (spec 13 addendum).
@@ -27,6 +31,21 @@ import { mastra } from "@/src/mastra";
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  let actor: GenerationActor | null = null;
+  let tenant: TenantContext;
+  if (HOSTED) {
+    const shop = verifyChatHandoff(req);
+    if (!shop) return Response.json({ error: "unauthorized" }, { status: 401 });
+    tenant = { shop, storeSlug: shop.replace(/\.myshopify\.com$/, "") };
+    const subject = verifyConsoleAuthority(req, shop);
+    if (subject) actor = { surface: "console", subject };
+  } else {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) return Response.json({ error: "unauthorized" }, { status: 401 });
+    actor = { surface: "console", subject: `supabase:${user.id}` };
+    tenant = getTenant();
+  }
   const params = await req.json();
 
   // Thread↔memory continuity (spec 15 §3). A `threadId` in the body — sent by
@@ -39,11 +58,13 @@ export async function POST(req: Request) {
     params.memory = { thread: String(params.threadId), resource: "storefront" };
   }
 
-  const stream = await handleChatStream({
-    mastra,
-    agentId: "marketing-agent",
-    version: "v6",
-    params,
-  });
-  return createUIMessageStreamResponse({ stream });
+  return runWithTenant(tenant, () => runWithGenerationActor(actor, async () => {
+    const stream = await handleChatStream({
+      mastra,
+      agentId: "marketing-agent",
+      version: "v6",
+      params,
+    });
+    return createUIMessageStreamResponse({ stream });
+  }));
 }

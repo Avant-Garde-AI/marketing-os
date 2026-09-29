@@ -5,6 +5,12 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const ID = /^[a-z0-9][a-z0-9-]{0,99}$/;
 const POST_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 const MAX_BODY_BYTES = 1024 * 1024;
+// Exact hosts observed in authenticated Higgsfield results; no CloudFront wildcard.
+const PROVIDER_ASSET_HOSTS = new Set([
+  "cdn.higgsfield.ai",
+  "d8j0ntlcm91z4.cloudfront.net",
+  "d2ol7oe51mr4n9.cloudfront.net",
+]);
 
 export interface GenerationReview {
   id: string;
@@ -34,7 +40,7 @@ function safeUrl(value: unknown, shop: string, inputHash?: string, providerAsset
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash ||
         !url.hostname.includes(".") || url.hostname.includes(":") || /^\d+(?:\.\d+){3}$/.test(url.hostname)) return null;
-    if (providerAsset && url.hostname.toLowerCase() !== "cdn.higgsfield.ai") return null;
+    if (providerAsset && !PROVIDER_ASSET_HOSTS.has(url.hostname.toLowerCase())) return null;
     if (inputHash && (url.searchParams.get("shop") !== shop || url.searchParams.get("hash") !== inputHash)) return null;
     return url.toString();
   } catch { return null; }

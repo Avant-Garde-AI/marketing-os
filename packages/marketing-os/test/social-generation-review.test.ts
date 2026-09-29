@@ -85,4 +85,25 @@ describe("social generation review broker read", () => {
     await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobsForMonth("2026-09")))
       .rejects.toThrow(/another month/);
   });
+
+  it("accepts the observed video and poster CDN hosts but rejects lookalikes", async () => {
+    const { runWithTenant, review } = await modules();
+    const videoUrl = "https://d8j0ntlcm91z4.cloudfront.net/pilot.mp4";
+    const thumbnailUrl = "https://d2ol7oe51mr4n9.cloudfront.net/pilot.jpg";
+    vi.stubGlobal("fetch", async () => Response.json({ job: { ...job, videoUrl, thumbnailUrl, durationSec: 5 } }));
+    const loaded = await runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId));
+    expect(loaded).toMatchObject({ videoUrl, thumbnailUrl, durationSec: 5 });
+    vi.stubGlobal("fetch", async () => Response.json({ job: { ...job,
+      videoUrl: "https://d8j0ntlcm91z4.cloudfront.net.evil.example/pilot.mp4" } }));
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId)))
+      .rejects.toThrow(/media/);
+    vi.stubGlobal("fetch", async () => Response.json({ job: { ...job,
+      thumbnailUrl: "https://other.cloudfront.net/pilot.jpg" } }));
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId)))
+      .rejects.toThrow(/media/);
+    vi.stubGlobal("fetch", async () => Response.json({ job: { ...job,
+      videoUrl: "https://cdn.higgsfield.ai/legacy.mp4" } }));
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId)))
+      .resolves.toMatchObject({ videoUrl: "https://cdn.higgsfield.ai/legacy.mp4" });
+  });
 });

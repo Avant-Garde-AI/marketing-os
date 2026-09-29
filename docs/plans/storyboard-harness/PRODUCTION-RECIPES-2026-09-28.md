@@ -42,9 +42,11 @@ the actual evidence; a grouping key alone is never a publishable claim.
    expose spending tools through the generic external-tool map.
 3. **Recipe pilot.** Prepare one loop, one real-home grouping and one imagined
    grouping. Present the actual source, motion/scene direction, caption
-   alternatives and estimated credit ceiling. Existing Action approval binds
-   source/brief/model/quote hashes. Reuse selection governance; do not add a
-   parallel authority system or treat a public review token as consent.
+   alternatives and estimated credit ceiling. For the bounded pilot, an explicit
+   request from a verified console user or `generation:run` MCP connector can
+   authorize the existing Action without an artwork preapproval step. Bind the
+   verified actor, source, brief, fixed settings, exact quote and ceiling in
+   that Action. A public review token is never spend consent.
 4. **Jobs.** Persist tenant, post/slot, provider request id, source and prompt
    hashes, model/version, estimate/maximum credits, attempts and outcome. Submit
    once after approval; persist before polling. An uncertain submit enters
@@ -118,7 +120,10 @@ the provider request ID before polling. Any uncertain call enters `unknown`.
 Only read-only reconciliation may move an unknown job forward; the contract
 allows one submission attempt and has no automatic resubmit transition, even
 after quote expiry. New spend requires a new job and a new existing-Action
-approval. This contract imports no provider credentials or renderer.
+authorization. The explicit authenticated-run pilot uses the same bounded
+Action and durable job contract, with a verified console or scoped MCP request
+as its authority rather than a separate artwork preapproval. This contract
+imports no provider credentials or renderer.
 
 NeuroGraph persona context remains an optional customer-agent MCP port.
 CreativeOutcome remains the proprietary Creative Review port, unimplemented.
@@ -176,8 +181,8 @@ Store implementation/data: marketplace PRs #171–#176, including
 and [#176](https://github.com/Arthaus-Inc/marketplace/pull/176) (middleware).
 Platform OAuth: marketing-os-app PR #18; governed execution:
 [#21](https://github.com/Avant-Garde-AI/marketing-os-app/pull/21).
-The account connection and production execution seam are deployed. Next:
-review and approve the waiting Passion Flower loop proposal, generate and inspect its
+The account connection and production execution seam are deployed. At that
+checkpoint the next step was to review and approve the waiting Passion Flower loop proposal, generate and inspect its
 actual output, then accept one loop, one real-home scene and one imagined-world
 scene before a budgeted month batch. Planning artifacts and the staged pilot
 source are neither imagery-spend nor publish consent.
@@ -237,10 +242,32 @@ available. The authenticated Store MCP created one Passion Flower proposal in
 returned the same job and proposal; status read verified the waiting phase.
 The production runtime was READY at deployment
 `dpl_GBXuKZ2oucBHwWy212u3cYqXhUxg`. No source upload, provider submission
-or credit spend has occurred for this pilot. The next concrete step is human
-review of the approval card. Final immutable
+or credit spend has occurred for this pilot. At that checkpoint, the next
+step was human review of the approval card. Final immutable
 video asset binding, decoded artwork fidelity and loop-seam review, exact-source
 real-home and imagined-world scenes, the month batch, and Instagram Reels
 publishing remain open. The month is not ready.
+
+### Authenticated one-loop run update (in development, 2026-09-28)
+
+The owner has removed the separate artwork preapproval requirement for now
+when they explicitly request this bounded pilot generation from an authenticated
+console or a connected MCP session carrying `generation:run`. The earlier
+`awaiting_approval` card remains a historical checkpoint, not the required next
+step for this new request path. The platform must record that verified actor in
+the existing Action gate, bind the exact source/creative/settings and maximum
+credits, obtain the exact post-upload quote within that ceiling, and submit at
+most once. An unsigned request, a background turn, a read-only connector, or a
+public review link cannot authorize spending. Unknown outcomes still receive
+read-only reconciliation only; publishing still needs its own Action.
+
+Open-core and store runtime changes are proposed in
+[`marketing-os` #103](https://github.com/Avant-Garde-AI/marketing-os/pull/103)
+and [`marketplace` #179](https://github.com/Arthaus-Inc/marketplace/pull/179).
+The pooled hosted runtime and platform verifier/console handoff must land
+together before this can be called a live console path. The platform will return
+token-scoped, store-owned one-page review links for generated outputs. No
+source upload, generation submission, credit charge or completed clip is
+claimed by this update.
 See [the platform connection/execution record](https://github.com/Avant-Garde-AI/marketing-os-app/blob/main/docs/HIGGSFIELD-MCP.md)
 for provider parameters, transport contracts and the remaining execution work.

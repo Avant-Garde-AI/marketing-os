@@ -24,6 +24,8 @@ describe("social generation broker tools", () => {
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual(input);
     expect(init.headers).toMatchObject({ Authorization: "Bearer deployment-secret" });
+    expect(init.redirect).toBe("error");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(socialGenerationTools.social_generation_prepare.inputSchema.safeParse({ ...input, maximumCredits: 101 }).success).toBe(false);
     expect(socialGenerationTools.social_generation_prepare.inputSchema.safeParse({ ...input, model: "arbitrary" }).success).toBe(false);
   });
@@ -68,6 +70,8 @@ describe("social generation broker tools", () => {
     expect(headers["x-mos-run-shop"]).toBe(shop);
     expect(headers["x-mos-run-sig"]).toBe(crypto.createHmac("sha256", "gate-secret")
       .update(`social-generation-run:v1\n${shop}\n${headers["x-mos-run-ts"]}\n${body}`).digest("hex"));
+    expect(init.redirect).toBe("error");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(result).toMatchObject({ postId: "2026-09-passion-flower", reviewUrl: expect.stringContaining("/review/social/"),
       sheetUrl: expect.stringContaining("month=2026-09") });
   });

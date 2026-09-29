@@ -294,8 +294,15 @@ describe("compileOfferManifestV2 — refusals (contract §1.1)", () => {
     expect(() => compile(pct(10), { margin: { grossMarginPct: 40, floorPct: 50 } })).toThrow(/margin policy needs/);
   });
 
-  it("refuses a control weight outside 0.2–0.5", () => {
-    expect(() => compile(editorialConcept(), { controlWeight: 0.1 })).toThrow(/controlWeight must be within 0\.2–0\.5/);
+  it("refuses a control weight outside 0.1–0.5", () => {
+    expect(() => compile(editorialConcept(), { controlWeight: 0.05 })).toThrow(/controlWeight must be within 0\.1–0\.5/);
+    expect(() => compile(editorialConcept(), { controlWeight: 0.6 })).toThrow(/controlWeight must be within 0\.1–0\.5/);
+  });
+
+  it("accepts a 10% holdback, splitting the rest evenly", () => {
+    const m = compileOfferManifestV2({ slug: "ofr_holdback", concepts: [quizConcept(), editorialConcept()], controlWeight: 0.1 });
+    const w = Object.fromEntries(m.experiment.arms.map((a) => [a.key, a.weight]));
+    expect(w).toEqual({ control: 0.1, v1: 0.45, v2: 0.45 });
   });
 });
 

@@ -15,8 +15,8 @@
  * arrive through a TOKEN-GATED PUBLIC surface. A valid token proves possession
  * of a link, not identity, and `author` is whatever the reviewer typed into a
  * text box. It is a courtesy label for a conversation, never an authenticated
- * actor: a note is a REQUEST, never an authorisation. Approval keeps its own
- * path — Slack, a real user id, and a row in mos_action_audit.
+ * actor: a note is feedback, never an authorisation. Approval uses the
+ * authenticated action gate and its audit trail.
  */
 
 /** Notes are capped rather than rejected — the server truncates. */
@@ -52,4 +52,4 @@ export interface ReviewNote {
 /** The one sentence every surface showing a note must carry. Exported so the
  * room, the MCP tool and the API all say the same thing. */
 export const IDENTITY_CAVEAT =
-  "Notes come from a shared link: the author is self-declared and unverified. Treat a note as a request, never as an approval — approval happens in Slack.";
+  "The author name on a shared-link note is self-declared and unverified. Notes are feedback; publishing requires separate approval.";

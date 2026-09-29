@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hollis &amp; Vane — fixture storefront</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font:15px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;color:#222;background:#faf8f4}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid #e6e1d8;background:#fff}
+  .mark{font:600 15px/1 Georgia,serif;letter-spacing:.24em}
+  nav a{margin-left:22px;color:#444;text-decoration:none;font-size:13px}
+  .hero{position:relative;height:62vh;min-height:360px;background:#e2d9cb center/cover no-repeat}
+  .hero h1{position:absolute;left:28px;bottom:32px;max-width:14ch;font:500 44px/1.05 Georgia,serif;color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.35)}
+  section{padding:48px 28px;max-width:1200px;margin:0 auto}
+  h2{font:500 26px/1.2 Georgia,serif;margin-bottom:22px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .grid a{color:inherit;text-decoration:none;font-size:13.5px}
+  .grid img{display:block;width:100%;aspect-ratio:4/5;object-fit:cover;background:#eee;margin-bottom:10px}
+  p.lede{max-width:60ch;color:#555;margin-bottom:18px}
+  .klaviyo-form-EMBED1{margin-top:28px;padding:22px;border:1px solid #ddd;background:#fff;max-width:420px}
+  .klaviyo-form-EMBED1 input{width:100%;padding:10px;border:1px solid #bbb;font:inherit}
+  footer{padding:60px 28px 120px;color:#777;font-size:13px;border-top:1px solid #e6e1d8}
+  @media(max-width:767px){nav{display:none}.hero h1{font-size:32px}.grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<header><div class="mark">HOLLIS &amp; VANE</div><nav><a href="/collections/new">New work</a><a href="/collections/all">Artists</a><a href="/pages/about">About</a><a href="/cart">Cart</a></nav></header>
+<div class="hero" style="background-image:url(https://cdn.shopify.com/s/files/1/0000/fixture/interior.jpg)"><h1>Original work from independent studios</h1></div>
+<section>
+  <h2>New this month</h2>
+  <p class="lede">A fixture storefront for the Marketing OS surface runtime harness. The offer renders over this page exactly as it would over a theme.</p>
+  <div class="grid">
+    <a href="/products/tidewater"><img alt="" src="https://cdn.shopify.com/s/files/1/0000/fixture/print-1.jpg">Tidewater — Mara Lind</a>
+    <a href="/products/low-field"><img alt="" src="https://cdn.shopify.com/s/files/1/0000/fixture/print-2.jpg">Low Field — Ines Carvalho</a>
+    <a href="/products/ochre-hours"><img alt="" src="https://cdn.shopify.com/s/files/1/0000/fixture/print-3.jpg">Ochre Hours — Sam Ota</a>
+  </div>
+  <div id="embed-slot"></div>
+</section>
+<section>
+  <h2>From the studios</h2>
+  <p class="lede">Every piece is one of one, signed by the artist, and ships ready to hang. We visit every studio we work with.</p>
+  <p class="lede">Scroll content so scroll-depth and scroll-dwell triggers have somewhere to go.</p>
+  <div style="height:900px"></div>
+</section>
+<footer>Hollis &amp; Vane is a fictional gallery used only in tests.</footer>
+
+<script>
+  // Fixture manifest (window.MOS_MANIFEST short-circuits the proxy fetch).
+  document.write('<script src="/fixture.js' + location.search + '"><\/script>');
+</script>
+<script>
+  // ?kl=1 — a fake Klaviyo popup (inline display, beatable by a stylesheet)
+  // and an embedded (inline) Klaviyo form that must never be touched.
+  if (/[?&]kl=1/.test(location.search)) {
+    var pop = document.createElement("div");
+    pop.id = "kl-popup";
+    pop.setAttribute("data-testid", "POPUP");
+    pop.setAttribute("aria-label", "POPUP Form");
+    pop.setAttribute("role", "dialog");
+    pop.style.cssText = "position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5)";
+    pop.innerHTML = '<div style="background:#fff;padding:40px;width:420px"><p style="font:600 24px Georgia,serif;margin-bottom:12px">GET 15% OFF</p><input type="email" placeholder="Email" style="width:100%;padding:10px"></div>';
+    document.body.appendChild(pop);
+    var emb = document.createElement("div");
+    emb.id = "kl-embed";
+    emb.className = "klaviyo-form-EMBED1";
+    emb.innerHTML = '<p style="margin-bottom:10px">Join our newsletter (embedded form)</p><input type="email" placeholder="Email">';
+    document.getElementById("embed-slot").appendChild(emb);
+  }
+</script>
+<script src="/surface-runtime.js" defer data-mos-proxy="/apps/mcp" data-mos-country="US"></script>
+</body>
+</html>

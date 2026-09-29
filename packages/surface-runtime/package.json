@@ -1,0 +1,40 @@
+{
+  "name": "@avant-garde/surface-runtime",
+  "version": "0.6.0",
+  "description": "Marketing OS storefront surface runtime: a zero-dependency browser script that renders offer manifests (v1 cards, v2 steps/blocks), runs sticky weighted experiments, mirrors events to GA4/GTM/Shopify customer events, and reports preview diagnostics. Shipped by a host (e.g. a Shopify theme app extension) as dist/surface-runtime.js + dist/surface-diag.js.",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    "./surface-runtime.js": "./dist/surface-runtime.js",
+    "./surface-diag.js": "./dist/surface-diag.js",
+    "./src/surface-runtime.js": "./src/surface-runtime.js",
+    "./src/surface-diag.js": "./src/surface-diag.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "lint": "eslint src scripts test",
+    "test": "node scripts/build.mjs && node scripts/test.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "esbuild": "0.25.12",
+    "eslint": "^9.0.0",
+    "globals": "^17.4.0",
+    "playwright": "^1.60.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Avant-Garde-AI/marketing-os",
+    "directory": "packages/surface-runtime"
+  }
+}

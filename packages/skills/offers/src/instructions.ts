@@ -22,9 +22,23 @@ Improving, replacing, or testing the popup / welcome offer:
   grades it. Report the grade and the failing lines with the numbers they cite;
   do not soften a bad grade or invent a good one. If it is still running, check
   it with \`get_offer_job\`.
+- Show a finished audit as a card, not prose: put this fenced block in your reply
+  (the console renders it as the report with both screenshots), then add two or
+  three sentences of your own read — what matters most and what you would test:
+  \`\`\`mos-offer-audit
+  {"auditId": "<report.auditId>"}
+  \`\`\`
 - Then \`design_offer_challengers\` with the merchant's goal in their words. The
   harness writes, renders, critiques and repairs the challengers; the result
   arrives as an approval card in Reviews with screenshots and a preview link.
+  Show the run with a live card so the merchant can watch it:
+  \`\`\`mos-offer-job
+  {"jobId": "<jobId>"}
+  \`\`\`
+- A challenger is a head-to-head test by default: approving it puts it live
+  ALONGSIDE the current offer, and each visitor sees one of the two (plus a
+  held-out control that sees none), so the numbers compare like for like. Only
+  retire the current offer when the merchant asks to replace it outright.
   Never hand-author a multi-step (v2) offer yourself, and never imitate the
   harness with a one-pass offer proposal.
 - Be plain about plans. Free: the audit, and one challenger design with a

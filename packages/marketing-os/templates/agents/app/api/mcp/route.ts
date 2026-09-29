@@ -6,9 +6,10 @@
 // prompts. Auth is a connector token (Authorization: Bearer mos_… or ?token=),
 // verified against the Marketing OS platform.
 
-import { extractToken, verifyConnectorToken } from "@/lib/connector-auth";
+import { extractToken, verifyConnectorToken, type ConnectorAuth } from "@/lib/connector-auth";
 import { verifyProxyHandoff } from "@/lib/proxy-auth";
 import { HOSTED, getTenant, runWithTenant, type TenantContext } from "@/lib/tenant-context";
+import { runWithGenerationActor } from "@/lib/social/generation-authority";
 import { runExploreSchema, runDescribeField } from "@/src/mastra/semantics/introspect";
 import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
@@ -183,6 +184,7 @@ function socialToolDefs(): ToolDef[] {
     ...mirrorTools(socialTools, [
       "social_production_month_plan",
       "social_generation_prepare",
+      "social_generation_run",
       "social_generation_status",
       "social_calendar_read",
       "social_graph_subjects",
@@ -725,6 +727,7 @@ function resolveTenantFromAuth(
   if (tokenAuth.valid && tokenAuth.shop && tokenAuth.storeSlug) {
     return { tenantId: tokenAuth.tenantId, shop: tokenAuth.shop, storeSlug: tokenAuth.storeSlug };
   }
+  if (tokenAuth.valid) return HOSTED ? null : getTenant();
   // Proxy handoff: shop travels in the router-signed header.
   const shop = req.headers.get("x-mos-proxy-shop");
   if (shop) {
@@ -739,7 +742,7 @@ export async function POST(req: Request) {
   // Auth: a connector token (Bearer or ?token=), OR a router-signed proxy
   // handoff (Shopify App Proxy path — Shopify's HMAC was verified upstream).
   const token = extractToken(req);
-  const tokenAuth = token ? await verifyConnectorToken(token) : { valid: false };
+  const tokenAuth: ConnectorAuth = token ? await verifyConnectorToken(token) : { valid: false };
   const authed = tokenAuth.valid || verifyProxyHandoff(req);
   if (!authed) {
     return Response.json(
@@ -769,7 +772,11 @@ export async function POST(req: Request) {
     return Response.json(rpcError(null, -32700, "Parse error"), { status: 400, headers: CORS_HEADERS });
   }
 
-  return runWithTenant(tenant, async () => {
+  const generationActor = tokenAuth.valid && tokenAuth.shop === tenant.shop && tokenAuth.connectorId &&
+    tokenAuth.scopes?.includes("generation:run")
+    ? { surface: "mcp_connector" as const, subject: `connector:${tokenAuth.connectorId}` }
+    : null;
+  return runWithTenant(tenant, () => runWithGenerationActor(generationActor, async () => {
     // Batch or single
     if (Array.isArray(payload)) {
       const responses = (await Promise.all(payload.map((m) => dispatch(m as RpcRequest, clientProtocol)))).filter(
@@ -784,5 +791,5 @@ export async function POST(req: Request) {
       return new Response(null, { status: 202, headers: CORS_HEADERS });
     }
     return Response.json(response, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
-  });
+  }));
 }

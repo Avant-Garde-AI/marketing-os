@@ -72,3 +72,19 @@ export function verifyChatHandoff(req: Request): string | null {
     .digest("hex");
   return timingSafeHexEqual(expected, sig) ? shop : null;
 }
+
+/** Additional console-only authority; legacy chat handoffs (including Slack) lack it. */
+export function verifyConsoleAuthority(req: Request, verifiedShop: string): string | null {
+  const secret = process.env.MCP_PROXY_SECRET;
+  const shop = req.headers.get("x-mos-chat-shop");
+  const ts = req.headers.get("x-mos-chat-ts");
+  const surface = req.headers.get("x-mos-chat-surface");
+  const actor = req.headers.get("x-mos-chat-actor");
+  const sig = req.headers.get("x-mos-chat-authority-sig");
+  if (!secret || !shop || shop !== verifiedShop || !ts || surface !== "console" ||
+      !actor || actor !== `shopify-admin:${shop}` || !sig) return null;
+  const expected = crypto.createHmac("sha256", secret)
+    .update(`chat-authority:v1\n${shop}\n${ts}\nconsole\n${actor}`)
+    .digest("hex");
+  return timingSafeHexEqual(expected, sig) ? actor : null;
+}

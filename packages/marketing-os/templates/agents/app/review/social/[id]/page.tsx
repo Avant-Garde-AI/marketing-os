@@ -154,8 +154,9 @@ export default async function SocialReviewRoom({
   }
 
   const ttl = ttlRemaining(exp);
+  const postMonth = generationJobs[0]?.postId.match(/^(\d{4}-(?:0[1-9]|1[0-2]))-/)?.[1] ?? null;
   const month = group.posts.find((p) => p.post.scheduledAt)?.post.scheduledAt?.slice(0, 7) ??
-    generationJobs[0]?.createdAt.slice(0, 7) ?? null;
+    postMonth ?? generationJobs[0]?.createdAt.slice(0, 7) ?? null;
   const sheet = month ? socialSheetLink(shop, month, ttl) : null;
   const anyApproved = group.posts.some((p) => p.post.status === "scheduled" || p.post.status === "published");
 
@@ -163,7 +164,9 @@ export default async function SocialReviewRoom({
     <main style={{ maxWidth: 1100, margin: "2.5rem auto 5rem", padding: "0 1.25rem", fontFamily: "system-ui, sans-serif" }}>
       <header style={{ marginBottom: "1.75rem" }}>
         <p style={{ fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.6, margin: 0 }}>
-          Social review · {group.posts.length} variant{group.posts.length === 1 ? "" : "s"}
+          {group.posts.length > 0
+            ? `Social review · ${group.posts.length} variant${group.posts.length === 1 ? "" : "s"}`
+            : "Social review · artwork loop"}
         </p>
         <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0 0" }}>{id}</h1>
         {sheet && (

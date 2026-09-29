@@ -1314,6 +1314,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-review.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-review.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/generation-plan.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/generation-plan.ts"),
       overwrite: "skip",

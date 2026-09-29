@@ -101,6 +101,7 @@ export async function loadGenerationJobsForMonth(month: string): Promise<Generat
   if (!body || !Array.isArray(body.jobs) || body.jobs.length > 100) throw new Error("Invalid social generation month response");
   const seen = new Set<string>();
   return body.jobs.map((item) => parseJob(item, shop)).filter((job) => {
+    if (!job.postId.startsWith(`${month}-`)) throw new Error("Social generation job belongs to another month");
     if (seen.has(job.postId)) return false;
     seen.add(job.postId); return true;
   });

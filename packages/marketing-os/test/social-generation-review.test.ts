@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const shop = "arthaus-website.myshopify.com";
 const inputHash = "a".repeat(64);
 const job = {
-  id: "11111111-1111-4111-8111-111111111111", artifactId: "artwork-loop-1", postId: "post-1", state: "submitted",
+  id: "11111111-1111-4111-8111-111111111111", artifactId: "artwork-loop-1", postId: "2026-09-post-1", state: "submitted",
   caption: "A quiet artwork in motion", prompt: "Subtle movement of the existing artwork", inputHash,
   sourcePreviewUrl: `https://store.example/review/generation/artwork-loop-1?shop=${shop}&hash=${inputHash}`,
   videoUrl: null, thumbnailUrl: null, durationSec: null, estimatedCredits: 20, maximumCredits: 30,
@@ -35,7 +35,7 @@ describe("social generation review broker read", () => {
     });
     const jobs = await runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobsForMonth("2026-09"));
     expect(jobs).toHaveLength(1);
-    expect(jobs[0]).toMatchObject({ postId: "post-1", state: "submitted", maximumCredits: 30 });
+    expect(jobs[0]).toMatchObject({ postId: "2026-09-post-1", state: "submitted", maximumCredits: 30 });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.url.toString()).toBe("https://platform.example/api/broker/social-generation?month=2026-09");
     expect(calls[0]?.init.method).toBe("GET");
@@ -51,19 +51,19 @@ describe("social generation review broker read", () => {
       calls.push({ url, init });
       return Response.json({ job });
     });
-    const loaded = await runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("post-1"));
-    expect(loaded?.postId).toBe("post-1");
-    expect(calls[0]?.url.searchParams.get("postId")).toBe("post-1");
+    const loaded = await runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("2026-09-post-1"));
+    expect(loaded?.postId).toBe("2026-09-post-1");
+    expect(calls[0]?.url.searchParams.get("postId")).toBe("2026-09-post-1");
     expect(new Headers(calls[0]?.init.headers).get("authorization")).toBe("Bearer service-secret");
     expect(new Headers(calls[0]?.init.headers).get("x-mos-tenant-shop")).toBe(shop);
     await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("post-2")))
       .rejects.toThrow(/post mismatch/);
     vi.stubGlobal("fetch", async () => Response.json({ job: { ...job, videoUrl: "https://evil.example/clip.mp4" } }));
-    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("post-1")))
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("2026-09-post-1")))
       .rejects.toThrow(/media/);
     vi.stubGlobal("fetch", async () => Response.json({ job: { ...job,
       sourcePreviewUrl: `https://store.example/review/generation/artwork-loop-1?shop=other.myshopify.com&hash=${inputHash}` } }));
-    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("post-1")))
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost("2026-09-post-1")))
       .rejects.toThrow(/media/);
   });
 
@@ -77,5 +77,12 @@ describe("social generation review broker read", () => {
     await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobsForMonth("2026-09")))
       .rejects.toThrow(/too large/);
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a platform month result with a post from another month", async () => {
+    const { runWithTenant, review } = await modules();
+    vi.stubGlobal("fetch", async () => Response.json({ jobs: [{ ...job, postId: "2026-10-post-1" }] }));
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobsForMonth("2026-09")))
+      .rejects.toThrow(/another month/);
   });
 });

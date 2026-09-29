@@ -18,6 +18,7 @@ import { socialSheetLink, ttlRemaining, verifyLink } from "@/lib/social/review-l
 import { listNotes } from "@/lib/review/notes";
 import { runWithTenant } from "@/lib/tenant-context";
 import { SocialReviewNotes } from "@/components/review/social-review";
+import { loadGenerationJobForPost, type GenerationReview } from "@/lib/social/generation-review";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -46,6 +47,58 @@ function aspectFor(channel: string): string {
   if (c.includes("story") || c.includes("reel") || c.includes("tiktok")) return "9 / 16";
   if (c.includes("pinterest")) return "2 / 3";
   return "1 / 1";
+}
+
+function motionStatus(state: string): string {
+  if (state === "awaiting_approval") return "Ready to generate";
+  if (["preparing", "submitting", "submitted"].includes(state)) return "Rendering in progress";
+  if (state === "succeeded") return "Rendered · ready for fidelity and loop review";
+  if (state === "unknown") return "Status needs checking";
+  if (state === "failed") return "Generation stopped";
+  if (state === "declined") return "Generation declined";
+  return state;
+}
+
+function GenerationPanel({ job }: { job: GenerationReview }) {
+  return (
+    <section style={{ border: "1px solid rgba(0,0,0,0.14)", borderRadius: 8, padding: "1rem", marginBottom: "1.5rem" }}>
+      <h2 style={{ fontSize: "1.05rem", margin: "0 0 0.35rem" }}>Artwork loop · {motionStatus(job.state)}</h2>
+      <p style={{ fontSize: "0.8rem", opacity: 0.7, margin: "0 0 0.75rem" }}>
+        {job.postId} · {job.estimatedCredits} estimated / {job.maximumCredits} maximum Higgsfield credits
+      </p>
+      {job.videoUrl ? (
+        <div>
+          <video controls loop playsInline preload="metadata" poster={job.thumbnailUrl ?? undefined}
+            style={{ width: "min(100%, 420px)", aspectRatio: "9 / 16", objectFit: "contain", background: "#151515", display: "block" }}>
+            <source src={job.videoUrl} type="video/mp4" />
+            Your browser cannot play this video.
+          </video>
+          <p style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            <a href={job.videoUrl} target="_blank" rel="noopener noreferrer">Open or download video</a>
+            {job.durationSec ? ` · ${job.durationSec} seconds` : ""}
+          </p>
+        </div>
+      ) : job.thumbnailUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={job.thumbnailUrl} alt="Artwork loop poster" style={{ width: "min(100%, 420px)", aspectRatio: "9 / 16", objectFit: "contain", background: "#f4f2ef" }} />
+      ) : (
+        <p style={{ fontSize: "0.85rem" }}>No rendered video is available yet. Reload this page to check status.</p>
+      )}
+      <p style={{ whiteSpace: "pre-wrap", fontSize: "0.9rem", lineHeight: 1.5 }}><strong>Caption</strong><br />{job.caption}</p>
+      <p style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem", lineHeight: 1.5 }}><strong>Motion brief</strong><br />{job.prompt}</p>
+      <p style={{ fontSize: "0.8rem" }}><a href={job.sourcePreviewUrl} target="_blank" rel="noopener noreferrer">Review source artwork and composition</a></p>
+      {(job.state === "unknown" || job.state === "failed") && (
+        <p role="status" style={{ fontSize: "0.8rem", color: "#765b16" }}>
+          {job.state === "unknown"
+            ? "Generation status needs checking before another attempt."
+            : "Generation stopped before a usable video was ready."}
+        </p>
+      )}
+      <p style={{ fontSize: "0.78rem", opacity: 0.7, marginBottom: 0 }}>
+        Review the full artwork, motion, and loop seam. Leave feedback below. Publishing requires a separate approval.
+      </p>
+    </section>
+  );
 }
 
 export default async function SocialReviewRoom({
@@ -79,17 +132,26 @@ export default async function SocialReviewRoom({
 
   const storeSlug = shop.replace(/\.myshopify\.com$/, "");
   const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
-  const { group, notes } = await runWithTenant({ shop, storeSlug }, async () => ({
-    group: await loadPostGroup(shop, id),
-    notes: await listNotes(SOCIAL_PACK_ID, id),
-  }));
+  const { group, notes, generationJobs, generationUnavailable } = await runWithTenant({ shop, storeSlug }, async () => {
+    const group = await loadPostGroup(shop, id);
+    const postIds = group.posts.length > 0 ? [...new Set(group.posts.map((member) => member.post.id))] : [id];
+    let generationUnavailable = false;
+    const lookedUp = await Promise.all(postIds.map(async (postId) => {
+      try { return await loadGenerationJobForPost(postId); }
+      catch { generationUnavailable = true; return null; }
+    }));
+    return { group, notes: await listNotes(SOCIAL_PACK_ID, id),
+      generationJobs: lookedUp.filter((job): job is GenerationReview => job !== null), generationUnavailable };
+  });
 
-  if (group.posts.length === 0) {
+  if (group.posts.length === 0 && generationJobs.length === 0) {
     return (
       <Gate
-        headline="Nothing to review here yet"
+        headline={generationUnavailable ? "Artwork-loop status unavailable" : "Nothing to review here yet"}
         sub={
-          group.unreadable > 0
+          generationUnavailable
+            ? "The generation status could not be loaded. Reload this page or try again later."
+            : group.unreadable > 0
             ? `This group has ${group.unreadable} post(s) that could not be read. That is a problem to fix, not an empty group — tell whoever shared the link.`
             : "No posts are in this group. It may have been renamed or not created yet."
         }
@@ -98,7 +160,9 @@ export default async function SocialReviewRoom({
   }
 
   const ttl = ttlRemaining(exp);
-  const month = group.posts.find((p) => p.post.scheduledAt)?.post.scheduledAt?.slice(0, 7) ?? null;
+  const postMonth = generationJobs[0]?.postId.match(/^(\d{4}-(?:0[1-9]|1[0-2]))-/)?.[1] ?? null;
+  const month = group.posts.find((p) => p.post.scheduledAt)?.post.scheduledAt?.slice(0, 7) ??
+    postMonth ?? generationJobs[0]?.createdAt.slice(0, 7) ?? null;
   const sheet = month ? socialSheetLink(shop, month, ttl) : null;
   const anyApproved = group.posts.some((p) => p.post.status === "scheduled" || p.post.status === "published");
 
@@ -106,7 +170,9 @@ export default async function SocialReviewRoom({
     <main style={{ maxWidth: 1100, margin: "2.5rem auto 5rem", padding: "0 1.25rem", fontFamily: "system-ui, sans-serif" }}>
       <header style={{ marginBottom: "1.75rem" }}>
         <p style={{ fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.6, margin: 0 }}>
-          Social review · {group.posts.length} variant{group.posts.length === 1 ? "" : "s"}
+          {group.posts.length > 0
+            ? `Social review · ${group.posts.length} variant${group.posts.length === 1 ? "" : "s"}`
+            : "Social review · artwork loop"}
         </p>
         <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0 0" }}>{id}</h1>
         {sheet && (
@@ -137,7 +203,15 @@ export default async function SocialReviewRoom({
         </p>
       )}
 
-      <div
+      {generationUnavailable && (
+        <p role="status" style={{ color: "#765b16", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
+          Artwork-loop status is temporarily unavailable. Existing post details and notes are still shown.
+        </p>
+      )}
+
+      {generationJobs.map((job) => <GenerationPanel key={job.id} job={job} />)}
+
+      {group.posts.length > 0 && <div
         style={{
           display: "grid",
           gap: "1.5rem",
@@ -261,7 +335,7 @@ export default async function SocialReviewRoom({
             </article>
           );
         })}
-      </div>
+      </div>}
 
       {group.posts.some((p) => p.post.body.trim()) && (
         <section style={{ marginTop: "2.5rem" }}>
@@ -292,7 +366,7 @@ export default async function SocialReviewRoom({
         token={token ?? ""}
         exp={exp ?? ""}
         initial={notes}
-        slots={group.posts.map((p) => p.post.id)}
+        slots={group.posts.length > 0 ? group.posts.map((p) => p.post.id) : generationJobs.map((job) => job.postId)}
       />
 
       <p style={{ fontSize: "0.75rem", opacity: 0.55, marginTop: "2.5rem" }}>

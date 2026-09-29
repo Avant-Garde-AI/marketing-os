@@ -14,6 +14,7 @@ import { groupKey, groupPosts, postThumbnailUrl } from "@/lib/social/projection"
 import { parsePost, postPath } from "@/lib/social/artifacts";
 import { socialRepo } from "@/lib/social/repo";
 import { countNotes } from "@/lib/review/notes";
+import { loadGenerationJobsForMonth, type GenerationReview } from "@/lib/social/generation-review";
 import { runWithTenant } from "@/lib/tenant-context";
 import type { SocialPost } from "@/lib/social/types";
 
@@ -69,7 +70,7 @@ export default async function SocialMonthSheet({
   const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
   const ttl = ttlRemaining(exp);
 
-  const { groups, counts, unreadable } = await runWithTenant({ shop, storeSlug }, async () => {
+  const { groups, counts, unreadable, generationJobs, generationUnavailable } = await runWithTenant({ shop, storeSlug }, async () => {
     // Read from the CALENDAR (the month's plan), then the artifacts it points
     // at — files are truth, so the sheet shows what would actually ship.
     const calendar = await loadCalendar(shop, month);
@@ -86,12 +87,20 @@ export default async function SocialMonthSheet({
       }
     }
     const grouped = groupPosts(posts);
+    let generationJobs: GenerationReview[] = [];
+    let generationUnavailable = false;
+    try { generationJobs = await loadGenerationJobsForMonth(month); }
+    catch { generationUnavailable = true; }
     return {
       groups: grouped,
       counts: await countNotes(SOCIAL_PACK_ID, grouped.map((g) => g.key)),
       unreadable: bad,
+      generationJobs,
+      generationUnavailable,
     };
   });
+  const postsInGroups = new Set(groups.flatMap((g) => g.posts.map((post) => post.id)));
+  const standaloneJobs = generationJobs.filter((job) => !postsInGroups.has(job.postId));
 
   return (
     <main style={{ maxWidth: 1200, margin: "2.5rem auto 5rem", padding: "0 1.25rem", fontFamily: "system-ui, sans-serif" }}>
@@ -108,7 +117,13 @@ export default async function SocialMonthSheet({
         </p>
       )}
 
-      {groups.length === 0 ? (
+      {generationUnavailable && (
+        <p role="status" style={{ color: "#765b16", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+          Artwork-loop status is temporarily unavailable. Existing posts are still shown below.
+        </p>
+      )}
+
+      {groups.length === 0 && standaloneJobs.length === 0 ? (
         <p style={{ opacity: 0.7 }}>
           Nothing is planned for {month} yet — or the month&rsquo;s calendar has no posts attached to its slots.
         </p>
@@ -119,6 +134,7 @@ export default async function SocialMonthSheet({
             const src = postThumbnailUrl(lead, publicUrl);
             const n = counts.get(key);
             const when = posts.find((p) => p.scheduledAt)?.scheduledAt;
+            const motion = generationJobs.filter((job) => posts.some((post) => post.id === job.postId));
             return (
               <a
                 key={key}
@@ -152,10 +168,34 @@ export default async function SocialMonthSheet({
                     {lead.status}
                     {n && n.total > 0 ? ` · ${n.open} open / ${n.total} note${n.total === 1 ? "" : "s"}` : ""}
                   </div>
+                  {motion.length > 0 && (
+                    <div style={{ fontSize: "0.75rem", marginTop: "0.45rem", fontWeight: 600 }}>
+                      Artwork loop · {motion.map((job) => job.state).join(", ")}
+                    </div>
+                  )}
                 </div>
               </a>
             );
           })}
+          {standaloneJobs.map((job) => (
+            <a key={`generation-${job.id}`} href={socialReviewLink(shop, job.postId, ttl).url}
+              style={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden", textDecoration: "none", color: "inherit", display: "block" }}>
+              {job.thumbnailUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={job.thumbnailUrl} alt="" style={{ width: "100%", aspectRatio: "9 / 16", objectFit: "contain", display: "block", background: "#f4f2ef" }} />
+              ) : (
+                <div style={{ aspectRatio: "1 / 1", background: "#f4f2ef", display: "grid", placeItems: "center", fontSize: "0.8rem" }}>
+                  Artwork loop · {job.state}
+                </div>
+              )}
+              <div style={{ padding: "0.7rem 0.85rem" }}>
+                <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>Artwork loop · {job.state}</div>
+                <div style={{ fontSize: "0.88rem", marginTop: "0.3rem", lineHeight: 1.4 }}>
+                  {(job.caption.split("\n").find((line) => line.trim()) ?? job.postId).slice(0, 90)}
+                </div>
+              </div>
+            </a>
+          ))}
         </div>
       )}
 

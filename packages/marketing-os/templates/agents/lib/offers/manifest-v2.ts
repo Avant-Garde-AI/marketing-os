@@ -60,7 +60,8 @@ export interface CompileOfferManifestV2Input {
   concepts: OfferConcept[];
   /** DESIGN.md tokens merged over the neutral defaults — never from the model. */
   style?: Partial<VariantV2Style>;
-  /** Default 0.34, or 0.25 with an incumbent (four equal arms). 0.2–0.5. */
+  /** Default 0.34, or 0.25 with an incumbent (four equal arms). 0.1–0.5 —
+   * below 0.1 the holdback read takes too long to mean anything. */
   controlWeight?: number;
   incumbent?: { vendor: IncumbentVendor };
   margin?: MarginPolicy;
@@ -420,7 +421,7 @@ export function compileOfferManifestV2(input: CompileOfferManifestV2Input): Offe
     }
   }
   const controlWeight = input.controlWeight ?? (input.incumbent ? 0.25 : 0.34);
-  if (!(controlWeight >= 0.2 && controlWeight <= 0.5)) fail(`controlWeight must be within 0.2–0.5, got ${controlWeight}`);
+  if (!(controlWeight >= 0.1 && controlWeight <= 0.5)) fail(`controlWeight must be within 0.1–0.5, got ${controlWeight}`);
 
   const placement = input.placement ?? "corner-card";
   const style: VariantV2Style = { ...DEFAULT_STYLE_V2, ...(input.style ?? {}) };

@@ -192,8 +192,8 @@ export default async function SocialReviewRoom({
             marginBottom: "1.5rem",
           }}
         >
-          Part of this group is already approved to publish. Notes here are still useful — but any change
-          to what ships re-arms the approval, and publishing itself is approved in Slack, never here.
+          Part of this group is already scheduled or published. Notes remain useful; changing what ships
+          requires a separate approval.
         </p>
       )}
 

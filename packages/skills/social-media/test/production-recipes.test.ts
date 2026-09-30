@@ -13,6 +13,15 @@ const subjects: ProductionSubject[] = ["a", "b", "c", "d"].map((handle) => ({
   groupingKeys: ["palette:blue"],
 }));
 const input: ProductionMonthInput = { month: "2026-10", count: 12, channel: "instagram", recipes, subjects };
+const carousel: NonNullable<ProductionMonthInput["recipes"][number]["carousel"]> = {
+  composition: "one-hero-per-slide" as const,
+  continuity: ["Keep the complete art and a coherent warm palette."],
+  slides: [
+    { role: "setup" as const, environment: "Courtyard", placement: "Inside an arch", visualConnection: "Leaf shadows echo the art." },
+    { role: "turn" as const, environment: "Rooftop", placement: "On a freestanding screen", visualConnection: "The shapes echo the skyline." },
+    { role: "payoff" as const, environment: "Desert oasis", placement: "Suspended from a stone pavilion", visualConnection: "The palette meets the landscape." },
+  ],
+};
 
 describe("planProductionMonth", () => {
   it("balances 6/3/3 and supplies exact, stable dates and source-bound briefs", () => {
@@ -87,5 +96,53 @@ describe("planProductionMonth", () => {
     expect(() => planProductionMonth({ ...input, recipes: [recipes[0]!, recipes[0]!] })).toThrow(/duplicate recipe/);
     expect(() => planProductionMonth({ ...input, subjects: [subjects[0]!, subjects[0]!] })).toThrow(/duplicate subject/);
     expect(() => planProductionMonth({ ...input, recipes: [{ ...recipes[0]!, weight: Infinity }] })).toThrow();
+  });
+
+  it("selects evidence-matched works before reuse ranking or a generic shared palette", () => {
+    const recipe = { ...recipes[2]!, outputKind: "carousel", carousel,
+      selection: { theme: "Tropical worlds", requirements: [{ anyOf: ["collection:tropical"] }] } };
+    const candidates = ["a", "b", "c", "d", "e", "f"].map((handle, i) => ({
+      ...subjects[0]!, handle,
+      ...(i >= 3 ? { selectionEvidence: [{ key: "collection:tropical", sourceRefs: [`catalog:membership:${handle}`] }] } : {}),
+    }));
+    const slot = planProductionMonth({ ...input, count: 1, recipes: [recipe], subjects: candidates }).slots[0]!;
+    expect(slot).toMatchObject({ status: "planned", subjectHandles: ["d", "e", "f"] });
+    expect(slot.brief?.carousel?.slides.map(s => s.subjectHandles)).toEqual([["d"], ["e"], ["f"]]);
+    expect(slot.brief?.subjects[0]?.selectionEvidence).toEqual([{ key: "collection:tropical", sourceRefs: ["catalog:membership:d"] }]);
+  });
+
+  it("blocks a themed shortfall without substituting the convenient existing trio", () => {
+    const recipe = { ...recipes[2]!, outputKind: "carousel", carousel,
+      selection: { theme: "Space collage", requirements: [{ anyOf: ["subject:space", "subject:cosmos"] }, { anyOf: ["medium:digital-collage"] }] } };
+    const candidates = subjects.map((s, i) => ({ ...s, selectionEvidence: [
+      { key: "subject:space", sourceRefs: ["inspection:space"] },
+      ...(i === 0 ? [{ key: "medium:digital-collage", sourceRefs: ["catalog:medium"] }] : []),
+    ] }));
+    const slot = planProductionMonth({ ...input, count: 1, recipes: [recipe], subjects: candidates }).slots[0]!;
+    expect(slot.status).toBe("blocked");
+    expect(slot.subjectHandles).toEqual(["a"]);
+    expect(slot.blockedReasons.join(" ")).toMatch(/Do not substitute unrelated/);
+    expect(slot.brief?.carousel?.slides.map(s => s.subjectHandles)).toEqual([["a"], [], []]);
+  });
+
+  it("does not accept a bare grouping key as thematic evidence", () => {
+    const slot = planProductionMonth({ ...input, count: 1, recipes: [{ ...recipes[2]!,
+      selection: { theme: "Space", requirements: [{ anyOf: ["palette:blue"] }] },
+    }] }).slots[0]!;
+    expect(slot.status).toBe("blocked");
+    expect(slot.subjectHandles).toEqual([]);
+  });
+
+  it("refuses missing carousel beats and duplicate environment or placement directions", () => {
+    expect(planProductionMonth({ ...input, count: 1, recipes: [{ ...recipes[2]!, outputKind: "carousel" }] }).slots[0]?.blockedReasons.join(" ")).toMatch(/single scene is not a carousel/);
+    for (const field of ["environment", "placement"] as const) {
+      const repeated = { ...carousel, slides: carousel.slides.map(s => ({ ...s, [field]: "Same" })) as typeof carousel.slides };
+      expect(() => planProductionMonth({ ...input, recipes: [{ ...recipes[2]!, outputKind: "carousel", carousel: repeated }] })).toThrow(/distinct/);
+    }
+  });
+
+  it("supports collection-per-slide without silently changing ordered identities", () => {
+    const slot = planProductionMonth({ ...input, count: 1, recipes: [{ ...recipes[2]!, outputKind: "carousel", carousel: { ...carousel, composition: "collection-per-slide" } }] }).slots[0]!;
+    expect(slot.brief?.carousel?.slides.map(s => s.subjectHandles)).toEqual([["a", "b", "c"], ["a", "b", "c"], ["a", "b", "c"]]);
   });
 });

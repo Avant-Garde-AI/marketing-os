@@ -1179,3 +1179,13 @@ hash. A succeeded background job is not a finished post. Shared validation,
 compositing and review live in the open-core template; scene directions, masters,
 credits and placements live in the store. `packages/storyboard` still imports
 no renderer. See [the scene delivery contract](../docs/plans/storyboard-harness/SCENE-DELIVERY-2026-09-29.md).
+
+**Themed carousel correction, 2026-09-30.** A shared color or botanical trio is
+not sufficient evidence that the art belongs in every imagined environment.
+The launch unit is one coherent three-scene carousel; default magical composition
+uses a different hero work in each scene. Source-bound theme eligibility precedes
+reuse ranking, and every slide requires a distinct setting and clever frame
+placement. The generic planner implements these constraints; store recipes own
+the aesthetic mappings. Grouped generation and final ordered carousel delivery
+remain open, and the standalone pilots must not be relabeled as that result.
+See [the themed carousel correction](../docs/plans/storyboard-harness/THEMED-SCENE-CAROUSELS-2026-09-30.md).

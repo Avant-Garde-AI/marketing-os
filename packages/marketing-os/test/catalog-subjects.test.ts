@@ -20,6 +20,11 @@ function queryWith(nodes: Array<ReturnType<typeof product> | null>): CatalogQuer
 }
 
 describe("readCatalogSubjects", () => {
+  it("returns observed collection membership and tags for themed selection", async () => {
+    const query = queryWith([product({ collections: { nodes: [{ handle: "tropical" }] }, tags: ["Collage"] })]);
+    expect((await readCatalogSubjects(["blue-study"], query))[0]).toMatchObject({ collectionHandles: ["tropical"], tags: ["Collage"] });
+    expect(vi.mocked(query).mock.calls[0]![0]).toContain("collections(first: 50)");
+  });
   it("uses a bounded Admin GraphQL query and returns current catalog fields", async () => {
     const query = queryWith([product()]);
 

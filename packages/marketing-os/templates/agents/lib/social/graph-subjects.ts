@@ -26,6 +26,8 @@ export interface CatalogSubject {
   status: string;
   onlineStoreUrl?: string;
   imageUrl?: string;
+  collectionHandles?: string[];
+  tags?: string[];
 }
 export interface SubjectReceipt {
   ref: string;

@@ -4,7 +4,14 @@ import { serializeCalendar } from "../templates/agents/lib/social/artifacts";
 import { storyboardContentHash } from "../templates/agents/lib/storyboard/reviews";
 
 const tenant = "test.myshopify.com";
-const recipe = { id: "home", mechanic: "collection-scene", scene: "real-home", weight: 1, conceptId: "three-works", requiredDistinctSubjects: 3, outputKind: "carousel" };
+const recipe = { id: "home", mechanic: "collection-scene", scene: "real-home", weight: 1, conceptId: "three-works", requiredDistinctSubjects: 3, outputKind: "carousel", carousel: {
+  composition: "one-hero-per-slide", continuity: ["Same framing language"],
+  slides: [
+    { role: "setup", environment: "Reading corner", placement: "Beside the chair", visualConnection: "Blue upholstery" },
+    { role: "turn", environment: "Dining room", placement: "Above the sideboard", visualConnection: "Blue ceramics" },
+    { role: "payoff", environment: "Hallway", placement: "At the end of a corridor", visualConnection: "Blue runner" },
+  ],
+} };
 const concept = `---
 id: three-works
 name: Three works
@@ -44,7 +51,7 @@ function deps(options: {
         results: handles.map(handle => ({ handle, title: handle, artist: "Synthetic artist" })),
       } : { artworks: handles.map(handle => ({ handle, palette: options.graphFacetOverrides?.[handle] ?? [options.unrelated ? handle : "blue"], subject: [], mood: [], movement: [] })) };
     },
-    readCatalog: async (handles: string[]) => handles.map(handle => ({ handle, title: `Work ${handle}`, status: options.catalogStatuses?.[handle] ?? "ACTIVE", onlineStoreUrl: `https://example.com/products/${handle}`, imageUrl: `https://example.com/${handle}.jpg` })),
+    readCatalog: async (handles: string[]) => handles.map(handle => ({ handle, title: `Work ${handle}`, status: options.catalogStatuses?.[handle] ?? "ACTIVE", onlineStoreUrl: `https://example.com/products/${handle}`, imageUrl: `https://example.com/${handle}.jpg`, tags: ["Classic Frame"] })),
   };
 }
 const input = { month: "2026-10", count: 2, channel: "instagram", graphPrefix: "graph", graphQueries: ["blue"] };
@@ -130,7 +137,7 @@ describe("tenant production context", () => {
     expect(plan.slots[0]?.subjectHandles).toEqual(["a", "b", "c"]);
     expect(plan.slots[0]?.brief?.subjects.find(subject => subject.handle === "c")?.sourceRefs).toEqual(expect.arrayContaining([expect.stringMatching(/^catalog:/), expect.stringMatching(/^inventory:/)]));
   });
-  it("plans a later coherent reviewed trio and emits its sourced relationship", async () => {
+  it("ignores generic shared product tags when choosing a coherent visual trio", async () => {
     const inventorySources = ["a", "b", "c", "d", "e", "f"].map((handle, i) => ({
       ...reviewedSource(handle), facets: { palette: [i < 3 ? `unrelated-${handle}` : "green"] },
     }));
@@ -156,4 +163,39 @@ describe("tenant production context", () => {
     expect(plan.slots[0]?.brief?.copyFacts.some(fact => fact.handle === "a" && fact.text.includes("Operator-reviewed palette: blue") && fact.sourceRefs.some(ref => ref.startsWith("inventory:")))).toBe(true);
     expect(plan.slots[0]?.relationships[0]).toMatchObject({ facet: "palette", value: "blue" });
   });
+  it("binds reviewed membership evidence and refuses unrelated palette matches", async () => {
+    const dependency = deps({ graphFailure: true, inventorySources: ["a", "b", "c", "d", "e", "f"].map((handle, i) => ({
+      ...reviewedSource(handle), facets: { palette: ["blue"] },
+      ...(i >= 3 ? { selectionEvidence: [{ key: "curated:tropical", sourceRefs: [`inspection:tropical:${handle}`] }] } : {}),
+    })) });
+    const read = dependency.repo.readFile;
+    dependency.repo.readFile = async path => path === "social/production/recipes.json" ? JSON.stringify({
+      version: 1, recipes: [{ ...recipe, selection: { theme: "Tropical", requirements: [{ anyOf: ["curated:tropical"] }] } }],
+      directions: { home: ["Tropical worlds"] },
+    }) : read(path);
+    const plan = await planStoreProductionMonth(input, dependency);
+    expect(plan.slots[0]).toMatchObject({ status: "planned", subjectHandles: ["d", "e", "f"] });
+    expect(plan.slots[0]?.brief?.subjects[0]?.selectionEvidence).toEqual([{ key: "curated:tropical", sourceRefs: ["inspection:tropical:d"] }]);
+    expect(plan.slots[0]?.brief?.carousel?.slides.map(s => s.subjectHandles)).toEqual([["d"], ["e"], ["f"]]);
+  });
+
+  it("uses fresh collection membership rather than stale inventory membership", async () => {
+    const dependency = deps({ graphFailure: true, inventorySources: ["a", "b", "c"].map(handle => ({
+      ...reviewedSource(handle), facets: { palette: ["blue"] },
+      selectionEvidence: [{ key: "collection:tropical", sourceRefs: ["stale:membership"] }],
+    })) });
+    const read = dependency.repo.readFile;
+    dependency.repo.readFile = async path => path === "social/production/recipes.json" ? JSON.stringify({
+      version: 1, recipes: [{ ...recipe, selection: { theme: "Tropical", requirements: [{ anyOf: ["collection:tropical"] }] } }],
+      directions: { home: ["Tropical worlds"] },
+    }) : read(path);
+    const missing = await planStoreProductionMonth(input, dependency);
+    expect(missing.slots[0]).toMatchObject({ status: "blocked", subjectHandles: [] });
+    const catalog = dependency.readCatalog;
+    dependency.readCatalog = async handles => (await catalog(handles)).map(item => ({ ...item, collectionHandles: ["tropical"] }));
+    const current = await planStoreProductionMonth(input, dependency);
+    expect(current.slots[0]).toMatchObject({ status: "planned", subjectHandles: ["a", "b", "c"] });
+    expect(current.slots[0]?.brief?.subjects[0]?.selectionEvidence).toEqual([{ key: "collection:tropical", sourceRefs: [expect.stringMatching(/^catalog:/)] }]);
+  });
+
 });

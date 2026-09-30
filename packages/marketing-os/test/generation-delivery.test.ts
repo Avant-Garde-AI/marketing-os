@@ -7,6 +7,11 @@ import { generationDeliveryPath, generationDeliverySchema, loadGenerationDeliver
 import { socialGenerationReviewLink, socialReviewLink } from "../templates/agents/lib/social/review-links";
 import { GET } from "../templates/agents/app/api/social/generation/render/[id]/route";
 
+const routeRepo = vi.hoisted(() => ({ readFile: vi.fn() }));
+// Generated runtimes provide their own DB/repo adapter. The public-route test
+// must prove auth blocks it, without importing an actual database driver.
+vi.mock("../templates/agents/lib/social/repo", () => ({ socialRepo: routeRepo }));
+
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 const shop = "arthaus-website.myshopify.com";
 const artifactId = "collection-room-1";
@@ -130,5 +135,6 @@ describe("signed scene render", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(fetch).not.toHaveBeenCalled();
+    expect(routeRepo.readFile).not.toHaveBeenCalled();
   });
 });

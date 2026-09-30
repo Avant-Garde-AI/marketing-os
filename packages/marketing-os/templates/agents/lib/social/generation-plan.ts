@@ -29,7 +29,7 @@ export const generationPlanSchema = z.object({
   transform: z.object({
     kind: z.literal("contain-pad"),
     width: z.literal(1080),
-    height: z.literal(1920),
+    height: z.union([z.literal(1920), z.literal(1350)]),
     background: z.string().regex(/^#[a-fA-F0-9]{6}$/),
   }).strict(),
 }).strict().superRefine((plan, ctx) => {
@@ -37,9 +37,17 @@ export const generationPlanSchema = z.object({
     ctx.addIssue({ code: "custom", message: "artwork-loop requires one source and no scene" });
   if (plan.mechanic === "collection-scene" && (plan.sources.length !== 3 || !plan.scene))
     ctx.addIssue({ code: "custom", message: "collection-scene requires three sources and a scene" });
+  if (plan.transform.height !== (plan.mechanic === "artwork-loop" ? 1920 : 1350))
+    ctx.addIssue({ code: "custom", message: "transform height must match the recipe canvas" });
   const refs = new Set(plan.sources.map((item) => item.sourceRef));
   if (refs.size !== plan.sources.length)
     ctx.addIssue({ code: "custom", message: "sourceRef values must be distinct" });
+  if (plan.mechanic === "collection-scene") {
+    if (new Set(plan.sources.map((item) => item.sourceSha256)).size !== plan.sources.length)
+      ctx.addIssue({ code: "custom", message: "collection-scene source hashes must be distinct" });
+    if (new Set(plan.sources.map((item) => item.verificationRef)).size !== plan.sources.length)
+      ctx.addIssue({ code: "custom", message: "collection-scene verification receipts must be distinct" });
+  }
 });
 
 export type GenerationPlan = z.infer<typeof generationPlanSchema>;

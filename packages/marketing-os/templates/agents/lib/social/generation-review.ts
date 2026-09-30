@@ -17,6 +17,8 @@ export interface GenerationReview {
   artifactId: string;
   postId: string;
   state: string;
+  mechanic: "artwork-loop" | "collection-scene";
+  imageUrl: string | null;
   caption: string;
   prompt: string;
   inputHash: string;
@@ -57,6 +59,11 @@ function parseJob(value: unknown, shop: string): GenerationReview {
       typeof job.createdAt !== "string" || !Number.isFinite(Date.parse(job.createdAt))) {
     throw new Error("Invalid social generation review metadata");
   }
+  const mechanic = job.mechanic ?? "artwork-loop";
+  const imageUrl = job.imageUrl ?? null;
+  if (!["artwork-loop", "collection-scene"].includes(String(mechanic)) ||
+      (imageUrl !== null && (mechanic !== "collection-scene" || !safeUrl(imageUrl, shop, undefined, true))) ||
+      (mechanic === "collection-scene" && job.videoUrl !== null)) throw new Error("Invalid social generation review media");
   const sourcePreviewUrl = safeUrl(job.sourcePreviewUrl, shop, job.inputHash);
   if (!sourcePreviewUrl || (job.videoUrl !== null && !safeUrl(job.videoUrl, shop, undefined, true)) ||
       (job.thumbnailUrl !== null && !safeUrl(job.thumbnailUrl, shop, undefined, true)) ||
@@ -64,7 +71,7 @@ function parseJob(value: unknown, shop: string): GenerationReview {
       (job.errorCode !== null && typeof job.errorCode !== "string")) {
     throw new Error("Invalid social generation review media");
   }
-  return { id: job.id, artifactId: job.artifactId, postId: job.postId, state: job.state,
+  return { id: job.id, artifactId: job.artifactId, postId: job.postId, state: job.state, mechanic: mechanic as GenerationReview["mechanic"], imageUrl: imageUrl === null ? null : safeUrl(imageUrl, shop, undefined, true),
     caption: job.caption, prompt: job.prompt, inputHash: job.inputHash, sourcePreviewUrl,
     videoUrl: job.videoUrl === null ? null : safeUrl(job.videoUrl, shop, undefined, true),
     thumbnailUrl: job.thumbnailUrl === null ? null : safeUrl(job.thumbnailUrl, shop, undefined, true),

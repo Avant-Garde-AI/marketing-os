@@ -1155,7 +1155,7 @@ posts. Full-resolution source acquisition, quoted provider execution and motion
 delivery remain separate work; source-only realization must continue refusing
 unsupported generation. See [production recipe delivery](../docs/plans/storyboard-harness/PRODUCTION-RECIPES-2026-09-28.md).
 
-**Pilot authorization update, 2026-09-28 (implementation pending).** For one
+**Pilot authorization update, 2026-09-28 (implemented).** For one
 bounded, explicit generation request in an authenticated Shopify admin console
 or an MCP connection with the `generation:run` scope, the user's request is
 the authorization to execute the existing Action. A separate artwork
@@ -1167,3 +1167,15 @@ source, fixed settings, exact post-upload quote and approved credit ceiling,
 persists the single submission attempt, and reconciles an unknown outcome
 without automatic resubmission. The generated output goes to a signed,
 read-only one-page review; publishing remains a separate governed Action.
+
+
+**Exact-artwork scene realization, 2026-09-29.** Multi-image model references
+are not an artwork-fidelity guarantee. The scene pilot therefore generates only
+an environment with empty frame openings, then deterministically contains and
+perspective-composites three byte-verified full artworks. The source contact
+sheet is signed review proof, never provider media. A delivery receipt binds
+placements, background hash and final caption to the existing immutable input
+hash. A succeeded background job is not a finished post. Shared validation,
+compositing and review live in the open-core template; scene directions, masters,
+credits and placements live in the store. `packages/storyboard` still imports
+no renderer. See [the scene delivery contract](../docs/plans/storyboard-harness/SCENE-DELIVERY-2026-09-29.md).

@@ -14,7 +14,37 @@ export async function readGenerationInput(repo: StoreRepo, id: string) {
   const raw = await repo.readFile(generationInputPath(id));
   if (!raw || raw.length > 64_000) throw new Error("Generation plan unavailable or too large");
   const plan = generationPlanSchema.parse(JSON.parse(raw));
-  if (plan.id !== id || plan.mechanic !== "artwork-loop") throw new Error("Only the artwork-loop pilot is currently executable");
+  if (plan.id !== id) throw new Error("Generation plan id does not match the requested artifact");
+  if (plan.mechanic === "collection-scene") {
+    // The scene provider receives a text-only empty-frame prompt. This sheet is
+    // signed review proof of source identity and order, never provider input.
+    const panels: Buffer[] = [];
+    const panelWidth = 336;
+    const gutter = 18;
+    const panelHeight = plan.transform.height;
+    for (const source of plan.sources) {
+      const encoded = await repo.readFile(source.sourcePath);
+      if (!encoded || encoded.length > 6_000_000 || encoded.length % 4 !== 0 ||
+          !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error("Verified source bytes unavailable");
+      const bytes = Buffer.from(encoded, "base64");
+      if (bytes.toString("base64") !== encoded) throw new Error("Source encoding is not canonical base64");
+      if (digest(bytes) !== source.sourceSha256) throw new Error("Source hash mismatch; prepare a new review");
+      const meta = await sharp(bytes, { limitInputPixels: 20_000_000 }).metadata();
+      if (meta.format !== "jpeg" || meta.width !== source.width || meta.height !== source.height ||
+          (meta.orientation ?? 1) !== 1 || source.width < 1024 || source.height < 1024)
+        throw new Error("Source format or dimensions disagree with its reviewed receipt");
+      panels.push(await sharp(bytes, { limitInputPixels: 20_000_000 })
+        .resize(panelWidth, panelHeight, { fit: "contain", background: plan.transform.background })
+        .toBuffer());
+    }
+    const sheet = await sharp({ create: {
+      width: plan.transform.width, height: panelHeight, channels: 3, background: plan.transform.background,
+    } }).composite(panels.map((input, index) => ({ input, left: gutter + index * (panelWidth + gutter), top: 0 })))
+      .jpeg({ quality: 95 }).toBuffer();
+    const prepared = { sha256: digest(sheet), width: plan.transform.width, height: panelHeight, mimeType: "image/jpeg" as const };
+    const inputHash = digest(JSON.stringify({ plan, prepared }));
+    return { plan, prepared, inputHash, base64: sheet.toString("base64") };
+  }
   const source = plan.sources[0]!;
   const encoded = await repo.readFile(source.sourcePath);
   if (!encoded || encoded.length > 6_000_000 || encoded.length % 4 !== 0 ||

@@ -32,8 +32,17 @@ describe("generation pilot plan", () => {
 
   it("requires three distinct sources and declared scene for collection recipe", () => {
     expect(() => generationPlanSchema.parse({ ...plan, mechanic: "collection-scene", scene: "real-home" })).toThrow(/three sources/);
-    const sources = ["a", "b", "c"].map((letter) => ({ ...source, sourceRef: `ams://work/${letter}` }));
-    expect(generationPlanSchema.parse({ ...plan, mechanic: "collection-scene", scene: "imagined-world", sources }).sources).toHaveLength(3);
-    expect(() => generationPlanSchema.parse({ ...plan, mechanic: "collection-scene", scene: "real-home", sources: [source, source, source] })).toThrow(/distinct/);
+    const sources = ["a", "b", "c"].map((letter) => ({ ...source, sourceRef: `ams://work/${letter}`,
+      verificationRef: `catalog://work/${letter}`, sourceSha256: letter.repeat(64),
+      sourcePath: `social/production/sources/${letter.repeat(64)}.jpeg.b64` }));
+    const scenePlan = { ...plan, mechanic: "collection-scene", scene: "imagined-world", sources,
+      transform: { ...plan.transform, height: 1350 } };
+    expect(generationPlanSchema.parse(scenePlan).sources).toHaveLength(3);
+    expect(() => generationPlanSchema.parse({ ...scenePlan, transform: plan.transform })).toThrow(/height must match/);
+    expect(() => generationPlanSchema.parse({ ...plan, transform: scenePlan.transform })).toThrow(/height must match/);
+    expect(() => generationPlanSchema.parse({ ...scenePlan, sources: [sources[0], sources[0], sources[2]] })).toThrow(/distinct/);
+    expect(() => generationPlanSchema.parse({ ...scenePlan, sources: [sources[0], { ...sources[1], sourceSha256: sources[0].sourceSha256,
+      sourcePath: sources[0].sourcePath }, sources[2]] })).toThrow(/source hashes must be distinct/);
+    expect(() => generationPlanSchema.parse({ ...scenePlan, sources: [sources[0], { ...sources[1], verificationRef: sources[0].verificationRef }, sources[2]] })).toThrow(/verification receipts must be distinct/);
   });
 });

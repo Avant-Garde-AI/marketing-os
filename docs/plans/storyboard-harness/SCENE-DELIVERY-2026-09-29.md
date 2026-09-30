@@ -88,3 +88,26 @@ the source. The JPEG SHA-256 and scene input checks still apply. A missing
 inline body is not an empty artwork, and recompressing the verified master is
 not the fix. The unchanged prompt still quotes at 2.75 credits through the
 production provider client.
+
+
+### Actual scene results
+
+All three pilots completed through the authenticated Store MCP and platform
+Action gate: three submissions at 2.75 credits each, 8.25 total confirmed by the
+357 → 348.75 balance change. Provider backgrounds were 1792×2240 PNGs;
+source-preserving composites are 1080×1350 JPEGs with artist-credited copy.
+Core #109/#110, platform #45 and store #190/#191 are merged; store #192 records
+placements and final result receipts for the existing signed room/month UI.
+
+See [the store's live pilot record](https://github.com/Arthaus-Inc/marketplace/blob/main/agents/social/production/SCENE-PILOT-2026-09-29.md)
+and [job, cost and hash receipts](https://github.com/Arthaus-Inc/marketplace/blob/main/agents/social/production/SCENE-RESULTS-2026-09-29.json).
+These are three single-image drafts for human review. The existing loop also
+now has its verified artist handle without changing the paid input.
+
+The generated observatory has landscape frames, so full portrait artwork uses
+wide side mats. The next prompt must specify opening orientation from the
+selected source dimensions. Do not silently crop art or spend on a reroll to
+hide that result. Frame coordinates were inspected manually; full month
+execution still needs reliable localization/rejection, durable final-media
+promotion, carousel sequencing when appropriate, bounded slot budgets and
+creative acceptance. Nothing in this pilot publishes or schedules a post.

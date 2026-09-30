@@ -162,3 +162,90 @@ test("render worker: preview diag, audit measurement, and no event/capture reque
     close();
   }
 });
+
+/** A Shopify-shaped password gate: every path 302s to /password until the
+ * form (hidden in a closed modal, as in Dawn) posts the right password. */
+function serveLocked(password: string): Promise<{ url: string; close: () => void }> {
+  const server = http.createServer((req, res) => {
+    const path = (req.url ?? "/").split("?")[0]!;
+    const unlocked = /(^|;\s*)storefront_digest=ok/.test(req.headers.cookie ?? "");
+    if (path === "/password" && req.method === "POST") {
+      let body = "";
+      req.on("data", (c) => (body += c));
+      req.on("end", () => {
+        const ok = new URLSearchParams(body).get("password") === password;
+        res.statusCode = 302;
+        if (ok) res.setHeader("set-cookie", "storefront_digest=ok; Path=/");
+        res.setHeader("location", ok ? "/" : "/password");
+        res.end();
+      });
+      return;
+    }
+    if (path === "/password") {
+      res.setHeader("content-type", "text/html");
+      res.end(`<!doctype html><html><body><h1>Opening soon</h1><div style="display:none">
+        <form method="post" action="/password"><input type="hidden" name="form_type" value="storefront_password">
+        <input type="password" name="password"><button type="submit">Enter</button></form></div></body></html>`);
+      return;
+    }
+    if (!unlocked) {
+      res.statusCode = 302;
+      res.setHeader("location", "/password");
+      res.end();
+      return;
+    }
+    res.setHeader("content-type", "text/html");
+    res.end(PREVIEW);
+  });
+  return new Promise((resolve) =>
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as { port: number };
+      resolve({ url: `http://127.0.0.1:${port}`, close: () => server.close() });
+    }),
+  );
+}
+
+test("render worker: unlocks a password-protected storefront, and says so when it can't", { timeout: 150_000 }, async (ctx) => {
+  const { url, close } = await serveLocked("hunter2");
+  const q = "?mos_preview=tok&mos_arm=v1&mos_step=1&mos_diag=1";
+  const run = async (password: string | undefined) => {
+    const dir = mkdtempSync(join(tmpdir(), "mos-render-lock-"));
+    const outDir = join(dir, "out");
+    const taskFile = join(dir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        outDir,
+        concurrency: 1,
+        fingerprints: VENDOR_FINGERPRINTS,
+        ...(password ? { storefrontPassword: password } : {}),
+        tasks: [{ id: "locked", url: `${url}/${q}`, viewport: "desktop", mode: "preview", waitMs: 4000 }],
+      }),
+    );
+    const r = await runWorker(taskFile);
+    return { r, taskFile, results: r.code === 0 ? (JSON.parse(readFileSync(join(outDir, "results.json"), "utf8")) as { ok: boolean; error?: string; extra: Record<string, unknown> }[]) : [] };
+  };
+  try {
+    const good = await run("hunter2");
+    if (good.r.code !== 0 && /Executable doesn't exist|browserType\.launch/i.test(good.r.stderr)) {
+      console.warn("render worker lock test SKIPPED — no local Chromium for playwright-core");
+      ctx.skip();
+      return;
+    }
+    assert.equal(good.r.code, 0, good.r.stderr);
+    assert.equal(good.results[0]!.ok, true);
+    assert.equal(good.results[0]!.extra.ready, true, "the preview loaded past the gate");
+    assert.ok(!readFileSync(good.taskFile, "utf8").includes("hunter2"), "the password is scrubbed from task.json");
+    assert.ok(!JSON.stringify(good.results).includes("hunter2"), "and never written to results");
+
+    const none = await run(undefined);
+    assert.equal(none.results[0]!.ok, false);
+    assert.match(none.results[0]!.error ?? "", /storefront_password_required/);
+
+    const wrong = await run("nope");
+    assert.equal(wrong.results[0]!.ok, false);
+    assert.match(wrong.results[0]!.error ?? "", /storefront_password_rejected/);
+  } finally {
+    close();
+  }
+});

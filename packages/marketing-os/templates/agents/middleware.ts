@@ -38,6 +38,8 @@ export async function middleware(request: NextRequest) {
     // Service-only generation input verifies ACTIONS_GATE_SECRET in-route.
     // Match this one path exactly; adjacent social routes still need sessions.
     request.nextUrl.pathname === "/api/social/generation/input" ||
+    // Final image reads authenticate a post-scoped review token inside the route.
+    /^\/api\/social\/generation\/render\/[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(request.nextUrl.pathname) ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
     // Campaign imagery, addressed by content hash and HMAC-tokened like the
     // preview. These URLs are embedded in assembled email HTML, so they must be

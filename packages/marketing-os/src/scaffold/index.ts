@@ -1314,6 +1314,21 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-delivery.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-delivery.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/scene-composite.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/scene-composite.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/generation/render/[id]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/generation/render/[id]/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/generation-input.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/generation-input.ts"),
       overwrite: "skip",

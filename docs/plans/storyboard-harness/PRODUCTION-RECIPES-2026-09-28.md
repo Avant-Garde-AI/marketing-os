@@ -271,3 +271,18 @@ source upload, generation submission, credit charge or completed clip is
 claimed by this update.
 See [the platform connection/execution record](https://github.com/Avant-Garde-AI/marketing-os-app/blob/main/docs/HIGGSFIELD-MCP.md)
 for provider parameters, transport contracts and the remaining execution work.
+
+
+## Superseding checkpoint: 2026-09-29
+
+The authenticated one-loop path is deployed and produced a real Passion Flower
+clip (7.5 credits). Source preparation targeted 1080×1920; the actual silent
+Kling output was 720×1280 at 24 fps, about five seconds. It remains a draft for
+fidelity and seam review, not a published or accepted creative. Earlier entries
+above are chronological checkpoints; their no-generation wording is historical.
+
+The next implementation is [exact-artwork scene delivery](SCENE-DELIVERY-2026-09-29.md):
+three distinct scenes, three exact artworks in each, caption credits and final
+composites in the same signed review room. The 8.25-credit scene quote is not a
+completed render. Frame localization for this pilot is inspected and recorded;
+automated placement and a full generated month remain subsequent work.

@@ -14,11 +14,13 @@
 
 import { loadPostGroup } from "@/lib/social/console-data";
 import { postReviewAssets } from "@/lib/social/projection";
-import { socialSheetLink, ttlRemaining, verifyLink } from "@/lib/social/review-links";
+import { socialReviewLink, socialSheetLink, ttlRemaining, verifyLink } from "@/lib/social/review-links";
 import { listNotes } from "@/lib/review/notes";
 import { runWithTenant } from "@/lib/tenant-context";
 import { SocialReviewNotes } from "@/components/review/social-review";
 import { loadGenerationJobForPost, type GenerationReview } from "@/lib/social/generation-review";
+import { loadGenerationDelivery } from "@/lib/social/generation-delivery";
+import { socialRepo } from "@/lib/social/repo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -49,7 +51,10 @@ function aspectFor(channel: string): string {
   return "1 / 1";
 }
 
-function motionStatus(state: string): string {
+type Delivery = NonNullable<Awaited<ReturnType<typeof loadGenerationDelivery>>>;
+type DeliveryResult = { delivery: Delivery | null; failed: boolean };
+
+function generationStatus(state: string): string {
   if (state === "awaiting_approval") return "Ready to generate";
   if (["preparing", "submitting", "submitted"].includes(state)) return "Rendering in progress";
   if (state === "succeeded") return "Rendered · ready for fidelity and loop review";
@@ -59,14 +64,43 @@ function motionStatus(state: string): string {
   return state;
 }
 
-function GenerationPanel({ job }: { job: GenerationReview }) {
+function sceneRenderUrl(shop: string, postId: string, ttl: number): string {
+  const signed = new URL(socialReviewLink(shop, postId, ttl).url);
+  return `/api/social/generation/render/${encodeURIComponent(postId)}?${signed.searchParams.toString()}`;
+}
+
+function GenerationPanel({ job, delivery, deliveryFailed, renderUrl }: {
+  job: GenerationReview; delivery: Delivery | null; deliveryFailed: boolean; renderUrl: string;
+}) {
+  const scene = job.mechanic === "collection-scene";
+  const sceneReady = scene && job.state === "succeeded" && !!job.imageUrl && !!delivery?.scene && !deliveryFailed;
+  const label = scene ? "Collection scene" : "Artwork loop";
   return (
     <section style={{ border: "1px solid rgba(0,0,0,0.14)", borderRadius: 8, padding: "1rem", marginBottom: "1.5rem" }}>
-      <h2 style={{ fontSize: "1.05rem", margin: "0 0 0.35rem" }}>Artwork loop · {motionStatus(job.state)}</h2>
+      <h2 style={{ fontSize: "1.05rem", margin: "0 0 0.35rem" }}>{label} · {sceneReady ? "Composed for review"
+        : scene && deliveryFailed ? "Composition unavailable"
+        : scene && job.state === "succeeded" ? "Background rendered · composition pending"
+        : generationStatus(job.state)}</h2>
       <p style={{ fontSize: "0.8rem", opacity: 0.7, margin: "0 0 0.75rem" }}>
         {job.postId} · {job.estimatedCredits} estimated / {job.maximumCredits} maximum Higgsfield credits
       </p>
-      {job.videoUrl ? (
+      {sceneReady ? (
+        <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={renderUrl} alt="Three complete artworks placed in the collection scene"
+            width={1080} height={1350}
+            style={{ width: "min(100%, 540px)", aspectRatio: "4 / 5", objectFit: "contain", background: "#f4f2ef", display: "block" }} />
+          <p style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>
+            <a href={renderUrl} target="_blank" rel="noopener noreferrer">Open or download final 4:5 image</a>
+          </p>
+        </div>
+      ) : scene ? (
+        <p role="status" style={{ fontSize: "0.85rem" }}>
+          {deliveryFailed ? "The final composition could not be verified. Reload this page or ask for a new review link."
+            : job.state === "succeeded" ? "Background rendered; exact artwork composition is pending. Reload this page to check status."
+            : "The final composition is not ready yet. Reload this page to check status."}
+        </p>
+      ) : job.videoUrl ? (
         <div>
           <video controls loop playsInline preload="metadata" poster={job.thumbnailUrl ?? undefined}
             style={{ width: "min(100%, 420px)", aspectRatio: "9 / 16", objectFit: "contain", background: "#151515", display: "block" }}>
@@ -84,18 +118,23 @@ function GenerationPanel({ job }: { job: GenerationReview }) {
       ) : (
         <p style={{ fontSize: "0.85rem" }}>No rendered video is available yet. Reload this page to check status.</p>
       )}
-      <p style={{ whiteSpace: "pre-wrap", fontSize: "0.9rem", lineHeight: 1.5 }}><strong>Caption</strong><br />{job.caption}</p>
-      <p style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem", lineHeight: 1.5 }}><strong>Motion brief</strong><br />{job.prompt}</p>
-      <p style={{ fontSize: "0.8rem" }}><a href={job.sourcePreviewUrl} target="_blank" rel="noopener noreferrer">Review source artwork and composition</a></p>
+      <p style={{ whiteSpace: "pre-wrap", fontSize: "0.9rem", lineHeight: 1.5 }}><strong>Caption</strong><br />{delivery?.caption ?? job.caption}</p>
+      {deliveryFailed && !scene && (
+        <p role="status" style={{ fontSize: "0.8rem", color: "#765b16" }}>
+          The latest caption receipt could not be verified. The original caption is shown above.
+        </p>
+      )}
+      <p style={{ whiteSpace: "pre-wrap", fontSize: "0.85rem", lineHeight: 1.5 }}><strong>{scene ? "Scene brief" : "Motion brief"}</strong><br />{job.prompt}</p>
+      <p style={{ fontSize: "0.8rem" }}><a href={job.sourcePreviewUrl} target="_blank" rel="noopener noreferrer">Review verified source artwork</a></p>
       {(job.state === "unknown" || job.state === "failed") && (
         <p role="status" style={{ fontSize: "0.8rem", color: "#765b16" }}>
           {job.state === "unknown"
             ? "Generation status needs checking before another attempt."
-            : "Generation stopped before a usable video was ready."}
+            : `Generation stopped before a usable ${scene ? "image" : "video"} was ready.`}
         </p>
       )}
       <p style={{ fontSize: "0.78rem", opacity: 0.7, marginBottom: 0 }}>
-        Review the full artwork, motion, and loop seam. Leave feedback below. Publishing requires a separate approval.
+        {scene ? "Review all three complete artworks in the final scene." : "Review the full artwork, motion, and loop seam."} Leave feedback below. Publishing requires a separate approval.
       </p>
     </section>
   );
@@ -132,7 +171,7 @@ export default async function SocialReviewRoom({
 
   const storeSlug = shop.replace(/\.myshopify\.com$/, "");
   const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
-  const { group, notes, generationJobs, generationUnavailable } = await runWithTenant({ shop, storeSlug }, async () => {
+  const { group, notes, generationJobs, generationUnavailable, deliveries } = await runWithTenant({ shop, storeSlug }, async () => {
     const group = await loadPostGroup(shop, id);
     const postIds = group.posts.length > 0 ? [...new Set(group.posts.map((member) => member.post.id))] : [id];
     let generationUnavailable = false;
@@ -140,14 +179,21 @@ export default async function SocialReviewRoom({
       try { return await loadGenerationJobForPost(postId); }
       catch { generationUnavailable = true; return null; }
     }));
-    return { group, notes: await listNotes(SOCIAL_PACK_ID, id),
-      generationJobs: lookedUp.filter((job): job is GenerationReview => job !== null), generationUnavailable };
+    const generationJobs = lookedUp.filter((job): job is GenerationReview => job !== null);
+    const deliveries = new Map<string, DeliveryResult>();
+    for (const job of generationJobs) {
+      try {
+        const delivery = await loadGenerationDelivery(socialRepo, job);
+        deliveries.set(job.id, { delivery, failed: false });
+      } catch { deliveries.set(job.id, { delivery: null, failed: true }); }
+    }
+    return { group, notes: await listNotes(SOCIAL_PACK_ID, id), generationJobs, generationUnavailable, deliveries };
   });
 
   if (group.posts.length === 0 && generationJobs.length === 0) {
     return (
       <Gate
-        headline={generationUnavailable ? "Artwork-loop status unavailable" : "Nothing to review here yet"}
+        headline={generationUnavailable ? "Generation status unavailable" : "Nothing to review here yet"}
         sub={
           generationUnavailable
             ? "The generation status could not be loaded. Reload this page or try again later."
@@ -172,7 +218,7 @@ export default async function SocialReviewRoom({
         <p style={{ fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.6, margin: 0 }}>
           {group.posts.length > 0
             ? `Social review · ${group.posts.length} variant${group.posts.length === 1 ? "" : "s"}`
-            : "Social review · artwork loop"}
+            : `Social review · ${generationJobs[0]?.mechanic === "collection-scene" ? "collection scene" : "artwork loop"}`}
         </p>
         <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0 0" }}>{id}</h1>
         {sheet && (
@@ -205,11 +251,13 @@ export default async function SocialReviewRoom({
 
       {generationUnavailable && (
         <p role="status" style={{ color: "#765b16", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
-          Artwork-loop status is temporarily unavailable. Existing post details and notes are still shown.
+          Generation status is temporarily unavailable. Existing post details and notes are still shown.
         </p>
       )}
 
-      {generationJobs.map((job) => <GenerationPanel key={job.id} job={job} />)}
+      {generationJobs.map((job) => <GenerationPanel key={job.id} job={job}
+        delivery={deliveries.get(job.id)?.delivery ?? null} deliveryFailed={deliveries.get(job.id)?.failed ?? false}
+        renderUrl={sceneRenderUrl(shop, job.postId, ttl)} />)}
 
       {group.posts.length > 0 && <div
         style={{
@@ -222,6 +270,8 @@ export default async function SocialReviewRoom({
           const assets = postReviewAssets(post, publicUrl);
           const sequence = post.renderedSequence;
           const video = post.renderedVideo;
+          const generation = generationJobs.find((job) => job.postId === post.id);
+          const latestCopy = generation ? deliveries.get(generation.id)?.delivery?.caption ?? generation.caption : post.copy;
           return (
             <article key={post.id} style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
               <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(0,0,0,0.08)", fontSize: "0.8rem" }}>
@@ -322,7 +372,7 @@ export default async function SocialReviewRoom({
                 </div>
               )}
               <div style={{ padding: "0.85rem" }}>
-                <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: "0.92rem", lineHeight: 1.5, margin: 0 }}>{post.copy}</p>
+                <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: "0.92rem", lineHeight: 1.5, margin: 0 }}>{latestCopy}</p>
                 <p style={{ fontSize: "0.8rem", marginTop: "0.6rem", opacity: 0.75, wordBreak: "break-all" }}>
                   → {post.targetLink}
                 </p>

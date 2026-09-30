@@ -41,6 +41,13 @@ describe("service-only generation input routing", () => {
     expect((await middleware(request("/api/social/generation/other") as never)).status).toBe(403);
   });
 
+  it("allows the token-checked final-image route but rejects adjacent hosted paths", async () => {
+    vi.stubEnv("MARKETING_OS_MODE", "hosted");
+    expect((await middleware(request("/api/social/generation/render/2026-10-instagram-02") as never)).status).toBe(200);
+    expect((await middleware(request("/api/social/generation/render/") as never)).status).toBe(403);
+    expect((await middleware(request("/api/social/generation/render/post/other") as never)).status).toBe(403);
+  });
+
   it("skips session redirect for this route in client-owned mode", async () => {
     vi.stubEnv("MARKETING_OS_MODE", "client-owned");
     vi.stubEnv("NODE_ENV", "production");

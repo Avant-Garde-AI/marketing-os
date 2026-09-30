@@ -106,4 +106,22 @@ describe("social generation review broker read", () => {
     await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId)))
       .resolves.toMatchObject({ videoUrl: "https://cdn.higgsfield.ai/legacy.mp4" });
   });
+  it("accepts scene image metadata while rejecting cross-mechanic or unsafe media", async () => {
+    const { runWithTenant, review } = await modules();
+    const imageUrl = "https://d2ol7oe51mr4n9.cloudfront.net/scene.jpg";
+    vi.stubGlobal("fetch", async () => Response.json({ job: { ...job, mechanic: "collection-scene", imageUrl } }));
+    await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId)))
+      .resolves.toMatchObject({ mechanic: "collection-scene", imageUrl });
+    for (const invalid of [
+      { mechanic: "artwork-loop", imageUrl },
+      { mechanic: "collection-scene", imageUrl: "https://evil.example/scene.jpg" },
+      { mechanic: "collection-scene", imageUrl, videoUrl: "https://cdn.higgsfield.ai/video.mp4" },
+      { mechanic: "unsupported", imageUrl: null },
+    ]) {
+      vi.stubGlobal("fetch", async () => Response.json({ job: { ...job, ...invalid } }));
+      await expect(runWithTenant({ shop, storeSlug: "arthaus-website" }, () => review.loadGenerationJobForPost(job.postId)))
+        .rejects.toThrow(/media/);
+    }
+  });
+
 });

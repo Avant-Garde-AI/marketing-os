@@ -123,7 +123,9 @@ describe("signed scene render", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     await expect(renderGenerationScene(repo, job, generationDeliverySchema.parse({ ...receipt, scene: { ...receipt.scene, backgroundSha256: "b".repeat(64) } })))
       .rejects.toThrow(/hash mismatch/);
-  });
+  // Includes real 1080x1350 projection plus source preparation; shared CI CPU
+  // contention can exceed Vitest's 5s unit-test default without a hung render.
+  }, 15_000);
 
   it("refuses invalid post-room tokens before broker or repo access", async () => {
     vi.stubEnv("ACTIONS_GATE_SECRET", "generation-test-secret");

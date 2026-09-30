@@ -55,7 +55,7 @@ specifically digital production method. Artist credits require their own
 verification. The 12-slot editorial mix remains six loops, three approachable
 home posts and three magical carousels (one per theme).
 
-## Next implementation: generate and review an actual carousel
+## Realization contract: generate and review an actual carousel
 
 1. Acquire current candidates from the relevant catalog/graph theme, inspect
    full unframed sources and stage source hashes. Record the actual palette,
@@ -93,3 +93,26 @@ collection-per-slide assignment, missing sequences and duplicate directions.
 Runtime tests cover source-bound membership/facets, catalog reads and tenant
 isolation. Store rehearsal uses current catalog reads and labels source gaps;
 it is not a generated month or production deployment receipt.
+
+## Implemented runtime and pilot execution boundary
+
+`sceneComposition: "single-artwork"` explicitly selects one full source and one
+frame. Absence retains the three-source legacy contract and hashes. The platform
+broker accepts the explicit variant through the same governed Action.
+
+Store manifests at `social/production/carousels/<parentPostId>.json` bind three
+ordered artifact/post/input hashes, one caption, optional per-slide credits and
+content-addressed final JPEGs. Repo-bound parent tokens cannot read siblings via
+a child token or select another repository. Review verifies broker job identity,
+source bytes, matching delivery receipts and 1080×1350 final image hashes.
+Partial groups remain explicit; the month sheet groups valid children once.
+
+A separate loop-export receipt serves hash-verified Reel/feed MP4s through the
+existing post token. A repeatable ffmpeg script preserves the complete source
+frame; feed fitting pads instead of cropping. Source-resolution and upscale
+claims remain in the store receipt. No new paid video call is implied.
+
+Arthaus artwork choices, environments, master lineage, captions, paid job
+receipts and visual acceptance are store-owned. Nine scene executions are a
+bounded pilot, not a scheduled monthly generation orchestrator or a publishing
+approval. Production evidence belongs beside those store artifacts.

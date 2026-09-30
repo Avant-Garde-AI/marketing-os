@@ -14,13 +14,16 @@
 
 import { loadPostGroup } from "@/lib/social/console-data";
 import { postReviewAssets } from "@/lib/social/projection";
-import { socialReviewLink, socialSheetLink, ttlRemaining, verifyLink } from "@/lib/social/review-links";
+import { socialCarouselSheetLink, socialReviewLink, socialSheetLink, ttlRemaining, verifyCarouselReviewLink, verifyLink } from "@/lib/social/review-links";
 import { listNotes } from "@/lib/review/notes";
 import { runWithTenant } from "@/lib/tenant-context";
 import { SocialReviewNotes } from "@/components/review/social-review";
 import { loadGenerationJobForPost, type GenerationReview } from "@/lib/social/generation-review";
-import { loadGenerationDelivery } from "@/lib/social/generation-delivery";
+import { generationDeliveryRepoFromPreview, loadGenerationDelivery } from "@/lib/social/generation-delivery";
 import { socialRepo } from "@/lib/social/repo";
+import { loadGenerationCarousel, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
+import { readGenerationInput } from "@/lib/social/generation-input";
+import { loadVerifiedLoopExport, loopExportManifestPath } from "@/lib/social/generation-export";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -53,6 +56,8 @@ function aspectFor(channel: string): string {
 
 type Delivery = NonNullable<Awaited<ReturnType<typeof loadGenerationDelivery>>>;
 type DeliveryResult = { delivery: Delivery | null; failed: boolean };
+type LoopExportView = { state: "verified" | "legacy" | "invalid"; sourceWidth?: number; sourceHeight?: number;
+  sourceUpscaled?: boolean; reelWidth?: number; reelHeight?: number; fit?: string };
 
 function generationStatus(state: string): string {
   if (state === "awaiting_approval") return "Ready to generate";
@@ -69,8 +74,14 @@ function sceneRenderUrl(shop: string, postId: string, ttl: number): string {
   return `/api/social/generation/render/${encodeURIComponent(postId)}?${signed.searchParams.toString()}`;
 }
 
-function GenerationPanel({ job, delivery, deliveryFailed, renderUrl }: {
+function loopExportUrl(shop: string, postId: string, ttl: number, variant: "reel" | "feed"): string {
+  const signed = new URL(socialReviewLink(shop, postId, ttl).url);
+  return `/api/social/generation/export/${encodeURIComponent(postId)}/${variant}?${signed.searchParams.toString()}`;
+}
+
+function GenerationPanel({ job, delivery, deliveryFailed, renderUrl, reelUrl, feedUrl, exportState }: {
   job: GenerationReview; delivery: Delivery | null; deliveryFailed: boolean; renderUrl: string;
+  reelUrl: string; feedUrl: string; exportState: LoopExportView | null;
 }) {
   const scene = job.mechanic === "collection-scene";
   const sceneReady = scene && job.state === "succeeded" && !!job.imageUrl && !!delivery?.scene && !deliveryFailed;
@@ -102,15 +113,25 @@ function GenerationPanel({ job, delivery, deliveryFailed, renderUrl }: {
         </p>
       ) : job.videoUrl ? (
         <div>
+          {exportState?.state === "verified" && <p style={{ fontSize: "0.8rem" }}>
+            Verified {exportState.reelWidth} × {exportState.reelHeight} Reel export. Derived from a {exportState.sourceWidth} × {exportState.sourceHeight} provider render{exportState.sourceUpscaled ? "; upscaled" : ""}{exportState.fit?.includes("no crop") ? ", full frame retained" : ""}. Review motion and loop seam before publishing.
+          </p>}
           <video controls loop playsInline preload="metadata" poster={job.thumbnailUrl ?? undefined}
             style={{ width: "min(100%, 420px)", aspectRatio: "9 / 16", objectFit: "contain", background: "#151515", display: "block" }}>
-            <source src={job.videoUrl} type="video/mp4" />
+            <source src={exportState?.state === "verified" ? reelUrl : job.videoUrl} type="video/mp4" />
             Your browser cannot play this video.
           </video>
           <p style={{ fontSize: "0.8rem", marginTop: "0.5rem" }}>
-            <a href={job.videoUrl} target="_blank" rel="noopener noreferrer">Open or download video</a>
+            <a href={exportState?.state === "verified" ? reelUrl : job.videoUrl} target="_blank" rel="noopener noreferrer">{exportState?.state === "verified" ? "Open or download Reel MP4" : "Open or download video"}</a>
+            {exportState?.state === "verified" && <> · <a href={feedUrl} target="_blank" rel="noopener noreferrer">Download 4:5 feed MP4</a></>}
             {job.durationSec ? ` · ${job.durationSec} seconds` : ""}
           </p>
+          {exportState?.state === "verified" && <details style={{ fontSize: "0.78rem" }}><summary>Provider source</summary>
+            <p>The exports were derived from the provider render. <a href={job.videoUrl} target="_blank" rel="noopener noreferrer">Open original provider video</a>.</p>
+          </details>}
+          {exportState?.state === "invalid" && <p role="status" style={{ fontSize: "0.8rem", color: "#765b16" }}>
+            The saved video export could not be verified. The original provider preview is shown above.
+          </p>}
         </div>
       ) : job.thumbnailUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -140,6 +161,90 @@ function GenerationPanel({ job, delivery, deliveryFailed, renderUrl }: {
   );
 }
 
+type CarouselSlideView = { state: "ready" | "preview" | "pending" | "failed"; detail: string; job: GenerationReview | null };
+const carouselBeats = ["Setup", "Turn", "Payoff"] as const;
+
+async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }: {
+  shop: string; parentPostId: string; githubRepo: string; token: string; exp: string;
+}) {
+  const storeSlug = shop.replace(/\.myshopify\.com$/, "");
+  let manifest: GenerationCarousel | null = null;
+  let views: CarouselSlideView[] = [];
+  let notes: Awaited<ReturnType<typeof listNotes>> = [];
+  try {
+    ({ manifest, views, notes } = await runWithTenant({ shop, storeSlug, githubRepo }, async () => {
+      const manifest = await loadGenerationCarousel(socialRepo, parentPostId);
+      if (!manifest) return { manifest: null, views: [], notes: [] };
+      const views = await Promise.all(manifest.slides.map(async (slide): Promise<CarouselSlideView> => {
+        try {
+          const input = await readGenerationInput(socialRepo, slide.artifactId);
+          if (input.inputHash !== slide.inputHash || input.plan.postId !== slide.postId ||
+              input.plan.mechanic !== "collection-scene" || input.plan.sceneComposition !== "single-artwork")
+            throw new Error("Carousel source binding changed");
+          const job = await loadGenerationJobForPost(slide.postId);
+          if (!job) return { state: "pending", detail: "Generation has not started.", job: null };
+          if (job.artifactId !== slide.artifactId || job.inputHash !== slide.inputHash ||
+              job.mechanic !== "collection-scene" || generationDeliveryRepoFromPreview(job) !== githubRepo)
+            throw new Error("Carousel job binding changed");
+          if (job.state === "failed" || job.state === "declined")
+            return { state: "failed", detail: "Generation stopped before this slide was ready.", job };
+          if (job.state !== "succeeded" || !job.imageUrl)
+            return { state: "pending", detail: "Generation is in progress. Reload to check status.", job };
+          const delivery = await loadGenerationDelivery(socialRepo, job);
+          if (!delivery?.scene) return { state: "pending", detail: "Background rendered; exact artwork composition is pending.", job };
+          if (slide.finalImage) {
+            await readPersistedCarouselImage(socialRepo, slide);
+            return { state: "ready", detail: "Final image ready for review.", job };
+          }
+          return { state: "preview", detail: "Composed preview available; the immutable final image is still pending.", job };
+        } catch {
+          return { state: "failed", detail: "This slide's source or delivery receipt could not be verified.", job: null };
+        }
+      }));
+      return { manifest, views, notes: await listNotes(SOCIAL_PACK_ID, parentPostId) };
+    }));
+  } catch { return <Gate headline="Carousel review unavailable" sub="The ordered slides could not be verified. Reload this page or ask for a fresh link." />; }
+  if (!manifest) return <Gate headline="Carousel review unavailable" sub="No carousel manifest is available for this post yet." />;
+  const ttl = ttlRemaining(exp);
+  const month = manifest.parentPostId.match(/^(\d{4}-(?:0[1-9]|1[0-2]))-/)?.[1];
+  const sheet = month ? socialCarouselSheetLink(shop, month, githubRepo, ttl) : null;
+  const qs = new URLSearchParams({ shop, repo: githubRepo, t: token, e: exp });
+  const ready = views.filter(v => v.state === "ready").length;
+  return <main style={{ maxWidth: 1100, margin: "2.5rem auto 5rem", padding: "0 1.25rem", fontFamily: "system-ui, sans-serif" }}>
+    <header style={{ marginBottom: "1.5rem" }}>
+      <p style={{ fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.6 }}>Social review · three-slide carousel</p>
+      <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0" }}>{parentPostId}</h1>
+      {sheet && <p style={{ fontSize: "0.85rem" }}><a href={sheet.url}>See the whole month ({month})</a></p>}
+      <p role="status" style={{ fontSize: "0.9rem" }}>{ready === 3 ? "All three slides are ready for review." : `${ready} of 3 final slides ready. The carousel is incomplete.`}</p>
+    </header>
+    <div style={{ display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))" }}>
+      {manifest.slides.map((slide, index) => {
+        const view = views[index]!;
+        const url = `/api/social/carousel/render/${encodeURIComponent(parentPostId)}/${index + 1}?${qs}`;
+        return <article key={slide.artifactId} style={{ border: "1px solid rgba(0,0,0,0.14)", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "0.7rem 0.9rem", fontSize: "0.85rem" }}><strong>Slide {index + 1} · {carouselBeats[index]}</strong>{slide.artistCredit && <span> · {slide.artistCredit}</span>}</div>
+          {(view.state === "ready" || view.state === "preview") ? <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={url} alt={`Slide ${index + 1} of the carousel: complete artwork in its composed scene`} width={1080} height={1350}
+              style={{ display: "block", width: "100%", height: "auto", aspectRatio: "4 / 5", objectFit: "contain", background: "#f4f2ef" }} />
+            <p style={{ padding: "0.7rem 0.9rem", margin: 0, fontSize: "0.8rem" }}><a href={url} target="_blank" rel="noopener noreferrer">{view.state === "ready" ? "Open or download final image" : "Open composed preview"}</a></p>
+            {view.state === "preview" && <p role="status" style={{ padding: "0 0.9rem", fontSize: "0.8rem", color: "#765b16" }}>{view.detail}</p>}
+          </> : <div role="status" style={{ aspectRatio: "4 / 5", background: "#f4f2ef", padding: "1rem", display: "grid", placeItems: "center", fontSize: "0.85rem", textAlign: "center" }}>{view.detail}</div>}
+          {view.job?.sourcePreviewUrl && <p style={{ padding: "0 0.9rem", fontSize: "0.75rem" }}><a href={view.job.sourcePreviewUrl} target="_blank" rel="noopener noreferrer">Review verified artwork source</a></p>}
+        </article>;
+      })}
+    </div>
+    <section style={{ maxWidth: 720, marginTop: "1.5rem" }}>
+      <h2 style={{ fontSize: "1rem" }}>Caption for the complete carousel</h2>
+      <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{manifest.caption}</p>
+      <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>Review all three slides in order. Publishing requires a separate approval.</p>
+    </section>
+    <SocialReviewNotes groupKey={parentPostId} shop={shop} token={token} exp={exp} repo={githubRepo}
+      endpoint="/api/social/carousel/review-notes" initial={notes} slots={manifest.slides.map((slide) => slide.postId)} />
+    <p style={{ fontSize: "0.75rem", opacity: 0.55, marginTop: "2rem" }}>This link works for about {ttl} more day{ttl === 1 ? "" : "s"}.</p>
+  </main>;
+}
+
 export default async function SocialReviewRoom({
   params,
   searchParams,
@@ -152,11 +257,14 @@ export default async function SocialReviewRoom({
   const shop = one(sp.shop) ?? process.env.SHOPIFY_STORE_URL ?? "";
   const token = one(sp.t);
   const exp = one(sp.e);
+  const githubRepo = one(sp.repo);
 
   if (!shop) {
     return <Gate headline="This link is incomplete" sub="It is missing the store it belongs to. Ask for a fresh link." />;
   }
-  const verdict = verifyLink("review", shop, id, token, exp);
+  const verdict = githubRepo !== null
+    ? verifyCarouselReviewLink(shop, id, githubRepo, token, exp)
+    : verifyLink("review", shop, id, token, exp);
   if (verdict === "expired") {
     return (
       <Gate
@@ -169,9 +277,11 @@ export default async function SocialReviewRoom({
     return <Gate headline="This link isn’t valid" sub="Check you copied the whole URL, or ask for a fresh link." />;
   }
 
+  if (githubRepo !== null) return <CarouselReviewRoom shop={shop} parentPostId={id} githubRepo={githubRepo} token={token!} exp={exp!} />;
+
   const storeSlug = shop.replace(/\.myshopify\.com$/, "");
   const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
-  const { group, notes, generationJobs, generationUnavailable, deliveries } = await runWithTenant({ shop, storeSlug }, async () => {
+  const { group, notes, generationJobs, generationUnavailable, deliveries, loopExports } = await runWithTenant({ shop, storeSlug }, async () => {
     const group = await loadPostGroup(shop, id);
     const postIds = group.posts.length > 0 ? [...new Set(group.posts.map((member) => member.post.id))] : [id];
     let generationUnavailable = false;
@@ -181,13 +291,28 @@ export default async function SocialReviewRoom({
     }));
     const generationJobs = lookedUp.filter((job): job is GenerationReview => job !== null);
     const deliveries = new Map<string, DeliveryResult>();
+    const loopExports = new Map<string, LoopExportView>();
     for (const job of generationJobs) {
       try {
         const delivery = await loadGenerationDelivery(socialRepo, job);
         deliveries.set(job.id, { delivery, failed: false });
       } catch { deliveries.set(job.id, { delivery: null, failed: true }); }
+      if (job.mechanic === "artwork-loop" && job.state === "succeeded" && job.videoUrl) {
+        try {
+          const githubRepo = generationDeliveryRepoFromPreview(job);
+          const result = await runWithTenant({ shop, storeSlug, githubRepo }, async () => {
+            const raw = await socialRepo.readFile(loopExportManifestPath(job.artifactId));
+            if (raw === null) return { state: "legacy" as const };
+            const reel = await loadVerifiedLoopExport(socialRepo, job, "reel");
+            await loadVerifiedLoopExport(socialRepo, job, "feed");
+            return { state: "verified" as const, sourceWidth: reel.sourceWidth, sourceHeight: reel.sourceHeight,
+              sourceUpscaled: reel.sourceUpscaled, reelWidth: reel.width, reelHeight: reel.height, fit: reel.fit };
+          });
+          loopExports.set(job.id, result);
+        } catch { loopExports.set(job.id, { state: "invalid" }); }
+      }
     }
-    return { group, notes: await listNotes(SOCIAL_PACK_ID, id), generationJobs, generationUnavailable, deliveries };
+    return { group, notes: await listNotes(SOCIAL_PACK_ID, id), generationJobs, generationUnavailable, deliveries, loopExports };
   });
 
   if (group.posts.length === 0 && generationJobs.length === 0) {
@@ -257,7 +382,9 @@ export default async function SocialReviewRoom({
 
       {generationJobs.map((job) => <GenerationPanel key={job.id} job={job}
         delivery={deliveries.get(job.id)?.delivery ?? null} deliveryFailed={deliveries.get(job.id)?.failed ?? false}
-        renderUrl={sceneRenderUrl(shop, job.postId, ttl)} />)}
+        renderUrl={sceneRenderUrl(shop, job.postId, ttl)}
+        reelUrl={loopExportUrl(shop, job.postId, ttl, "reel")} feedUrl={loopExportUrl(shop, job.postId, ttl, "feed")}
+        exportState={loopExports.get(job.id) ?? null} />)}
 
       {group.posts.length > 0 && <div
         style={{

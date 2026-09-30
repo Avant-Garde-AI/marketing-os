@@ -9,13 +9,14 @@
  */
 
 import { loadCalendar } from "@/lib/social/console-data";
-import { socialReviewLink, ttlRemaining, verifyLink } from "@/lib/social/review-links";
+import { socialCarouselReviewLink, socialReviewLink, ttlRemaining, verifyLink } from "@/lib/social/review-links";
 import { groupKey, groupPosts, postThumbnailUrl } from "@/lib/social/projection";
 import { parsePost, postPath } from "@/lib/social/artifacts";
 import { socialRepo } from "@/lib/social/repo";
 import { countNotes } from "@/lib/review/notes";
 import { loadGenerationJobsForMonth, type GenerationReview } from "@/lib/social/generation-review";
-import { loadGenerationDelivery } from "@/lib/social/generation-delivery";
+import { generationDeliveryRepoFromPreview, loadGenerationDelivery } from "@/lib/social/generation-delivery";
+import { listGenerationCarouselsForMonth, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
 import { runWithTenant } from "@/lib/tenant-context";
 import type { SocialPost } from "@/lib/social/types";
 
@@ -57,11 +58,14 @@ export default async function SocialMonthSheet({
   const month = one(sp.month) ?? "";
   const token = one(sp.t);
   const exp = one(sp.e);
+  const repoParam = one(sp.repo);
 
   if (!shop || !MONTH_RE.test(month)) {
     return <Gate headline="This link is incomplete" sub="It is missing the store or the month. Ask for a fresh link." />;
   }
-  const verdict = verifyLink("sheet", shop, month, token, exp);
+  const verdict = repoParam !== null
+    ? verifyLink("sheet", shop, `carousel-sheet:${month}:${repoParam}`, token, exp)
+    : verifyLink("sheet", shop, month, token, exp);
   if (verdict === "expired") {
     return (
       <Gate
@@ -78,7 +82,8 @@ export default async function SocialMonthSheet({
   const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
   const ttl = ttlRemaining(exp);
 
-  const { groups, counts, unreadable, generationJobs, generationUnavailable, deliveries } = await runWithTenant({ shop, storeSlug }, async () => {
+  const { groups, counts, unreadable, generationJobs, generationUnavailable, deliveries,
+    carousels, carouselRepo, carouselUnavailable, invalidCarousels, finalImages } = await runWithTenant({ shop, storeSlug, githubRepo: repoParam }, async () => {
     // Read from the CALENDAR (the month's plan), then the artifacts it points
     // at — files are truth, so the sheet shows what would actually ship.
     const calendar = await loadCalendar(shop, month);
@@ -99,6 +104,33 @@ export default async function SocialMonthSheet({
     let generationUnavailable = false;
     try { generationJobs = await loadGenerationJobsForMonth(month); }
     catch { generationUnavailable = true; }
+    let carouselRepo = repoParam;
+    let carouselUnavailable = false;
+    if (!carouselRepo && generationJobs.length > 0) {
+      try {
+        const candidates = new Set(generationJobs.map((job) => generationDeliveryRepoFromPreview(job)).filter((v): v is string => !!v));
+        if (candidates.size === 1) carouselRepo = [...candidates][0]!;
+        else if (candidates.size > 1) carouselUnavailable = true;
+      } catch { carouselUnavailable = true; }
+    }
+    if (!carouselRepo && process.env.MARKETING_OS_MODE !== "hosted") carouselRepo = process.env.GITHUB_REPO ?? null;
+    let carousels: GenerationCarousel[] = [];
+    let invalidCarousels: string[] = [];
+    if (carouselRepo && !carouselUnavailable) {
+      try {
+        const found = await runWithTenant({ shop, storeSlug, githubRepo: carouselRepo }, () => listGenerationCarouselsForMonth(socialRepo, month));
+        carousels = found.manifests; invalidCarousels = found.invalid;
+      } catch { carouselUnavailable = true; }
+    }
+    const finalImages = new Map<string, boolean>();
+    if (carouselRepo) {
+      for (const manifest of carousels) for (const slide of manifest.slides) if (slide.finalImage) {
+        try {
+          await runWithTenant({ shop, storeSlug, githubRepo: carouselRepo }, () => readPersistedCarouselImage(socialRepo, slide));
+          finalImages.set(slide.artifactId, true);
+        } catch { finalImages.set(slide.artifactId, false); }
+      }
+    }
     const deliveries = new Map<string, DeliveryResult>();
     // Bound concurrent repo reads for a full month; one bad receipt must not
     // hide other jobs or the ordinary calendar cards.
@@ -112,15 +144,23 @@ export default async function SocialMonthSheet({
     }
     return {
       groups: grouped,
-      counts: await countNotes(SOCIAL_PACK_ID, grouped.map((g) => g.key)),
+      counts: await countNotes(SOCIAL_PACK_ID, [...grouped.map((g) => g.key), ...carousels.map((manifest) => manifest.parentPostId)]),
       unreadable: bad,
       generationJobs,
       generationUnavailable,
       deliveries,
+      carousels,
+      carouselRepo,
+      carouselUnavailable,
+      invalidCarousels,
+      finalImages,
     };
   });
-  const postsInGroups = new Set(groups.flatMap((g) => g.posts.map((post) => post.id)));
-  const standaloneJobs = generationJobs.filter((job) => !postsInGroups.has(job.postId));
+  const carouselChildren = new Set(carousels.flatMap((manifest) => manifest.slides.map((slide) => slide.postId)));
+  const visibleGroups = groups.map((group) => ({ ...group, posts: group.posts.filter((post) => !carouselChildren.has(post.id)) }))
+    .filter((group) => group.posts.length > 0);
+  const postsInGroups = new Set(visibleGroups.flatMap((g) => g.posts.map((post) => post.id)));
+  const standaloneJobs = generationJobs.filter((job) => !postsInGroups.has(job.postId) && !carouselChildren.has(job.postId));
 
   return (
     <main style={{ maxWidth: 1200, margin: "2.5rem auto 5rem", padding: "0 1.25rem", fontFamily: "system-ui, sans-serif" }}>
@@ -143,13 +183,57 @@ export default async function SocialMonthSheet({
         </p>
       )}
 
-      {groups.length === 0 && standaloneJobs.length === 0 ? (
+      {(carouselUnavailable || invalidCarousels.length > 0) && (
+        <p role="status" style={{ color: "#765b16", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
+          {invalidCarousels.length > 0 ? `${invalidCarousels.length} carousel manifest${invalidCarousels.length === 1 ? "" : "s"} could not be verified. Their child jobs remain visible separately.`
+            : "Carousel manifests are temporarily unavailable. Other posts remain visible."}
+        </p>
+      )}
+
+      {visibleGroups.length === 0 && standaloneJobs.length === 0 && carousels.length === 0 ? (
         <p style={{ opacity: 0.7 }}>
           Nothing is planned for {month} yet — or the month&rsquo;s calendar has no posts attached to its slots.
         </p>
       ) : (
         <div style={{ display: "grid", gap: "1.25rem", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-          {groups.map(({ key, posts }) => {
+          {carousels.map((manifest) => {
+            const n = counts.get(manifest.parentPostId);
+            const childViews = manifest.slides.map((slide) => {
+              const job = generationJobs.find((item) => item.postId === slide.postId);
+              const validJob = job?.artifactId === slide.artifactId && job.inputHash === slide.inputHash && job.mechanic === "collection-scene";
+              const delivery = job ? deliveries.get(job.id) : null;
+              return { job, ready: !!validJob && job?.state === "succeeded" && !!job.imageUrl && !!delivery?.delivery?.scene && !delivery.failed && finalImages.get(slide.artifactId) === true,
+                failed: finalImages.get(slide.artifactId) === false || !!job && (!validJob || delivery?.failed === true || job.state === "failed" || job.state === "declined") };
+            });
+            const ready = childViews.filter((v) => v.ready).length;
+            const firstReady = childViews[0]?.ready;
+            const firstImage = firstReady && carouselRepo
+              ? `/api/social/carousel/render/${encodeURIComponent(manifest.parentPostId)}/1?${new URL(socialCarouselReviewLink(shop, manifest.parentPostId, carouselRepo, ttl).url).searchParams}`
+              : null;
+            return <a key={`carousel-${manifest.parentPostId}`}
+              href={carouselRepo ? socialCarouselReviewLink(shop, manifest.parentPostId, carouselRepo, ttl).url : "#"}
+              style={{ border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden", textDecoration: "none", color: "inherit", display: "block" }}>
+              {firstImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={firstImage} alt="" style={{ width: "100%", aspectRatio: "4 / 5", objectFit: "contain", display: "block", background: "#f4f2ef" }} />
+              ) : <div style={{ aspectRatio: "4 / 5", background: "#f4f2ef", display: "grid", placeItems: "center", padding: "1rem", textAlign: "center", fontSize: "0.85rem" }}>
+                {ready} of 3 final slides ready
+              </div>}
+              <div style={{ padding: "0.7rem 0.85rem" }}>
+                <div style={{ fontSize: "0.75rem", opacity: 0.65 }}>Three-slide carousel · {ready} of 3 ready</div>
+                <div style={{ fontSize: "0.88rem", marginTop: "0.3rem", lineHeight: 1.4 }}>
+                  {(manifest.caption.split("\n").find((line) => line.trim()) ?? manifest.parentPostId).slice(0, 90)}
+                </div>
+                {n && n.total > 0 && <div style={{ fontSize: "0.75rem", marginTop: "0.45rem", opacity: 0.7 }}>
+                  {n.open} open / {n.total} note{n.total === 1 ? "" : "s"}
+                </div>}
+                {childViews.some((v) => v.failed) && <div role="status" style={{ fontSize: "0.75rem", marginTop: "0.45rem", color: "#765b16" }}>
+                  A slide needs attention before this carousel is complete.
+                </div>}
+              </div>
+            </a>;
+          })}
+          {visibleGroups.map(({ key, posts }) => {
             const lead = posts[0]!;
             const motion = generationJobs.filter((job) => posts.some((post) => post.id === job.postId));
             const leadJob = motion.find((job) => job.postId === lead.id) ?? motion[0];

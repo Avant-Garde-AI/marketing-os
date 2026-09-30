@@ -29,9 +29,12 @@ interface Props {
   initial: ReviewNote[];
   /** Variant ids in the group, so a note can name which one it is about. */
   slots: string[];
+  /** Carousel notes use a separate parent-token route; ordinary groups retain the existing endpoint. */
+  endpoint?: string;
+  repo?: string;
 }
 
-export function SocialReviewNotes({ groupKey, shop, token, exp, initial, slots }: Props) {
+export function SocialReviewNotes({ groupKey, shop, token, exp, initial, slots, endpoint = "/api/social/review-notes", repo }: Props) {
   const [notes, setNotes] = useState<ReviewNote[]>(initial);
   const [author, setAuthor] = useState("");
   const [body, setBody] = useState("");
@@ -45,7 +48,7 @@ export function SocialReviewNotes({ groupKey, shop, token, exp, initial, slots }
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/social/review-notes", {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -53,6 +56,7 @@ export function SocialReviewNotes({ groupKey, shop, token, exp, initial, slots }
           shop,
           t: token,
           e: exp,
+          ...(repo ? { repo } : {}),
           author,
           body,
           slot: slot || null,

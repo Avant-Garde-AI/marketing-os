@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { generationPlanCreativeHash, generationPlanSchema } from "../src/generation-plan";
 
 const sha = "a".repeat(64);
@@ -44,5 +45,23 @@ describe("generation pilot plan", () => {
     expect(() => generationPlanSchema.parse({ ...scenePlan, sources: [sources[0], { ...sources[1], sourceSha256: sources[0].sourceSha256,
       sourcePath: sources[0].sourcePath }, sources[2]] })).toThrow(/source hashes must be distinct/);
     expect(() => generationPlanSchema.parse({ ...scenePlan, sources: [sources[0], { ...sources[1], verificationRef: sources[0].verificationRef }, sources[2]] })).toThrow(/verification receipts must be distinct/);
+  });
+
+  it("requires an explicit single-artwork scene and preserves legacy creative hashes", () => {
+    const legacy = { ...plan, mechanic: "collection-scene" as const, scene: "real-home" as const,
+      sources: ["a", "b", "c"].map((letter) => ({ ...source, sourceRef: `ams://work/${letter}`,
+        verificationRef: `catalog://work/${letter}`, sourceSha256: letter.repeat(64),
+        sourcePath: `social/production/sources/${letter.repeat(64)}.jpeg.b64` })),
+      transform: { ...plan.transform, height: 1350 as const } };
+    const oldHash = createHash("sha256").update(JSON.stringify({ mechanic: legacy.mechanic, scene: legacy.scene,
+      prompt: legacy.prompt, caption: legacy.caption, transform: legacy.transform })).digest("hex");
+    expect(generationPlanCreativeHash(legacy)).toBe(oldHash);
+    const single = { ...legacy, sceneComposition: "single-artwork" as const, sources: [legacy.sources[0]!] };
+    expect(generationPlanSchema.parse(single)).toEqual(single);
+    expect(generationPlanCreativeHash(single)).not.toBe(oldHash);
+    expect(() => generationPlanSchema.parse({ ...legacy, sources: [legacy.sources[0]!] })).toThrow(/three sources/);
+    expect(() => generationPlanSchema.parse({ ...single, sources: legacy.sources })).toThrow(/one source/);
+    expect(() => generationPlanSchema.parse({ ...plan, sceneComposition: "single-artwork" })).toThrow(/no scene/);
+    expect(() => generationPlanSchema.parse({ ...single, sceneComposition: "three-artworks" })).toThrow();
   });
 });

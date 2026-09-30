@@ -1,4 +1,4 @@
-/** Deterministic, full-artwork placement into three reviewed scene openings. */
+/** Deterministic, full-artwork placement into explicitly reviewed scene openings. */
 import sharp from "sharp";
 
 const WIDTH = 1080;
@@ -10,7 +10,7 @@ type Quad = readonly [Point, Point, Point, Point];
 
 export interface SceneSource { ref: string; bytes: Buffer }
 export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string }
-export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[] }
+export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[]; composition?: "single-artwork" }
 
 function cross(a: Point, b: Point, c: Point): number {
   return (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
@@ -77,16 +77,18 @@ async function checkedImage(bytes: Buffer, label: string) {
 }
 
 export async function compositeArtworkScene(input: SceneCompositeInput): Promise<Buffer> {
-  if (input.sources?.length !== 3 || input.placements?.length !== 3) throw new Error("Scene requires exactly three artworks and placements");
+  const count = input.composition === "single-artwork" ? 1 : 3;
+  if (input.sources?.length !== count || input.placements?.length !== count)
+    throw new Error(`Scene requires exactly ${count} artwork${count === 1 ? "" : "s"} and placement${count === 1 ? "" : "s"}`);
   const refs = new Set(input.sources.map(s => s.ref));
-  if (refs.size !== 3 || [...refs].some(ref => !ref || ref.length > 200)) throw new Error("Scene artwork references must be distinct");
+  if (refs.size !== count || [...refs].some(ref => !ref || ref.length > 200)) throw new Error("Scene artwork references must be distinct");
   const placed = new Set(input.placements.map(p => p.sourceRef));
-  if (placed.size !== 3 || [...refs].some(ref => !placed.has(ref))) throw new Error("Scene placements must use each artwork once");
+  if (placed.size !== count || [...refs].some(ref => !placed.has(ref))) throw new Error("Scene placements must use each artwork once");
   for (const p of input.placements) {
     if (!quadIsValid(p.quad)) throw new Error("Invalid scene placement quad");
     if (!/^#[0-9a-fA-F]{6}$/.test(p.mat)) throw new Error("Invalid scene mat color");
   }
-  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++)
+  for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++)
     if (overlaps(input.placements[i]!.quad, input.placements[j]!.quad)) throw new Error("Scene placements overlap");
   const backgroundMeta = await checkedImage(input.background, "Background");
   if (Math.abs(backgroundMeta.width! / backgroundMeta.height! - WIDTH / HEIGHT) > 0.001)

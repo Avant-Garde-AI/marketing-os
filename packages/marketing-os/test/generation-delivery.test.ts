@@ -46,6 +46,25 @@ async function fixture() {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("generation delivery receipt", () => {
+  it("binds one placement to an explicitly single-artwork scene plan", async () => {
+    const { repo, files, receipt, job, background } = await fixture();
+    const planPath = `social/production/jobs/${artifactId}.json`;
+    const plan = JSON.parse(files[planPath]!);
+    files[planPath] = JSON.stringify({ ...plan, sceneComposition: "single-artwork", sources: [plan.sources[0]] });
+    const input = await readGenerationInput(repo, artifactId);
+    const singleReceipt = { ...receipt, inputHash: input.inputHash,
+      scene: { ...receipt.scene, placements: [receipt.scene.placements[0]] } };
+    files[generationDeliveryPath(artifactId)] = JSON.stringify(singleReceipt);
+    const boundJob = { ...job, inputHash: input.inputHash };
+    expect((await loadGenerationDelivery(repo, boundJob))?.scene?.placements).toHaveLength(1);
+    vi.stubGlobal("fetch", async () => new Response(new Uint8Array(background)));
+    const rendered = await renderGenerationScene(repo, boundJob, generationDeliverySchema.parse(singleReceipt));
+    const meta = await sharp(rendered).metadata();
+    expect([meta.width, meta.height]).toEqual([1080, 1350]);
+    files[generationDeliveryPath(artifactId)] = JSON.stringify({ ...singleReceipt, scene: receipt.scene });
+    await expect(loadGenerationDelivery(repo, boundJob)).rejects.toThrow(/placements do not match/);
+  });
+
   it("derives the hosted git repo only from the signed source preview binding", async () => {
     vi.stubEnv("MARKETING_OS_MODE", "hosted");
     vi.stubEnv("ACTIONS_GATE_SECRET", "delivery-test-secret");

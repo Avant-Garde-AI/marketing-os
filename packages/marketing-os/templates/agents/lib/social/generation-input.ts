@@ -19,6 +19,7 @@ export async function readGenerationInput(repo: StoreRepo, id: string) {
     // The scene provider receives a text-only empty-frame prompt. This sheet is
     // signed review proof of source identity and order, never provider input.
     const panels: Buffer[] = [];
+    let singleArtwork: Buffer | undefined;
     const panelWidth = 336;
     const gutter = 18;
     const panelHeight = plan.transform.height;
@@ -33,9 +34,21 @@ export async function readGenerationInput(repo: StoreRepo, id: string) {
       if (meta.format !== "jpeg" || meta.width !== source.width || meta.height !== source.height ||
           (meta.orientation ?? 1) !== 1 || source.width < 1024 || source.height < 1024)
         throw new Error("Source format or dimensions disagree with its reviewed receipt");
+      if (plan.sceneComposition === "single-artwork") {
+        singleArtwork = bytes;
+        continue;
+      }
       panels.push(await sharp(bytes, { limitInputPixels: 20_000_000 })
         .resize(panelWidth, panelHeight, { fit: "contain", background: plan.transform.background })
         .toBuffer());
+    }
+    if (plan.sceneComposition === "single-artwork") {
+      const fitted = await sharp(singleArtwork!, { limitInputPixels: 20_000_000 })
+        .resize(plan.transform.width, panelHeight, { fit: "contain", background: plan.transform.background })
+        .jpeg({ quality: 95 }).toBuffer();
+      const prepared = { sha256: digest(fitted), width: plan.transform.width, height: panelHeight, mimeType: "image/jpeg" as const };
+      const inputHash = digest(JSON.stringify({ plan, prepared }));
+      return { plan, prepared, inputHash, base64: fitted.toString("base64") };
     }
     const sheet = await sharp({ create: {
       width: plan.transform.width, height: panelHeight, channels: 3, background: plan.transform.background,

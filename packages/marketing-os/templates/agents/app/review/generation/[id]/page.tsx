@@ -23,17 +23,19 @@ export default async function GenerationReview({ params, searchParams }: {
       () => readGenerationInput(socialRepo, id));
     if (input.inputHash !== hash) return unavailable;
     const isScene = input.plan.mechanic === "collection-scene";
+    const singleScene = isScene && input.plan.sceneComposition === "single-artwork";
     return <main style={{ maxWidth: 960, margin: "2rem auto", padding: "1rem", fontFamily: "system-ui", lineHeight: 1.6 }}>
-      <p>{isScene ? "Three-source scene · verified source contact sheet" : "Artwork loop · before generation"}</p>
-      <h1>{isScene ? "Review the three artworks and scene direction" : "Review the artwork and animation"}</h1>
+      <p>{singleScene ? "Single-artwork scene · verified full source" : isScene ? "Three-source scene · verified source contact sheet" : "Artwork loop · before generation"}</p>
+      <h1>{singleScene ? "Review the artwork and scene direction" : isScene ? "Review the three artworks and scene direction" : "Review the artwork and animation"}</h1>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: "2rem" }}>
         {/* Source bytes stay behind the signed review; no public master URL. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`data:image/jpeg;base64,${input.base64}`} alt={isScene ? "Ordered contact sheet of three complete source artworks, left to right" : "Complete artwork fitted into the proposed video canvas"} style={{ width: "100%", maxHeight: 640, objectFit: "contain" }} />
+        <img src={`data:image/jpeg;base64,${input.base64}`} alt={singleScene ? "Complete verified artwork fitted into the proposed scene canvas" : isScene ? "Ordered contact sheet of three complete source artworks, left to right" : "Complete artwork fitted into the proposed video canvas"} style={{ width: "100%", maxHeight: 640, objectFit: "contain" }} />
         <section>{isScene && <p>Scene: {input.plan.scene === "real-home" ? "real home" : "imagined world"}</p>}
           <h2>{isScene ? "Empty-frame environment prompt" : "Motion"}</h2><p style={{ whiteSpace: "pre-wrap" }}>{input.plan.prompt}</p>
           <h2>Caption</h2><p>{input.plan.caption}</p><h2>Source treatment</h2>
-          {isScene ? <p>The contact sheet shows all three verified artworks in source order, left to right, with their full edges preserved. It is source-review proof, not the generated scene or a placement preview. The provider generates a text-only empty-frame environment; the artworks are composited afterward and are not redrawn by the provider.</p>
+          {singleScene ? <p>The full verified artwork is fitted into this source preview with its edges preserved. This is source proof, not the generated slide or its final placement. The provider generates a text-only empty-frame environment; the exact artwork is composited afterward.</p>
+            : isScene ? <p>The contact sheet shows all three verified artworks in source order, left to right, with their full edges preserved. It is source-review proof, not the generated scene or a placement preview. The provider generates a text-only empty-frame environment; the artworks are composited afterward and are not redrawn by the provider.</p>
             : <p>The complete artwork is fitted into the video canvas with padding. Its edges are preserved.</p>}
           {isScene && <ol>{input.plan.sources.map((source) => <li key={source.sourceSha256}>{source.sourceRef} · receipt {source.verificationRef}</li>)}</ol>}
           <p>{isScene ? "This is source proof, not generated output." : "This is proposed input, not generated output."} An explicit authenticated run with a credit ceiling proceeds through the Action gate; no separate artwork preapproval is required. Publishing remains a separate action.</p>

@@ -1314,6 +1314,31 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-carousel.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-carousel.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-export.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-export.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/carousel/render/[id]/[index]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/carousel/render/[id]/[index]/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/carousel/review-notes/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/carousel/review-notes/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/generation/export/[id]/[variant]/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/generation/export/[id]/[variant]/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/generation-delivery.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/generation-delivery.ts"),
       overwrite: "skip",

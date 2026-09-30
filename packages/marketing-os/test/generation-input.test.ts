@@ -91,13 +91,32 @@ describe("generation input", () => {
 });
 
 describe("three-source collection scene input", () => {
+  it("prepares one complete artwork on a 4:5 canvas only with explicit single-artwork composition", async () => {
+    const { sceneId, repo, files, plan, assets } = await sceneFixture();
+    const single = { ...plan, sceneComposition: "single-artwork", sources: [plan.sources[0]!] };
+    files[generationInputPath(sceneId)] = JSON.stringify(single);
+    const result = await readGenerationInput(repo, sceneId);
+    const expected = await sharp(assets[0]!.bytes, { limitInputPixels: 20_000_000 })
+      .resize(1080, 1350, { fit: "contain", background: "#f4f3ee" }).jpeg({ quality: 95 }).toBuffer();
+    expect(result.base64).toBe(expected.toString("base64"));
+    expect(result.prepared).toEqual({ sha256: sha(expected), width: 1080, height: 1350, mimeType: "image/jpeg" });
+    files[generationInputPath(sceneId)] = JSON.stringify({ ...single, sources: plan.sources });
+    await expect(readGenerationInput(repo, sceneId)).rejects.toThrow(/one source/);
+  });
+
   it("verifies all sources and produces an ordered, fully contained review sheet", async () => {
-    const { sceneId, repo, plan } = await sceneFixture();
+    const { sceneId, repo, plan, assets } = await sceneFixture();
     const input = await readGenerationInput(repo, sceneId);
     expect(input.plan).toEqual(plan);
     expect(input.prepared).toEqual({ sha256: sha(Buffer.from(input.base64, "base64")), width: 1080,
       height: 1350, mimeType: "image/jpeg" });
     expect(input.inputHash).toBe(sha(Buffer.from(JSON.stringify({ plan: input.plan, prepared: input.prepared }))));
+    const priorPanels = await Promise.all(assets.map(({ bytes }) => sharp(bytes, { limitInputPixels: 20_000_000 })
+      .resize(336, 1350, { fit: "contain", background: "#f4f3ee" }).toBuffer()));
+    const priorSheet = await sharp({ create: { width: 1080, height: 1350, channels: 3, background: "#f4f3ee" } })
+      .composite(priorPanels.map((panel, index) => ({ input: panel, left: 18 + index * 354, top: 0 })))
+      .jpeg({ quality: 95 }).toBuffer();
+    expect(input.base64).toBe(priorSheet.toString("base64"));
     const image = sharp(Buffer.from(input.base64, "base64"));
     const meta = await image.metadata();
     expect([meta.width, meta.height]).toEqual([1080, 1350]);

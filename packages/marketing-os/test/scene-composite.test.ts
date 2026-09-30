@@ -25,6 +25,22 @@ async function pixel(bytes: Buffer, x: number, y: number) {
 }
 
 describe("artwork scene compositor", () => {
+  it("places one full artwork only when single-artwork composition is explicit", async () => {
+    const input = await fixture();
+    input.sources = [input.sources[0]!];
+    input.placements = [input.placements[0]!];
+    await expect(compositeArtworkScene(input)).rejects.toThrow(/exactly 3/);
+    input.composition = "single-artwork";
+    const output = await compositeArtworkScene(input);
+    const meta = await sharp(output).metadata();
+    expect([meta.width, meta.height]).toEqual([1080, 1350]);
+    const artwork = await pixel(output, 170, 390), outside = await pixel(output, 540, 1050);
+    expect(artwork[0]).toBeGreaterThan(artwork[1]! * 2);
+    expect(outside[2]).toBeGreaterThan(outside[0]! * 3);
+    input.sources = [input.sources[0]!, { ref: "other", bytes: input.sources[0]!.bytes }];
+    await expect(compositeArtworkScene(input)).rejects.toThrow(/exactly 1/);
+  });
+
   it("projects all three artworks and leaves the outside background untouched", async () => {
     const output = await compositeArtworkScene(await fixture());
     const meta = await sharp(output).metadata();

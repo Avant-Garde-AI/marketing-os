@@ -27,7 +27,7 @@ export const generationDeliverySchema = z.object({
   caption: z.string().trim().min(1).max(5_000),
   scene: z.object({
     backgroundSha256: z.string().regex(hash),
-    placements: z.tuple([placement, placement, placement]),
+    placements: z.array(placement).min(1).max(3),
   }).strict().optional(),
 }).strict();
 export type GenerationDelivery = z.infer<typeof generationDeliverySchema>;
@@ -75,9 +75,11 @@ export async function loadGenerationDelivery(repo: StoreRepo, job: BoundJob): Pr
     if (input.inputHash !== job.inputHash || input.plan.postId !== job.postId || input.plan.mechanic !== job.mechanic)
       throw new Error("Generation delivery receipt does not match immutable source input");
     if (receipt.scene) {
+      const expected = input.plan.sceneComposition === "single-artwork" ? 1 : 3;
       const planned = new Set(input.plan.sources.map(source => source.sourceRef));
       const placed = new Set(receipt.scene.placements.map(item => item.sourceRef));
-      if (planned.size !== 3 || placed.size !== 3 || [...planned].some(ref => !placed.has(ref)))
+      if (planned.size !== expected || receipt.scene.placements.length !== expected || placed.size !== expected ||
+          [...planned].some(ref => !placed.has(ref)))
         throw new Error("Generation delivery placements do not match reviewed artworks");
     }
     return receipt;
@@ -134,7 +136,7 @@ async function readVerifiedSources(repo: StoreRepo, job: BoundJob) {
       throw new Error("Verified scene source dimensions changed");
     sources.push({ ref: source.sourceRef, bytes });
   }
-  return sources;
+  return { sources, composition: input.plan.sceneComposition };
 }
 
 export async function renderGenerationScene(repo: StoreRepo, job: SceneJob, receipt: GenerationDelivery): Promise<Buffer> {
@@ -142,8 +144,13 @@ export async function renderGenerationScene(repo: StoreRepo, job: SceneJob, rece
       receipt.artifactId !== job.artifactId || receipt.postId !== job.postId || receipt.inputHash !== job.inputHash)
     throw new Error("Finished scene and matching receipt required");
   return withJobRepo(job, async () => {
-    const sources = await readVerifiedSources(repo, job);
+    const { sources, composition } = await readVerifiedSources(repo, job);
+    const expected = composition === "single-artwork" ? 1 : 3;
+    if (receipt.scene!.placements.length !== expected ||
+        new Set(receipt.scene!.placements.map(item => item.sourceRef)).size !== expected ||
+        sources.some(source => !receipt.scene!.placements.some(item => item.sourceRef === source.ref)))
+      throw new Error("Generation delivery placements do not match reviewed artworks");
     const background = await readProviderBackground(job.imageUrl!, receipt.scene!.backgroundSha256);
-    return compositeArtworkScene({ background, sources, placements: receipt.scene!.placements });
+    return compositeArtworkScene({ background, sources, placements: receipt.scene!.placements, composition });
   });
 }

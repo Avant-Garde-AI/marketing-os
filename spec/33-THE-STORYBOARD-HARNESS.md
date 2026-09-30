@@ -1186,6 +1186,8 @@ The launch unit is one coherent three-scene carousel; default magical compositio
 uses a different hero work in each scene. Source-bound theme eligibility precedes
 reuse ranking, and every slide requires a distinct setting and clever frame
 placement. The generic planner implements these constraints; store recipes own
-the aesthetic mappings. Grouped generation and final ordered carousel delivery
-remain open, and the standalone pilots must not be relabeled as that result.
+the aesthetic mappings. The runtime now supports explicit single-artwork child jobs and a repo-bound
+three-slide parent manifest. Parent review requires matching child input hashes,
+exact-artwork delivery receipts and persisted final JPEGs before reporting a
+complete carousel. The earlier standalone pilots remain separate artifacts.
 See [the themed carousel correction](../docs/plans/storyboard-harness/THEMED-SCENE-CAROUSELS-2026-09-30.md).

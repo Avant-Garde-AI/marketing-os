@@ -84,6 +84,23 @@ export function socialReviewLink(shop: string, groupKey: string, ttlDays = DEFAU
   return mint("review", `/review/social/${encodeURIComponent(groupKey)}`, shop, groupKey, ttlDays);
 }
 
+/** One parent post and one store repo. Its token cannot open a child post room. */
+export function socialCarouselReviewLink(shop: string, parentPostId: string, githubRepo: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(parentPostId) ||
+      !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(githubRepo)) throw new Error("Invalid carousel review binding");
+  const link = mint("review", `/review/social/${encodeURIComponent(parentPostId)}`,
+    shop, `carousel:${parentPostId}:${githubRepo}`, ttlDays);
+  const url = new URL(link.url); url.searchParams.set("repo", githubRepo);
+  return { ...link, url: url.toString() };
+}
+
+export function verifyCarouselReviewLink(shop: string, parentPostId: string, githubRepo: string | null,
+  token: string | null, exp: string | null): VerifyResult {
+  if (!githubRepo || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(githubRepo) ||
+      !/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(parentPostId)) return "invalid";
+  return verifyLink("review", shop, `carousel:${parentPostId}:${githubRepo}`, token, exp);
+}
+
 /** Read-only narrative shortlist. Its token never grants selection or spend authority. */
 export function socialStoryboardReviewLink(shop: string, reviewId: string, reviewHash: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
   const link = mint("review", `/review/storyboard/${encodeURIComponent(reviewId)}`, shop, `storyboard:${reviewId}`, ttlDays);
@@ -102,6 +119,15 @@ export function socialGenerationReviewLink(shop: string, id: string, inputHash: 
 /** The month sheet — every group planned for a month. */
 export function socialSheetLink(shop: string, month: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
   return mint("sheet", "/review/social", shop, month, ttlDays);
+}
+
+/** Repo-bound month view for store-owned carousel manifests in hosted mode. */
+export function socialCarouselSheetLink(shop: string, month: string, githubRepo: string, ttlDays = DEFAULT_TTL_DAYS): MintedLink {
+  if (!/^\d{4}-(?:0[1-9]|1[0-2])$/.test(month) ||
+      !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(githubRepo)) throw new Error("Invalid carousel sheet binding");
+  const link = mint("sheet", "/review/social", shop, `carousel-sheet:${month}:${githubRepo}`, ttlDays);
+  const url = new URL(link.url); url.searchParams.set("month", month); url.searchParams.set("repo", githubRepo);
+  return { ...link, url: url.toString() };
 }
 
 /**

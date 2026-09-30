@@ -9,6 +9,7 @@ governed generation, evaluation, and rollout.
 | --- | --- |
 | [Core plan](../../STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md) | Full architecture, contracts, research experiments, gates and implementation work packages |
 | [Spec 33](../../../spec/33-THE-STORYBOARD-HARNESS.md) | Diagnosis, invariants and implementation history |
+| [Scene delivery](SCENE-DELIVERY-2026-09-29.md) | Exact-artwork scene runtime, actual three-scene pilot and remaining month automation |
 | [Initialization](INITIALIZATION.md) | Original handover brief |
 | [Corpus pilot](CORPUS-PILOT.md) | Verified inventory, real three-image results and coverage limits |
 | [TRD reconciliation](TRD-RECONCILIATION.md) | Earlier design synthesis; superseded where the core plan records corrections |

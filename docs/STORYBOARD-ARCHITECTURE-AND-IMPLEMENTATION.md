@@ -1680,3 +1680,19 @@ The owner now prioritizes repeatable artwork loops and three-work lifestyle
 scenes. [Production recipes](plans/storyboard-harness/PRODUCTION-RECIPES-2026-09-28.md)
 specifies the delivered planning slice and remaining source/OAuth/job/media
 work. This is the immediate shipping lane; the research roadmap remains open.
+
+
+## Live launch checkpoint — 2026-09-29 scene pilot
+
+The temporary recipe lane has produced one artwork-loop draft and three actual
+scene compositions (Moroccan courtyard, forest gallery, space observatory).
+The scene lane generates backgrounds only, then places three verified complete
+artworks deterministically. Instagram delivery is 1080×1350 JPEG with credited
+copy in the existing token-scoped room/month review. Total scene spend was
+8.25 Higgsfield credits; no automated rerolls, scheduling or publishing occurred.
+
+[Scene delivery and the remaining work](plans/storyboard-harness/SCENE-DELIVERY-2026-09-29.md)
+records the generic/store/platform boundaries and links the live result receipts.
+This establishes a working pilot, not creative acceptance, a proven engagement
+archetype, automatic frame localization or a finished month. The research and
+pattern-admission work above retains its own evidence requirements.

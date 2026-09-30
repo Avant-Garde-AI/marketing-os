@@ -42,6 +42,8 @@ const inventorySchema = z.object({
     artist: text.max(200).optional(),
     visualFacts: z.array(text.max(500)).max(30).optional(),
     facets: facetSchema.optional(),
+    // Explicit reviewed catalog/graph membership or medium; never inferred from an artist name.
+    selectionEvidence: z.array(z.object({ key: text.max(400), sourceRefs: z.array(text.max(1000)).min(1).max(20) }).strict()).max(100).optional(),
   }).strict()).max(500),
 }).strict();
 
@@ -184,6 +186,11 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
             continue;
           }
           const verifiedItem = item!;
+          const selectionEvidence = [
+            ...(source.selectionEvidence ?? []).filter(e => !e.key.startsWith("collection:") && !e.key.startsWith("tag:")),
+            ...(verifiedItem.collectionHandles ?? []).map(handle => ({ key: `collection:${handle}`, sourceRefs: [catalogReceipt.ref] })),
+            ...normalized(verifiedItem.tags ?? []).map(tag => ({ key: `tag:${tag}`, sourceRefs: [catalogReceipt.ref] })),
+          ];
           const sourceRef = inventoryRef(source.handle, source.sha256);
           const current = subjects.get(source.handle);
           const graph = graphSubjects.get(source.handle);
@@ -206,9 +213,11 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
           subjects.set(source.handle, current ? {
             ...current, sourceRefs: [...new Set([...current.sourceRefs, catalogReceipt.ref, sourceRef])],
             facts: [...(current.facts ?? []), ...visualFacts],
+            selectionEvidence,
           } : {
             handle: source.handle, artist: source.artist ?? "Unattributed in reviewed inventory; do not invent a credit",
             sourceRefs: [catalogReceipt.ref, sourceRef],
+            selectionEvidence,
             asset: { kind: "full-master", ref: source.ref, verificationRef: `${source.verificationRef}#sha256=${source.sha256}` },
             facts: [
               { text: `Catalog title: ${verifiedItem.title}. Public product page: ${verifiedItem.onlineStoreUrl}. Stock availability is unknown.`, sourceRefs: [catalogReceipt.ref] },
@@ -219,11 +228,14 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
       }
       const productionSubjects = [...subjects.values()].map(subject => {
         const evidence = facetEvidence.get(subject.handle);
-        const groupingKeys = FACETS.flatMap(facet => {
+        const selectionEvidence = [...(subject.selectionEvidence ?? []), ...FACETS.flatMap(facet => {
           const bound = evidence?.[facet];
-          return bound?.sourceRefs.length ? normalized(bound.values).map(value => `${facet}:${value}`) : [];
-        });
-        return { ...subject, groupingKeys };
+          return bound?.sourceRefs.length ? normalized(bound.values).map(value => ({ key: `${facet}:${value}`, sourceRefs: bound.sourceRefs })) : [];
+        })];
+        // Generic catalog tags (e.g. "Classic Frame") are eligibility metadata,
+        // not a visual relationship that should displace a coherent palette/subject cohort.
+        return { ...subject, selectionEvidence, groupingKeys: [...new Set(selectionEvidence
+          .filter(e => FACETS.some(facet => e.key.startsWith(`${facet}:`))).map(e => e.key))] };
       });
       const plan = planProductionMonth({ month, count: requestedCount, channel: selectedChannel, recipes: config.recipes, subjects: productionSubjects, ...(existingSlots ? { existingSlots } : {}) });
       const uses = new Map<string, number>();
@@ -240,7 +252,7 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
             .map(value => ({ facet, value, sourceRefs: [...new Set(selected.flatMap(s => s.facets[facet].sourceRefs))] }));
         });
         const blockedReasons = [...slot.blockedReasons];
-        if (recipe.mechanic === "collection-scene" && !relationships.length) blockedReasons.push("No shared acquired facet connects all selected artworks; curate a different set before realization.");
+        if (recipe.mechanic === "collection-scene" && !recipe.selection && !relationships.length) blockedReasons.push("No shared acquired facet connects all selected artworks; curate a different set before realization.");
         if (await repo.readFile(postPath(slot.id)) !== null)
           blockedReasons.push(`Post artifact ${postPath(slot.id)} already exists; inspect or reuse it instead of overwriting.`);
         return { ...slot, status: blockedReasons.length ? "blocked" as const : "planned" as const, blockedReasons, relationships, creativeDirection: directions[ordinal % directions.length], directionRepeated: ordinal >= directions.length };
@@ -249,6 +261,6 @@ export async function planStoreProductionMonth(input: z.input<typeof productionP
         ...plan, slots, calendarContext, summary: { ...plan.summary, planned: slots.filter(s => s.status === "planned").length, blocked: slots.filter(s => s.status === "blocked").length }, sourcePackets: packets, curatedCatalogReceipts, acquisitionFailures, sourceFailures, sourceWarnings, voices, brand,
         sources: [{ path: CONFIG, hash: storyboardContentHash(raw) }, { path: MASTERS, hash: inventoryRaw ? storyboardContentHash(inventoryRaw) : null }, { path: "social/reference/art-graph.json", hash: aliasesRaw ? storyboardContentHash(aliasesRaw) : null }],
         generation: { available: false, reason: "This tool prepares editorial/source context only. A verified provider connection, quoted execution adapter and approved creative are required for imagery." },
-        next: "Use each slot's facts, creative direction and acquired voice to draft distinct caption alternatives. Never describe a planned animation or fictional home as observed footage. Review the recipe/storyboard before provider spend; preserve existing post IDs on retries and inspect existing artifacts before any upsert. Finish with the existing monthly social review sheet after real assets are bound.",
+        next: "Use each slot's source-bound theme, ordered carousel beats, facts and acquired voice to draft one caption for the complete post. A missing themed source blocks that slot; never substitute a merely color-compatible work. Each scene needs a distinct setting and placement idea; three angles or crops of one scene do not qualify. This planning read spends nothing. Authenticated owner-triggered generation uses the existing bounded Action path; public review links authorize no spend. Preserve existing post IDs and inspect artifacts before any upsert. Present all generated slides in order in one final review; publishing requires separate consent.",
       };
 }

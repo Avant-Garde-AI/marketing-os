@@ -1696,3 +1696,7 @@ records the generic/store/platform boundaries and links the live result receipts
 This establishes a working pilot, not creative acceptance, a proven engagement
 archetype, automatic frame localization or a finished month. The research and
 pattern-admission work above retains its own evidence requirements.
+
+## Owner correction: themed scene carousels (2026-09-30)
+
+The three standalone scenes establish compositing fidelity, not the final post format. See [the themed carousel contract](plans/storyboard-harness/THEMED-SCENE-CAROUSELS-2026-09-30.md) for the implemented source-bound theme selection and three-scene planning contract, plus the remaining grouped-generation and ordered-review work. Magical worlds follow artwork aesthetics and complement separate approachable-home content.

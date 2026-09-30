@@ -8,6 +8,8 @@ export interface CatalogSubject {
   status: string;
   onlineStoreUrl?: string;
   imageUrl?: string;
+  collectionHandles?: string[];
+  tags?: string[];
 }
 
 interface ProductNode {
@@ -16,6 +18,8 @@ interface ProductNode {
   status: string;
   onlineStoreUrl?: string | null;
   featuredMedia?: { image?: { url?: string | null } | null } | null;
+  collections?: { nodes?: Array<{ handle: string }> };
+  tags?: string[];
 }
 
 interface ProductsData {
@@ -38,6 +42,8 @@ const PRODUCTS_QUERY = `
         status
         onlineStoreUrl
         featuredMedia { ... on MediaImage { image { url } } }
+        collections(first: 50) { nodes { handle } }
+        tags
       }
     }
   }
@@ -89,6 +95,8 @@ export async function readCatalogSubjects(
       ...(product.featuredMedia?.image?.url
         ? { imageUrl: product.featuredMedia.image.url }
         : {}),
+      ...(product.collections?.nodes ? { collectionHandles: product.collections.nodes.map(c => c.handle) } : {}),
+      ...(product.tags ? { tags: product.tags } : {}),
     });
   }
 

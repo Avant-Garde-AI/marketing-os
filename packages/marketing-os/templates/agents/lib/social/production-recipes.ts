@@ -4,6 +4,27 @@ import { z } from "zod";
 
 const nonempty = z.string().trim().min(1);
 const slug = nonempty.max(100).regex(/^[a-z0-9][a-z0-9-]*$/);
+const evidenceSchema = z.object({
+  key: nonempty.max(400),
+  sourceRefs: z.array(nonempty.max(1000)).min(1).max(20),
+}).strict();
+const sceneBeatSchema = z.object({
+  role: z.enum(["setup", "turn", "payoff"]),
+  environment: nonempty.max(1000),
+  placement: nonempty.max(1000),
+  visualConnection: nonempty.max(1000),
+}).strict();
+const carouselSchema = z.object({
+  composition: z.enum(["one-hero-per-slide", "collection-per-slide"]),
+  continuity: z.array(nonempty.max(500)).min(1).max(10),
+  slides: z.tuple([sceneBeatSchema, sceneBeatSchema, sceneBeatSchema]),
+}).strict().superRefine((carousel, ctx) => {
+  if (carousel.slides.map(s => s.role).join(",") !== "setup,turn,payoff")
+    ctx.addIssue({ code: "custom", message: "carousel must progress from setup to turn to payoff" });
+  for (const field of ["environment", "placement"] as const)
+    if (new Set(carousel.slides.map(s => s[field].toLowerCase())).size !== 3)
+      ctx.addIssue({ code: "custom", message: `carousel needs three distinct ${field} directions` });
+});
 export const productionRecipeSchema = z.object({
   id: slug,
   mechanic: z.enum(["artwork-loop", "collection-scene"]),
@@ -12,6 +33,12 @@ export const productionRecipeSchema = z.object({
   conceptId: nonempty.max(200),
   requiredDistinctSubjects: z.number().int().min(1).max(20),
   outputKind: nonempty.max(100),
+  /** Every requirement must match at least one source-bound key for every work. */
+  selection: z.object({
+    theme: nonempty.max(200),
+    requirements: z.array(z.object({ anyOf: z.array(nonempty.max(400)).min(1).max(20) }).strict()).min(1).max(10),
+  }).strict().optional(),
+  carousel: carouselSchema.optional(),
 }).strict();
 export const productionSubjectSchema = z.object({
   handle: slug,
@@ -21,6 +48,7 @@ export const productionSubjectSchema = z.object({
   facts: z.array(z.object({ text: nonempty.max(500), sourceRefs: z.array(nonempty.max(1000)).min(1).max(20) }).strict()).max(30).optional(),
   /** Opaque evidence-derived keys used only to form collection cohorts. */
   groupingKeys: z.array(nonempty.max(400)).max(200).optional(),
+  selectionEvidence: z.array(evidenceSchema).max(200).optional(),
 }).strict();
 export const productionMonthInputSchema = z.object({
   month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
@@ -39,6 +67,8 @@ export interface ProductionRecipe {
   conceptId: string;
   requiredDistinctSubjects: number;
   outputKind: string;
+  selection?: z.infer<typeof productionRecipeSchema>["selection"];
+  carousel?: z.infer<typeof carouselSchema>;
 }
 
 export interface ProductionSubject {
@@ -50,6 +80,7 @@ export interface ProductionSubject {
   facts?: Array<{ text: string; sourceRefs: string[] }>;
   /** Shared keys supplied by the caller from acquired evidence, never copy claims. */
   groupingKeys?: string[];
+  selectionEvidence?: z.infer<typeof evidenceSchema>[];
 }
 
 export interface ExistingProductionSlot {
@@ -64,12 +95,20 @@ export interface ProductionBrief {
   scene?: ProductionRecipe["scene"];
   outputKind: string;
   direction: string;
+  theme?: string;
+  /** Planning only: no generated URLs, approval, provider budget or publish authority. */
+  carousel?: {
+    composition: z.infer<typeof carouselSchema>["composition"];
+    continuity: string[];
+    slides: Array<z.infer<typeof sceneBeatSchema> & { index: number; subjectHandles: string[] }>;
+  };
   subjects: Array<{
     handle: string;
     artist: string;
     masterRef?: string;
     masterVerificationRef?: string;
     sourceRefs: string[];
+    selectionEvidence?: z.infer<typeof evidenceSchema>[];
   }>;
   /** These are the only factual inputs for copy. They are not finished claims. */
   copyFacts: Array<{ handle: string; text: string; sourceRefs: string[] }>;
@@ -217,6 +256,8 @@ function validate(input: ProductionMonthInput): number {
     if (recipe.mechanic === "collection-scene" && recipe.scene !== "real-home" && recipe.scene !== "imagined-world")
       throw new Error(`collection scene is required: ${recipe.id}`);
     if (recipe.mechanic === "artwork-loop" && recipe.scene !== undefined) throw new Error(`artwork loop cannot set scene: ${recipe.id}`);
+    if (recipe.carousel && (recipe.mechanic !== "collection-scene" || recipe.outputKind !== "carousel" || recipe.requiredDistinctSubjects !== 3))
+      throw new Error(`three-slide scene carousel requires collection-scene, carousel output and three distinct subjects: ${recipe.id}`);
     if (!Number.isFinite(recipe.weight) || recipe.weight <= 0) throw new Error(`weight must be finite and positive: ${recipe.id}`);
     if (!Number.isInteger(recipe.requiredDistinctSubjects) || recipe.requiredDistinctSubjects < 1)
       throw new Error(`requiredDistinctSubjects must be a positive integer: ${recipe.id}`);
@@ -250,7 +291,7 @@ function validate(input: ProductionMonthInput): number {
 
 /** Creates a reviewable plan only. Dates are editorial slots, never scheduled publish times. */
 export function planProductionMonth(input: ProductionMonthInput): ProductionMonthPlan {
-  productionMonthInputSchema.parse(input);
+  input = productionMonthInputSchema.parse(input);
   const days = validate(input);
   const dates = datesFor(input.month, days, input.count, input.existingSlots ?? []);
   const existing = new Map((input.existingSlots ?? []).map((slot) => [slot.date, slot]));
@@ -261,16 +302,23 @@ export function planProductionMonth(input: ProductionMonthInput): ProductionMont
   const slots = dates.map((date, index): ProductionSlot => {
     const recipe = rotation[index]!;
     recipeCounts[recipe.id] = (recipeCounts[recipe.id] ?? 0) + 1;
-    const eligible = [...input.subjects].sort((a, b) => {
+    const matchesTheme = (subject: ProductionSubject) => !recipe.selection || recipe.selection.requirements.every(requirement =>
+      requirement.anyOf.some(key => subject.selectionEvidence?.some(evidence => evidence.key === key && evidence.sourceRefs.length > 0)));
+    const thematicSubjects = input.subjects.filter(matchesTheme);
+    const eligible = [...thematicSubjects].sort((a, b) => {
       const aMaster = masterSubjects.includes(a) ? 0 : 1;
       const bMaster = masterSubjects.includes(b) ? 0 : 1;
       return aMaster - bMaster || (useCount.get(a.handle) ?? 0) - (useCount.get(b.handle) ?? 0) || a.handle.localeCompare(b.handle);
     });
     const cohort = recipe.mechanic === "collection-scene"
-      ? collectionCohort(masterSubjects, recipe.requiredDistinctSubjects, useCount)
+      ? collectionCohort(masterSubjects.filter(matchesTheme), recipe.requiredDistinctSubjects, useCount)
       : null;
     const selected = cohort ?? eligible.slice(0, recipe.requiredDistinctSubjects);
     const blockedReasons: string[] = [];
+    if (recipe.selection && thematicSubjects.length < recipe.requiredDistinctSubjects)
+      blockedReasons.push(`Theme ${recipe.selection.theme} needs ${recipe.requiredDistinctSubjects} works with source-bound selection evidence; ${thematicSubjects.length} match. Do not substitute unrelated works.`);
+    if (recipe.outputKind === "carousel" && recipe.mechanic === "collection-scene" && !recipe.carousel)
+      blockedReasons.push("Scene carousel needs three ordered environment and placement briefs; a single scene is not a carousel.");
     if (selected.length < recipe.requiredDistinctSubjects)
       blockedReasons.push(`Requires ${recipe.requiredDistinctSubjects} distinct subjects; ${selected.length} supplied.`);
     const missingMasters = selected.filter((subject) => !masterSubjects.includes(subject));
@@ -285,14 +333,26 @@ export function planProductionMonth(input: ProductionMonthInput): ProductionMont
     const id = `${input.month}-${encodeURIComponent(input.channel)}-${date.slice(-2)}`;
     const direction = recipe.mechanic === "artwork-loop"
       ? "Use the verified full master to build a repeatable, seamless artwork video loop. Keep the artwork accurate and review every crop and motion treatment."
-      : `Compose ${recipe.requiredDistinctSubjects} distinct artworks in a ${recipe.scene === "real-home" ? "real-home lifestyle setting" : "clearly imagined world"}. Preserve each artwork's identity; treat the setting as a creative proposal.`;
+      : recipe.carousel
+        ? `Create one three-slide carousel${recipe.selection ? ` about ${recipe.selection.theme}` : ""}, with ${recipe.carousel.composition === "one-hero-per-slide" ? "a different hero artwork on each slide" : "the coherent collection on every slide"}. Each slide has a distinct environment and placement; preserve the complete original art. One caption and one final ordered review cover the whole post.`
+        : `Compose ${recipe.requiredDistinctSubjects} distinct artworks in a ${recipe.scene === "real-home" ? "real-home lifestyle setting" : "clearly imagined world"}. Preserve each artwork's identity; treat the setting as a creative proposal.`;
     const brief: ProductionBrief = {
       recipe: { ...recipe },
       conceptId: recipe.conceptId, mechanic: recipe.mechanic, ...(recipe.scene ? { scene: recipe.scene } : {}),
       outputKind: recipe.outputKind, direction,
+      ...(recipe.selection ? { theme: recipe.selection.theme } : {}),
+      ...(recipe.carousel ? { carousel: {
+        composition: recipe.carousel.composition,
+        continuity: [...recipe.carousel.continuity],
+        slides: recipe.carousel.slides.map((slide, i) => ({ ...slide, index: i + 1,
+          subjectHandles: recipe.carousel!.composition === "one-hero-per-slide" ? subjectHandles.slice(i, i + 1) : [...subjectHandles],
+        })),
+      } } : {}),
       subjects: selected.map((subject) => ({ handle: subject.handle, artist: subject.artist,
         ...(subject.asset?.kind === "full-master" && subject.asset.verificationRef ? { masterRef: subject.asset.ref, masterVerificationRef: subject.asset.verificationRef } : {}),
-        sourceRefs: [...subject.sourceRefs] })),
+        sourceRefs: [...subject.sourceRefs],
+        ...(recipe.selection ? { selectionEvidence: (subject.selectionEvidence ?? []).filter(evidence => recipe.selection!.requirements.some(r => r.anyOf.includes(evidence.key))) } : {}),
+      })),
       copyFacts: selected.flatMap((subject) => (subject.facts ?? []).map((fact) => ({ handle: subject.handle, text: fact.text, sourceRefs: [...fact.sourceRefs] }))),
       copyGuidance: "Draft copy only from the listed source-bound facts. Attribute artists using subject receipts. Do not infer titles, provenance, dimensions, availability, offers, or scene reality. If facts do not support a claim, leave it out or request evidence.",
     };

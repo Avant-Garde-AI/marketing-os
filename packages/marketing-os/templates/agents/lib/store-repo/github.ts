@@ -25,6 +25,7 @@
  * human-paced agent. It would be the wrong choice for anything hot.
  */
 
+import { createHash } from "node:crypto";
 import type { StoreRepo } from "../skill-kit";
 
 export interface GitHubStoreRepoOptions {
@@ -43,6 +44,7 @@ export interface GitHubStoreRepoOptions {
 }
 
 const API = "https://api.github.com";
+const MAX_RAW_CONTENT_BYTES = 8 * 1024 * 1024;
 
 interface CacheEntry {
   content: string | null;
@@ -93,6 +95,43 @@ export function createGitHubStoreRepo(opts: GitHubStoreRepoOptions): StoreRepo {
     return res;
   }
 
+  /** GitHub omits inline base64 for files over 1 MB. Read that same Contents
+   * endpoint as raw bytes; never follow a returned download_url. */
+  async function rawContents(url: URL, fullPath: string, expectedSize: number, blobSha?: string): Promise<string> {
+    if (!Number.isSafeInteger(expectedSize) || expectedSize < 0 || expectedSize > MAX_RAW_CONTENT_BYTES)
+      throw new Error(`GitHub raw file exceeds the read limit for ${fullPath}`);
+    if (!blobSha || !/^[a-f0-9]{40}$/.test(blobSha))
+      throw new Error(`GitHub raw file blob SHA missing for ${fullPath}`);
+    const res = await gh(url.toString(), {
+      headers: { Accept: "application/vnd.github.raw+json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`GitHub raw read failed (${res.status}) for ${fullPath}`);
+    const declared = res.headers.get("content-length");
+    if (declared !== null && (!/^\d+$/.test(declared) || Number(declared) > MAX_RAW_CONTENT_BYTES))
+      throw new Error(`GitHub raw response too large for ${fullPath}`);
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error(`GitHub raw response missing for ${fullPath}`);
+    const chunks: Uint8Array[] = [];
+    let length = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        length += value.byteLength;
+        if (length > MAX_RAW_CONTENT_BYTES || length > expectedSize)
+          throw new Error(`GitHub raw response too large for ${fullPath}`);
+        chunks.push(value);
+      }
+    } finally { await reader.cancel(); }
+    if (length !== expectedSize) throw new Error(`GitHub raw response size mismatch for ${fullPath}`);
+    const bytes = Buffer.concat(chunks);
+    const actual = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+    if (actual !== blobSha) throw new Error(`GitHub raw response blob SHA mismatch for ${fullPath}`);
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  }
+
   /** Fetch a file's content + blob sha. Returns nulls when absent. */
   async function fetchFile(fullPath: string): Promise<CacheEntry> {
     const url = new URL(`${API}/repos/${repo}/contents/${encodeURI(fullPath)}`);
@@ -100,12 +139,20 @@ export function createGitHubStoreRepo(opts: GitHubStoreRepoOptions): StoreRepo {
     const res = await gh(url.toString());
     if (res.status === 404) return { content: null, sha: undefined, at: Date.now() };
     if (!res.ok) throw new Error(`GitHub read failed (${res.status}) for ${fullPath}`);
-    const json = (await res.json()) as { content?: string; sha?: string; encoding?: string; type?: string };
-    if (json.type !== "file" || typeof json.content !== "string") {
+    const json = (await res.json()) as { content?: string; sha?: string; encoding?: string; type?: string; size?: number };
+    if (json.type !== "file") {
       return { content: null, sha: json.sha, at: Date.now() };
     }
-    // The contents API returns base64 with embedded newlines.
-    const content = Buffer.from(json.content.replace(/\n/g, ""), "base64").toString("utf-8");
+    if (typeof json.content !== "string") throw new Error(`GitHub file content missing for ${fullPath}`);
+    let content: string;
+    if (json.encoding === "base64") {
+      // The contents API returns small files as base64 with embedded newlines.
+      content = Buffer.from(json.content.replace(/\n/g, ""), "base64").toString("utf-8");
+    } else if (json.encoding === "none" && json.content === "") {
+      content = await rawContents(url, fullPath, json.size!, json.sha);
+    } else {
+      throw new Error(`Unsupported GitHub file encoding for ${fullPath}`);
+    }
     return { content, sha: json.sha, at: Date.now() };
   }
 

@@ -76,3 +76,15 @@ The connected account returned 2.75 credits per exact scene prompt (8.25 total)
 on 2026-09-29. At this documentation checkpoint, no scene has been generated.
 Append live provider IDs, actual spend and QA to the store receipt after the
 production run; never infer completion from mocks or a quote.
+
+
+### Live integration correction
+
+The first production scene request stopped before job creation because the
+Wildflowers source is a 4 MB base64 file. GitHub Contents returns `encoding: none`
+and empty content above 1 MB. StoreRepo must retrieve that same API path as raw
+media, with a bounded response, and match the metadata blob SHA before decoding
+the source. The JPEG SHA-256 and scene input checks still apply. A missing
+inline body is not an empty artwork, and recompressing the verified master is
+not the fix. The unchanged prompt still quotes at 2.75 credits through the
+production provider client.

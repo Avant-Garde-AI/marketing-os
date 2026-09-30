@@ -8,8 +8,13 @@
  *
  *   node offer-render-worker.mjs <task.json>
  *
- * task.json: { outDir, concurrency, fingerprints, tasks: [{ id, url, viewport, mode }] }
+ * task.json: { outDir, concurrency, fingerprints, storefrontPassword?, tasks: [{ id, url, viewport, mode }] }
  * Writes <outDir>/<id>.jpg per task and <outDir>/results.json.
+ *
+ * storefrontPassword: for a password-protected storefront (every development
+ * store, many stores before launch). Each browser context submits it on the
+ * store's /password page before its first real load. The worker deletes it
+ * from task.json as soon as it has been read, and never writes it anywhere.
  *
  * Two modes:
  *   audit   — a first-visit look at the merchant's CURRENT popup: wait up to
@@ -31,6 +36,8 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.MOS_PLAYWRIGHT_MODULE || "playwright-core");
 
 const BLOCKED = /\/apps\/mcp\/surfaces\/(events|capture)(\?|$|\/)/;
+/** Set once from task.json; module-level so it never rides along in results. */
+let storefrontPassword = null;
 const TASK_TIMEOUT_MS = 50_000;
 const AUDIT_WAIT_MS = 20_000;
 const PREVIEW_WAIT_MS = 15_000;
@@ -271,9 +278,40 @@ async function storefrontFontsInPage() {
  * problem loading this website" page. That is the storefront throttling us,
  * not the offer failing: back off and load again (3 tries), and report it as
  * `storefront_unavailable` if it never clears so callers can tell the two apart. */
+/** Shopify's password gate: every storefront path redirects to /password. */
+function onPasswordPage(page) {
+  try { return /^\/password\/?$/.test(new URL(page.url()).pathname); } catch (e) { return false; }
+}
+
+/** Submit the storefront password the way a visitor would. The field usually
+ * sits in a closed modal, so it is filled and submitted in-page rather than
+ * clicked. Throws storefront_password_required / _rejected so callers can tell
+ * a locked store from a broken offer. */
+async function unlockStorefront(page) {
+  if (!storefrontPassword) throw new Error("storefront_password_required");
+  const submitted = await page.evaluate((pw) => {
+    const input = document.querySelector('form input[type="password"]');
+    if (!input || !input.form) return false;
+    input.value = pw;
+    input.form.submit();
+    return true;
+  }, storefrontPassword);
+  if (!submitted) throw new Error("storefront_password_required");
+  await page.waitForLoadState("domcontentloaded", { timeout: 30_000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  if (onPasswordPage(page)) throw new Error("storefront_password_rejected");
+}
+
 async function gotoStorefront(page, url) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    if (onPasswordPage(page)) {
+      // The unlock visit is not the measured one: load the real URL again so
+      // an audit's clock and a preview's handshake start on the storefront.
+      await unlockStorefront(page);
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      if (onPasswordPage(page)) throw new Error("storefront_password_rejected");
+    }
     const blocked = await page
       .evaluate(() => /There was a problem loading this website/i.test(document.body ? document.body.innerText.slice(0, 400) : ""))
       .catch(() => false);
@@ -387,6 +425,11 @@ async function runTask(browser, task, fps, outDir) {
 
 async function main() {
   const spec = JSON.parse(readFileSync(process.argv[2], "utf8"));
+  if (spec.storefrontPassword) {
+    storefrontPassword = String(spec.storefrontPassword);
+    delete spec.storefrontPassword;
+    try { writeFileSync(process.argv[2], JSON.stringify(spec)); } catch (e) { /* read-only mount: the sandbox is torn down anyway */ }
+  }
   const outDir = spec.outDir;
   mkdirSync(outDir, { recursive: true });
   const browser = await chromium.launch({

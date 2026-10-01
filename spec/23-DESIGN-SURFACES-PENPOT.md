@@ -1,5 +1,7 @@
 # 23 — Design Surfaces: the Penpot Core
 
+> **⚠ Superseded in part (2026-10-01) by [35-DESIGN-STUDIO-AND-THE-FIGMA-BRIDGE.md](./35-DESIGN-STUDIO-AND-THE-FIGMA-BRIDGE.md):** Penpot is being retired as both render engine and canvas; DS4–DS6 are frozen. The `DesignSurface` primitive (§0, §2) and the export contract survive on a new substrate.
+
 > **Status:** DRAFT v2 — direction decided 2026-07-15 (Garrett): **deep, integrated Penpot** — embedded editor canvas + seamlessly managed MCP. **D1–D3 + OQ4 resolved 2026-07-15 (§11); ready for build go.** Supersedes the 2026-07-11 Canva Bridge draft (never committed; its Canva/Figma survey conclusions are distilled in §0's "why Penpot" and the platform-survey memory notes). Grounded in a Penpot platform deep-dive 2026-07-15 (sources at end).
 > **Depends on:** 22-BRAND-SOUL (DESIGN.md is what gets compiled into the canvas's brand system), 20-CAPABILITY-SUITE (domain writes gate as Actions; canvas composition does not), 18-EXTERNAL-MCP (the tool-merge mechanics the managed MCP reuses), 13-CONSOLE-DESIGN-RETROFIT (the canvas is a console surface), 11-HOSTED-PATH (per-tenant infra provisioning pattern).
 > **Consumed by:** 24-SOCIAL-MEDIA-AGENT (first consumer), then ad creative (NeuroGraph packs), offer surfaces (spec 14), landing-page/editorial work (spec 21 orbit).

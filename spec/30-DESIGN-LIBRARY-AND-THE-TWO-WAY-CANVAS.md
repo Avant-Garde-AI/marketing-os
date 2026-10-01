@@ -1,6 +1,7 @@
 # 30 — The Design Library and the Two-Way Canvas
 
 > **Status:** TRD — proposed. Binding on the design-surface lane once D1–D4 are settled.
+> **Amended 2026-10-01 by [35](./35-DESIGN-STUDIO-AND-THE-FIGMA-BRIDGE.md):** "Penpot" in this spec now reads "the renderer and Figma". D1 (repo is master) and §4 (canvas proposes, never overwrites) carry over unchanged; 35 §6.4 gives read-back its concrete source.
 > **Depends on:** 22-BRAND-SOUL (files are truth), 23-DESIGN-SURFACES-PENPOT (the canvas, tenancy, compose lane), 26-SOCIAL-AGENT-ALIGNMENT (artifacts in git), 29-POST-CONCEPTS (§9 keyframes).
 > **Generalises:** social is the first consumer, not the subject. Email board sections, offers and ads use the same lane.
 > **Written:** 2026-09-11, after the first real carousel composed end to end.

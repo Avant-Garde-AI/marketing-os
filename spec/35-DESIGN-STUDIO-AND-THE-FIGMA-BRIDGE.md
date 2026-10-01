@@ -258,7 +258,7 @@ REST path, because REST cannot create layers. §6.4 gives the three outbound cha
 | **OAuth 2 apps** issue REST tokens with granular scopes via a standard web redirect flow. | "Connect Figma" is an ordinary console connector, using the same shape as Klaviyo and Google. Confirm at FG0 whether Figma reviews an OAuth app before users outside our team can authorize it, and budget for that. |
 | The **REST API** reads files and nodes (geometry, layout, styles, text, components, and a plugin's shared data via `plugin_data`), renders any node to PNG/SVG/PDF (`GET /v1/images`), and handles comments. **Webhooks v2** fire `FILE_VERSION_UPDATE`, `FILE_UPDATE` (after ~30 min idle), `LIBRARY_PUBLISH` and `FILE_COMMENT`. | **Inbound is all API:** import (§6.3) and sync back (§6.5) need no plugin and no open Figma tab. |
 | REST **cannot create or modify nodes**, and there is no file-import endpoint. **Variables write** over REST is **Enterprise-only**. There appears to be no "list my teams" endpoint, so a team is identified from a pasted team, project or file URL. | **Outbound needs something running inside Figma** (§6.4). |
-| Figma's **capture script** (the `generate_figma_design` / html-to-design path) serializes a rendered web page into Figma's clipboard format. Pasting yields editable layers with inferred auto-layout. The format is **undocumented** and may change. | A no-install "Copy to Figma" is possible because our designs *are* rendered HTML (§6.4 E1). It is fragile, so it is a convenience, never the sync backbone. |
+| Figma's **clipboard format** (what its own html-to-design capture produces) is undocumented but has MIT open-source encoders: `@figit/dom-to-figma` (DOM → node tree with inferred auto-layout, plus a node→DOM trace) and `@figit/fig-kiwi` (encode/decode the Kiwi envelope). Pasting yields editable layers. **Spike 2026-10-01:** this runs server-side in headless Chromium, and our layer anchors survive a re-encode/decode round trip. | "Copy to Figma" needs no install and no Figma permission, because our designs and the storefront *are* rendered HTML (§6.4 E1, §6.9). We own the capture; only the format is borrowed, so it carries a canary. |
 | The **Plugin API** has full read/write: frames, auto-layout, text styles, components, variables on all plans, image fills, `setSharedPluginData` tags readable over REST, and `setRelaunchData` buttons on nodes. | A **Marketing OS plugin** is the reliable outbound channel (§6.4 E2). Installed once, it turns updates into one click on the frame itself. |
 | The **remote MCP** (`mcp.figma.com/mcp`) can write (`use_figma`, `generate_figma_design`) but is OAuth-only for **allowlisted catalog clients**. Other clients get a 403 at dynamic client registration, approvals are paused, and the server is beta and expected to become usage-priced. | Zero-touch server push exists only if Figma admits us (§6.4 E3). Apply now; depend on nothing. |
 
@@ -306,13 +306,14 @@ becomes the agent's raw material on day one.
 
 ### 6.4 Export: put a console design into Figma (three channels)
 
-**E1 — Copy to Figma (no install).** The Studio's renderer output is HTML, so "Copy to Figma"
-runs Figma's capture script over the rendered board and puts Figma clipboard data on the
-person's clipboard. They paste into any file and get editable layers. Layer names carry
-`mos:{nodeId}` anchors so sync back can find them, *if* the capture preserves names; FG2's
-spike checks this.
-- **Cost:** an undocumented format, no variable bindings, and each copy is a fresh paste rather
-  than an update.
+**E1 — Copy to Figma (no install).** Our renderer output is HTML, so the server-side capture
+(§6.9 step 1) turns a board or a whole page into a Figma clipboard payload. Layers are named
+with `mos:` anchors from the converter's trace. "Copy to Figma" writes that payload to the
+clipboard, and the person pastes it into any file. Because the anchors travel in layer names,
+sync back (§6.5) works for pasted designs too, provided Figma keeps the names on paste (FG4
+checks this).
+- **Cost:** a borrowed, undocumented format; no variable bindings; and each copy is a fresh
+  paste rather than an in-place update.
 - **Use:** one-offs, first impressions, and teams that won't install anything.
 
 **E2 — Plugin sync (the backbone).** The team installs the Marketing OS plugin once from
@@ -402,6 +403,82 @@ endpoint (spec 12, already serving `compose_design_surface` / `export_design_sur
 the approved Figma client and bridges both servers. This works today, and their changes into
 our system arrive as patches like any other.
 
+### 6.9 Webpages in Figma: capture the storefront, edit it in Figma, build it back ⟨BUILD⟩
+
+The same machinery reaches past surfaces to **the store's actual web pages**. Any storefront
+page, whether live or a draft-theme preview, can be recreated in Figma as editable layers. A
+designer can change it there, and the change comes back as a storefront proposal. This takes
+the most engineering in the spec. The 2026-10-01 spike (`docs/plans/design-studio/figma-capture-spike/`)
+showed the hard part works.
+
+**1. Capture (server-side, Chromium).** The capture reuses the Vercel Sandbox Chromium worker
+from `offer-render.server.ts`:
+- It loads the page URL at 390, 768 and 1440 px (the viewports `design-loop` already uses).
+- It injects `@figit/dom-to-figma` (MIT). The converter walks the DOM, reads computed styles,
+  and emits Figma's node tree with **inferred native auto-layout**. Flex, block flow, wrap and
+  grid become real stacks. Any container it cannot reproduce exactly falls back to absolute
+  positioning, so the result is never worse than a flat paste.
+- Fonts and images are fetched by the worker on the server, not by the page. That avoids CORS,
+  and theme fonts come from the page's own `@font-face` sources.
+- The converter's **trace** maps every emitted node back to its DOM element. We use it to name
+  layers with **anchors** and then re-encode the payload with `@figit/fig-kiwi`:
+  - Shopify section wrappers get `mos:shopify-section-<id>`, which is stable per section
+    instance in JSON templates.
+  - Our own surfaces get `mos:<nodeId>` from `data-mos-id`.
+- The captured node tree is stored, sha'd and versioned per page and theme, so it doubles as
+  the baseline for the diff in step 3.
+
+**2. Deliver into Figma.** No outbound REST path exists (§6.1), so the capture rides the §6.4
+channels:
+- **Copy page to Figma (E1, no install):** the console button writes the stored payload as a
+  `text/html` `ClipboardItem`. The click provides the user gesture the clipboard requires. The
+  person pastes into any file and gets editable frames with auto-layout, text and images, named
+  with anchors.
+- **Plugin "Import page" (E2):** the plugin pulls the same tree and builds it through the
+  Plugin API. That allows in-place re-capture (update a page frame rather than paste a new one)
+  and binding colours to the **{store} Brand** variables.
+- **E3:** if Figma approves our hosted MCP client, `generate_figma_design` does the same job
+  server-to-file.
+
+This replaces the first draft's plan to run *Figma's* capture script. We own the capture, the
+fonts, the images and the anchors. The one thing we still borrow is the clipboard *format*.
+
+**3. Read back (pure API).** When a designer edits the captured page, the §6.5 triggers fire.
+REST reads the frames whose names carry `mos:` anchors and diffs them against the stored
+capture, section by section. The result is a **design change brief**, not a patch, because a
+storefront is Liquid and a Figma frame cannot be mapped back to Liquid deterministically:
+- **Exact copy changes:** "hero heading: 'Quiet rooms, loud walls' → 'Quiet rooms, bold walls'".
+- **Style changes in tokens where possible:** "CTA fill → brand/ink-900, padding 14→18".
+- **Structure:** sections reordered, hidden or added.
+- **Unattributable additions:** new layers without anchors, attached as a cropped render of the
+  Figma frame (`GET /v1/images`) rather than guessed at.
+
+**4. Build it back (the existing storefront write path).** The brief becomes a storefront task:
+- **Text-only changes take a fast path.** When the old string is a section or block setting in
+  `templates/*.json`, the change is a settings edit on a proposal branch, with no agent
+  judgement needed.
+- **Everything else goes to the design-code agent** (`design-loop`, spec 21's async Actions)
+  with **the Figma frame render as the conformance target**. The refine loop already runs
+  render → capture → compare. Here, "compare" means against the designer's frame instead of a
+  heuristic.
+- The result is a **draft-theme proposal** in `/app/reviews`, the same governed path as every
+  storefront change (spec 11 §3.3, spec 20). The merchant previews it on their own store before
+  anything publishes.
+- After the proposal publishes, the page is re-captured, so the Figma file can be refreshed
+  from what is actually live.
+
+**Proven vs unproven.**
+- **Proven in the 2026-10-01 spike, headless Chromium, no Figma account:**
+  - A two-section mock storefront page converted in ~0.45 s to a ~40 KB payload with 13
+    auto-layout frames and 10 editable text layers.
+  - Anchors were written through the trace, re-encoded, and survived a decode round trip.
+- **Not yet proven:**
+  - Pasting into a real Figma file, and Figma keeping the anchor names on paste.
+  - A real Arthaus page: theme fonts, CDN images, page length and payload size.
+  - The clipboard format's stability.
+- FG4's first task is exactly those three checks. A canary pastes a known payload into a test
+  file weekly via the plugin, so a format break is caught by us, not a merchant.
+
 ## 7. Data model
 
 `004_design_surfaces_and_social.sql` is **not yet applied to production**, so it is amended in
@@ -479,6 +556,13 @@ Decommission order:
   brand variables. A designer edits it, and the change round-trips back (FG1).
 - **FG3 — Library sync (§6.7)** and the Figma-owned escape hatch (D5). E3 (hosted MCP) when and
   if Figma approves us. Bring your own agent (§6.8) arrives with ST2's tool work.
+- **FG4 — Webpages in Figma (§6.9).**
+  - **First:** check pasting into real Figma (are anchors kept?), test a real Arthaus page
+    (fonts, CDN images, payload size), and set up the format canary.
+  - **Then:** "Copy page to Figma" and plugin "Import page", read back into a design change
+    brief, the text fast path to theme JSON, and the `design-loop` conformance target.
+  - **Exit:** a designer changes the Arthaus home hero in Figma, and a draft-theme proposal
+    matching it appears in `/app/reviews`.
 - **Deferred — console direct editing.** Inline text edit only, and only if usage shows chat is
   too slow for one-word fixes (§4).
 
@@ -529,12 +613,18 @@ deliberate: inbound first, because it is all API.
 - **Webhook latency.** `FILE_UPDATE` waits ~30 min of idle time. Saving a version, the plugin's
   "Send to Marketing OS" and the console's "Pull from Figma" are the immediate paths; the UI
   says which applies.
-- **Capture format (E1).** It is undocumented and may break without notice. E1 is a convenience
-  with a canary, and nothing depends on it.
+- **Capture format (E1, §6.9).** Figma's clipboard format is undocumented and reverse-engineered
+  by the `@figit` packages (0.x, MIT; we pin and vendor them). A format change breaks paste, not
+  sync. Inbound stays pure REST, and the plugin path builds through the documented Plugin API.
+  The weekly paste canary catches a break first.
+- **Storefront fidelity (§6.9).** Real themes carry icon fonts, CSS masks, canvas and app
+  embeds that convert to images or not at all. That is acceptable for a design surface, and
+  the read-back brief treats anything that is not an anchored text or frame as a picture to
+  match, not a value to apply.
 - **Sandbox render latency** in the agent's self-critique loop. Critique can render client-side
   or in-process HTML → screenshot only when needed. Measure in ST0.
 
 ---
-*Sources (Figma, checked 2026-10-01): help.figma.com Figma MCP server guide; Figma capture.js clipboard mode (html.to.design, open-source capture extensions); forum.figma.com threads
+*Sources (Figma, checked 2026-10-01): help.figma.com Figma MCP server guide; Figma clipboard format via `@figit/dom-to-figma` 0.2.4 + `@figit/fig-kiwi` 0.2.0 (MIT, npm; spike 2026-10-01); open-source capture extensions (vorbei/figma-capture, dynCode/HTML-to-FIGMA); forum.figma.com threads
 on remote-MCP OAuth client registration and the catalog allowlist; developers.figma.com REST API
 (variables endpoints, webhooks v2); Builder.io `skills/visual-edit` README (the pattern weighed in D2).*

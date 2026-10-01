@@ -225,7 +225,7 @@ async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }
           <div style={{ padding: "0.7rem 0.9rem", fontSize: "0.85rem" }}><strong>Slide {index + 1} · {carouselBeats[index]}</strong>{slide.artistCredit && <span> · {slide.artistCredit}</span>}</div>
           {(view.state === "ready" || view.state === "preview") ? <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={url} alt={`Slide ${index + 1} of the carousel: complete artwork in its composed scene`} width={1080} height={1350}
+            <img src={url} alt={`Slide ${index + 1} of the carousel: verified artwork in its composed scene`} width={1080} height={1350}
               style={{ display: "block", width: "100%", height: "auto", aspectRatio: "4 / 5", objectFit: "contain", background: "#f4f2ef" }} />
             <p style={{ padding: "0.7rem 0.9rem", margin: 0, fontSize: "0.8rem" }}><a href={url} target="_blank" rel="noopener noreferrer">{view.state === "ready" ? "Open or download final image" : "Open composed preview"}</a></p>
             {view.state === "preview" && <p role="status" style={{ padding: "0 0.9rem", fontSize: "0.8rem", color: "#765b16" }}>{view.detail}</p>}

@@ -46,6 +46,16 @@ async function fixture() {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("generation delivery receipt", () => {
+  it("records explicit full-bleed fit and rejects unsupported transforms", async () => {
+    const { repo, files, receipt, job } = await fixture();
+    receipt.scene.placements.forEach((p) => Object.assign(p, { fit: "cover" }));
+    files[generationDeliveryPath(artifactId)] = JSON.stringify(receipt);
+    expect((await loadGenerationDelivery(repo, job))?.scene?.placements[0]?.fit).toBe("cover");
+    Object.assign(receipt.scene.placements[0]!, { fit: "stretch" });
+    files[generationDeliveryPath(artifactId)] = JSON.stringify(receipt);
+    await expect(loadGenerationDelivery(repo, job)).rejects.toThrow();
+  });
+
   it("binds one placement to an explicitly single-artwork scene plan", async () => {
     const { repo, files, receipt, job, background } = await fixture();
     const planPath = `social/production/jobs/${artifactId}.json`;

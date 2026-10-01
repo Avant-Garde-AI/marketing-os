@@ -1,4 +1,4 @@
-/** Deterministic, full-artwork placement into explicitly reviewed scene openings. */
+/** Deterministic artwork placement into explicitly reviewed scene openings. */
 import sharp from "sharp";
 
 const WIDTH = 1080;
@@ -9,7 +9,7 @@ type Point = readonly [number, number];
 type Quad = readonly [Point, Point, Point, Point];
 
 export interface SceneSource { ref: string; bytes: Buffer }
-export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string }
+export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover" }
 export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[]; composition?: "single-artwork" }
 
 function cross(a: Point, b: Point, c: Point): number {
@@ -87,6 +87,7 @@ export async function compositeArtworkScene(input: SceneCompositeInput): Promise
   for (const p of input.placements) {
     if (!quadIsValid(p.quad)) throw new Error("Invalid scene placement quad");
     if (!/^#[0-9a-fA-F]{6}$/.test(p.mat)) throw new Error("Invalid scene mat color");
+    if (p.fit !== undefined && p.fit !== "contain" && p.fit !== "cover") throw new Error("Invalid scene artwork fit");
   }
   for (let i = 0; i < count; i++) for (let j = i + 1; j < count; j++)
     if (overlaps(input.placements[i]!.quad, input.placements[j]!.quad)) throw new Error("Scene placements overlap");
@@ -102,7 +103,7 @@ export async function compositeArtworkScene(input: SceneCompositeInput): Promise
     const matWidth = Math.min(1536, Math.max(128, Math.ceil(Math.max(distance(q[0], q[1]), distance(q[3], q[2])))));
     const matHeight = Math.min(1536, Math.max(128, Math.ceil(Math.max(distance(q[0], q[3]), distance(q[1], q[2])))));
     const { data: mat } = await sharp(source, { limitInputPixels: MAX_INPUT_PIXELS })
-      .flatten({ background: placement.mat }).resize(matWidth, matHeight, { fit: "contain", background: placement.mat })
+      .flatten({ background: placement.mat }).resize(matWidth, matHeight, { fit: placement.fit ?? "contain", position: "centre", background: placement.mat })
       .removeAlpha().raw().toBuffer({ resolveWithObject: true });
     const left = Math.max(0, Math.floor(Math.min(...q.map(p => p[0] * WIDTH))));
     const top = Math.max(0, Math.floor(Math.min(...q.map(p => p[1] * HEIGHT))));

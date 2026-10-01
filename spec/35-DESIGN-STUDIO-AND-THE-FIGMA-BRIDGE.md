@@ -49,8 +49,9 @@ already pay for.
 Three rules carry the design:
 
 1. **The SDoc is the only master.** This is 30 D1 again with Penpot removed from the
-   sentence. HTML is a projection, and so is Figma. A projection can *propose* changes but
-   never owns the surface.
+   sentence. HTML is a projection, and so is Figma. A Figma edit reaches the surface only as a
+   patch on the SDoc: applied automatically to a draft and proposed once a design is in review
+   (§6.5, D8). It is never a second copy that wins.
 2. **Everyone edits through the same pipe.** An agent tool call, an undo in the console,
    and a designer's change in Figma all become `SurfacePatch` ops against a base revision.
    Undo, history, attribution, review and conflict handling are written once.

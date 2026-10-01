@@ -289,16 +289,23 @@ function onPasswordPage(page) {
  * a locked store from a broken offer. */
 async function unlockStorefront(page) {
   if (!storefrontPassword) throw new Error("storefront_password_required");
-  const submitted = await page.evaluate((pw) => {
+  const hasForm = await page.evaluate(() => {
     const input = document.querySelector('form input[type="password"]');
-    if (!input || !input.form) return false;
+    return !!(input && input.form);
+  });
+  if (!hasForm) throw new Error("storefront_password_required");
+  // Wait for the POST's own navigation (redirect to the storefront, or back to
+  // /password when wrong) before reading the URL. Shopify takes a beat to
+  // answer; checking on a timer misread a correct password as rejected.
+  const nav = page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 30_000 }).catch(() => null);
+  await page.evaluate((pw) => {
+    const input = document.querySelector('form input[type="password"]');
     input.value = pw;
-    input.form.submit();
-    return true;
+    // Native submit: skips the page's AJAX handler (Shopify's form is
+    // data-remote) and does a plain POST, which answers with a redirect.
+    HTMLFormElement.prototype.submit.call(input.form);
   }, storefrontPassword);
-  if (!submitted) throw new Error("storefront_password_required");
-  await page.waitForLoadState("domcontentloaded", { timeout: 30_000 }).catch(() => {});
-  await page.waitForTimeout(300);
+  await nav;
   if (onPasswordPage(page)) throw new Error("storefront_password_rejected");
 }
 

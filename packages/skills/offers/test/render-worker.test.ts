@@ -172,13 +172,15 @@ function serveLocked(password: string): Promise<{ url: string; close: () => void
     if (path === "/password" && req.method === "POST") {
       let body = "";
       req.on("data", (c) => (body += c));
-      req.on("end", () => {
+      // Real storefronts take a beat to answer the POST; a worker that checks
+      // the URL before the redirect lands misreads a good password as wrong.
+      req.on("end", () => setTimeout(() => {
         const ok = new URLSearchParams(body).get("password") === password;
         res.statusCode = 302;
         if (ok) res.setHeader("set-cookie", "storefront_digest=ok; Path=/");
         res.setHeader("location", ok ? "/" : "/password");
         res.end();
-      });
+      }, 1200));
       return;
     }
     if (path === "/password") {

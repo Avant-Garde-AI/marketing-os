@@ -5,6 +5,8 @@ import { emailRepo } from "@/lib/email/repo";
 import { countNotes } from "@/lib/email/review-notes";
 import { heroImageUrl } from "@/lib/email/hero";
 import { emailReviewLink, ttlRemaining, verifyLink } from "@/lib/email/review-links";
+import { nextGateStep } from "@/lib/email/next-step";
+import { SheetGrid, type SheetCard } from "@/components/review/sheet-grid";
 
 /**
  * The contact sheet (spec 25) — a month of email on one page.
@@ -15,7 +17,8 @@ import { emailReviewLink, ttlRemaining, verifyLink } from "@/lib/email/review-li
  * a single campaign. Reviewing emails one at a time hides exactly the problems
  * that only show up in sequence.
  *
- * Public by token, same posture as the review room. Reads only.
+ * Public by token, same posture as the review room. Reads, plus one request:
+ * selected campaigns can have their next approval card sent to Slack.
  */
 
 export const runtime = "nodejs";
@@ -124,11 +127,30 @@ export default async function EmailSheetPage({
           row: c,
           hero: heroImageUrl(artifact?.sections),
           previewText: artifact?.previewText ?? null,
+          // The artifact is the truth; the index row lags it after an approval.
+          status: artifact?.status ?? c.status,
+          scheduledAt: artifact?.scheduledAt ?? c.scheduledAt,
           link: emailReviewLink(shop, c.id, ttl).url,
           notes: counts.get(c.id) ?? { total: 0, open: 0 },
         };
       }),
     );
+  });
+
+  const sheetCards: SheetCard[] = cards.map(({ row, hero, previewText, link, notes, status, scheduledAt }) => {
+    const step = nextGateStep({ id: row.id, status, scheduledAt });
+    return {
+      id: row.id,
+      link,
+      hero,
+      day: dayLabel(scheduledAt),
+      archetype: row.archetype,
+      status,
+      subject: row.subject ?? row.id,
+      previewText,
+      notes,
+      step: step.ok ? { ok: true, label: step.label } : { ok: false, reason: step.reason },
+    };
   });
 
   return (
@@ -141,55 +163,15 @@ export default async function EmailSheetPage({
           <h1 className="font-display text-[30px] leading-[1.15]">{monthLabel(month)}</h1>
           <p className="mt-2 text-[14.5px] text-ink-2">
             {cards.length} {cards.length === 1 ? "campaign" : "campaigns"}. Open any one to see
-            it rendered and leave notes. Nothing here has been sent — approval happens in Slack.
+            it rendered and leave notes. Select campaigns to send their approval cards to Slack —
+            approving still happens there or in the console.
           </p>
         </div>
 
         {cards.length === 0 ? (
           <p className="text-[14.5px] text-ink-2">Nothing planned for this month yet.</p>
         ) : (
-          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {cards.map(({ row, hero, previewText, link, notes }) => (
-              <li key={row.id} className="border border-hairline bg-raised">
-                <a href={link} className="group block">
-                  <div className="aspect-[4/3] overflow-hidden bg-[#f2efe9]">
-                    {hero ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={hero}
-                        alt=""
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-[12px] text-ink-3">
-                        no imagery yet
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="mb-1.5 flex items-baseline gap-2 text-[10px] uppercase tracking-[0.14em] text-ink-3">
-                      <span className="tnum">{dayLabel(row.scheduledAt)}</span>
-                      <span>· {row.archetype}</span>
-                      <span className="ml-auto">{row.status}</span>
-                    </div>
-                    <div className="font-display text-[16.5px] leading-snug">
-                      {row.subject ?? row.id}
-                    </div>
-                    {previewText && (
-                      <p className="mt-1 line-clamp-2 text-[13px] text-ink-2">{previewText}</p>
-                    )}
-                    {notes.total > 0 && (
-                      <p className="mt-2 text-[12px] text-ink-3">
-                        {notes.open > 0
-                          ? `${notes.open} open ${notes.open === 1 ? "note" : "notes"}`
-                          : `${notes.total} ${notes.total === 1 ? "note" : "notes"}, all handled`}
-                      </p>
-                    )}
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <SheetGrid cards={sheetCards} shop={shop} month={month} token={token} exp={exp} />
         )}
       </div>
     </div>

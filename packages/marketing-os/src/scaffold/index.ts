@@ -754,6 +754,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/app/api/email/review-approvals/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/review-approvals/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/api/klaviyo/connect-key/route.ts"),
       targetPath: path.join(targetDir, "agents/app/api/klaviyo/connect-key/route.ts"),
       overwrite: "skip",
@@ -919,6 +924,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/components/review/sheet-grid.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/sheet-grid.tsx"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/components/review/social-review.tsx"),
       targetPath: path.join(targetDir, "agents/components/review/social-review.tsx"),
       overwrite: "skip",
@@ -936,6 +946,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/lib/actions/gate-client.ts"),
       targetPath: path.join(targetDir, "agents/lib/actions/gate-client.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/actions/propose.ts"),
+      targetPath: path.join(targetDir, "agents/lib/actions/propose.ts"),
       overwrite: "skip",
     },
     {
@@ -1186,6 +1201,16 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/lib/email/review-links.ts"),
       targetPath: path.join(targetDir, "agents/lib/email/review-links.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/next-step.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/next-step.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/refine.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/refine.ts"),
       overwrite: "skip",
     },
     {

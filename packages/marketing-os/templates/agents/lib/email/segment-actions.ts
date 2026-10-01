@@ -81,6 +81,15 @@ const predicateSchema: z.ZodType<Predicate> = z.discriminatedUnion("kind", [
     atLeast: z.number().int().min(1).optional(),
     withinDays: z.number().int().min(1).max(3650).optional(),
   }),
+  z.object({
+    kind: z.literal("new_profile"),
+    withinDays: z
+      .number()
+      .int()
+      .min(1)
+      .max(3650)
+      .describe("Profile created within this many days — store-wide (Klaviyo's `created`), not per-list."),
+  }),
 ]) as z.ZodType<Predicate>;
 
 const params = z.object({

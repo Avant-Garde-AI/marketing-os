@@ -51,6 +51,10 @@ export async function middleware(request: NextRequest) {
     // images — which is exactly the bug that put this route here.
     request.nextUrl.pathname.startsWith("/api/email/asset/") ||
     request.nextUrl.pathname.startsWith("/api/email/review-notes") ||
+    // A third write: a month-sheet token may ask for approval CARDS to be
+    // posted for that month's campaigns. It cannot approve one — deciding
+    // still needs a verified human in Slack or the console.
+    request.nextUrl.pathname === "/api/email/review-approvals" ||
     // Headline selection, the second WRITE reachable by a review token.
     // Narrower than it sounds: it swaps the subject and preview text for
     // one of the options the campaign already carries, and refuses once

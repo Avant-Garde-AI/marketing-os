@@ -46,6 +46,8 @@
  * `expiresInMinutes` so they cannot accidentally treat one as durable.
  */
 
+import { getShopifyClient } from "../shopify";
+
 const AMS_BASE = process.env.AMS_MOCKUP_URL ?? "https://artwork-ms-spfdrt2aha-uc.a.run.app/artwork-ms";
 const AMS_KEY = process.env.AMS_MOCKUP_SERVICE_KEY ?? "";
 const COMPOSE_TIMEOUT_MS = 60_000;
@@ -177,6 +179,63 @@ export function rawArtworkUrlFrom(url: string): string | null {
   return `${RAW_ARTWORK_CDN}/${m[1]}-${m[2]}.webp`;
 }
 
+/**
+ * Catalogue product photos on this store are FRAMED variant shots (frame + mat
+ * on white), whether served from Shopify's product CDN or re-hosted by Klaviyo.
+ * The filename says nothing, which is how they slipped past isRenderedMockup
+ * and shipped frame-within-a-frame heroes onto a whole month of review cards.
+ */
+export function isCatalogueProductPhoto(url: string): boolean {
+  return /cdn\.shopify\.com\/s\/files\/[^?]*\/products\/|d3k81ch9hvuctc\.cloudfront\.net\//i.test(url);
+}
+
+/** Candidate artwork slugs: the handle minus Shopify's `-1` dedupe suffix, then the title. */
+export function artworkSlugCandidates(handle: string, title?: string): string[] {
+  const slugs = [handle.replace(/-\d+$/, "")];
+  if (title) {
+    slugs.push(
+      title
+        .toLowerCase()
+        .normalize("NFKD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, ""),
+    );
+  }
+  return [...new Set(slugs.filter(Boolean))];
+}
+
+/**
+ * Recover raw artwork from a Shopify handle. Variant SKUs are
+ * `{productId}-{artworkId}-…`, and the raw CDN is keyed `{artworkId}-{slug}`.
+ * Returns null — never a guess — when the handle isn't a product or no
+ * candidate URL actually serves an image.
+ */
+async function rawArtworkFromHandle(handle: string, title?: string): Promise<string | null> {
+  if (!/^[a-z0-9-]+$/i.test(handle)) return null;
+  try {
+    const res = await getShopifyClient().graphql<{
+      productByHandle: { title: string; variants: { nodes: Array<{ sku: string | null }> } } | null;
+    }>(
+      `query($h: String!) { productByHandle(handle: $h) { title variants(first: 5) { nodes { sku } } } }`,
+      { h: handle },
+    );
+    const product = res.data?.productByHandle;
+    if (!product) return null;
+    const artworkId = product.variants.nodes
+      .map((v) => v.sku?.split("-")[1])
+      .find((id): id is string => !!id && /^\d+$/.test(id));
+    if (!artworkId) return null;
+    for (const slug of artworkSlugCandidates(handle, title ?? product.title)) {
+      const url = `${RAW_ARTWORK_CDN}/${artworkId}-${slug}.webp`;
+      if (await servesImage(url)) return url;
+    }
+  } catch {
+    // A lookup failure falls through to the host check, which declines framed sources.
+  }
+  return null;
+}
+
 /** Does a candidate raw-artwork URL actually serve an image? */
 async function servesImage(url: string): Promise<boolean> {
   try {
@@ -194,27 +253,32 @@ async function servesImage(url: string): Promise<boolean> {
 export async function resolveImagery(req: ImageryRequest): Promise<ImageryResult> {
   const warnings: string[] = [];
 
-  // Never composite a mockup. A product image is not guaranteed to be raw art —
-  // some carry a styled leaning shot — and framing one yields a picture of a
-  // picture. Recover the raw artwork where the filename allows it; otherwise
-  // decline, because no hero is better than an obviously wrong one.
-  if (isRenderedMockup(req.artworkUrl)) {
-    const raw = rawArtworkUrlFrom(req.artworkUrl);
-    if (raw && (await servesImage(raw))) {
+  // Only raw art gets composited. Anything else — a mockup, or a catalogue
+  // photo that is framed but says nothing in its name — is swapped for the raw
+  // artwork (via the filename, then the product handle), or declined when it is
+  // known to be framed, because no hero is better than a picture of a picture.
+  if (!req.artworkUrl.startsWith(RAW_ARTWORK_CDN)) {
+    let raw: string | null = null;
+    if (isRenderedMockup(req.artworkUrl)) {
+      const fromName = rawArtworkUrlFrom(req.artworkUrl);
+      if (fromName && (await servesImage(fromName))) raw = fromName;
+    }
+    if (!raw) raw = await rawArtworkFromHandle(req.artworkKey, req.title);
+    if (raw) {
       warnings.push(
-        `source was a rendered mockup; composited the raw artwork instead (${raw.split("/").pop()})`,
+        `source was not raw artwork; composited the raw artwork instead (${raw.split("/").pop()})`,
       );
       req = { ...req, artworkUrl: raw };
-    } else {
+    } else if (isRenderedMockup(req.artworkUrl) || isCatalogueProductPhoto(req.artworkUrl)) {
       return {
         chosen: null,
         candidates: [],
         source: "none",
         expiresInMinutes: null,
-        provenance: "declined: source image is a rendered mockup",
+        provenance: "declined: source image is already framed",
         warnings: [
           ...warnings,
-          "the supplied image is already a framed/leaning mockup and no raw artwork could be recovered from its name. Compositing it would produce a framed photo of a framed print. Pass the raw artwork URL.",
+          "the supplied image is already framed (a mockup or a catalogue product photo) and no raw artwork could be recovered from its name or the product handle. Compositing it would produce a framed photo of a framed print. Pass the Shopify handle as artworkKey, or the raw artwork URL.",
         ],
       };
     }

@@ -151,6 +151,11 @@ export default async function EmailReviewPage({ params, searchParams }: Params) 
                 See the whole month
               </a>
             )}
+            {!sent && (
+              <a href={`/email/campaigns/${encodeURIComponent(id)}`} className="arrow-link text-[13.5px]">
+                Approve in console
+              </a>
+            )}
           </div>
         </div>
 

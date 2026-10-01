@@ -57,7 +57,7 @@ Email & campaigns — this store's own record, not a pooled copy:
 - klaviyo_audiences_read / klaviyo_audience_explain for who a send reached — the second gives the actual rule behind an audience name, not just a count.
 - klaviyo_performance_read for a raw Klaviyo window; email_campaign_retrospective for a single campaign judged against this store's OWN other sends (a rate alone cannot be called good or bad — read the verdict bands and caveats it returns, do not recompute your own threshold).
 - email_review_notes / email_review_notes_resolve for what reviewers said.
-- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_draft author and stage changes into THIS store's repo — they never send. Sending happens only through this store's governed approval flow.
+- email_campaign_upsert, email_plan_propose, email_strategy_upsert, email_partials_upsert, propose_email_approval, propose_email_draft, propose_email_schedule author and stage changes into THIS store's repo — they never send. Sending happens only through this store's governed approval flow.
 
 Storyboards: social_graph_storyboard_plan returns three durable independently critiqued arcs and a read-only reviewUrl. Human selection uses storyboard.select through the existing Action gate, then explicit per-beat layouts use social_storyboard_realization_prepare and social.storyboard_realize. No token or hash authorizes selection or publishing. Final review shows the entire immutable slide sequence. Unsupported generation/motion/mockups fail closed.
 
@@ -603,6 +603,45 @@ const TOOLS: ToolDef[] = [
       runMastra(actionTools.propose_action, {
         kind: "klaviyo.create_campaign_draft",
         params: { campaignId: a.campaignId },
+        ...(a.channel ? { channel: a.channel } : {}),
+      }),
+  },
+  {
+    name: "propose_email_approval",
+    description:
+      "Step 1 of 3: propose approving a `proposed` campaign for DRAFTING (email.approve_campaign) and post the approval card to Slack and the console. Approval moves it to `approved`; nothing touches Klaviyo and nothing sends. A human approves the card — it cannot be approved from here. Next: propose_email_draft (step 2), then propose_email_schedule (step 3).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaignId: { type: "string" },
+        channel: { type: "string", description: "Slack channel id for the card (defaults to the store's digest channel)." },
+      },
+      required: ["campaignId"],
+    },
+    run: (a) =>
+      runMastra(actionTools.propose_action, {
+        kind: "email.approve_campaign",
+        params: { campaignId: a.campaignId },
+        ...(a.channel ? { channel: a.channel } : {}),
+      }),
+  },
+  {
+    name: "propose_email_schedule",
+    description:
+      "Step 3 of 3: propose SENDING a drafted campaign at a specific time (klaviyo.schedule_campaign) and post the approval card. Approving that card is consent to send at sendAt — a human must approve it; it cannot be approved from here. sendAt must be in the future and should match the campaign's scheduledAt.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        campaignId: { type: "string" },
+        sendAt: { type: "string", description: "ISO datetime with offset, e.g. 2026-10-03T10:00:00-05:00." },
+        channel: { type: "string", description: "Slack channel id for the card (defaults to the store's digest channel)." },
+      },
+      required: ["campaignId", "sendAt"],
+    },
+    run: (a) =>
+      runMastra(actionTools.propose_action, {
+        kind: "klaviyo.schedule_campaign",
+        params: { campaignId: a.campaignId, sendAt: a.sendAt },
         ...(a.channel ? { channel: a.channel } : {}),
       }),
   },

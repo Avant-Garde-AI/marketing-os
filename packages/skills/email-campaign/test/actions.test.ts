@@ -211,6 +211,20 @@ describe("klaviyo.create_campaign_draft", () => {
     expect(newMutations.filter((m) => m.startsWith("assignTemplate"))).toHaveLength(1);
     void repo;
   });
+
+  it("a re-draft syncs the subject onto the existing Klaviyo message", async () => {
+    const c = draftReady();
+    const { actions, repo, state } = setup({ [campaignPath(c.id)]: serializeCampaign(c) });
+    await actions.createCampaignDraft.execute({ campaignId: c.id });
+    expect(state.mutations.filter((m) => m.startsWith("updateCampaignMessage"))).toHaveLength(0);
+
+    const drafted = parseCampaign((await repo.readFile(campaignPath(c.id)))!);
+    await repo.writeFile(campaignPath(c.id), serializeCampaign({ ...drafted, subject: "A corrected subject" }));
+    await actions.createCampaignDraft.execute({ campaignId: c.id });
+    expect(state.mutations.filter((m) => m.startsWith("updateCampaignMessage"))).toEqual([
+      "updateCampaignMessage:MsgNew:A corrected subject",
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------

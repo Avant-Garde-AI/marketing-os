@@ -1,7 +1,8 @@
 # 35 — Design Studio and the Figma Bridge: retiring Penpot
 
-> **Status:** PROPOSAL — direction set 2026-10-01 (Garrett: retire Penpot; agentic Studio first;
-> deep Figma sync for teams that live there). D1 leaning-decided; D2–D7 open (§10). Build not started.
+> **Status:** PROPOSAL — direction set 2026-10-01 (Garrett: retire Penpot; the hosted console is the
+> agentic design surface, connected Figma is where teams edit by hand, with sync both ways).
+> D1 + D8 leaning-decided; D2–D7 open (§10). Build not started.
 > **Supersedes:** 23-DESIGN-SURFACES-PENPOT §1, §3, §4, §6 and phases DS4–DS6 (the Penpot substrate,
 > the embedded Penpot canvas, the Penpot MCP live lane). The `DesignSurface` *idea* in 23 §0/§2 — a
 > domain-agnostic surface with lifecycle, provenance and an export contract — survives intact.
@@ -39,9 +40,9 @@ already pay for.
             render (pure)  │         │ edit    │ project / read back
                            ▼         ▼         ▼
                  HTML/CSS preview   STUDIO     FIGMA
-                 + PNG/PDF export   chat +     frames, auto-layout,
-                 (Chromium)         canvas +   variables, components
-                                    inspector
+                 + PNG/PDF export   agentic    direct manipulation:
+                 (Chromium)         chat +     frames, auto-layout,
+                                    live view  variables, components
          every change, whoever makes it (agent · person · Figma), is a PATCH on the SDoc
 ```
 
@@ -50,7 +51,7 @@ Three rules carry the design:
 1. **The SDoc is the only master.** This is 30 D1 again with Penpot removed from the
    sentence. HTML is a projection, and so is Figma. A projection can *propose* changes but
    never owns the surface.
-2. **Everyone edits through the same pipe.** An agent tool call, a click in the inspector,
+2. **Everyone edits through the same pipe.** An agent tool call, an undo in the console,
    and a designer's change in Figma all become `SurfacePatch` ops against a base revision.
    Undo, history, attribution, review and conflict handling are written once.
 3. **The agent never emits HTML.** It emits SDoc nodes and patches from a fixed vocabulary,
@@ -158,22 +159,26 @@ Exports land as sha'd artifacts in the store repo path the domain pack chooses, 
 already specified. Video stays out of scope, as in 23 §6. The SDoc is static, and MP4 is a
 later stage over exported frames.
 
-## 4. The Studio ⟨BUILD⟩
+## 4. The Studio: the console is where you *talk* to the design ⟨BUILD⟩
 
-The product surface: **agentic chat on the left, the live surface on the right, a light inspector
-when you select something.**
+**Division of labour (Garrett, 2026-10-01).** The hosted console is the agentic surface: chat
+beside the live design, and every change made by asking. **Direct manipulation lives in
+Figma.** A team that wants to push pixels around opens the design in its connected Figma
+account (§6). The console does not try to be a second, worse Figma. This replaces the "light
+inspector" of the first draft. The console keeps only the controls that make *talking*
+precise.
 
 ```
 ┌──────────────────────┬──────────────────────────────────────────────┐
 │ Chat (session, 27)   │  [Feed 1:1] [Story 9:16] [Carousel 1/5 ▸]    │
-│                      │  ┌────────────────────────────┐ ┌──────────┐ │
-│ › tighten the        │  │                            │ │Inspector │ │
-│   headline and use   │  │   live render (iframe)     │ │ headline │ │
-│   the gold variant   │  │   click → select node      │ │ text  ✎  │ │
-│                      │  │                            │ │ size ±   │ │
-│ ⚙ surface_patch (3)  │  └────────────────────────────┘ │ color ◉◉◉│ │
-│   headline.size 64→56│  History · rev 14 · ↶ ↷         └──────────┘ │
-│ ✓ re-rendered        │  [Send for review] [Export] [Open in Figma]  │
+│                      │  ┌────────────────────────────────────────┐  │
+│ › tighten the        │  │                                        │  │
+│   headline and use   │  │   live render (iframe)                 │  │
+│   the gold variant   │  │   click → point at a node (●headline)  │  │
+│                      │  │                                        │  │
+│ ⚙ surface_patch (3)  │  └────────────────────────────────────────┘  │
+│   headline.size 64→56│  History · rev 14 · ↶ ↷   Figma: ✓ synced    │
+│ ✓ re-rendered        │  [Send for review] [Export] [Open in Figma ↗]│
 └──────────────────────┴──────────────────────────────────────────────┘
 ```
 
@@ -182,9 +187,23 @@ render URL), `surface_patch`, `surface_render` (returns the image to the model f
 self-critique), and `surface_variants`. Variants fork N child drafts, shown as a strip, and the
 person picks one.
 
-**Selection makes chat precise.** Clicking a node puts `selected: headline (node h1)` into the
-turn context. "Make this bigger" then has an unambiguous referent, and that covers most of the
-cases where people currently feel they need a manual editor.
+**Pointing, not editing.** Clicking a node in the render puts `selected: headline (node h1)` into
+the turn context. Shift-click selects several. "Make this bigger" or "swap this photo for the
+oak frame" then has an unambiguous referent. This is the one direct interaction the canvas
+owns, and it covers most of the moments that would otherwise send someone looking for a
+manual editor.
+
+**What the console keeps, beyond chat:**
+- History with undo and redo.
+- Per-node "revert to before that change".
+- Variant pick.
+- Format and board switching.
+- Send for review, export, and **Open in Figma**.
+
+There is no text editing on the canvas, no colour pickers and no drag handles. A one-word copy
+fix is a one-line chat message. If that turns out to be too slow in practice, inline text edit
+is the single control to add first; it would be a `SurfacePatch` with `actor.kind = "user"`,
+because the pipe already supports it.
 
 **Streaming is a prerequisite.** The hosted runtime's `/api/chat` currently returns the final
 answer as `text/plain` (`app/api/chat/route.ts:121-218`). The Studio needs tool calls as they
@@ -192,23 +211,9 @@ happen, so the canvas can re-render mid-turn. The OSS template already does this
 `createUIMessageStreamResponse`. ST2 brings the hosted route up to that contract, which also
 benefits the plain console.
 
-**The light inspector is deliberately not a design tool.** It changes the selected node only:
-
-| Can | Cannot |
-|---|---|
-| Edit text inline (claims guard runs on commit, as for agent copy) | Draw arbitrary shapes, paths, pen tool |
-| Step size on the **type scale**, weight, tracking, case | Free-form font picking outside brand tokens (except via an explicit off-brand override, §5) |
-| Pick color from **brand swatches** | Effects, blend modes, masks |
-| Nudge position (absolute) / reorder (row/column), step padding & gap on the spacing scale | Restructure the layout tree beyond move/insert of library components |
-| Swap image from the asset library / imagery service; drag the **focal point** | Pixel-level image editing |
-| Hide/show, swap component variant, revert a node to the agent's version | — |
-
-Each inspector action is a `SurfacePatch` with `actor.kind = "user"`, so it shows up in history
-and the agent sees it next turn. "Revert to agent's version" is cheap because history is
-per-node.
-
-For anything the inspector cannot do, the answer is **Open in Figma** (§6), not a bigger
-inspector.
+**Figma status is always visible.** Each surface shows its Figma state: not linked, synced, N
+changes pulled from Figma, or conflict. Someone chatting in the console can always see that a
+teammate has been working on the same design in Figma (§6.5).
 
 **Where it lives (D7).** Today it is single-column chat in the embedded admin
 (`app.console.tsx`) and a chat + Penpot-iframe "Design Studio" in the OSS template
@@ -225,115 +230,176 @@ Penpot webhooks becomes a comparison: `doc.rev` versus the rev the last export w
 
 The SDoc makes the brand enforceable in a way Penpot never did. A `Paint` is a token reference
 unless it carries an explicit `offBrand: true` hex. The same rule applies to font families and
-to sizes off the type scale. Inspector controls offer only tokens by default, behind an "off
-brand" toggle. The validator counts off-brand values per surface and shows them in review, so
-"why is this teal?" has an answer. Agents may not set `offBrand` unless the human asked in the
+to sizes off the type scale. Agents may not set `offBrand` unless the person asked for it in the
 turn. This is enforced in the tool rather than in the prompt.
 
+Figma is where off-brand values will actually come from: a designer picks a colour by eye.
+Read-back (§6.5) maps a colour back to its token when the value matches one. A colour that
+matches none comes back as `offBrand`. The validator counts off-brand values per surface and
+shows them in review, so "why is this teal?" has an answer and a one-click "snap to nearest
+brand token".
+
 ## 6. The Figma bridge ⟨BUILD⟩
+
+**The goal (Garrett, 2026-10-01):** a team connects its Figma account from the console in one
+web flow. From then on, every design the agent makes can be opened in that team's Figma.
+Changes made there come back into the console without anyone thinking about sync, and existing
+Figma designs can be brought in for the agent to work from.
+
+**The asymmetry this design has to live with:** Figma's public APIs make the **inbound**
+direction (Figma → us) fully server-side. The **outbound** direction (us → Figma) has no pure
+REST path, because REST cannot create layers. §6.4 gives the three outbound channels, ranked.
 
 ### 6.1 Platform reality (checked 2026-10-01; re-verify at FG0)
 
 | Fact | Consequence |
 |---|---|
-| Figma's **remote MCP** (`mcp.figma.com/mcp`) can **write** to the canvas since Feb 2026, including `use_figma` and `generate_figma_design` (web page → layers). It is **OAuth only, restricted to an allowlist of catalog clients** (Claude Code, Cursor, VS Code, Codex…). Dynamic client registration from other clients gets a 403, and new client approvals are paused. It is beta and expected to become usage-priced. | The hosted runtime **cannot** use it today. Apply to the catalog now (cheap), but nothing on the critical path depends on approval. |
-| The **REST API** can read files and nodes (including a plugin's shared data via `plugin_data`), render node images, handle comments, and run **webhooks v2** (`FILE_VERSION_UPDATE`, `FILE_UPDATE` after ~30 min idle, `LIBRARY_PUBLISH`, `FILE_COMMENT`). It **cannot create or modify nodes.** Writing **variables** over REST is **Enterprise-only** (`file_variables:write`). | REST is the **read-back** channel: server-side, with no Figma tab open. It cannot be the write channel. |
-| The **Plugin API** has full read/write: frames, auto-layout, text styles, components, variables, image fills, and `setSharedPluginData` tags readable over REST. Plugins can call our API (`networkAccess.allowedDomains`). | A **Marketing OS Figma plugin** is the reliable, approval-free **write** channel. |
-| Standard **Figma OAuth apps** issue REST tokens with granular scopes. | "Connect Figma" is an ordinary connector, using the same pattern as Klaviyo/Google (`provider_connections` + Vault + broker refresh). Confirm at FG0 whether Figma requires app review before users outside our team can authorize. |
+| **OAuth 2 apps** issue REST tokens with granular scopes via a standard web redirect flow. | "Connect Figma" is an ordinary console connector, using the same shape as Klaviyo and Google. Confirm at FG0 whether Figma reviews an OAuth app before users outside our team can authorize it, and budget for that. |
+| The **REST API** reads files and nodes (geometry, layout, styles, text, components, and a plugin's shared data via `plugin_data`), renders any node to PNG/SVG/PDF (`GET /v1/images`), and handles comments. **Webhooks v2** fire `FILE_VERSION_UPDATE`, `FILE_UPDATE` (after ~30 min idle), `LIBRARY_PUBLISH` and `FILE_COMMENT`. | **Inbound is all API:** import (§6.3) and sync back (§6.5) need no plugin and no open Figma tab. |
+| REST **cannot create or modify nodes**, and there is no file-import endpoint. **Variables write** over REST is **Enterprise-only**. There appears to be no "list my teams" endpoint, so a team is identified from a pasted team, project or file URL. | **Outbound needs something running inside Figma** (§6.4). |
+| Figma's **capture script** (the `generate_figma_design` / html-to-design path) serializes a rendered web page into Figma's clipboard format. Pasting yields editable layers with inferred auto-layout. The format is **undocumented** and may change. | A no-install "Copy to Figma" is possible because our designs *are* rendered HTML (§6.4 E1). It is fragile, so it is a convenience, never the sync backbone. |
+| The **Plugin API** has full read/write: frames, auto-layout, text styles, components, variables on all plans, image fills, `setSharedPluginData` tags readable over REST, and `setRelaunchData` buttons on nodes. | A **Marketing OS plugin** is the reliable outbound channel (§6.4 E2). Installed once, it turns updates into one click on the frame itself. |
+| The **remote MCP** (`mcp.figma.com/mcp`) can write (`use_figma`, `generate_figma_design`) but is OAuth-only for **allowlisted catalog clients**. Other clients get a 403 at dynamic client registration, approvals are paused, and the server is beta and expected to become usage-priced. | Zero-touch server push exists only if Figma admits us (§6.4 E3). Apply now; depend on nothing. |
 
-### 6.2 Connect
+### 6.2 Connect: one web flow from the console
 
-**Integrations → Connect Figma** runs a standard OAuth code + PKCE flow, modeled on
-`klaviyo-connect.server.ts`. A new `figma` value in the `provider_name` enum stores the token in
-Vault, and the broker issues and refreshes it like Google. Requested read scopes are file
-content, metadata, comments, library content, plus webhooks write. Variables read is added where
-the plan allows. The connection records which Figma team(s) and project the store syncs to.
+1. In **Integrations → Figma → Connect**, the person is sent to Figma's consent screen and back.
+   This is authorization code + PKCE, modeled on `klaviyo-connect.server.ts`, with HMAC state as
+   in `oauth.server.ts`.
+2. The token is stored as a new `figma` value in `provider_name` → `provider_connections` +
+   Vault. The broker issues and refreshes it like Google (`broker.server.ts`).
+3. **Choose where designs go.** The person pastes the Figma team or project link once (see §6.1
+   on team discovery). We list its projects and files and record a default project. On first
+   export we create a **"Marketing OS — {store}"** file there, plus a **"{store} Brand"** library
+   file (§6.7).
+4. Webhooks are registered on the team for sync back (§6.5).
 
-The **plugin pairs to the same tenant**. Plugins cannot receive an OAuth redirect, so the plugin
-calls `figma.openExternal` to open `/figma/pair?code=…` in the browser. The person is already
-signed in to the console and confirms, and the plugin polls for a scoped, revocable plugin token
-stored in `connector_tokens`. One click, with no API keys pasted.
+Requested scopes, to be finalized at FG0: file content and metadata read, comments read and
+write, library content read, webhooks write, and variables read where the plan allows.
+Connection status, the connected Figma user and team, and a Disconnect button that revokes the
+connection and deletes the webhooks all appear on the same Integrations page as the other
+connectors.
 
-### 6.3 Push: Studio → Figma (plugin writes)
+### 6.3 Import: bring a Figma design in (pure API)
 
-1. **Open in Figma** in the Studio chooses a target file from the connected account, or creates
-   a "Marketing OS — {store}" file the first time. It enqueues a push job: the SDoc rev plus
-   rendered assets.
-2. When the plugin is opened in Figma, it shows the store's pending pushes. Applying one
-   **materializes native Figma content**:
-   - Boards become frames.
-   - Row and column frames use auto-layout.
-   - Token refs bind to **variables**. The plugin maintains a "{store} Brand" variable
-     collection from `tokens.json`. Pushing through the plugin works below Enterprise.
-   - Library instances become instances of a synced component in the store's Figma library
-     file.
-   - Images become image fills with the focal crop applied.
-3. Every node gets shared plugin data `mos:{surfaceId, nodeId, rev}`. Re-pushing is an
-   **idempotent upsert** by `nodeId`. It updates the nodes we own and leaves alone anything the
-   designer added (§6.5).
+The person pastes a frame link in chat ("make this month's posts from this template"), or picks
+one in the Studio. Then:
 
-The push target is the designer's world, so the push never renames, moves or deletes nodes it
-does not own.
+1. `GET /v1/files/:key/nodes?ids=…` fetches the subtree, and `GET /v1/files/:key/images`
+   fetches the image fills.
+2. Under the intersection rule (§2), it maps to an SDoc:
+   - Frames and auto-layout become row/column frames, and absolute frames stay absolute.
+   - Text and its style are carried over.
+   - Fills are mapped to tokens where the values match, and to `offBrand` otherwise.
+   - Image fills keep their crop.
+   - Component instances map to library instances where the component is in the store's
+     library.
+3. Every SDoc node records the **Figma node id it came from**. An imported design is therefore
+   *already linked*: sync back (§6.5) maps 1:1 with no tagging step.
+4. Anything outside the intersection (effects, vectors, blend modes) is listed as "not
+   carried". The agent says so in chat rather than approximating silently.
 
-### 6.4 Pull: Figma → Studio (REST reads, server-side)
+An import can become a **surface** (work on this design) or a **template** (an archetype the
+social and email packs fill). The template path is how a team's existing Figma brand work
+becomes the agent's raw material on day one.
 
-A webhook (`FILE_VERSION_UPDATE` when a designer saves a version; `FILE_UPDATE` as the idle
-fallback) or the plugin's **Send changes to Marketing OS** button starts a read-back:
+### 6.4 Export: put a console design into Figma (three channels)
 
-1. `GET /v1/files/:key/nodes?ids=…&plugin_data=shared` fetches the tagged nodes.
-2. **Map back** each tagged node's supported properties (text, style, fills→tokens,
-   size/position, auto-layout params, image crop, visibility, component swap) to SDoc paths, and
-   diff against the SDoc at the tagged `rev`.
+**E1 — Copy to Figma (no install).** The Studio's renderer output is HTML, so "Copy to Figma"
+runs Figma's capture script over the rendered board and puts Figma clipboard data on the
+person's clipboard. They paste into any file and get editable layers. Layer names carry
+`mos:{nodeId}` anchors so sync back can find them, *if* the capture preserves names; FG2's
+spike checks this.
+- **Cost:** an undocumented format, no variable bindings, and each copy is a fresh paste rather
+  than an update.
+- **Use:** one-offs, first impressions, and teams that won't install anything.
+
+**E2 — Plugin sync (the backbone).** The team installs the Marketing OS plugin once from
+Figma Community. It pairs to the store through the same console session: `figma.openExternal`
+→ `/figma/pair?code=…` → confirm → a scoped, revocable token in `connector_tokens`.
+- **Opening a design:** "Open in Figma" in the console opens the store's Marketing OS file. If
+  the design is not there yet or is out of date, the plugin's panel says "2 designs ready", and
+  one click materializes them as **native content**:
+  - frames with auto-layout;
+  - text bound to text styles;
+  - fills bound to the **{store} Brand** variables;
+  - library components as instances;
+  - images with the focal crop applied.
+- **Tagging:** every node gets shared plugin data `mos:{surfaceId, nodeId, rev}`.
+- **Updating:** each synced frame carries a relaunch button, **"Update from Marketing OS"**, so
+  pulling the agent's latest revision is one click on the frame. Updates are an idempotent
+  upsert by `nodeId`. They change only nodes we own and never rename, move or delete anything
+  the designer added.
+
+**E3 — Hosted MCP push (zero touch, if approved).** With catalog access, the Studio agent writes
+straight into the linked file via `use_figma`, and "Open in Figma" lands on an up-to-date frame
+with no plugin step. The connection uses the shipped Higgsfield OAuth-MCP pattern (DCR + PKCE +
+RFC 8707 `resource` + row-locked refresh) through a **governed adapter**, not the generic merge
+(`external-mcp.server.ts:151-153`). If approved, E3 replaces E2's click; it does not replace E2.
+
+**Default:** E2 for any team that syncs more than once, and E1 as the always-available fallback.
+
+### 6.5 Sync back: Figma changes flow into the console (pure API)
+
+A webhook triggers the read-back: `FILE_VERSION_UPDATE` when a designer saves a version, or
+`FILE_UPDATE` after ~30 minutes idle. The plugin's **"Send to Marketing OS"** and a console
+**"Pull from Figma"** button trigger it immediately.
+
+1. **Read** the linked nodes over REST (`plugin_data=shared` for E2, layer-name anchors for E1,
+   recorded node ids for imports).
+2. **Map** supported properties back to SDoc paths and diff against the SDoc at the linked
+   `rev`.
 3. **Classify** each change using 30 §4's rules:
-   - **Attributable** changes become a `SurfacePatch` with `actor.kind = "figma"`.
-   - **Off-vocabulary** changes (an effect, a blend mode) are reported as "kept in Figma, not
-     carried".
-   - **Unattributable** changes (a node with no `mos` tag) are reported and never guessed at.
-4. **Propose** the result as a change in the Studio, e.g. "Figma: 4 changes from Dana, 1 not
-   carried", accepted or rejected per change. The SDoc changes only on acceptance. Conflicts with
-   newer SDoc revs use the §2 rebase rule.
+   - **Attributable** changes become a `SurfacePatch` with `actor.kind = "figma"` and the Figma
+     user's name.
+   - **Off-vocabulary** changes are reported as "kept in Figma, not carried".
+   - **Unattributable** changes (new untagged layers) are reported, never guessed at.
+4. **Apply** according to the surface's state (D8):
+   - **Draft:** attributable changes **apply automatically**. They show in history as "Dana in
+     Figma: headline text, image crop", and each is individually undoable. Editing a draft in
+     Figma should feel like editing it here; there is no inbox to babysit.
+   - **In review or approved:** changes arrive as a **proposal**. Accepting one re-opens the
+     review, because what was approved is no longer what's on the canvas (23 §2's nonce rule,
+     now enforceable).
+   - **Conflict** (the same node changed in the console since the linked rev): both versions are
+     shown side by side, and the person picks one. Nothing merges silently.
 
-Colors that match a token value are mapped back to the token. A color that matches none comes
-back as `offBrand`, and the person sees that.
+Changes are attributed in the Studio header ("synced from Figma 4 min ago · Dana") and in chat,
+so the agent's next turn knows a person changed the headline and does not "fix" it back.
 
-### 6.5 The shipped pixels
+### 6.6 The shipped pixels
 
 **Pixels that ship are always rendered from the SDoc by our renderer.** Figma is where a person
-*changes* the design. It is never where the shipped file comes from. Two consequences, both
+*changes* a design. It is never where the shipped file comes from. Two consequences, both
 intended:
 
 - What Figma shows and what ships can differ only by the reported "not carried" list. That
   difference is visible, never silent.
-- The pipeline never depends on a Figma tab or a Figma seat to publish a post.
+- Publishing never depends on a Figma seat, a Figma tab, or Figma's uptime.
 
 The **escape hatch (D5)**: a surface can be marked *Figma-owned*. The designer then owns it
-outright. Export comes from REST image render (`GET /v1/images`), and the agent may read it but
-not patch it. This is for the designer-heavy team that wants a hero piece hand-made, at the
-cost of agent editability for that surface.
+outright. Export comes from `GET /v1/images`, and the agent may read it but not patch it. This
+is for a hero piece a designer wants to hand-make, at the cost of agent editability for that
+surface.
 
-### 6.6 The design library in Figma
+### 6.7 The design library in Figma
 
-- **Tokens** are one-way, repo → Figma variables, through the plugin. Enterprise teams can use
-  REST `POST /variables` instead, with no plugin needed.
-- **Components** are published from `design/library/components/*.json` into the store's Figma
-  library file. Library publishing inside Figma stays a human click, since Figma exposes no API
-  for it. Going the other way, a designer's edit to a library component (`LIBRARY_PUBLISH`
-  webhook) becomes a **proposed** change to the component JSON in the store repo. That is 30 D1
-  applied to Figma: the repo is master, and Figma proposes.
+- **Tokens** are one-way, repo → the **{store} Brand** variable collection, via the plugin on
+  any plan or REST `POST /variables` on Enterprise.
+- **Components** go from `design/library/components/*.json` into the Brand library file.
+  Publishing a library inside Figma stays a human click, since Figma exposes no API for it.
+- **Inbound:** a `LIBRARY_PUBLISH` webhook turns a designer's change to a library component
+  into a **proposed** change to the component JSON in the store repo. That is 30 D1 applied to
+  Figma: the repo is master, Figma proposes, and component changes always go through review
+  because they propagate to every future design.
 
-### 6.7 The MCP lanes
+### 6.8 Bring your own agent
 
-- **FG-M1, bring your own agent (works today).** Designers already running Claude Code or Cursor
-  with Figma's MCP can add the store's MCP endpoint (spec 12, already serving
-  `compose_design_surface` / `export_design_surface` / `list_design_surfaces`), extended with
-  `surface_read` / `surface_propose_patch`. Their agent is the approved Figma client and bridges
-  both servers. Their writes into our system still arrive as proposed patches.
-- **FG-M2, hosted Figma MCP (if approved).** If Figma admits us to the catalog, the connection
-  uses the Higgsfield OAuth-MCP pattern already shipped (DCR + PKCE + RFC 8707 `resource` +
-  row-locked refresh), entering through a **governed adapter** rather than the generic merge
-  (`external-mcp.server.ts:151-153`). The win is push **without opening the plugin**: the Studio
-  agent writes straight to the file with `use_figma`. The plugin stays as the fallback and for
-  plans or teams the MCP doesn't cover.
+Designers already running Claude Code or Cursor with Figma's MCP can add the store's MCP
+endpoint (spec 12, already serving `compose_design_surface` / `export_design_surface` /
+`list_design_surfaces`), extended with `surface_read` / `surface_propose_patch`. Their agent is
+the approved Figma client and bridges both servers. This works today, and their changes into
+our system arrive as patches like any other.
 
 ## 7. Data model
 
@@ -346,9 +412,12 @@ place rather than migrated:
   `draft_doc jsonb` (the working draft between commits), `exported_rev` (so `edited` =
   `doc_rev > exported_rev`) and `owner` (`'mos' | 'figma'`, D5).
 - New `mos_surface_patches` (append-only: surface, base, applied rev, actor, ops, note,
-  status `applied|proposed|rejected|conflict`) is the history, undo, and Figma proposal inbox.
-- New `mos_figma_links` (surface ↔ file key, node map, last pushed rev, last pulled version) and
-  `figma_push_jobs`.
+  status `applied|proposed|rejected|conflict`) is the history, undo, and the record of Figma
+  changes (auto-applied on drafts, proposed after review, §6.5).
+- New `mos_figma_links` (surface ↔ file key, node map — from plugin tags, layer anchors or
+  import — channel `clipboard|plugin|mcp|import`, last pushed rev, last pulled version) and
+  `figma_push_jobs` (what the plugin's "ready" panel lists).
+- `figma_webhooks` (team, webhook id, passcode hash) for the inbound lane.
 - `mos_social_posts.design_surface_id` is unchanged.
 
 Commit cadence: the draft lives in `draft_doc` while a session iterates, and is committed to the
@@ -363,7 +432,7 @@ per meaningful step, not per keystroke. (This resolves 23 OQ2 for the new substr
 | Social compose (`archetype-surface.ts`, `compose_post_from_archetype`, `compose_post_keyframes`) | `ComposeSpec` → Penpot | Emit SDoc via `composeSpecToDoc()`, then emit SDoc natively. The image-fit and paint-order workarounds are deleted, not ported. |
 | Email surface sections (template `lib/email/assemble.ts:121-176`) | Penpot boards → PNG slots | SDoc boards → PNG slots, using the same tokens as the HTML body. |
 | Storyboard realize (`lib/storyboard/realization.ts:164`, `exportSurfaceBoards`) | Penpot | SDoc. 33's renderer-agnostic seam means `packages/storyboard` does not change. |
-| Design library publish/check (template `design-library.ts`) | → Penpot shared library | → renderer (components resolved at render) and → Figma library (§6.6). |
+| Design library publish/check (template `design-library.ts`) | → Penpot shared library | → renderer (components resolved at render) and → Figma Brand library (§6.7). |
 | Template Studio page (`app/studio/page.tsx`, `studio-session` route) | Penpot iframe + session minting | SDoc canvas; delete the session-minting route. |
 | Offers | Playwright in Vercel Sandbox | No change. Offers are already HTML, and their render worker is the export pattern §3 reuses. |
 
@@ -391,21 +460,29 @@ Decommission order:
 - **ST1 — Migrate consumers (§8 table).** Export via the Sandbox Chromium worker. Amend
   migration 004. **Exit:** Arthaus social publish runs end to end with Penpot switched off.
 - **ST2 — Studio, agentic.** UIMessage streaming on the hosted `/api/chat`; the split layout;
-  the `surface_*` tools; selection-aware chat; variants strip; history and undo; send-for-review
-  → change set. **Exit:** a post goes from brief to approved without leaving the Studio.
-- **ST3 — Light inspector (§4 table) + brand constraint (§5).** Built only after ST2 has been in
-  use. Build the controls people reach for, in the order they reach for them.
-- **FG0 — Figma connect + verification spike.** OAuth app; re-verify §6.1 (scopes, app review,
-  `plugin_data` over REST, plugin variable APIs by plan); submit the MCP catalog request.
-- **FG1 — Plugin push (§6.3)** with pairing, variables collection, idempotent upsert.
-  **Exit:** a carousel opens in Figma as native auto-layout frames bound to brand variables.
-- **FG2 — Read-back (§6.4)** via webhooks + REST + the plugin's "send changes" button; Figma
-  proposals in the Studio. **Exit:** a designer's headline edit in Figma comes back as an
-  accept/reject proposal, and a blur they added is reported as not carried.
-- **FG3 — Library sync (§6.6)** and the Figma-owned escape hatch (D5).
-- **FG-M1** comes with ST2's tool work. **FG-M2** waits on Figma.
+  the `surface_*` tools; point-to-select; variants strip; history and undo; brand constraint (§5);
+  send-for-review → change set. **Exit:** a post goes from brief to approved by conversation
+  alone, without leaving the Studio.
+- **FG0 — Connect + verification spike.** Console OAuth flow (§6.2), team/project linking,
+  webhook registration. Re-verify §6.1: scopes, OAuth app review, team discovery, `plugin_data`
+  over REST, plugin variables by plan, whether capture preserves layer names. Submit the MCP
+  catalog request.
+- **FG1 — Inbound: import + sync back (pure API, §6.3, §6.5).** This ships before outbound
+  because it needs nothing installed. **Exit:** a team's existing Figma post template is
+  imported as a social archetype, and the agent fills it. A designer's edit to that frame in
+  Figma lands in the console draft as an attributed, undoable change, while a blur they added
+  is reported as not carried.
+- **FG2 — Outbound (§6.4).** E1 "Copy to Figma" as a spike first, then the E2 plugin: pairing,
+  the Brand variable collection, materialize + relaunch "Update from Marketing OS", idempotent
+  upsert. **Exit:** a console carousel opens in Figma as native auto-layout frames bound to
+  brand variables. A designer edits it, and the change round-trips back (FG1).
+- **FG3 — Library sync (§6.7)** and the Figma-owned escape hatch (D5). E3 (hosted MCP) when and
+  if Figma approves us. Bring your own agent (§6.8) arrives with ST2's tool work.
+- **Deferred — console direct editing.** Inline text edit only, and only if usage shows chat is
+  too slow for one-word fixes (§4).
 
-ST and FG are independent after ST0, so they can run in parallel.
+ST and FG are independent after ST0, so they can run in parallel. The order inside FG is
+deliberate: inbound first, because it is all API.
 
 ## 10. Decisions
 
@@ -420,9 +497,9 @@ ST and FG are independent after ST0, so they can run in parallel.
   (serverless, already used for charts). It is cheaper and faster but supports only a CSS
   subset, so the preview could differ from what ships. Revisit if Sandbox latency or cost hurts
   at volume.
-- **D4 — Figma write channel.** *Leaning: plugin first, hosted MCP if and when approved.* The
-  plugin needs no one's permission. The MCP lane is a better user experience and arrives later
-  or never.
+- **D4 — Figma outbound channel.** *Leaning: E2 plugin as the backbone, E1 clipboard as the
+  no-install fallback, E3 hosted MCP if and when approved* (§6.4). REST cannot write layers, so
+  some piece of us has to run inside Figma until Figma admits us to the MCP catalog.
 - **D5 — Figma-owned surfaces.** *Open.* The escape hatch is cheap to build and honest about its
   cost. The risk is that teams use it by default and lose the agent loop.
 - **D6 — Plugin distribution.** *Open. Leaning: Figma Community publish.* It is free to
@@ -432,6 +509,11 @@ ST and FG are independent after ST0, so they can run in parallel.
   inside the Shopify admin, or a runtime-hosted page opened from the admin (the runtime already
   has `/chat` and the conversations API). Leaning toward whichever keeps the HMAC chat handoff
   (`/api/chat/grant`) unchanged.
+- **D8 — Console = agentic, Figma = direct manipulation.** *Leaning-decided 2026-10-01
+  (Garrett).* The console gets no inspector, pickers or drag handles (§4); the hand-editing
+  surface is the team's own Figma. As a consequence, Figma edits to a **draft** apply
+  automatically as attributed, undoable patches. Edits to a design **in review or approved**
+  arrive as proposals that re-open review (§6.5).
 
 ## 11. Risks
 
@@ -440,13 +522,18 @@ ST and FG are independent after ST0, so they can run in parallel.
 - **Figma API drift.** The MCP is beta and the plugin and REST APIs are versioned. FG0's
   verification becomes a small canary like the Penpot one, scoped to the handful of calls we
   use.
-- **Two-place editing confusion.** A person edits in the Studio while a designer edits in Figma.
-  The rebase rule and per-change acceptance handle correctness. The UI must show "Figma has 3
-  unreviewed changes" before anyone exports.
+- **Two-place editing confusion.** Someone chats in the console while a designer edits in Figma.
+  Rebase plus side-by-side conflicts handle correctness. The Studio's Figma status (§4) and
+  attributed history handle awareness, and export warns when Figma is newer than the last pull.
+- **Webhook latency.** `FILE_UPDATE` waits ~30 min of idle time. Saving a version, the plugin's
+  "Send to Marketing OS" and the console's "Pull from Figma" are the immediate paths; the UI
+  says which applies.
+- **Capture format (E1).** It is undocumented and may break without notice. E1 is a convenience
+  with a canary, and nothing depends on it.
 - **Sandbox render latency** in the agent's self-critique loop. Critique can render client-side
   or in-process HTML → screenshot only when needed. Measure in ST0.
 
 ---
-*Sources (Figma, checked 2026-10-01): help.figma.com Figma MCP server guide; forum.figma.com threads
+*Sources (Figma, checked 2026-10-01): help.figma.com Figma MCP server guide; Figma capture.js clipboard mode (html.to.design, open-source capture extensions); forum.figma.com threads
 on remote-MCP OAuth client registration and the catalog allowlist; developers.figma.com REST API
 (variables endpoints, webhooks v2); Builder.io `skills/visual-edit` README (the pattern weighed in D2).*

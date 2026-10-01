@@ -451,6 +451,8 @@ export interface KlaviyoClient {
   updateTemplate(id: string, input: { html: string; name?: string }): Promise<void>;
   createCampaign(input: CreateCampaignInput): Promise<{ campaignId: string; messageId: string }>;
   assignTemplate(messageId: string, templateId: string): Promise<void>;
+  /** Sync subject/preview text onto an EXISTING campaign message (a re-draft). */
+  updateCampaignMessage(messageId: string, input: { subject: string; previewText?: string }): Promise<void>;
   updateCampaignSendStrategy(campaignId: string, strategy: { datetime: string }): Promise<void>;
   createSendJob(campaignId: string): Promise<{ status: string }>;
   cancelSendJob(campaignId: string, opts?: { revertToDraft?: boolean }): Promise<void>;

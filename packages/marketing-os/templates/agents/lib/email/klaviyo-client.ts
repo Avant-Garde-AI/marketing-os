@@ -812,6 +812,42 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
       });
     },
 
+    async updateCampaignMessage(
+      messageId: string,
+      input: { subject: string; previewText?: string }
+    ): Promise<void> {
+      // Read-merge-write: the content block also carries from/reply-to, and a
+      // PATCH that names only the subject must not be the thing that clears them.
+      const path = `/campaign-messages/${encodeURIComponent(messageId)}`;
+      const current = asOne(await request({ path }), "campaign message");
+      const definition = (current.attributes?.["definition"] ?? {}) as {
+        channel?: string;
+        label?: string;
+        content?: Record<string, unknown>;
+      };
+      const content: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(definition.content ?? {})) if (v !== null) content[k] = v;
+      content["subject"] = input.subject;
+      if (input.previewText !== undefined) content["preview_text"] = input.previewText;
+      await request({
+        method: "PATCH",
+        path,
+        body: {
+          data: {
+            type: "campaign-message",
+            id: messageId,
+            attributes: {
+              definition: {
+                channel: definition.channel ?? "email",
+                ...(definition.label ? { label: definition.label } : {}),
+                content,
+              },
+            },
+          },
+        },
+      });
+    },
+
     async updateCampaignSendStrategy(
       campaignId: string,
       strategy: { datetime: string }

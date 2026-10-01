@@ -92,7 +92,15 @@ export type Predicate =
       artist: string;
       atLeast?: number;
       withinDays?: number;
-    };
+    }
+  /** Became a profile within the last `withinDays` — Klaviyo's reserved
+   *  `created` property, not a per-list join date (Klaviyo has no list-scoped
+   *  equivalent in the segment condition language; `created` is the store-
+   *  wide "new to us" signal, which is what every caller of this predicate
+   *  has actually meant). Shape confirmed against Klaviyo's own API reference
+   *  2026-09-27 — `property: "created"` bare, no `properties[...]` wrapper,
+   *  because it is a reserved top-level field, unlike `$country`. */
+  | { kind: "new_profile"; withinDays: number };
 
 /**
  * An audience: groups of predicates. Within a group, ANY may match (OR).
@@ -250,6 +258,20 @@ async function compilePredicate(p: Predicate, client?: KlaviyoClient): Promise<R
         },
       ];
     }
+
+    case "new_profile":
+      return [
+        {
+          type: "profile-property",
+          property: "created",
+          filter: {
+            type: "date",
+            operator: "in-the-last",
+            quantity: p.withinDays,
+            unit: "day",
+          },
+        },
+      ];
   }
 }
 
@@ -291,6 +313,8 @@ export function describe(spec: AudienceSpec): string[] {
         const when = p.withinDays ? ` in the last ${p.withinDays} days` : "";
         return `someone who has ${verb} work by ${p.artist}${times}${when}`;
       }
+      case "new_profile":
+        return `a profile created in the last ${p.withinDays} days`;
     }
   };
   return spec.anyOfGroups.map(
@@ -328,6 +352,9 @@ export async function explainDefinition(
         return `${k.is_member === false ? "not on" : "on"} list ${(k.group_ids ?? []).join(", ")}`;
       case "profile-property": {
         const f = k.filter ?? {};
+        if (f.type === "date" && f.operator === "in-the-last") {
+          return `${k.property} in the last ${f.quantity} ${f.unit}`;
+        }
         return `${k.property} ${f.operator ?? "?"} ${JSON.stringify(f.value)}`;
       }
       case "profile-metric": {

@@ -257,6 +257,9 @@ export function createFakeKlaviyo(overrides: Partial<FakeKlaviyoState> = {}): {
     async assignTemplate(messageId, templateId) {
       state.mutations.push(`assignTemplate:${messageId}:${templateId}`);
     },
+    async updateCampaignMessage(messageId, input) {
+      state.mutations.push(`updateCampaignMessage:${messageId}:${input.subject}`);
+    },
     async updateCampaignSendStrategy(campaignId, strategy) {
       state.mutations.push(`updateSendStrategy:${campaignId}:${strategy.datetime}`);
     },

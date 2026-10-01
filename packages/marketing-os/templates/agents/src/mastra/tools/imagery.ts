@@ -31,7 +31,7 @@ export const imageryResolveTool = createTool({
     artworkUrl: z.string().describe("Public https URL of the artwork image to composite."),
     artworkKey: z
       .string()
-      .describe("Stable key, normally the Shopify handle — seeds template selection so the same piece resolves consistently across campaigns."),
+      .describe("The artwork's Shopify handle. Seeds template selection so the same piece resolves consistently, and is how the raw (unframed) artwork is recovered when artworkUrl is a framed product photo."),
     role: roleEnum.describe("What the image is for; picks the treatment."),
     orientation: z
       .enum(["portrait", "landscape", "square"])

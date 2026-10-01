@@ -28,6 +28,8 @@ import { emailRepo } from "../../../../lib/email/repo";
 import { campaignPath, parseCampaign, serializeCampaign } from "../../../../lib/email/artifacts";
 import { createKlaviyoClient } from "../../../../lib/email/klaviyo-client";
 import { syncCampaignIndex } from "../../../../lib/email/index-sync";
+import { listOpenNotes } from "../../../../lib/email/review-notes";
+import { refineCampaignFromNotes } from "../../../../lib/email/refine";
 import { getBrokerToken } from "../../../../lib/broker-client";
 import type { EmailCampaign } from "../../../../lib/email/types";
 
@@ -258,6 +260,32 @@ async function sweepShop(shop: string): Promise<CampaignSweepOutcome[]> {
       }
       outcomes.push({ id: campaign.id, action });
     }
+
+    // 4 — note-driven refine. Unbounded by CAMPAIGNS_PER_SHOP on purpose: only
+    // `proposed` campaigns qualify (see refineCampaignFromNotes), which is
+    // never the large historical set the readback cap exists to bound.
+    const openNotes = await listOpenNotes();
+    console.log(
+      `[cron-email] ${shop}: refine check — ${openNotes.length} open note(s) across ${parsed.length} campaign(s)`,
+    );
+    const notesByCampaign = new Map<string, typeof openNotes>();
+    for (const note of openNotes) {
+      const list = notesByCampaign.get(note.campaignId) ?? [];
+      list.push(note);
+      notesByCampaign.set(note.campaignId, list);
+    }
+    for (const { campaign } of parsed) {
+      const notes = notesByCampaign.get(campaign.id);
+      if (!notes || notes.length === 0) continue;
+      const result = await refineCampaignFromNotes(emailRepo, campaign, notes);
+      if (result.action !== "no-open-notes") {
+        const line = `[cron-email] ${shop}/${campaign.id} refine: ${result.action}${result.detail ? ` — ${result.detail}` : ""}`;
+        if (result.action === "revised") console.log(line);
+        else console.error(line);
+      }
+      outcomes.push({ id: campaign.id, action: `refine:${result.action}` });
+    }
+
     return outcomes;
   });
 }

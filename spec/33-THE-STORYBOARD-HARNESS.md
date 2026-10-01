@@ -1191,3 +1191,14 @@ three-slide parent manifest. Parent review requires matching child input hashes,
 exact-artwork delivery receipts and persisted final JPEGs before reporting a
 complete carousel. The earlier standalone pilots remain separate artifacts.
 See [the themed carousel correction](../docs/plans/storyboard-harness/THEMED-SCENE-CAROUSELS-2026-09-30.md).
+
+
+**Owner-directed full-bleed scene delivery, 2026-09-30.** A delivery placement
+may explicitly set `fit: "cover"` to fill its reviewed frame opening without
+added mat bands. This uses the same verified master and provider background;
+it crops source edges proportionally instead of stretching or redrawing the
+artwork. Omission (or `contain`) retains complete-source fitting. White pixels
+in the original artwork remain artwork, not a removable mat. The fit is recorded
+in the job-bound delivery receipt, and revised final JPEG hashes replace the
+parent's references. This is a delivery revision, not a new generation request
+or publishing consent; a later publish approval must bind those final hashes.

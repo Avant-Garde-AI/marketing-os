@@ -18,6 +18,7 @@ const placement = z.object({
   sourceRef: z.string().trim().min(1).max(200),
   quad: z.tuple([point, point, point, point]),
   mat: z.string().regex(/^#[a-fA-F0-9]{6}$/),
+  fit: z.enum(["contain", "cover"]).optional(),
 }).strict();
 export const generationDeliverySchema = z.object({
   schemaVersion: z.literal(1),

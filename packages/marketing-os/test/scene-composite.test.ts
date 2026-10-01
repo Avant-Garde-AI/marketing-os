@@ -73,6 +73,29 @@ describe("artwork scene compositor", () => {
     expect(sideMat[2]).toBeGreaterThan(195);
   });
 
+  it("fills the opening without mat bands only when cover is explicit, preserving aspect ratio", async () => {
+    const input = await fixture();
+    const portrait = await sharp({ create: { width: 80, height: 200, channels: 3, background: "#777777" } })
+      .composite([
+        { input: await solid("#eb1818", 80, 30), left: 0, top: 0 },
+        { input: await solid("#1dcb2b", 80, 30), left: 0, top: 170 },
+      ]).png().toBuffer();
+    input.sources = [{ ref: "red", bytes: portrait }];
+    input.composition = "single-artwork";
+    input.placements = [{ sourceRef: "red", quad: [[0.04, 0.12], [0.30, 0.12], [0.30, 0.29], [0.04, 0.29]], mat: "#f4f0e8", fit: "cover" }];
+    const output = await compositeArtworkScene(input);
+    // A wide opening crops the portrait's end stripes, with source pixels at
+    // both side edges where contain would add a pale mat. The scene is retained.
+    for (const [x, y] of [[66, 270], [305, 270], [180, 174], [180, 377]]) {
+      const rgb = await pixel(output, x!, y!);
+      expect(rgb.every(v => v > 105 && v < 135)).toBe(true);
+    }
+    const outside = await pixel(output, 540, 1050);
+    expect(outside[2]).toBeGreaterThan(outside[0]! * 3);
+    input.placements[0]!.fit = "stretch" as never;
+    await expect(compositeArtworkScene(input)).rejects.toThrow(/Invalid scene artwork fit/);
+  });
+
   it("rejects degenerate, misordered, overlapping, and out-of-bounds placements", async () => {
     const input = await fixture();
     const original = input.placements[0]!.quad;

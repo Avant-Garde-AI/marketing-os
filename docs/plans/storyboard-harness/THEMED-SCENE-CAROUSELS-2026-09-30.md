@@ -116,3 +116,15 @@ Arthaus artwork choices, environments, master lineage, captions, paid job
 receipts and visual acceptance are store-owned. Nine scene executions are a
 bounded pilot, not a scheduled monthly generation orchestrator or a publishing
 approval. Production evidence belongs beside those store artifacts.
+
+
+## Owner-directed full-bleed revision
+
+Scene delivery placements accept optional `fit: "contain" | "cover"`. Omission
+keeps the existing full-source contain behavior. Explicit cover fills the same
+reviewed opening with proportional center cropping and removes only the added
+mat bands. It does not stretch or redraw the work, erase painted white
+backgrounds, or require another provider call. Source identity, background hash,
+frame geometry, parent post IDs and captions remain bound. New JPEG hashes
+replace the parent references; a future publishing approval must bind the
+revised ordered image hashes and caption.

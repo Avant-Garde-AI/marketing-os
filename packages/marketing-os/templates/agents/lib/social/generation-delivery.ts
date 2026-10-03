@@ -42,7 +42,10 @@ const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest(
 /** Repo choice comes from a second signed, hash-bound link returned by the broker. */
 export function generationDeliveryRepoFromPreview(job: BoundJob): string | null {
   const tenant = getTenant();
-  if (!HOSTED) return tenant.githubRepo ?? null;
+  // A client-owned execute request carries shop/slug but may omit repo. Its
+  // deployment owns exactly one store, so use the same configured repo as preview.
+  // Hosted requests still require the signed job binding below.
+  if (!HOSTED) return tenant.githubRepo ?? process.env.GITHUB_REPO ?? null;
   const url = new URL(job.sourcePreviewUrl);
   const repo = url.searchParams.get("repo");
   if (url.protocol !== "https:" || url.username || url.password || url.port || url.hash ||

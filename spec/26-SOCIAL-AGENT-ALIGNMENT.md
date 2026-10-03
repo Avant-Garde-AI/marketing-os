@@ -151,3 +151,10 @@ to the tenant's pending proposal and reviewed parent/hash, and records the
 server-derived actor. The existing gate still claims the nonce and dispatches
 execution. Hosted runtimes refuse deployment-wide console sessions. This extends
 the review surface while preserving §0.1's separation of possession and authority.
+
+Production verification caught a client-owned handoff difference: the gate's
+execute request supplies shop/slug but no repository. Delivery verification uses
+the configured `GITHUB_REPO` fallback in this mode, matching preview; pooled
+hosted mode still requires the signed job-specific repo binding. A recorded gate
+decision can return HTTP 200 with `status: failed`; review controls must surface
+that failure rather than imply publication succeeded.

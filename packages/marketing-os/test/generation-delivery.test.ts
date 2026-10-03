@@ -46,6 +46,22 @@ async function fixture() {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
 describe("generation delivery receipt", () => {
+  it("resolves the configured client-owned repo when gate execution supplies no repo", async () => {
+    vi.stubEnv("MARKETING_OS_MODE", "client-owned");
+    vi.stubEnv("GITHUB_REPO", "Arthaus-Inc/marketplace");
+    vi.resetModules();
+    const [{ runWithTenant }, delivery] = await Promise.all([
+      import("../templates/agents/lib/tenant-context"),
+      import("../templates/agents/lib/social/generation-delivery"),
+    ]);
+    const job = { artifactId, postId, inputHash: "a".repeat(64), mechanic: "collection-scene" as const,
+      sourcePreviewUrl: "https://store.example/review/generation/collection-room-1" };
+    expect(await runWithTenant({ shop, storeSlug: "arthaus-website" }, async () => delivery.generationDeliveryRepoFromPreview(job)))
+      .toBe("Arthaus-Inc/marketplace");
+    expect(await runWithTenant({ shop, storeSlug: "arthaus-website", githubRepo: "Explicit/store" }, async () => delivery.generationDeliveryRepoFromPreview(job)))
+      .toBe("Explicit/store");
+  });
+
   it("records explicit full-bleed fit and rejects unsupported transforms", async () => {
     const { repo, files, receipt, job } = await fixture();
     receipt.scene.placements.forEach((p) => Object.assign(p, { fit: "cover" }));

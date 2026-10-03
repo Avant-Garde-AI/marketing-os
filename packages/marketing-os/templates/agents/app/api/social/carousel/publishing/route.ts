@@ -72,7 +72,13 @@ export async function POST(req: NextRequest) {
       if (!proposal) return json({ error: "Approval is stale or belongs to another post" }, 409);
       const response = await fetch(`${base}/api/actions/review`, { method: "POST", headers,
         body: JSON.stringify({ proposalId: body.proposalId, approve: body.approve, actor: `social-review:${user.id}` }) });
-      return json(await response.json(), response.status);
+      const decision = await response.json();
+      if (!response.ok) return json(decision, response.status);
+      // The shared gate returns HTTP 200 for a recorded decision even when
+      // execution fails. Surface its outcome, not a misleading success message.
+      const ok = decision.status === "executed" || decision.status === "declined";
+      return json({ ...decision, ok, summary: decision.message,
+        ...(!ok ? { error: decision.message ?? "Publishing did not complete" } : {}) }, ok ? 200 : 409);
     });
   } catch (e) { return json({ error: e instanceof Error ? e.message : "Publishing failed" }, 409); }
 }

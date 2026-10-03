@@ -21,6 +21,10 @@ import { SocialReviewNotes } from "@/components/review/social-review";
 import { loadGenerationJobForPost, type GenerationReview } from "@/lib/social/generation-review";
 import { generationDeliveryRepoFromPreview, loadGenerationDelivery } from "@/lib/social/generation-delivery";
 import { socialRepo } from "@/lib/social/repo";
+import { parsePost, postPath } from "@/lib/social/artifacts";
+import type { SocialPost } from "@/lib/social/types";
+import { SocialPublishing } from "@/components/review/social-publishing";
+import { carouselManifestHash } from "@/lib/social/generation-publishing";
 import { loadGenerationCarousel, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
 import { readGenerationInput } from "@/lib/social/generation-input";
 import { loadVerifiedLoopExport, loopExportManifestPath } from "@/lib/social/generation-export";
@@ -170,11 +174,12 @@ async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }
   const storeSlug = shop.replace(/\.myshopify\.com$/, "");
   let manifest: GenerationCarousel | null = null;
   let views: CarouselSlideView[] = [];
+  let boundPost: SocialPost | null = null;
   let notes: Awaited<ReturnType<typeof listNotes>> = [];
   try {
-    ({ manifest, views, notes } = await runWithTenant({ shop, storeSlug, githubRepo }, async () => {
+    ({ manifest, views, notes, boundPost } = await runWithTenant({ shop, storeSlug, githubRepo }, async () => {
       const manifest = await loadGenerationCarousel(socialRepo, parentPostId);
-      if (!manifest) return { manifest: null, views: [], notes: [] };
+      if (!manifest) return { manifest: null, views: [], notes: [], boundPost: null };
       const views = await Promise.all(manifest.slides.map(async (slide): Promise<CarouselSlideView> => {
         try {
           const input = await readGenerationInput(socialRepo, slide.artifactId);
@@ -201,7 +206,8 @@ async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }
           return { state: "failed", detail: "This slide's source or delivery receipt could not be verified.", job: null };
         }
       }));
-      return { manifest, views, notes: await listNotes(SOCIAL_PACK_ID, parentPostId) };
+      const bound = await socialRepo.readFile(postPath(parentPostId));
+      return { manifest, views, notes: await listNotes(SOCIAL_PACK_ID, parentPostId), boundPost: bound ? parsePost(bound) : null };
     }));
   } catch { return <Gate headline="Carousel review unavailable" sub="The ordered slides could not be verified. Reload this page or ask for a fresh link." />; }
   if (!manifest) return <Gate headline="Carousel review unavailable" sub="No carousel manifest is available for this post yet." />;
@@ -216,6 +222,9 @@ async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }
       <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0" }}>{parentPostId}</h1>
       {sheet && <p style={{ fontSize: "0.85rem" }}><a href={sheet.url}>See the whole month ({month})</a></p>}
       <p role="status" style={{ fontSize: "0.9rem" }}>{ready === 3 ? "All three slides are ready for review." : `${ready} of 3 final slides ready. The carousel is incomplete.`}</p>
+      {boundPost && <p style={{ fontSize: "0.9rem" }}>Instagram {boundPost.channelAccount ? `@${boundPost.channelAccount.username}` : ""} · {boundPost.status}
+        {boundPost.scheduledAt && boundPost.status === "scheduled" ? ` · ${boundPost.scheduledAt}` : ""}
+        {boundPost.platform?.permalink && <> · <a href={boundPost.platform.permalink}>View published carousel</a></>}</p>}
     </header>
     <div style={{ display: "grid", gap: "1.5rem", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))" }}>
       {manifest.slides.map((slide, index) => {
@@ -239,6 +248,7 @@ async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }
       <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{manifest.caption}</p>
       <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>Review all three slides in order. Publishing requires a separate approval.</p>
     </section>
+    {ready === 3 && <SocialPublishing postId={parentPostId} manifestHash={carouselManifestHash(manifest)} />}
     <SocialReviewNotes groupKey={parentPostId} shop={shop} token={token} exp={exp} repo={githubRepo}
       endpoint="/api/social/carousel/review-notes" initial={notes} slots={manifest.slides.map((slide) => slide.postId)} />
     <p style={{ fontSize: "0.75rem", opacity: 0.55, marginTop: "2rem" }}>This link works for about {ttl} more day{ttl === 1 ? "" : "s"}.</p>
@@ -441,15 +451,15 @@ export default async function SocialReviewRoom({
                   {sequence && (
                     <div style={{ padding: "0.85rem", background: "#f4f2ef", fontSize: "0.8rem", lineHeight: 1.5, overflowWrap: "anywhere" }}>
                       <strong>{assets.length} slide{assets.length === 1 ? "" : "s"} · publication order</strong>
-                      <p style={{ margin: "0.25rem 0 0" }}>Storyboard: {sequence.storyboardId}</p>
+                      <p style={{ margin: "0.25rem 0 0" }}>{"origin" in sequence ? "Verified generation delivery" : `Storyboard: ${sequence.storyboardId}`}</p>
                       <p style={{ margin: "0.25rem 0 0" }}>These rendered slides are the final creative for review.</p>
                       <details style={{ marginTop: "0.5rem" }}>
                         <summary>Render provenance</summary>
                         <dl style={{ marginBottom: 0 }}>
-                          <dt>Storyboard hash</dt>
-                          <dd style={{ margin: "0 0 0.5rem", fontFamily: "monospace" }}>{sequence.storyboardHash}</dd>
-                          <dt>Review hash</dt>
-                          <dd style={{ margin: 0, fontFamily: "monospace" }}>{sequence.reviewHash}</dd>
+                          <dt>{"origin" in sequence ? "Manifest hash" : "Storyboard hash"}</dt>
+                          <dd style={{ margin: "0 0 0.5rem", fontFamily: "monospace" }}>{"origin" in sequence ? sequence.manifestHash : sequence.storyboardHash}</dd>
+                          <dt>{"origin" in sequence ? "Delivery hashes" : "Review hash"}</dt>
+                          <dd style={{ margin: 0, fontFamily: "monospace" }}>{"origin" in sequence ? sequence.deliveryHashes.join(" · ") : sequence.reviewHash}</dd>
                         </dl>
                       </details>
                     </div>

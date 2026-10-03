@@ -14,6 +14,7 @@ import { proposeToGate } from "./gate-client";
 // rather than relying on some tool module having been loaded first.
 import "../email/register-actions";
 import "../social/register-actions";
+import "../social/generation-publishing";
 import "../offers/register-actions";
 import "../storyboard/register-actions";
 import "../storyboard/realization";

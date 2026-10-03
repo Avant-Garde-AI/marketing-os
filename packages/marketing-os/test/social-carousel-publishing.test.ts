@@ -1,0 +1,41 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
+const m = vi.hoisted(() => ({ operator: vi.fn(), propose: vi.fn(), manifest: vi.fn(), repo: { readFile: vi.fn(), writeFile: vi.fn(), list: vi.fn() }, account: vi.fn(), input: vi.fn(), job: vi.fn(), delivery: vi.fn(), image: vi.fn(), save: vi.fn() }));
+vi.mock("../templates/agents/lib/social/review-operator", () => ({ socialReviewOperator: m.operator }));
+vi.mock("../templates/agents/lib/social/repo", () => ({ socialRepo: m.repo }));
+vi.mock("../templates/agents/lib/actions/propose", () => ({ proposeAction: m.propose }));
+vi.mock("../templates/agents/lib/social/register-actions", () => ({ socialActionDeps: () => ({}) }));
+vi.mock("../templates/agents/lib/social/generation-carousel", () => ({ loadGenerationCarousel: m.manifest, readPersistedCarouselImage: m.image }));
+vi.mock("../templates/agents/lib/social/channels/instagram", () => ({ instagramIdentity: m.account }));
+vi.mock("../templates/agents/lib/social/channels", () => ({ brokerTokenSource: {} }));
+vi.mock("../templates/agents/lib/social/generation-input", () => ({ readGenerationInput: m.input }));
+vi.mock("../templates/agents/lib/social/generation-review", () => ({ loadGenerationJobForPost: m.job }));
+vi.mock("../templates/agents/lib/social/generation-delivery", () => ({ loadGenerationDelivery: m.delivery, generationDeliveryRepoFromPreview: () => "Owner/store" }));
+vi.mock("../templates/agents/lib/storyboard/assets", () => ({ saveSocialImage: m.save, validateSocialAssetBase: vi.fn() }));
+import { GET, POST } from "../templates/agents/app/api/social/carousel/publishing/route";
+import { readPublishableCarousel, carouselManifestHash, persistCarouselBinding } from "../templates/agents/lib/social/generation-publishing";
+import { runWithTenant } from "../templates/agents/lib/tenant-context";
+const postId = "2026-10-instagram-forest-carousel", shop = "store.myshopify.com";
+const manifest = { schemaVersion: 1, parentPostId: postId, caption: "Forest gallery @artist", slides: [1,2,3].map(n => ({ artifactId: `forest-slide-${n}`, postId: `2026-10-forest-slide-${n}`, inputHash: String(n).repeat(64), finalImage: { sha256: String(n+3).repeat(64) } })) };
+const p = { postId, expectedManifestHash: carouselManifestHash(manifest), accountId: "123", accountUsername: "store" };
+const req = (extra = {}, origin = "https://console.example") => new NextRequest("https://console.example/api/social/carousel/publishing", { method: "POST", headers: { "Content-Type": "application/json", origin }, body: JSON.stringify({ ...p, operation: "propose", mode: "publish", ...extra }) });
+beforeEach(() => {
+ vi.clearAllMocks(); vi.unstubAllGlobals(); vi.stubEnv("GITHUB_REPO","Owner/store"); vi.stubEnv("SHOPIFY_STORE_URL",shop); vi.stubEnv("MARKETING_OS_API_URL","https://gate.example"); vi.stubEnv("ACTIONS_GATE_SECRET","gate");
+ m.operator.mockResolvedValue({ id: "verified-user" }); m.manifest.mockResolvedValue(manifest); m.account.mockResolvedValue({id:"123",username:"store"}); m.repo.readFile.mockResolvedValue(null); m.propose.mockResolvedValue({proposalId:"mine",summary:"publish"});
+ m.input.mockImplementation(async (_repo,id) => {const s=manifest.slides.find(s=>s.artifactId===id)!;return {inputHash:s.inputHash,plan:{postId:s.postId,mechanic:"collection-scene",sceneComposition:"single-artwork"}}});
+ m.job.mockImplementation(async id=>({...manifest.slides.find(s=>s.postId===id),state:"succeeded",imageUrl:"https://cdn.higgsfield.ai/image.jpeg",mechanic:"collection-scene"})); m.delivery.mockResolvedValue({scene:{}}); m.image.mockResolvedValue(Buffer.from("jpeg"));
+});
+describe("authenticated carousel controls",()=>{
+ it("denies review-link possession without a session",async()=>{m.operator.mockResolvedValue(null);expect((await GET(new NextRequest(`https://console.example/api/social/carousel/publishing?postId=${postId}`))).status).toBe(401);expect((await POST(req({t:"read-token"}))).status).toBe(401);expect(m.propose).not.toHaveBeenCalled()});
+ it("rejects cross-site requests",async()=>{expect((await POST(req({},"https://other.example"))).status).toBe(403);expect(m.propose).not.toHaveBeenCalled()});
+ it("rejects manifest drift and proposes exact destination material",async()=>{expect((await POST(req({expectedManifestHash:"0".repeat(64)}))).status).toBe(409);expect((await POST(req())).status).toBe(200);expect(m.propose).toHaveBeenCalledWith({kind:"social.publish_carousel",params:p})});
+ it("refuses another post's proposal",async()=>{vi.stubGlobal("fetch",vi.fn(async()=>Response.json({proposals:[{id:"foreign",kind:"social.publish_carousel",params:{...p,postId:"other"}}]})));expect((await POST(req({operation:"decide",proposalId:"foreign",approve:true}))).status).toBe(409);expect(fetch).toHaveBeenCalledTimes(1)});
+ it("records server-verified identity through the same gate",async()=>{const f=vi.fn().mockResolvedValueOnce(Response.json({proposals:[{id:"mine",kind:"social.publish_carousel",params:p}]})).mockResolvedValueOnce(Response.json({ok:true}));vi.stubGlobal("fetch",f);expect((await POST(req({operation:"decide",proposalId:"mine",approve:true,actor:"spoofed"}))).status).toBe(200);expect(JSON.parse(f.mock.calls[1][1].body)).toEqual({proposalId:"mine",approve:true,actor:"social-review:verified-user"})});
+});
+describe("verified delivery binding",()=>{
+ const read=()=>runWithTenant({shop,storeSlug:"store",githubRepo:"Owner/store"},()=>readPublishableCarousel(m.repo,p,"https://console.example"));
+ it("previews without writes, then saves immutable assets and honest ordered provenance",async()=>{const result=await read();expect(m.repo.writeFile).not.toHaveBeenCalled();expect(m.save).not.toHaveBeenCalled();expect(result.post.copy).toBe(manifest.caption);expect(result.post.renderedSequence).not.toHaveProperty("storyboardId");expect(result.post.renderedSequence!.slides.map(s=>s.sha256)).toEqual(manifest.slides.map(s=>s.finalImage.sha256));await runWithTenant({shop,storeSlug:"store"},()=>persistCarouselBinding(m.repo,result,"https://console.example"));expect(m.save).toHaveBeenCalledTimes(3);expect(m.repo.writeFile).toHaveBeenCalledTimes(1)});
+ it("rejects incomplete jobs, altered sources and missing receipts",async()=>{m.job.mockResolvedValueOnce({...manifest.slides[0],state:"submitted"});await expect(read()).rejects.toThrow("incomplete");m.input.mockResolvedValueOnce({inputHash:"0".repeat(64),plan:{}});await expect(read()).rejects.toThrow("source binding");m.delivery.mockResolvedValueOnce(null);await expect(read()).rejects.toThrow("receipt missing")});
+ it("rejects changed destination and damaged final images",async()=>{m.account.mockResolvedValueOnce({id:"999",username:"store"});await expect(read()).rejects.toThrow("account changed");m.image.mockRejectedValueOnce(Error("hash mismatch"));await expect(read()).rejects.toThrow("hash mismatch")});
+ it("never replaces bound copy silently",async()=>{const good=await read();const {serializePost}=await import("../templates/agents/lib/social/artifacts");m.repo.readFile.mockResolvedValue(serializePost({...good.post,copy:"changed"}));await expect(read()).rejects.toThrow("differs");expect(m.repo.writeFile).not.toHaveBeenCalled()});
+});

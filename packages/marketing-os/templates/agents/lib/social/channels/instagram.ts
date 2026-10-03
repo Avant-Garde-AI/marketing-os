@@ -52,6 +52,7 @@ async function graph<T>(
   }
   const res = await fetch(url, {
     method,
+    signal: AbortSignal.timeout(20_000),
     ...(body ? { body, headers: { "Content-Type": "application/x-www-form-urlencoded" } } : {}),
   });
   const json = (await res.json().catch(() => ({}))) as T & GraphError;
@@ -74,6 +75,25 @@ export async function igResolveUserId(accessToken: string): Promise<string> {
   const id = me.user_id ?? me.id;
   if (!id) throw new Error("Instagram /me returned no user_id — check the token's scopes");
   return String(id);
+}
+
+/** Always resolve the live connected account; approval never relies on a deployment label. */
+export async function instagramIdentity(tokens: ChannelTokenSource): Promise<{ id: string; username: string }> {
+  const token = await tokens.accessToken("instagram");
+  const me = await graph<{ user_id?: string | number; id?: string; username?: string }>("/me", {
+    params: { fields: "user_id,username", access_token: token },
+  });
+  const id = me.user_id ?? me.id;
+  if (!id || !me.username) throw new Error("Instagram account identity unavailable");
+  return { id: String(id), username: me.username };
+}
+
+async function verifiedDestination(tokens: ChannelTokenSource, post: SocialPost, token: string): Promise<string> {
+  if (!post.channelAccount) return igResolveUserId(token);
+  const identity = await instagramIdentity(tokens);
+  if (identity.id !== post.channelAccount.id || identity.username !== post.channelAccount.username)
+    throw new Error("Instagram destination changed since approval");
+  return identity.id;
 }
 
 /** Step 1 — create the (inert) media container. Nothing publishes here. */
@@ -176,7 +196,7 @@ export function createInstagramAdapter(tokens: ChannelTokenSource): SocialChanne
       }
       if (assetUrls.length === 1) return this.publish(post, assetUrls[0]);
       const token = await tokens.accessToken("instagram");
-      const userId = await igResolveUserId(token);
+      const userId = await verifiedDestination(tokens, post, token);
       const containerId = await igCreateCarouselContainer(token, userId, { imageUrls: assetUrls, caption: post.copy });
       await igWaitForContainer(token, containerId);
       const platformId = await igPublishContainer(token, userId, containerId);
@@ -184,7 +204,7 @@ export function createInstagramAdapter(tokens: ChannelTokenSource): SocialChanne
     },
     async publish(post: SocialPost, assetUrl: string): Promise<{ platformId: string; permalink: string }> {
       const token = await tokens.accessToken("instagram");
-      const userId = await igResolveUserId(token);
+      const userId = await verifiedDestination(tokens, post, token);
       const containerId = await igCreateContainer(token, userId, {
         imageUrl: assetUrl,
         caption: post.copy,

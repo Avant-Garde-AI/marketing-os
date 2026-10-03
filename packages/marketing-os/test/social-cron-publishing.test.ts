@@ -1,0 +1,23 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { NextRequest } from "next/server";
+const m = vi.hoisted(() => ({ files: new Map<string,string>(), submit: vi.fn(), lock: vi.fn(), saved: vi.fn() }));
+vi.mock("pg",()=>({Pool:class{async query(){return {rows:[{shop:"store.myshopify.com"}]}}}}));
+vi.mock("../templates/agents/lib/cron-frame",()=>({cronGate:()=>null,cronSweep:async(_name:any,shops:any,_cap:any,_key:any,run:any)=>Promise.all(shops.map(run))}));
+vi.mock("../templates/agents/lib/social/repo",()=>({socialRepo:{readFile:async(p:string)=>m.files.get(p)??null,writeFile:async(p:string,s:string)=>{m.files.set(p,s)},list:async()=>[...m.files.keys()]}}));
+vi.mock("../templates/agents/lib/social/register-actions",()=>({socialActionDeps:()=>({repo:{readFile:async(p:string)=>m.files.get(p)??null,writeFile:async(p:string,s:string)=>{m.files.set(p,s)},list:async()=>[...m.files.keys()]},adapterFor:()=>({channel:"instagram",publish:m.submit}),assetUrl:()=>"https://store.example/image.jpeg",withPostLock:m.lock,onPostSaved:m.saved})}));
+vi.mock("../templates/agents/lib/social/channels/refresh",()=>({ensureUsableInstagramToken:async()=>({action:"valid"}),maybeRefreshInstagram:async()=>({action:"skipped"})}));
+vi.mock("../templates/agents/lib/social/channels",()=>({brokerTokenSource:{accessToken:async()=>"token"},envTokenSource:{accessToken:async()=>"token"}}));
+vi.mock("../templates/agents/lib/broker-client",()=>({channelConnectionStatus:async()=>({daysRemaining:30}),storeChannelToken:vi.fn()}));
+import { GET } from "../templates/agents/app/api/cron/social/route";
+import { parsePost,serializePost,postPath } from "../templates/agents/lib/social/artifacts";
+import { approvalHash } from "../templates/agents/lib/social/actions";
+import type { SocialPost } from "../templates/agents/lib/social/types";
+const p=():SocialPost=>({id:"due",channel:"instagram",copy:"caption",assetRefs:[],targetLink:"https://store.example",provenance:[],body:"",status:"scheduled",scheduledAt:"2000-01-01T00:00:00Z",designSurface:{teamId:"team",fileId:"file"}});
+beforeEach(()=>{m.files.clear();vi.clearAllMocks();vi.stubEnv("DATABASE_URL","database");const post=p();post.approval={hash:approvalHash(post),at:"2000-01-01T00:00:00Z"};m.files.set(postPath(post.id),serializePost(post));m.lock.mockImplementation(async(_id,run)=>run());m.submit.mockResolvedValue({platformId:"live",permalink:"https://instagram.com/p/live"})});
+const run=()=>GET(new NextRequest("https://console.example/api/cron/social"));
+describe("cron uses current consent inside shared publishing lock",()=>{
+ it("does not publish after cancellation wins the lock race",async()=>{m.lock.mockImplementationOnce(async(_id,fn)=>{const post=parsePost(m.files.get(postPath("due"))!);post.status="asset_ready";delete post.approval;m.files.set(postPath("due"),serializePost(post));return fn()});await run();expect(m.submit).not.toHaveBeenCalled();expect(m.lock).toHaveBeenCalledTimes(1)});
+ it("voids drift under the lock without contacting Instagram",async()=>{const post=parsePost(m.files.get(postPath("due"))!);post.copy="new";m.files.set(postPath("due"),serializePost(post));await run();expect(m.submit).not.toHaveBeenCalled();expect(parsePost(m.files.get(postPath("due"))!).status).toBe("asset_ready");expect(m.saved).toHaveBeenCalledTimes(1)});
+ it("publishes due consent once without recursively acquiring its lock",async()=>{await run();expect(m.submit).toHaveBeenCalledTimes(1);expect(m.lock).toHaveBeenCalledTimes(1);expect(parsePost(m.files.get(postPath("due"))!).platform?.id).toBe("live");await run();expect(m.submit).toHaveBeenCalledTimes(1)});
+ it("does not acquire the lock or submit for a future schedule",async()=>{const post=parsePost(m.files.get(postPath("due"))!);post.scheduledAt="2099-01-01T00:00:00Z";m.files.set(postPath("due"),serializePost(post));await run();expect(m.lock).not.toHaveBeenCalled();expect(m.submit).not.toHaveBeenCalled()});
+});

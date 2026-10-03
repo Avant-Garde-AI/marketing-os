@@ -89,7 +89,7 @@ async function sweepShop(shop: string): Promise<PostSweepOutcome[]> {
     const outcomes: PostSweepOutcome[] = [];
     const paths = (await socialRepo.list("social/posts/")).filter((p) => p.endsWith("/post.md"));
     const deps = socialActionDeps();
-    const publish = createSocialActions(deps).publishPost;
+    const publish = createSocialActions({ ...deps, withPostLock: undefined }).publishPost;
 
     let handled = 0;
     for (const path of paths) {
@@ -108,27 +108,27 @@ async function sweepShop(shop: string): Promise<PostSweepOutcome[]> {
       if (!post.scheduledAt || Date.parse(post.scheduledAt) > Date.now()) continue;
       handled++;
 
-      // 1 — re-verify the approve-at-schedule consent (D2): the publish-
-      // material hash AND the canvas revision (verifyScheduleConsent — the
-      // pack owns the semantics; canvas edits that don't change the
-      // designSurface ref show up as a revn bump).
-      const consent = await verifyScheduleConsent(post, deps);
-      if (!consent.ok) {
-        const reverted: SocialPost = { ...post, status: "asset_ready" };
-        delete reverted.scheduledAt;
-        delete reverted.approval;
-        await socialRepo.writeFile(postPath(post.id), serializePost(reverted));
-        const action = `OUT-OF-BAND: ${consent.reason} — consent void, post back to asset_ready; re-propose social.schedule_post`;
-        console.error(`[cron-social] ${shop}/${post.id} ${action}`);
-        outcomes.push({ id: post.id, action });
-        continue;
-      }
-
-      // 2 — publish (the action writes platform/permalink/status back itself;
-      // a failure writes status=failed + the message, then throws).
+      // The same lock covers a fresh schedule/consent read and publish. A
+      // cancellation that wins this race must not be followed by a cron send.
       try {
-        const result = await publish.execute({ postId: post.id });
-        outcomes.push({ id: post.id, action: result.summary });
+        const action = await deps.withPostLock!(post.id, async () => {
+          const fresh = await socialRepo.readFile(postPath(post.id));
+          if (!fresh) return "no longer present";
+          const current = parsePost(fresh);
+          if (current.status !== "scheduled" || !current.scheduledAt || Date.parse(current.scheduledAt) > Date.now())
+            return "no longer due";
+          const consent = await verifyScheduleConsent(current, deps);
+          if (!consent.ok) {
+            const reverted: SocialPost = { ...current, status: "asset_ready" };
+            delete reverted.scheduledAt;
+            delete reverted.approval;
+            await socialRepo.writeFile(postPath(current.id), serializePost(reverted));
+            await deps.onPostSaved?.(reverted);
+            return `OUT-OF-BAND: ${consent.reason} — consent void; re-propose social.schedule_post`;
+          }
+          return (await publish.execute({ postId: current.id })).summary;
+        });
+        outcomes.push({ id: post.id, action });
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         console.error(`[cron-social] ${shop}/${post.id} publish FAILED: ${message}`);

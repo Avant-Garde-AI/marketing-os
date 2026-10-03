@@ -1,8 +1,4 @@
-/**
- * VENDORED from packages/skills/social-media (the CANONICAL source, spec 24
- * SM0/SM2 + spec 26 — its test suite lives there). Keep this file faithful
- * below this header; fix bugs upstream first, then re-vendor.
- */
+/** VENDORED from packages/skills/social-media (CANONICAL source). */
 /**
  * Social Media Agent (spec 24) — SM0 type definitions.
  *
@@ -159,7 +155,7 @@ export interface PostPlatformResult {
   publishedAt: string;
 }
 
-export interface RenderedSocialSequence {
+export interface StoryboardSocialSequence {
   version: 1;
   storyboardId: string;
   storyboardHash: string;
@@ -168,18 +164,35 @@ export interface RenderedSocialSequence {
   slides: { beatId: string; boardName: string; url: string; sha256: string; width: number; height: number }[];
 }
 
+/** Source/job verified generation delivery; does not claim storyboard selection. */
+export interface GeneratedSocialSequence {
+  version: 1;
+  origin: "generation-delivery";
+  parentPostId: string;
+  manifestHash: string;
+  deliveryHashes: string[];
+  slides: StoryboardSocialSequence["slides"];
+}
+export type RenderedSocialSequence = StoryboardSocialSequence | GeneratedSocialSequence;
+
 /** A trusted renderer's immutable video and poster receipt, never model-authored. */
 export interface RenderedSocialVideo {
   version: 1;
   storyboardId: string;
   storyboardHash: string;
   reviewHash: string;
+  /** Exact source bindings and bytes used by the renderer. */
   sources: { ref: string; sha256: string }[];
   video: { url: string; sha256: string; mimeType: "video/mp4"; width: number; height: number; durationMs: number };
   poster: { url: string; sha256: string; width: number; height: number };
 }
 
 export interface SocialPost {
+  /** Connected destination verified during preview and again before sending. */
+  channelAccount?: { id: string; username: string };
+  /** Persisted before provider submission. Unresolved attempts block automatic retries. */
+  publishAttempt?: { startedAt: string; state: "started" | "unknown" | "completed" };
+
   /** Only the runtime realization path supplies this field; never model authoring input. */
   renderedSequence?: RenderedSocialSequence;
   /** Only a trusted runtime renderer supplies this field; never model authoring input. */

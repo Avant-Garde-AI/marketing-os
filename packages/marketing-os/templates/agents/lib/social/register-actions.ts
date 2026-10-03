@@ -17,7 +17,8 @@ import { registerAction } from "../actions/registry";
 import { getDesignSurfaceAdapter, isDesignSurfacesConfigured } from "../design-surfaces/config";
 import { syncPostIndex } from "./index-sync";
 import { getTenant } from "../tenant-context";
-import { socialReviewLink } from "./review-links";
+import { withSocialPostLock } from "./publish-lock";
+import { socialCarouselReviewLink, socialReviewLink } from "./review-links";
 import type { SocialPost } from "./types";
 
 /**
@@ -85,7 +86,18 @@ export function socialActionDeps(): SocialActionDeps {
     repo: socialRepo,
     adapterFor: (channel) => adapterFor(channel),
     assetUrl: socialAssetUrl,
-    reviewUrl: (post) => socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
+    reviewUrl: (post) => post.renderedSequence && "origin" in post.renderedSequence
+      ? socialCarouselReviewLink(getTenant().shop, post.id, getTenant().githubRepo ?? process.env.GITHUB_REPO!).url
+      : socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
+    withPostLock: withSocialPostLock,
+    validateMaterial: async post => {
+      const seq = post.renderedSequence;
+      if (!seq || !("origin" in seq)) return;
+      if (!post.channelAccount) throw new Error("Reviewed generation delivery requires a destination account");
+      const { readPublishableCarousel } = await import("./generation-publishing");
+      await readPublishableCarousel(socialRepo, { postId: post.id, expectedManifestHash: seq.manifestHash,
+        accountId: post.channelAccount.id, accountUsername: post.channelAccount.username }, process.env.MOS_AGENTS_PUBLIC_URL ?? "");
+    },
     surfaceRevision: socialSurfaceRevision,
     onPostSaved,
   };

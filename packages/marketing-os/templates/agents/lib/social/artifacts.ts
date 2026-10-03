@@ -1,8 +1,4 @@
-/**
- * VENDORED from packages/skills/social-media (the CANONICAL source, spec 24
- * SM0/SM2 + spec 26 — its test suite lives there). Keep this file faithful
- * below this header; fix bugs upstream first, then re-vendor.
- */
+/** VENDORED from packages/skills/social-media (CANONICAL source). */
 /**
  * Parse + serialize the three `social/` repo artifacts (spec 24 §1).
  *
@@ -237,7 +233,7 @@ export function serializeCalendar(calendar: SocialCalendar): string {
 // ---------------------------------------------------------------------------
 
 /** Runtime-rendered material, validated on every artifact read. */
-export const renderedSequenceSchema = z.object({
+const storyboardSequenceSchema = z.object({
   version: z.literal(1),
   storyboardId: z.string().min(1),
   storyboardHash: z.string().regex(/^[a-f0-9]{64}$/),
@@ -259,6 +255,21 @@ export const renderedSequenceSchema = z.object({
   const unique = (key: "beatId" | "boardName" | "url") => new Set(sequence.slides.map((slide) => slide[key])).size === sequence.slides.length;
   return unique("beatId") && unique("boardName") && unique("url");
 }, "slides must have unique beat ids, board names and immutable URLs");
+
+export const renderedSequenceSchema = z.union([
+  storyboardSequenceSchema,
+  z.object({
+    version: z.literal(1), origin: z.literal("generation-delivery"),
+    parentPostId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/),
+    manifestHash: z.string().regex(/^[a-f0-9]{64}$/),
+    deliveryHashes: z.array(z.string().regex(/^[a-f0-9]{64}$/)).min(1).max(10),
+    slides: storyboardSequenceSchema.innerType().shape.slides,
+  }).strict().refine(s => s.deliveryHashes.length === s.slides.length &&
+    new Set(s.slides.map(x => x.beatId)).size === s.slides.length &&
+    new Set(s.slides.map(x => x.boardName)).size === s.slides.length &&
+    new Set(s.slides.map(x => x.url)).size === s.slides.length,
+    "generation sequence must bind unique slides and one delivery per slide"),
+]);
 
 const publicRenderUrl = (value: string, extension: RegExp): boolean => {
   let u: URL;
@@ -306,6 +317,9 @@ const postFrontMatterSchema = z.object({
   copy: z.string().min(1).describe("The caption text"),
   copyFormulaRef: z.string().optional().describe("brand.md copy formula ref"),
   assetRefs: z.array(z.string()).describe("Repo-relative asset paths"),
+  channelAccount: z.object({ id: z.string().min(1), username: z.string().min(1) }).strict().optional(),
+  publishAttempt: z.object({ startedAt: z.string().datetime({ offset: true }),
+    state: z.enum(["started", "unknown", "completed"]) }).strict().optional(),
   renderedSequence: renderedSequenceSchema.optional(),
   renderedVideo: renderedVideoSchema.optional(),
   // Explicit, first-class: the front-matter schemas STRIP unknown keys on
@@ -366,6 +380,8 @@ export function parsePost(raw: string): SocialPost {
   if (fm.groupId !== undefined) post.groupId = fm.groupId;
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
+  if (fm.channelAccount !== undefined) post.channelAccount = fm.channelAccount;
+  if (fm.publishAttempt !== undefined) post.publishAttempt = fm.publishAttempt;
   if (fm.renderedSequence !== undefined) post.renderedSequence = fm.renderedSequence;
   if (fm.renderedVideo !== undefined) post.renderedVideo = fm.renderedVideo;
   if (fm.designSurface !== undefined) post.designSurface = fm.designSurface;
@@ -382,6 +398,8 @@ export function serializePost(post: SocialPost): string {
   fm.copy = post.copy;
   if (post.copyFormulaRef !== undefined) fm.copyFormulaRef = post.copyFormulaRef;
   fm.assetRefs = post.assetRefs;
+  if (post.channelAccount !== undefined) fm.channelAccount = post.channelAccount;
+  if (post.publishAttempt !== undefined) fm.publishAttempt = post.publishAttempt;
   if (post.renderedSequence !== undefined) fm.renderedSequence = renderedSequenceSchema.parse(post.renderedSequence);
   if (post.renderedVideo !== undefined) fm.renderedVideo = renderedVideoSchema.parse(post.renderedVideo);
   if (post.renderedSequence && post.renderedVideo) throw new Error("A post cannot bind both a rendered sequence and video");

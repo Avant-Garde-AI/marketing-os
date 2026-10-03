@@ -37,7 +37,8 @@ function LoginForm() {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push("/");
+      const next = searchParams.get("next");
+      router.push(next?.startsWith("/") && !next.startsWith("//") && !next.includes("\\") ? next : "/");
       router.refresh();
     } catch (error) {
       setIsError(true);

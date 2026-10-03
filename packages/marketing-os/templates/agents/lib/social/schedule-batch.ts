@@ -29,13 +29,19 @@ export function socialScheduleBatchAction() {
     summary: (p: ScheduleBatchParams) => `Schedule ${p.entries.length} reviewed social posts`,
     async preview(p: ScheduleBatchParams) {
       const deps = socialActionDeps(), actions = createSocialActions(deps);
-      const rows: { label: string; value: string }[] = [];
-      for (const entry of p.entries) {
-        const post = await verifyEntry(entry);
-        await actions.schedulePost.preview({ postId: entry.postId, scheduledAt: entry.scheduledAt });
-        rows.push({ label: `${entry.scheduledAt} · ${post.renderedVideo ? "Reel" : "Carousel"} · @${post.channelAccount!.username}`,
-          value: post.copy });
-      }
+      // Read-only validation runs in a small pool: a month should not wait for
+      // fourteen sequential provider/Git round trips. Keep rows in date order.
+      const rows: { label: string; value: string }[] = new Array(p.entries.length);
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(3, p.entries.length) }, async () => {
+        while (next < p.entries.length) {
+          const index = next++, entry = p.entries[index];
+          const post = await verifyEntry(entry);
+          await actions.schedulePost.preview({ postId: entry.postId, scheduledAt: entry.scheduledAt });
+          rows[index] = { label: `${entry.scheduledAt} · ${post.renderedVideo ? "Reel" : "Carousel"} · @${post.channelAccount!.username}`,
+            value: post.copy };
+        }
+      }));
       return { summary: `Approval authorizes ${p.entries.length} final posts at the listed times. Edits invalidate consent; no further approval at send time.`,
         rows, previewUrl: `${process.env.MOS_AGENTS_PUBLIC_URL?.replace(/\/$/, "")}/social/schedule?month=${p.entries[0].scheduledAt.slice(0, 7)}`,
         previewHash: hashPreview({ kind: "social.schedule_batch", entries: p.entries }) };

@@ -36,7 +36,8 @@ import { paletteOf } from "../../../lib/imagery/palette";
 import { linkPostToCalendarSlot, upsertCalendar, upsertPost } from "../../../lib/social/authoring";
 import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
 import { syncPostIndex } from "../../../lib/social/index-sync";
-import { socialReviewLink, socialSheetLink } from "../../../lib/social/review-links";
+import { loadGenerationCarousel, listGenerationCarouselsForMonth } from "../../../lib/social/generation-carousel";
+import { socialCarouselReviewLink, socialCarouselSheetLink, socialReviewLink, socialSheetLink } from "../../../lib/social/review-links";
 import { channelConnectionStatus } from "../../../lib/broker-client";
 import { brokerTokenSource } from "../../../lib/social/channels";
 import {
@@ -360,7 +361,7 @@ const socialReviewShare = createTool({
     "Mint a shareable review link so teammates WITHOUT a console account can look at planned social and leave notes. " +
     "Pass groupKey for one post group (every platform variant side by side — the unit worth reviewing), or month for the whole month's contact sheet. " +
     "Links expire (30 days by default) and the expiry is inside the signature, so it cannot be edited. " +
-    "A review link is for FEEDBACK ONLY: it can never approve or publish anything, because possessing a link proves possession of a link, not identity. Approval happens in Slack. Say that when you share it.",
+    "Link possession only permits reading and notes. Publishing requires a separately authenticated reviewer, using the same-page console controls or Slack approval gate.",
   inputSchema: z.object({
     groupKey: z.string().min(1).optional().describe("Post group key (a post id, or the shared groupId)"),
     month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional().describe("YYYY-MM for the month sheet"),
@@ -377,9 +378,15 @@ const socialReviewShare = createTool({
     if (!input.groupKey && !input.month) {
       throw new Error("social_review_share: pass groupKey (one group) or month (the whole month sheet)");
     }
-    const link = input.groupKey
-      ? socialReviewLink(shop, input.groupKey, input.ttlDays ?? 30)
-      : socialSheetLink(shop, input.month!, input.ttlDays ?? 30);
+    const tenant = getTenant();
+    const repo = tenant.githubRepo ?? process.env.GITHUB_REPO;
+    const ttl = input.ttlDays ?? 30;
+    const carousel = input.groupKey && /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/.test(input.groupKey)
+      ? await loadGenerationCarousel(socialRepo, input.groupKey) : null;
+    const carousels = input.month && repo ? await listGenerationCarouselsForMonth(socialRepo, input.month) : null;
+    const link = carousel && repo ? socialCarouselReviewLink(shop, carousel.parentPostId, repo, ttl)
+      : input.month && repo && carousels?.manifests.length ? socialCarouselSheetLink(shop, input.month, repo, ttl)
+      : input.groupKey ? socialReviewLink(shop, input.groupKey, ttl) : socialSheetLink(shop, input.month!, ttl);
     return {
       url: link.url,
       expiresAt: link.expiresAt,

@@ -90,7 +90,6 @@ export function schedulingGaps(post: SocialPost): string[] {
       "creative (compose_design_surface with kind 'social.post', then social_link_design)",
     );
   }
-  if (post.renderedVideo) missing.push("Video publishing is not available yet");
   if (post.provenance.length === 0) missing.push("provenance (at least one claim with its origin)");
   return missing;
 }

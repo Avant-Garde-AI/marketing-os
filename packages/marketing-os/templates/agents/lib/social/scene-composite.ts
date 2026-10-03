@@ -9,7 +9,7 @@ type Point = readonly [number, number];
 type Quad = readonly [Point, Point, Point, Point];
 
 export interface SceneSource { ref: string; bytes: Buffer }
-export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover" }
+export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad } }
 export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[]; composition?: "single-artwork" }
 
 function cross(a: Point, b: Point, c: Point): number {
@@ -76,7 +76,54 @@ async function checkedImage(bytes: Buffer, label: string) {
   return meta;
 }
 
+/** Refit the empty physical frame rather than cropping or stretching the real artwork. */
+export async function reframeSceneOpening(background: Buffer, source: Buffer, placement: ScenePlacement) {
+  if (!placement.reframe) return { background, placement };
+  const outer = placement.reframe.outerQuad, q = placement.quad;
+  if (!quadIsValid(outer) || !quadIsValid(q)) throw new Error("Invalid frame geometry");
+  // Initial rollout is deliberately limited to near-frontal, rectangular frames.
+  if (Math.max(Math.abs(q[0][1] - q[1][1]), Math.abs(q[2][1] - q[3][1]),
+      Math.abs(q[0][0] - q[3][0]), Math.abs(q[1][0] - q[2][0])) > 0.025)
+    throw new Error("Frame needs a more frontal template");
+  for (const [i, point] of q.entries()) {
+    if ((i === 0 || i === 3 ? point[0] <= outer[i][0] : point[0] >= outer[i][0]) ||
+        (i < 2 ? point[1] <= outer[i][1] : point[1] >= outer[i][1])) throw new Error("Opening must sit within the physical frame");
+  }
+  const meta = await checkedImage(source, "Artwork");
+  const width = (distance(q[0], q[1]) + distance(q[3], q[2])) / 2;
+  const height = (distance(q[0], q[3]) + distance(q[1], q[2])) / 2;
+  const scale = meta.width! / meta.height! * height / width;
+  if (scale < 0.75 || scale > 2.5) throw new Error("Frame ratio adjustment exceeds reviewed template limits");
+  const center = q.reduce((sum, p) => sum + p[0], 0) / 4;
+  const stretch = (quad: Quad): Quad => quad.map(([x, y]) => [center + (x - center) * scale, y] as Point) as unknown as Quad;
+  const target = stretch(outer), opening = stretch(q);
+  if (!quadIsValid(target) || target.some(p => p[0] < 0.04 || p[0] > 0.96)) throw new Error("Adjusted frame leaves scene safe area");
+  const { data: raw } = await sharp(background).resize(WIDTH, HEIGHT, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const layer = Buffer.alloc(WIDTH * HEIGHT * 4), H = homography(target), O = homography(outer);
+  for (let y = Math.floor(Math.min(...target.map(p => p[1] * HEIGHT))); y < Math.ceil(Math.max(...target.map(p => p[1] * HEIGHT))); y++)
+    for (let x = Math.floor(Math.min(...target.map(p => p[0] * WIDTH))); x < Math.ceil(Math.max(...target.map(p => p[0] * WIDTH))); x++) {
+      const px = x + 0.5, py = y + 0.5;
+      const A = H.a - px * H.g, B = H.b - px * H.h, C = px - H.c;
+      const D = H.d - py * H.g, E = H.e - py * H.h, F = py - H.f, det = A * E - B * D;
+      if (Math.abs(det) < 1e-9) continue;
+      const u = (C * E - B * F) / det, v = (A * F - C * D) / det;
+      if (u < 0 || u > 1 || v < 0 || v > 1) continue;
+      const divisor = O.g * u + O.h * v + 1;
+      sample(raw, WIDTH, HEIGHT, (O.a * u + O.b * v + O.c) / divisor / WIDTH,
+        (O.d * u + O.e * v + O.f) / divisor / HEIGHT, layer, (y * WIDTH + x) * 4);
+    }
+  return { background: await sharp(background).resize(WIDTH, HEIGHT, { fit: "fill" })
+    .composite([{ input: await sharp(layer, { raw: { width: WIDTH, height: HEIGHT, channels: 4 } }).png().toBuffer() }]).png().toBuffer(),
+    placement: { ...placement, quad: opening, fit: "contain" as const, reframe: undefined } };
+}
+
 export async function compositeArtworkScene(input: SceneCompositeInput): Promise<Buffer> {
+  if (input.placements.some(p => p.reframe)) {
+    if (input.composition !== "single-artwork" || input.sources.length !== 1 || input.placements.length !== 1)
+      throw new Error("Frame refitting requires one reviewed artwork");
+    const fitted = await reframeSceneOpening(input.background, input.sources[0].bytes, input.placements[0]);
+    input = { ...input, background: fitted.background, placements: [fitted.placement] };
+  }
   const count = input.composition === "single-artwork" ? 1 : 3;
   if (input.sources?.length !== count || input.placements?.length !== count)
     throw new Error(`Scene requires exactly ${count} artwork${count === 1 ? "" : "s"} and placement${count === 1 ? "" : "s"}`);

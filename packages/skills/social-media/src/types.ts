@@ -175,7 +175,7 @@ export interface GeneratedSocialSequence {
 export type RenderedSocialSequence = StoryboardSocialSequence | GeneratedSocialSequence;
 
 /** A trusted renderer's immutable video and poster receipt, never model-authored. */
-export interface RenderedSocialVideo {
+export interface StoryboardSocialVideo {
   version: 1;
   storyboardId: string;
   storyboardHash: string;
@@ -185,6 +185,20 @@ export interface RenderedSocialVideo {
   video: { url: string; sha256: string; mimeType: "video/mp4"; width: number; height: number; durationMs: number };
   poster: { url: string; sha256: string; width: number; height: number };
 }
+
+/** Paid generation receipt, distinct from storyboard renderer provenance. */
+export interface GeneratedSocialVideo {
+  version: 1;
+  origin: "generation-delivery";
+  artifactId: string;
+  inputHash: string;
+  deliveryHash: string;
+  exportHash: string;
+  sources: StoryboardSocialVideo["sources"];
+  video: StoryboardSocialVideo["video"];
+  poster: StoryboardSocialVideo["poster"];
+}
+export type RenderedSocialVideo = StoryboardSocialVideo | GeneratedSocialVideo;
 
 export interface SocialPost {
   /** Connected destination verified during preview and again before sending. */
@@ -216,6 +230,8 @@ export interface SocialPost {
   groupId?: string;
   /** ISO datetime the post is scheduled for (absent until scheduled). */
   scheduledAt?: string;
+  /** Intended slot only; never authorizes the scheduler. */
+  plannedAt?: string;
   /** The caption text. */
   copy: string;
   /** The brand copy formula this copy instantiated (brand.md ref). Optional. */
@@ -252,6 +268,7 @@ export interface SocialPost {
  */
 export interface SocialChannelAdapter {
   channel: string;
+  publishVideo?: (post: SocialPost, videoUrl: string) => Promise<{ platformId: string; permalink: string }>;
   publishSequence?: (post: SocialPost, assetUrls: string[]) => Promise<{ platformId: string; permalink: string }>;
   /**
    * Publish the post with `assetUrl` as its creative — a PUBLIC image URL the

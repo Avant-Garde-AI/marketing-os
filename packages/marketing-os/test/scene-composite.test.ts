@@ -115,3 +115,16 @@ describe("artwork scene compositor", () => {
     await expect(compositeArtworkScene(input)).rejects.toThrow(/4:5/);
   });
 });
+
+it("refits a narrow empty physical frame to preserve the complete artwork ratio", async () => {
+  const { reframeSceneOpening } = await import("../templates/agents/lib/social/scene-composite");
+  const source = await sharp({ create: { width: 600, height: 900, channels: 3, background: "#f00" } }).png().toBuffer();
+  const background = await sharp({ create: { width: 1080, height: 1350, channels: 3, background: "#555" } }).png().toBuffer();
+  const placement = { sourceRef: "art", mat: "#fff", quad: [[.43,.2],[.57,.2],[.57,.6],[.43,.6]] as const,
+    reframe: { outerQuad: [[.41,.18],[.59,.18],[.59,.62],[.41,.62]] as const } };
+  const fitted = await reframeSceneOpening(background, source, placement);
+  const q=fitted.placement.quad;
+  expect((q[1][0]-q[0][0])*1080/((q[3][1]-q[0][1])*1350)).toBeCloseTo(600/900, 3);
+  expect(fitted.placement.fit).toBe("contain");
+  await expect(reframeSceneOpening(background, source, { ...placement, reframe: { outerQuad: placement.quad } })).rejects.toThrow("within");
+});

@@ -123,8 +123,8 @@ export async function igContainerStatus(
 const POLL_ATTEMPTS = 10;
 const POLL_DELAY_MS = 3000;
 
-async function igWaitForContainer(accessToken: string, containerId: string): Promise<void> {
-  for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+async function igWaitForContainer(accessToken: string, containerId: string, attempts = POLL_ATTEMPTS): Promise<void> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const { statusCode, status } = await igContainerStatus(accessToken, containerId);
     if (statusCode === "FINISHED") return;
     if (statusCode === "ERROR" || statusCode === "EXPIRED") {
@@ -135,7 +135,7 @@ async function igWaitForContainer(accessToken: string, containerId: string): Pro
     await new Promise((r) => setTimeout(r, POLL_DELAY_MS));
   }
   throw new Error(
-    `Instagram container ${containerId} not FINISHED after ${POLL_ATTEMPTS} checks — image may be slow to fetch or invalid (must be a public JPEG)`,
+    `Instagram container ${containerId} not FINISHED after ${attempts} checks — media processing is incomplete`,
   );
 }
 
@@ -187,9 +187,33 @@ export async function igCreateCarouselContainer(
   return parent.id;
 }
 
+/** Reel container creation is inert; only the gate's adapter calls media_publish. */
+export async function igCreateReelContainer(accessToken: string, userId: string, input: { videoUrl: string; caption: string; coverUrl: string }) {
+  const result = await graph<{ id: string }>(`/${userId}/media`, { method: "POST", params: {
+    media_type: "REELS", video_url: input.videoUrl, caption: input.caption,
+    cover_url: input.coverUrl, share_to_feed: "true", access_token: accessToken,
+  } });
+  if (!result.id) throw new Error("Instagram returned no Reel container id");
+  return result.id;
+}
+
 export function createInstagramAdapter(tokens: ChannelTokenSource): SocialChannelAdapter {
   return {
     channel: "instagram",
+    async publishVideo(post, videoUrl) {
+      const receipt = post.renderedVideo;
+      if (!receipt || receipt.video.url !== videoUrl || receipt.video.mimeType !== "video/mp4" ||
+          receipt.video.width !== 1080 || receipt.video.height !== 1920 ||
+          receipt.video.durationMs < 3000 || receipt.video.durationMs > 120000)
+        throw new Error("Instagram Reel must match the reviewed 1080 × 1920 MP4");
+      if ([...post.copy].length > 2200) throw new Error("Instagram caption exceeds 2,200 characters");
+      const token = await tokens.accessToken("instagram");
+      const userId = await verifiedDestination(tokens, post, token);
+      const container = await igCreateReelContainer(token, userId, { videoUrl, caption: post.copy, coverUrl: receipt.poster.url });
+      await igWaitForContainer(token, container, 40);
+      const platformId = await igPublishContainer(token, userId, container);
+      return { platformId, permalink: await igPermalink(token, platformId) };
+    },
     async publishSequence(post, assetUrls) {
       if (!post.renderedSequence || JSON.stringify(assetUrls) !== JSON.stringify(post.renderedSequence.slides.map((slide) => slide.url))) {
         throw new Error("Instagram ordered assets must match the reviewed rendered sequence");

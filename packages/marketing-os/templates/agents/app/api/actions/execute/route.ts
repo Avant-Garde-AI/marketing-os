@@ -22,6 +22,7 @@ import { runWithTenant } from "../../../../lib/tenant-context";
 // bundles per route; a registration that only rides the chat/tools bundle is
 // invisible to this one).
 import "../../../../lib/social/register-actions";
+import "../../../../lib/social/schedule-batch";
 import "../../../../lib/social/generation-publishing";
 import "../../../../lib/email/register-actions";
 import "../../../../lib/storyboard/register-actions";

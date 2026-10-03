@@ -171,9 +171,6 @@ export async function verifyScheduleConsent(
 function requirePublishable(post: SocialPost, allowed: string[]): void {
   if (post.publishAttempt && post.publishAttempt.state !== "completed")
     throw new Error("Previous publishing attempt needs reconciliation; automatic retry is blocked");
-  if (post.renderedVideo) {
-    throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
-  }
   if (!allowed.includes(post.status)) {
     throw new Error(
       `post "${post.id}" is "${post.status}" — only ${allowed.join("/")} posts can take this action` +
@@ -190,6 +187,10 @@ function requirePublishable(post: SocialPost, allowed: string[]): void {
 }
 
 function publishAssets(deps: SocialActionDeps, post: SocialPost): string[] {
+  if (post.renderedVideo) {
+    if (!deps.adapterFor(post.channel).publishVideo) throw new Error(`${post.channel} requires a governed video channel adapter`);
+    return [post.renderedVideo.video.url];
+  }
   if (post.renderedSequence) {
     const adapter = deps.adapterFor(post.channel);
     if (!adapter.publishSequence) throw new Error(`${post.channel} does not support ordered rendered sequences`);
@@ -252,16 +253,15 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
           { label: "Publish time", value: p.scheduledAt },
           { label: "Undo", value: "social.cancel_post any time before publish" },
         ],
-        previewUrl: post.renderedSequence ? deps.reviewUrl?.(post) ?? asset : asset,
+        previewUrl: post.renderedSequence || post.renderedVideo ? deps.reviewUrl?.(post) ?? post.renderedVideo?.poster.url ?? asset : asset,
         ...(warnings.length ? { warnings } : {}),
         previewHash: hashMaterial({ kind: "social.schedule_post", material: publishMaterial(scheduled) }),
       } satisfies ActionPreview;
     },
     async execute(p) {
       const post = await loadPost(deps.repo, p.postId);
-      if (post.renderedVideo) throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
       // Idempotent: already scheduled at exactly this time with a live consent.
-      if (post.status === "scheduled" && post.scheduledAt === p.scheduledAt && post.approval) {
+      if (post.status === "scheduled" && post.scheduledAt === p.scheduledAt && post.approval && (await verifyScheduleConsent(post, deps)).ok) {
         return {
           ok: true,
           summary: `already scheduled for ${p.scheduledAt}`,
@@ -271,6 +271,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
       requirePublishable(post, ["asset_ready", "scheduled"]);
       await deps.validateMaterial?.(post);
       publishAssets(deps, post);
+      if (Date.parse(p.scheduledAt) <= Date.now()) throw new Error("Choose a future publish time");
       const scheduled: SocialPost = { ...post, scheduledAt: p.scheduledAt, status: "scheduled" };
       delete scheduled.failure;
       // The consent record the cron re-verifies (D2). Hash covers the post's
@@ -278,7 +279,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
       // which the gate guarantees matches the previewed state (nonce). The
       // canvas revision pins the creative's PIXELS at approval time — edits
       // bump it without changing the binding, so hash alone can't see them.
-      const surfaceRevn = scheduled.renderedSequence ? null : (await deps.surfaceRevision?.(scheduled)) ?? null;
+      const surfaceRevn = scheduled.renderedSequence || scheduled.renderedVideo ? null : (await deps.surfaceRevision?.(scheduled)) ?? null;
       scheduled.approval = {
         hash: approvalHash(scheduled),
         at: new Date().toISOString(),
@@ -319,13 +320,13 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
       const assets = publishAssets(deps, post);
       const asset = assets[0]!;
       return {
-        summary: `Publish to ${post.channel} NOW — live the moment this is approved. The card image IS the final creative.`,
+        summary: `Publish to ${post.channel} NOW — live the moment this is approved. Review the complete caption and final media before approval.`,
         rows: [
           ...baseRows(post),
           { label: "Publish time", value: "immediately on approval" },
           { label: "Undo", value: "none after publish (delete on-platform manually)" },
         ],
-        previewUrl: post.renderedSequence ? deps.reviewUrl?.(post) ?? asset : asset,
+        previewUrl: post.renderedSequence || post.renderedVideo ? deps.reviewUrl?.(post) ?? post.renderedVideo?.poster.url ?? asset : asset,
         ...(post.status === "failed" && post.failure
           ? { warnings: [`retries a failed publish (last error: ${post.failure})`] }
           : {}),
@@ -334,7 +335,6 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
     },
     async execute(p) {
       const post = await loadPost(deps.repo, p.postId);
-      if (post.renderedVideo) throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
       // Idempotent: a retry after a landed publish returns what exists.
       if (post.status === "published" && post.platform) {
         return {
@@ -362,7 +362,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
       try {
         const { platformId, permalink } = post.renderedSequence
           ? await adapter.publishSequence!(post, assets)
-          : await adapter.publish(post, asset);
+          : post.renderedVideo ? await adapter.publishVideo!(post, asset) : await adapter.publish(post, asset);
         const published: SocialPost = {
           ...post,
           status: "published",

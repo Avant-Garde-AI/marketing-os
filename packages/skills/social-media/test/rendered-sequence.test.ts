@@ -95,8 +95,8 @@ describe("reviewed rendered video", () => {
   expect(authored.renderedVideo).toBeUndefined();
   expect(authored.status).toBe("proposed");
  });
- it("reports the video publishing limit as a scheduling gap", () => {
-  expect(schedulingGaps(videoPost())).toContain("Video publishing is not available yet");
+ it("uses a trusted video receipt as creative readiness; the runtime checks channel support", () => {
+  expect(schedulingGaps(videoPost())).not.toContain("Video publishing is not available yet");
  });
  it("authored copy and source binding edits invalidate the receipt and consent", async () => {
   const p = videoPost(); p.status = "scheduled"; p.scheduledAt = "2099-01-01T00:00:00Z";
@@ -123,5 +123,45 @@ describe("reviewed rendered video", () => {
   await expect(actions.schedulePost.execute({ postId: p.id, scheduledAt: "2099-01-01T00:00:00Z" })).rejects.toThrow(/governed video channel adapter/);
   await expect(actions.publishPost.preview({ postId: p.id })).rejects.toThrow(/governed video channel adapter/);
   await expect(actions.publishPost.execute({ postId: p.id })).rejects.toThrow(/governed video channel adapter/);
+ });
+});
+
+describe("Reel lifecycle", () => {
+ it("schedules a reviewed video and publishes it once using the video adapter, never the poster", async () => {
+  const p = videoPost(); p.channelAccount = { id: "user", username: "merchant" }; p.plannedAt = "2099-01-01T00:00:00Z";
+  let raw = serializePost(p); const submit = vi.fn(async () => ({ platformId: "live-reel", permalink: "https://instagram.com/reel/live" }));
+  const image = vi.fn(); const validate = vi.fn();
+  const actions = createSocialActions({ repo: { readFile: async () => raw, writeFile: async (_, s) => { raw = s; }, list: async () => [] },
+   adapterFor: () => ({ channel: "instagram", publish: image, publishVideo: submit }),
+   assetUrl: () => { throw Error("poster must not publish"); }, validateMaterial: validate,
+   reviewUrl: () => "https://console.example/review/social/test" });
+  expect(parsePost(raw).scheduledAt).toBeUndefined();
+  expect((await actions.schedulePost.preview({postId:p.id,scheduledAt:p.plannedAt})).previewUrl).toContain("review/social");
+  await actions.schedulePost.execute({postId:p.id,scheduledAt:p.plannedAt});
+  expect(await verifyScheduleConsent(parsePost(raw),{})).toEqual({ok:true});
+  await actions.publishPost.execute({postId:p.id}); await actions.publishPost.execute({postId:p.id});
+  expect(submit).toHaveBeenCalledTimes(1); expect(submit.mock.calls[0][1]).toBe(p.renderedVideo!.video.url); expect(image).not.toHaveBeenCalled();
+  expect(parsePost(raw).publishAttempt?.state).toBe("completed");
+ });
+ it("roundtrips honest generation provenance without inventing a storyboard", () => {
+  const p=videoPost(), old=p.renderedVideo!;
+  p.renderedVideo={version:1,origin:"generation-delivery",artifactId:"loop-1",inputHash:"1".repeat(64),deliveryHash:"2".repeat(64),exportHash:"3".repeat(64),sources:old.sources,video:old.video,poster:old.poster};
+  expect(parsePost(serializePost(p)).renderedVideo).toEqual(p.renderedVideo);
+  expect(p.renderedVideo).not.toHaveProperty("storyboardId");
+ });
+ it("creates a Reel, waits for processing and publishes exactly once", async () => {
+  const p=videoPost(); p.channelAccount={id:"user",username:"merchant"}; const writes:URLSearchParams[]=[];
+  vi.stubGlobal("fetch",vi.fn(async(url:URL,init:RequestInit)=>{
+   if(init.method==="POST") writes.push(new URLSearchParams(init.body as string));
+   return {ok:true,json:async()=>url.pathname.endsWith("/me")?{user_id:"user",username:"merchant"}:url.pathname.endsWith("media_publish")?{id:"reel"}:init.method==="POST"?{id:"container"}:{status_code:"FINISHED",permalink:"https://instagram.com/reel/live"}};
+  }));
+  await createInstagramAdapter({accessToken:async()=>"token"}).publishVideo!(p,p.renderedVideo!.video.url);
+  expect(writes).toHaveLength(2);expect(writes[0].get("media_type")).toBe("REELS");expect(writes[0].get("video_url")).toBe(p.renderedVideo!.video.url);
+  expect(writes[0].get("cover_url")).toBe(p.renderedVideo!.poster.url);expect(writes[0].get("share_to_feed")).toBe("true"); expect(writes[1].get("creation_id")).toBe("container");
+ });
+ it("never submits a Reel when the connected account has changed", async () => {
+  const p=videoPost();p.channelAccount={id:"user",username:"merchant"};
+  const fetcher=vi.fn(async()=>({ok:true,json:async()=>({user_id:"other",username:"other"})}));vi.stubGlobal("fetch",fetcher);
+  await expect(createInstagramAdapter({accessToken:async()=>"token"}).publishVideo!(p,p.renderedVideo!.video.url)).rejects.toThrow("destination changed");expect(fetcher).toHaveBeenCalledTimes(1);
  });
 });

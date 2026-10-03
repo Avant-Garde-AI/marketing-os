@@ -19,6 +19,7 @@ const placement = z.object({
   quad: z.tuple([point, point, point, point]),
   mat: z.string().regex(/^#[a-fA-F0-9]{6}$/),
   fit: z.enum(["contain", "cover"]).optional(),
+  reframe: z.object({ outerQuad: z.tuple([point, point, point, point]) }).strict().optional(),
 }).strict();
 export const generationDeliverySchema = z.object({
   schemaVersion: z.literal(1),

@@ -15,7 +15,7 @@ const time="2099-01-04T15:00:00Z";
 const post=(id:string):SocialPost=>({id,channel:"instagram",channelAccount:{id:"123",username:"store"},copy:"caption",targetLink:"https://store.example",assetRefs:[],status:"asset_ready",provenance:[],body:"",plannedAt:time,designSurface:{teamId:"team",fileId:"file"}});
 const params=()=>({entries:["first","second"].map(id=>({postId:id,scheduledAt:time,expectedMaterialHash:approvalHash({...post(id),scheduledAt:time})}))});
 const request=(body:any,origin="https://console.example")=>new NextRequest("https://console.example/api/social/scheduling",{method:"POST",headers:{origin,"Content-Type":"application/json"},body:JSON.stringify({operation:"propose",params:params(),...body})});
-beforeEach(()=>{vi.clearAllMocks();vi.unstubAllGlobals();m.files.clear();for(const id of ["first","second"])m.files.set(postPath(id),serializePost(post(id)));m.lock.mockImplementation(async(_id,run)=>run());m.operator.mockResolvedValue({id:"verified"});m.propose.mockResolvedValue({proposalId:"mine",summary:"schedule"});vi.stubEnv("MARKETING_OS_API_URL","https://gate.example");vi.stubEnv("ACTIONS_GATE_SECRET","gate");vi.stubEnv("SHOPIFY_STORE_URL","store.myshopify.com")});
+beforeEach(()=>{vi.clearAllMocks();m.validate.mockReset();vi.unstubAllGlobals();m.files.clear();for(const id of ["first","second"])m.files.set(postPath(id),serializePost(post(id)));m.lock.mockImplementation(async(_id,run)=>run());m.operator.mockResolvedValue({id:"verified"});m.propose.mockResolvedValue({proposalId:"mine",summary:"schedule"});vi.stubEnv("MARKETING_OS_API_URL","https://gate.example");vi.stubEnv("ACTIONS_GATE_SECRET","gate");vi.stubEnv("SHOPIFY_STORE_URL","store.myshopify.com")});
 it("refuses duplicate posts",()=>expect(scheduleBatchSchema.safeParse({entries:[params().entries[0],params().entries[0]]}).success).toBe(false));
 it("previews without writes and schedules every exact post through the shared locks",async()=>{
  const action=socialScheduleBatchAction();const preview=await action.preview(params());expect(preview.rows).toHaveLength(2);expect(m.save).not.toHaveBeenCalled();
@@ -26,3 +26,29 @@ it("rejects any changed caption, time or destination before writing the set",asy
 it("rejects unauthenticated or cross-site approval",async()=>{m.operator.mockResolvedValue(null);expect((await POST(request({}))).status).toBe(401);expect((await POST(request({},"https://other.example"))).status).toBe(403);expect(m.propose).not.toHaveBeenCalled()});
 it("refuses approval of another batch",async()=>{vi.stubGlobal("fetch",vi.fn(async()=>Response.json({proposals:[{id:"mine",kind:"social.schedule_batch",params:{entries:[params().entries[0]]}}]})));expect((await POST(request({operation:"decide",approve:true,proposalId:"mine"}))).status).toBe(409);expect(fetch).toHaveBeenCalledTimes(1)});
 it("uses the verified actor and shows gate failures honestly",async()=>{const f=vi.fn().mockResolvedValueOnce(Response.json({proposals:[{id:"mine",kind:"social.schedule_batch",params:params()}]})).mockResolvedValueOnce(Response.json({status:"failed",message:"Scheduling failed"}));vi.stubGlobal("fetch",f);expect((await POST(request({operation:"decide",approve:true,proposalId:"mine",actor:"spoofed"}))).status).toBe(409);expect(JSON.parse(f.mock.calls[1][1].body).actor).toBe("social-review:verified")});
+
+it("bounds parallel read-only media checks and preserves reviewed row order", async () => {
+ const ids = Array.from({length: 8}, (_, i) => `post-${i}`);
+ const entries = ids.map(id => { const p = {...post(id), copy:id}; m.files.set(postPath(id), serializePost(p));
+   return {postId:id,scheduledAt:time,expectedMaterialHash:approvalHash({...p,scheduledAt:time})}; });
+ let active = 0, peak = 0;
+ m.validate.mockImplementation(async () => { active++; peak = Math.max(peak, active);
+   await new Promise(resolve => setTimeout(resolve, 10)); active--; });
+ const preview = await socialScheduleBatchAction().preview({entries});
+ expect(peak).toBe(3); expect(preview.rows.map(row => row.value)).toEqual(ids);
+ expect(m.save).not.toHaveBeenCalled();
+});
+
+it("resumes only an identical pending batch without creating another proposal", async () => {
+ vi.stubGlobal("fetch", vi.fn(async () => Response.json({proposals:[
+   {id:"other",kind:"social.schedule_batch",params:{entries:[params().entries[0]]}},
+   {id:"existing",kind:"social.schedule_batch",params:params(),preview:{summary:"Existing reviewed batch"}},
+ ]})));
+ const response = await POST(request({})); expect(response.status).toBe(200);
+ expect(await response.json()).toEqual({proposalId:"existing",summary:"Existing reviewed batch"});
+ expect(m.propose).not.toHaveBeenCalled();
+});
+it("creates a fresh proposal when no matching pending batch exists", async () => {
+ vi.stubGlobal("fetch", vi.fn(async () => Response.json({proposals:[]})));
+ expect((await POST(request({}))).status).toBe(200); expect(m.propose).toHaveBeenCalledTimes(1);
+});

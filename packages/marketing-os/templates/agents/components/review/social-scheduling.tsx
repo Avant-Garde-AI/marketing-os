@@ -1,12 +1,13 @@
 "use client";
 import { useState } from "react";
 import { PrimaryButton, OutlineButton } from "../primitives";
+type PendingProposal = { proposalId: string; summary: string };
 type Entry = { postId: string; scheduledAt: string; expectedMaterialHash: string };
 /** Two deliberate clicks: proposal review, then final approval with the verified session actor. */
-export function SocialScheduling({ entries }: { entries: Entry[] }) {
+export function SocialScheduling({ entries, initialProposal = null }: { entries: Entry[]; initialProposal?: PendingProposal | null }) {
   const [busy, setBusy] = useState(false), [message, setMessage] = useState("");
   const [signedOut, setSignedOut] = useState(false), [done, setDone] = useState(false);
-  const [proposal, setProposal] = useState<{ proposalId: string; summary: string } | null>(null);
+  const [proposal, setProposal] = useState<PendingProposal | null>(initialProposal);
   async function request(operation: "propose" | "decide", approve?: boolean) {
     setBusy(true); setMessage("");
     try {

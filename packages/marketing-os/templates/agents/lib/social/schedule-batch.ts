@@ -68,3 +68,19 @@ export function socialScheduleBatchAction() {
   };
 }
 registerAction("social.schedule_batch", socialScheduleBatchAction);
+
+/** Authenticated review callers can resume the exact pending batch on any device. */
+export async function pendingScheduleBatch(params: ScheduleBatchParams) {
+  if (!params.entries.length) return null;
+  const base = process.env.MARKETING_OS_API_URL?.replace(/\/$/, ""), secret = process.env.ACTIONS_GATE_SECRET;
+  const { shop } = getTenant();
+  if (!base || !secret || !shop) return null;
+  const response = await fetch(`${base}/api/actions/review?shop=${encodeURIComponent(shop)}`, {
+    headers: { Authorization: `Bearer ${secret}` }, cache: "no-store", signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok) throw new Error("Pending schedule approvals unavailable");
+  const body = await response.json();
+  const proposal = body.proposals?.find((p: any) => p.kind === "social.schedule_batch" &&
+    hashPreview(p.params) === hashPreview(params));
+  return proposal ? { proposalId: proposal.id, summary: proposal.preview?.summary ?? proposal.summary } : null;
+}

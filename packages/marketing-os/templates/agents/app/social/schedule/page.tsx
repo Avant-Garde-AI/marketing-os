@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { pendingScheduleBatch } from "../../../lib/social/schedule-batch";
+import { socialReviewOperator } from "../../../lib/social/review-operator";
 import { socialRepo } from "../../../lib/social/repo";
 import type { SocialPost } from "../../../lib/social/types";
 import { parsePost } from "../../../lib/social/artifacts";
@@ -14,12 +16,14 @@ export default async function ScheduleReview({ searchParams }: { searchParams: P
   }))).filter((post): post is SocialPost => !!post && !!post.plannedAt?.startsWith(month) && ["asset_ready", "scheduled", "published", "failed"].includes(post.status));
   const ready = posts.filter(post => post!.status === "asset_ready" && Date.parse(post!.plannedAt!) > Date.now() && (post!.renderedSequence || post!.renderedVideo));
   const entries = ready.map(post => ({ postId: post!.id, scheduledAt: post!.plannedAt!, expectedMaterialHash: approvalHash({ ...post!, scheduledAt: post!.plannedAt }) }));
+  const operator = await socialReviewOperator();
+  const initialProposal = operator && entries.length ? await pendingScheduleBatch({ entries }).catch(() => null) : null;
   const timeZone = process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC";
   posts.sort((a, b) => a!.plannedAt!.localeCompare(b!.plannedAt!));
   return <main style={{ maxWidth: 1100, margin: "2rem auto", padding: "0 1rem" }}>
     <Link className="text-[14px] text-ink-2 hover:text-gold" href={`/calendar?month=${month}`}>← Calendar</Link><h1 className="mt-4 mb-3 font-display text-[34px]">Social publishing · {month}</h1>
     <p className="text-[14px] leading-relaxed text-ink-2">Planned posts become scheduled only after approval. All times shown in {timeZone}.</p>
-    <SocialScheduling entries={entries} />
+    <SocialScheduling entries={entries} initialProposal={initialProposal} />
     {!posts.length && <p>No dated social posts are ready yet.</p>}
     {posts.map(post => { const p = post!; return <article key={p.id} className="mb-8 border border-hairline bg-raised p-5">
       <h2 className="mb-2 font-display text-[22px]">{new Date(p.scheduledAt ?? p.plannedAt!).toLocaleString("en-US", { timeZone, dateStyle: "full", timeStyle: "short" })} · {p.renderedVideo ? "Artwork loop" : "Three-slide carousel"}</h2>

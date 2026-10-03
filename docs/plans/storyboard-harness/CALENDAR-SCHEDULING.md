@@ -13,3 +13,5 @@ Generated blank frame aspect ratios are not reliable. Opt-in delivery `reframe.o
 The authenticated shared calendar refreshes dated social cards from file truth under the tenant/post lock, before querying its read model. This repairs posts committed through the store repo without requiring an authoring rewrite or silently leaving them invisible. Refresh errors are visible and never advance a lifecycle. The authoring tool accepts `plannedAt` separately from scheduled consent.
 
 Batch preview validates up to three posts concurrently, preserving date order and all existing material checks. This keeps the two-week review responsive without introducing concurrent writes or bypassing consent. The review page uses the console’s shared button and typography primitives.
+
+Authenticated reviewers resume the exact pending batch after refresh or on another device. Matching requires identical post, material hash and date parameters; mismatched batches create a fresh proposal. A pending proposal is not publishing consent.

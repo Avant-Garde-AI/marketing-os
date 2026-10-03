@@ -38,3 +38,17 @@ it("bounds parallel read-only media checks and preserves reviewed row order", as
  expect(peak).toBe(3); expect(preview.rows.map(row => row.value)).toEqual(ids);
  expect(m.save).not.toHaveBeenCalled();
 });
+
+it("resumes only an identical pending batch without creating another proposal", async () => {
+ vi.stubGlobal("fetch", vi.fn(async () => Response.json({proposals:[
+   {id:"other",kind:"social.schedule_batch",params:{entries:[params().entries[0]]}},
+   {id:"existing",kind:"social.schedule_batch",params:params(),preview:{summary:"Existing reviewed batch"}},
+ ]})));
+ const response = await POST(request({})); expect(response.status).toBe(200);
+ expect(await response.json()).toEqual({proposalId:"existing",summary:"Existing reviewed batch"});
+ expect(m.propose).not.toHaveBeenCalled();
+});
+it("creates a fresh proposal when no matching pending batch exists", async () => {
+ vi.stubGlobal("fetch", vi.fn(async () => Response.json({proposals:[]})));
+ expect((await POST(request({}))).status).toBe(200); expect(m.propose).toHaveBeenCalledTimes(1);
+});

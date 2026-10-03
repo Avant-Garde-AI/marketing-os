@@ -22,12 +22,13 @@ import { runWithTenant } from "../../../../lib/tenant-context";
 // bundles per route; a registration that only rides the chat/tools bundle is
 // invisible to this one).
 import "../../../../lib/social/register-actions";
+import "../../../../lib/social/generation-publishing";
 import "../../../../lib/email/register-actions";
 import "../../../../lib/storyboard/register-actions";
 import "../../../../lib/storyboard/realization";
 import "../../../../lib/offers/register-actions";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 interface ExecuteBody {
   proposalId?: string;

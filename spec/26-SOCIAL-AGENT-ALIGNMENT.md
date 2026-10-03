@@ -141,3 +141,13 @@ Per spec 25 §7 and **D4**: first-party packs may run DDL at enablement; a third
 | D6 | Pack DDL trust boundary (spec 25 D4) | First-party: DDL at enablement, `pack_social` schema. Ship the migration **declaratively** now so the ecosystem path is a runner change, not a rewrite. |
 | D7 | Does the month sheet get a per-post note affordance, or notes only in the room? | Sheet gets counts (the `countNotes` one-query pattern); composing a note stays in the room. |
 | D8 | Do review notes on a `scheduled` post invalidate the nonce? | **No** — a note is a request, and auto-invalidating would let anyone with a link cancel a publish. Surface the open-note count on the card and let the human decide. |
+
+## Authenticated controls within social review (2026-10-03)
+
+The token-scoped carousel review hosts Publish/Schedule controls for a separately
+verified console operator. The signed link remains read/comment authority only.
+The API verifies Supabase `getUser()`, rejects cross-site writes, scopes decisions
+to the tenant's pending proposal and reviewed parent/hash, and records the
+server-derived actor. The existing gate still claims the nonce and dispatches
+execution. Hosted runtimes refuse deployment-wide console sessions. This extends
+the review surface while preserving §0.1's separation of possession and authority.

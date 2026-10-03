@@ -77,6 +77,10 @@ export interface SocialActionDeps {
    * a publish.
    */
   onPostSaved?: (post: SocialPost) => Promise<void>;
+  /** Revalidate trusted external delivery bindings without mutating. */
+  validateMaterial?: (post: SocialPost) => Promise<void>;
+  /** Serialize gate and cron execution for this tenant/post. */
+  withPostLock?: <T>(postId: string, run: () => Promise<T>) => Promise<T>;
 }
 
 function sha256(s: string): string {
@@ -115,6 +119,7 @@ export function publishMaterial(post: SocialPost): Record<string, unknown> {
   return {
     postId: post.id,
     channel: post.channel,
+    ...(post.channelAccount ? { channelAccount: post.channelAccount } : {}),
     copy: post.copy,
     targetLink: post.targetLink,
     assetRefs: post.assetRefs,
@@ -164,6 +169,8 @@ export async function verifyScheduleConsent(
  * clear message the approver (and the agent) needs when the post isn't ready.
  */
 function requirePublishable(post: SocialPost, allowed: string[]): void {
+  if (post.publishAttempt && post.publishAttempt.state !== "completed")
+    throw new Error("Previous publishing attempt needs reconciliation; automatic retry is blocked");
   if (post.renderedVideo) {
     throw new Error(`post "${post.id}" contains rendered video; scheduling and publishing require a governed video channel adapter`);
   }
@@ -225,6 +232,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
     async preview(p) {
       const post = await loadPost(deps.repo, p.postId);
       requirePublishable(post, ["asset_ready", "scheduled"]);
+      await deps.validateMaterial?.(post);
       if (Date.parse(p.scheduledAt) <= Date.now()) {
         throw new Error(
           `scheduledAt ${p.scheduledAt} is in the past — use social.publish_post to publish now`,
@@ -261,6 +269,7 @@ function schedulePost(deps: SocialActionDeps): Action<SchedulePostParams> {
         };
       }
       requirePublishable(post, ["asset_ready", "scheduled"]);
+      await deps.validateMaterial?.(post);
       publishAssets(deps, post);
       const scheduled: SocialPost = { ...post, scheduledAt: p.scheduledAt, status: "scheduled" };
       delete scheduled.failure;
@@ -305,6 +314,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
     async preview(p) {
       const post = await loadPost(deps.repo, p.postId);
       requirePublishable(post, ["asset_ready", "scheduled", "failed"]);
+      await deps.validateMaterial?.(post);
       deps.adapterFor(post.channel); // unsupported channel fails at preview, not after approval
       const assets = publishAssets(deps, post);
       const asset = assets[0]!;
@@ -334,9 +344,21 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
         };
       }
       requirePublishable(post, ["asset_ready", "scheduled", "failed"]);
+      await deps.validateMaterial?.(post);
+      if (post.status === "scheduled") {
+        const consent = await verifyScheduleConsent(post, deps);
+        if (!consent.ok) throw new Error(consent.reason);
+      }
       const adapter = deps.adapterFor(post.channel);
       const assets = publishAssets(deps, post);
       const asset = assets[0]!;
+      const attempted: SocialPost = { ...post, publishAttempt: { startedAt: new Date().toISOString(), state: "started" } };
+      // If this durable write fails, no provider request is made.
+      await savePost(deps.repo, attempted, deps.onPostSaved);
+      const durableAttempt = await loadPost(deps.repo, p.postId);
+      if (JSON.stringify(durableAttempt.publishAttempt) !== JSON.stringify(attempted.publishAttempt) ||
+          approvalHash(durableAttempt) !== approvalHash(attempted))
+        throw new Error("Publishing attempt could not be read back from artifact truth; nothing was submitted");
       try {
         const { platformId, permalink } = post.renderedSequence
           ? await adapter.publishSequence!(post, assets)
@@ -344,6 +366,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
         const published: SocialPost = {
           ...post,
           status: "published",
+          publishAttempt: { ...attempted.publishAttempt!, state: "completed" },
           platform: { id: platformId, permalink, publishedAt: new Date().toISOString() },
         };
         delete published.failure;
@@ -357,7 +380,7 @@ function publishPost(deps: SocialActionDeps): Action<PublishPostParams> {
         const message = e instanceof Error ? e.message : String(e);
         // Record the failure on the artifact FIRST (files are truth), then
         // surface it — the gate audits the error, the cron flags it.
-        const failed: SocialPost = { ...post, status: "failed", failure: message };
+        const failed: SocialPost = { ...attempted, status: "failed", failure: message, publishAttempt: { ...attempted.publishAttempt!, state: "unknown" } };
         await savePost(deps.repo, failed, deps.onPostSaved);
         throw new Error(`publish to ${post.channel} failed: ${message}`);
       }
@@ -433,9 +456,13 @@ export function createSocialActions(deps: SocialActionDeps): {
   publishPost: Action<PublishPostParams>;
   cancelPost: Action<CancelPostParams>;
 } {
+  function locked<P extends { postId: string }>(action: Action<P>): Action<P> {
+    return { ...action, execute: p => deps.withPostLock
+      ? deps.withPostLock(p.postId, () => action.execute(p)) : action.execute(p) };
+  }
   return {
-    schedulePost: schedulePost(deps),
-    publishPost: publishPost(deps),
-    cancelPost: cancelPost(deps),
+    schedulePost: locked(schedulePost(deps)),
+    publishPost: locked(publishPost(deps)),
+    cancelPost: locked(cancelPost(deps)),
   };
 }

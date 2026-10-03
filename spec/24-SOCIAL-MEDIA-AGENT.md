@@ -119,3 +119,14 @@ Copy is generated under the brand's front-mattered copy-formula templates and th
 2. **Platform API review gates** — per D1, **Meta app review is an SM0 action item** (Instagram publishing must clear it before SM2 completes); TikTok's audit waits for its channel's turn. (The Penpot direction removed every *design-tool* review gate; the social platforms' own gates remain.)
 3. **Story/video formats** — Penpot is static-only (spec 23 §6/DS6: MP4 = external render over exports) and NeuroGraph generates video prompts; statics prove the loop first, video is a fast-follow riding DS6.
 4. **Multi-store workspaces** — spec 15 supports multiple stores per Slack workspace; the weekly ritual and calendar are per-store — does a multi-store agency want a cross-store social digest?
+
+## Reviewed generation-carousel delivery (2026-10-03)
+
+Temporary scene archetypes ship through SM2 without claiming a storyboard-selection
+pass. `renderedSequence` supports an explicit `generation-delivery` origin alongside
+legacy storyboard provenance. The trusted runtime verifies manifests, source bytes,
+finished jobs, delivery receipts and final JPEGs. `social.publish_carousel` and
+`social.schedule_carousel` pin immutable public assets and delegate to the existing
+post lifecycle after approval. Account ID/handle are consent material and are
+rechecked before publishing. Unresolved submissions block retries; gate and cron
+execution serialize per tenant/post. See [the delivery contract](../docs/plans/storyboard-harness/CAROUSEL-PUBLISHING.md).

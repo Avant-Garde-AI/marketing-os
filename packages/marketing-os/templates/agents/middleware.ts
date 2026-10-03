@@ -44,6 +44,8 @@ export async function middleware(request: NextRequest) {
     // A carousel parent token can read only its three manifest-bound slides.
     /^\/api\/social\/carousel\/render\/[A-Za-z0-9][A-Za-z0-9._-]{0,119}\/[123]$/.test(request.nextUrl.pathname) ||
     request.nextUrl.pathname === "/api/social/carousel/review-notes" ||
+    // Authenticated in-route via getUser(), never by the review token.
+    request.nextUrl.pathname === "/api/social/carousel/publishing" ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
     // Campaign imagery, addressed by content hash and HMAC-tokened like the
     // preview. These URLs are embedded in assembled email HTML, so they must be

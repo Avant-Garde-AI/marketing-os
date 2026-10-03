@@ -347,6 +347,7 @@ const postReadInput = z.object({ id: z.string().min(1).describe("Post id") });
 const postReadOutput = z.object({
   id: z.string(),
   channel: z.string(),
+  plannedAt: z.string().datetime({ offset: true }).optional().describe("Intended calendar time only; does not schedule publishing"),
   scheduledAt: z.string().optional(),
   copy: z.string(),
   copyFormulaRef: z.string().optional(),

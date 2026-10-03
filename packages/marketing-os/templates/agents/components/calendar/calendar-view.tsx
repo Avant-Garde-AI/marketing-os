@@ -79,7 +79,7 @@ function StatusChip({ status }: { status: string }) {
   );
 }
 
-function ItemCard({ item, compact }: { item: CalendarItem; compact?: boolean }) {
+function ItemCard({ item, compact, timeZone }: { item: CalendarItem; compact?: boolean; timeZone: string }) {
   // Resolved server-side (app/calendar/page.tsx): review links are token-gated
   // and a client component never sees a secret. Falls back to the detail route
   // for channels with no review room.
@@ -95,14 +95,18 @@ function ItemCard({ item, compact }: { item: CalendarItem; compact?: boolean }) 
         <ChannelChip channel={item.channel} />
         <StatusChip status={item.status} />
       </div>
-      {item.thumbnailUrl && !compact && (
+      {item.thumbnailUrl && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={item.thumbnailUrl}
           alt={item.title}
-          className="mt-1.5 max-h-16 w-full border border-hairline object-cover"
+          className="mt-1.5 max-h-28 w-full border border-hairline object-contain"
         />
       )}
+      {item.scheduledAt && <div className="mt-1 text-[10px] text-ink-3">
+        {new Date(item.scheduledAt).toLocaleTimeString("en-US", { timeZone, hour: "numeric", minute: "2-digit", timeZoneName: "short" })}
+        {!["scheduled", "published", "sent", "measured"].includes(item.status) ? " · planned" : ""}
+      </div>}
       <div className="mt-0.5 truncate text-[11.5px] text-ink-2" title={item.intent || item.title}>
         {item.title}
       </div>
@@ -148,7 +152,7 @@ function FilterChip({
   );
 }
 
-export function CalendarView({ month, items }: { month: string; items: CalendarItem[] }) {
+export function CalendarView({ month, items, timeZone = "UTC" }: { month: string; items: CalendarItem[]; timeZone?: string }) {
   // Filter dimensions derive from the DATA — never from a hardcoded list.
   const channels = useMemo(() => [...new Set(items.map((i) => i.channel))].sort(), [items]);
   const statuses = useMemo(() => [...new Set(items.map((i) => i.status))].sort(), [items]);
@@ -184,7 +188,7 @@ export function CalendarView({ month, items }: { month: string; items: CalendarI
 
   const byDate = new Map<string, CalendarItem[]>();
   for (const item of scheduled) {
-    const date = item.scheduledAt!.slice(0, 10);
+    const date = new Date(item.scheduledAt!).toLocaleDateString("en-CA", { timeZone });
     const list = byDate.get(date) ?? [];
     list.push(item);
     byDate.set(date, list);
@@ -255,7 +259,7 @@ export function CalendarView({ month, items }: { month: string; items: CalendarI
                   <>
                     <div className="tnum text-[11px] text-ink-3">{day}</div>
                     {dayItems.map((item) => (
-                      <ItemCard key={`${item.channel}-${item.itemId}`} item={item} />
+                      <ItemCard key={`${item.channel}-${item.itemId}`} item={item} timeZone={timeZone} />
                     ))}
                   </>
                 )}
@@ -273,7 +277,7 @@ export function CalendarView({ month, items }: { month: string; items: CalendarI
           </div>
           <div className="grid grid-cols-1 gap-x-3 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-4">
             {backlog.map((item) => (
-              <ItemCard key={`${item.channel}-${item.itemId}`} item={item} compact />
+              <ItemCard key={`${item.channel}-${item.itemId}`} item={item} timeZone={timeZone} compact />
             ))}
           </div>
         </div>

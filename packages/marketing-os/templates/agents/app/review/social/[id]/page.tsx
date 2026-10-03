@@ -23,6 +23,8 @@ import { generationDeliveryRepoFromPreview, loadGenerationDelivery } from "@/lib
 import { socialRepo } from "@/lib/social/repo";
 import { parsePost, postPath } from "@/lib/social/artifacts";
 import type { SocialPost } from "@/lib/social/types";
+import { SocialScheduling } from "@/components/review/social-scheduling";
+import { approvalHash } from "@/lib/social/actions";
 import { SocialPublishing } from "@/components/review/social-publishing";
 import { carouselManifestHash } from "@/lib/social/generation-publishing";
 import { loadGenerationCarousel, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
@@ -426,17 +428,21 @@ export default async function SocialReviewRoom({
                     <div>
                       <div style={{ padding: "0.85rem", background: "#f4f2ef", fontSize: "0.8rem", overflowWrap: "anywhere" }}>
                         <strong>Rendered video · final creative for review</strong>
-                        <p>Storyboard: {video.storyboardId} · {(video.video.durationMs / 1000).toFixed(1)} seconds</p>
-                        <p>Video publishing is not available yet.</p>
+                        <p>Storyboard: {"origin" in video ? video.artifactId : video.storyboardId} · {(video.video.durationMs / 1000).toFixed(1)} seconds</p>
+                        <p>1080 × 1920 Reel. Review the full artwork and loop seam before approving its schedule.</p>
                         <details>
                           <summary>Render provenance</summary>
-                          <p>Storyboard hash: <code>{video.storyboardHash}</code></p>
-                          <p>Review hash: <code>{video.reviewHash}</code></p>
+                          <p>Storyboard hash: <code>{"origin" in video ? video.inputHash : video.storyboardHash}</code></p>
+                          <p>Review hash: <code>{"origin" in video ? video.deliveryHash : video.reviewHash}</code></p>
                           <p>Video SHA-256: <code>{video.video.sha256}</code></p>
                           <p>Poster SHA-256: <code>{video.poster.sha256}</code></p>
                           <p>{video.sources.length} source asset{video.sources.length === 1 ? "" : "s"} bound in the render receipt</p>
                         </details>
                       </div>
+                      {post.status === "asset_ready" && post.plannedAt && <SocialScheduling entries={[{
+                        postId: post.id, scheduledAt: post.plannedAt,
+                        expectedMaterialHash: approvalHash({ ...post, scheduledAt: post.plannedAt }),
+                      }]} />}
                       <video controls loop playsInline preload="metadata" poster={video.poster.url}
                         width={video.video.width} height={video.video.height}
                         style={{ width: "100%", height: "auto", background: "#111", display: "block" }}>

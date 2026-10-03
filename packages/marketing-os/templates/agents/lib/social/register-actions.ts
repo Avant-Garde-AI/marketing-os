@@ -32,6 +32,7 @@ export function socialAssetUrl(post: SocialPost): string {
   if (!base) {
     throw new Error("MOS_AGENTS_PUBLIC_URL not configured — cannot build a public asset URL for publishing");
   }
+  if (post.renderedVideo) return post.renderedVideo.video.url;
   if (post.renderedSequence) return post.renderedSequence.slides[0].url;
   if (!post.designSurface) {
     throw new Error(
@@ -91,6 +92,10 @@ export function socialActionDeps(): SocialActionDeps {
       : socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
     withPostLock: withSocialPostLock,
     validateMaterial: async post => {
+      if (post.renderedVideo && "origin" in post.renderedVideo) {
+        const { validateGeneratedVideo } = await import("./generation-video");
+        await validateGeneratedVideo(socialRepo, post, process.env.MOS_AGENTS_PUBLIC_URL ?? "");
+      }
       const seq = post.renderedSequence;
       if (!seq || !("origin" in seq)) return;
       if (!post.channelAccount) throw new Error("Reviewed generation delivery requires a destination account");

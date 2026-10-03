@@ -106,6 +106,7 @@ export default async function CalendarPage({
         {items.length > 0 ? (
           <>
             <CalendarView
+              timeZone={process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC"}
               month={month}
               items={items.map((i) => ({
                 ...i,
@@ -113,8 +114,8 @@ export default async function CalendarPage({
               }))}
             />
             <p className="animate-enter-3 mt-5 text-[11.5px] text-ink-3">
-              Read + click-through for now — scheduling changes happen where each channel&apos;s
-              approvals live. Refine any month in chat.
+              Planned dates are suggestions; scheduled items have approval to send automatically.
+              {" "}<Link href={`/social/schedule?month=${month}`}>Review and approve social schedules →</Link>
             </p>
           </>
         ) : (

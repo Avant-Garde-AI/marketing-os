@@ -1,8 +1,9 @@
 import "server-only";
 
+import { getTenant } from "../tenant-context";
 import { detailRouteFor } from "./routes";
 import { emailReviewLink } from "../email/review-links";
-import { socialReviewLink } from "../social/review-links";
+import { socialReviewLink, socialCarouselReviewLink } from "../social/review-links";
 
 /**
  * Where a calendar card clicks through to.
@@ -23,7 +24,11 @@ export const channelReviewRoute: Record<string, (itemId: string, shop: string) =
   // A social review room is keyed by GROUP. For an ungrouped post the group key
   // IS the post id, and loadPostGroup resolves a member id to its group, so an
   // item id is always a valid key.
-  social: (itemId, shop) => socialReviewLink(shop, itemId).url,
+  social: (itemId, shop) => {
+    const repo = getTenant().githubRepo ?? process.env.GITHUB_REPO;
+    // The same signed repo scope is accepted by both generation and generic review rooms.
+    return repo ? socialCarouselReviewLink(shop, itemId, repo).url : socialReviewLink(shop, itemId).url;
+  },
   email: (itemId, shop) => emailReviewLink(shop, itemId).url,
 };
 

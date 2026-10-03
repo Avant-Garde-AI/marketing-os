@@ -46,6 +46,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname === "/api/social/carousel/review-notes" ||
     // Authenticated in-route via getUser(), never by the review token.
     request.nextUrl.pathname === "/api/social/carousel/publishing" ||
+    request.nextUrl.pathname === "/api/social/scheduling" ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
     // Campaign imagery, addressed by content hash and HMAC-tokened like the
     // preview. These URLs are embedded in assembled email HTML, so they must be

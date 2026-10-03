@@ -130,3 +130,13 @@ finished jobs, delivery receipts and final JPEGs. `social.publish_carousel` and
 post lifecycle after approval. Account ID/handle are consent material and are
 rechecked before publishing. Unresolved submissions block retries; gate and cron
 execution serialize per tenant/post. See [the delivery contract](../docs/plans/storyboard-harness/CAROUSEL-PUBLISHING.md).
+
+## Calendar scheduling and generation Reels (2026-10-03)
+
+`SocialPost.plannedAt` records editorial intent. The shared calendar may project it as a placement time, but it is never consent and the sending sweep reads only the artifact's `status=scheduled`, `scheduledAt` and matching approval hash. A plan change cannot authorize a send. Show the merchant's configured calendar timezone (`SOCIAL_CALENDAR_TIME_ZONE`, UTC default), thumbnails, and a clear planned/scheduled distinction.
+
+A generation video receipt is separate from storyboard renderer provenance: `origin=generation-delivery`, artifact/input/delivery/export hashes, exact artwork sources, immutable MP4 and poster. Never fabricate a storyboard/review hash for a fixed recipe. The runtime verifies the paid job, immutable input, caption receipt, full-frame export, and tenant-scoped public bytes both at preview and execution. Public MP4 assets support HEAD and byte ranges; hashes are checked on every read. Instagram Reels use `media_type=REELS`, public `video_url`, reviewed cover and `share_to_feed=true`, followed by processing status and one `media_publish`. Unknown outcomes retain the existing journal and block automatic retry.
+
+`social.schedule_batch` is one existing-gate proposal over up to 31 unique posts, exact timestamps and each scheduled material hash. A signed review URL can inspect content but cannot approve. The scheduling endpoint requires the verified console session, same-origin request, matching pending batch and server-derived actor. The page shows every final slide/video, complete caption, destination and intended time. Approval records each post's normal schedule consent under the existing tenant/post lock. The five-minute social sweep performs the same adapter execution as immediate publishing; edits cancel consent. Partial scheduling failure reports the completed count and stops, with no immediate media publication. A repeat can resume unchanged scheduled items without rewriting their consent.
+
+Open-core owns receipt types, adapters, action contracts, calendar/review UI and the scaffold. Store data owns artwork selection, scene recipes, artist handles, copy, job receipts and intended cadence. Neither layer claims these temporary archetypes are statistically proven by the corpus. Corpus evaluation and persona adapters remain separate work.

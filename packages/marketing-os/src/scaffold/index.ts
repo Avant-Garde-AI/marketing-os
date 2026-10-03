@@ -1514,6 +1514,36 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/video-assets.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/video-assets.ts"),
+      interpolate: false,
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/generation-video.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/generation-video.ts"),
+      interpolate: false,
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/schedule-batch.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/schedule-batch.ts"),
+      interpolate: false,
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/scheduling/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/scheduling/route.ts"),
+      interpolate: false,
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/review/social-scheduling.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/social-scheduling.tsx"),
+      interpolate: false,
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/social/schedule/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/social/schedule/page.tsx"),
+      interpolate: false,
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/generation-publishing.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/generation-publishing.ts"),
       overwrite: "skip",

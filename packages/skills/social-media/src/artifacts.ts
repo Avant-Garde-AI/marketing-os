@@ -280,11 +280,7 @@ const publicRenderUrl = (value: string, extension: RegExp): boolean => {
 };
 
 /** Trusted renderer receipt. The generic social_post_upsert input omits this field. */
-export const renderedVideoSchema = z.object({
-  version: z.literal(1),
-  storyboardId: z.string().min(1),
-  storyboardHash: z.string().regex(/^[a-f0-9]{64}$/),
-  reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
+const videoReceiptFields = {
   sources: z.array(z.object({ ref: z.string().min(1), sha256: z.string().regex(/^[a-f0-9]{64}$/) }).strict()).min(1).max(20),
   video: z.object({
     url: z.string().url().refine((url) => publicRenderUrl(url, /\.mp4$/i), "must be a public HTTPS MP4 URL"),
@@ -297,8 +293,18 @@ export const renderedVideoSchema = z.object({
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
     width: z.number().int().positive(), height: z.number().int().positive(),
   }).strict(),
-}).strict().refine((receipt) => new Set(receipt.sources.map((source) => source.ref)).size === receipt.sources.length,
-  "video sources must have unique refs");
+};
+const uniqueVideoSources = (receipt: { sources: { ref: string }[] }) => new Set(receipt.sources.map(source => source.ref)).size === receipt.sources.length;
+export const renderedVideoSchema = z.union([
+  z.object({ version: z.literal(1), storyboardId: z.string().min(1),
+    storyboardHash: z.string().regex(/^[a-f0-9]{64}$/), reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
+    ...videoReceiptFields }).strict().refine(uniqueVideoSources, "video sources must have unique refs"),
+  z.object({ version: z.literal(1), origin: z.literal("generation-delivery"),
+    artifactId: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/),
+    inputHash: z.string().regex(/^[a-f0-9]{64}$/), deliveryHash: z.string().regex(/^[a-f0-9]{64}$/),
+    exportHash: z.string().regex(/^[a-f0-9]{64}$/), ...videoReceiptFields
+  }).strict().refine(uniqueVideoSources, "video sources must have unique refs"),
+]);
 
 const postFrontMatterSchema = z.object({
   id: z.string().min(1),
@@ -308,6 +314,7 @@ const postFrontMatterSchema = z.object({
     .min(1)
     .optional()
     .describe("Post group this variant belongs to (spec 26 D3) — variants share it"),
+  plannedAt: z.string().datetime({ offset: true }).optional().describe("Intended calendar time; not publish consent"),
   scheduledAt: z
     .string()
     .datetime({ offset: true })
@@ -377,6 +384,7 @@ export function parsePost(raw: string): SocialPost {
     body: body.trim(),
   };
   if (fm.groupId !== undefined) post.groupId = fm.groupId;
+  if (fm.plannedAt !== undefined) post.plannedAt = fm.plannedAt;
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
   if (fm.channelAccount !== undefined) post.channelAccount = fm.channelAccount;
@@ -393,6 +401,7 @@ export function parsePost(raw: string): SocialPost {
 export function serializePost(post: SocialPost): string {
   const fm: Record<string, unknown> = { id: post.id, channel: post.channel };
   if (post.groupId !== undefined) fm.groupId = post.groupId;
+  if (post.plannedAt !== undefined) fm.plannedAt = post.plannedAt;
   if (post.scheduledAt !== undefined) fm.scheduledAt = post.scheduledAt;
   fm.copy = post.copy;
   if (post.copyFormulaRef !== undefined) fm.copyFormulaRef = post.copyFormulaRef;

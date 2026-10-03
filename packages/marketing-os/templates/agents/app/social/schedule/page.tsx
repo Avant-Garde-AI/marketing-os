@@ -22,7 +22,7 @@ export default async function ScheduleReview({ searchParams }: { searchParams: P
     <SocialScheduling entries={entries} />
     {!posts.length && <p>No dated social posts are ready yet.</p>}
     {posts.map(post => { const p = post!; return <article key={p.id} style={{ border: "1px solid #ccc", padding: "1rem", borderRadius: 8, marginBottom: "1.5rem" }}>
-      <h2>{new Date(p.plannedAt!).toLocaleString("en-US", { timeZone, dateStyle: "full", timeStyle: "short" })} · {p.renderedVideo ? "Artwork loop" : "Three-slide carousel"}</h2>
+      <h2>{new Date(p.scheduledAt ?? p.plannedAt!).toLocaleString("en-US", { timeZone, dateStyle: "full", timeStyle: "short" })} · {p.renderedVideo ? "Artwork loop" : "Three-slide carousel"}</h2>
       <p>Instagram @{p.channelAccount?.username} · {p.status === "asset_ready" ? "Planned · awaiting approval" : p.status}</p>
       {p.renderedVideo ? <video controls loop playsInline preload="metadata" poster={p.renderedVideo.poster.url} src={p.renderedVideo.video.url} style={{ width: "min(100%, 300px)", aspectRatio: "9/16" }} /> :
         <div style={{ display: "flex", gap: 12, overflowX: "auto" }}>{p.renderedSequence?.slides.map((s, i) => <figure key={s.sha256} style={{ margin: 0, flex: "1 0 220px", maxWidth: 340 }}>

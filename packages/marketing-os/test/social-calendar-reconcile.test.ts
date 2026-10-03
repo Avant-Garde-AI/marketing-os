@@ -1,0 +1,12 @@
+import { beforeEach,it,expect,vi } from "vitest";
+const m=vi.hoisted(()=>({list:vi.fn(),read:vi.fn(),sync:vi.fn(),lock:vi.fn()}));
+vi.mock("../templates/agents/lib/social/repo",()=>({socialRepo:{list:m.list,readFile:m.read}}));
+vi.mock("../templates/agents/lib/social/index-sync",()=>({syncPostIndex:m.sync}));
+vi.mock("../templates/agents/lib/social/publish-lock",()=>({withSocialPostLock:m.lock}));
+import { reconcileSocialCalendar } from "../templates/agents/lib/social/calendar-reconcile";
+import { serializePost } from "../templates/agents/lib/social/artifacts";
+const p={id:"2099-01-04-loop",channel:"instagram",copy:"caption",assetRefs:[],targetLink:"https://store.example",provenance:[],status:"asset_ready" as const,body:"",plannedAt:"2099-01-04T15:00:00Z"};
+beforeEach(()=>{vi.clearAllMocks();m.list.mockResolvedValue([`social/posts/${p.id}/post.md`]);m.read.mockResolvedValue(serializePost(p));m.sync.mockResolvedValue({ok:true});m.lock.mockImplementation(async(_id,run)=>run())});
+it("repairs dated cards from file truth within the publish lock without changing consent",async()=>{expect(await reconcileSocialCalendar("store.myshopify.com","2099-01")).toEqual({indexed:1,failures:[]});expect(m.sync).toHaveBeenCalledWith("store.myshopify.com",p);expect(m.lock).toHaveBeenCalledWith(p.id,expect.any(Function))});
+it("reports unavailable indexes and never invents scheduled state",async()=>{m.sync.mockResolvedValue({ok:false,reason:"no-database"});expect((await reconcileSocialCalendar("store.myshopify.com","2099-01")).failures).toHaveLength(1);expect(m.sync.mock.calls[0][1].scheduledAt).toBeUndefined();expect(m.sync.mock.calls[0][1].approval).toBeUndefined()});
+it("rejects mismatched IDs and leaves other months untouched",async()=>{m.read.mockResolvedValueOnce(serializePost({...p,id:"other"}));expect((await reconcileSocialCalendar("store.myshopify.com","2099-01")).failures).toHaveLength(1);expect(m.sync).not.toHaveBeenCalled();m.read.mockResolvedValue(serializePost({...p,plannedAt:"2099-02-04T15:00:00Z"}));expect((await reconcileSocialCalendar("store.myshopify.com","2099-01")).indexed).toBe(0)});

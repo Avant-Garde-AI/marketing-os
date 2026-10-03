@@ -57,6 +57,7 @@ export interface SocialPostUpsertInput {
   copy?: string;
   targetLink?: string;
   scheduledAt?: string;
+  plannedAt?: string;
   copyFormulaRef?: string;
   assetRefs?: string[];
   provenance?: { claim: string; origin: "owner" | "agent" | "data" }[];
@@ -145,6 +146,7 @@ export function nextPost(
   if (input.provenance !== undefined) next.provenance = input.provenance;
   if (input.body !== undefined) next.body = input.body;
   if (input.scheduledAt !== undefined) next.scheduledAt = input.scheduledAt;
+  if (input.plannedAt !== undefined) next.plannedAt = input.plannedAt;
 
   // Changing authored content requires the runtime to realize and review again.
   if ((existing?.renderedSequence || existing?.renderedVideo) && MATERIAL_FIELDS.some((field) => JSON.stringify(existing[field] ?? null) !== JSON.stringify(next[field] ?? null))) {

@@ -63,7 +63,11 @@ rejection, scoped decisions, verified actor, read-only preview and source/job/re
 changes. Store readiness and the forest production smoke evidence live under
 `agents/social/production/`. Moroccan/space remain unposted until approved.
 
-Next: governed Reel adapter for existing loops; durable provider container journal
-and reconciliation UI; corpus-backed archetype evolution and performance feedback.
+The governed Reel adapter and batch calendar approval are now implemented; see
+[calendar scheduling](CALENDAR-SCHEDULING.md). Arthaus activated a 14-post batch
+for October 4–17. This is production activation, not proof of its first future
+automatic send. Remaining work: durable provider container journal and
+reconciliation UI, proactive failure alerts, corpus-backed archetype evolution
+and performance feedback.
 
 Reference: [Meta Instagram API](https://www.postman.com/meta/instagram/documentation/6yqw8pt/instagram-api).

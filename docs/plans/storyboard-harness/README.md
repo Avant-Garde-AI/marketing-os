@@ -9,6 +9,9 @@ governed generation, evaluation, and rollout.
 | --- | --- |
 | [Core plan](../../STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md) | Full architecture, contracts, research experiments, gates and implementation work packages |
 | [Spec 33](../../../spec/33-THE-STORYBOARD-HARNESS.md) | Diagnosis, invariants and implementation history |
+| [Production handover](PRODUCTION-HANDOVER-2026-10-04.md) | Shipped social recipes, live calendar/review/approval/publishing boundaries, and remaining research |
+| [Calendar scheduling](CALENDAR-SCHEDULING.md) | Implemented batch approval, planned versus scheduled dates, and governed Reels |
+| [Carousel publishing](CAROUSEL-PUBLISHING.md) | Implemented generation receipt binding, authenticated publishing controls and retry discipline |
 | [Themed carousels](THEMED-SCENE-CAROUSELS-2026-09-30.md) | Owner correction: artwork-led themes, three distinct scenes, implemented planning and remaining delivery |
 | [Scene delivery](SCENE-DELIVERY-2026-09-29.md) | Exact-artwork scene runtime, actual three-scene pilot and remaining month automation |
 | [Initialization](INITIALIZATION.md) | Original handover brief |

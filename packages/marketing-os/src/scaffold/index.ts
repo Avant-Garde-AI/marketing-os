@@ -1519,6 +1519,16 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/workflow.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/workflow.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/calendar/visibility.ts"),
+      targetPath: path.join(targetDir, "agents/lib/calendar/visibility.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/video-assets.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/video-assets.ts"),
       overwrite: "skip",

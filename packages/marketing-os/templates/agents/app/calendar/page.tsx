@@ -5,6 +5,7 @@ import { CalendarView } from "@/components/calendar/calendar-view";
 import { calendarHrefFor } from "@/lib/calendar/review-routes";
 import { listCalendarItems, listCalendarMonths } from "@/lib/calendar/console-data";
 import { getTenant } from "@/lib/tenant-context";
+import { calendarVisibility } from "@/lib/calendar/visibility";
 
 /**
  * Calendar — THE cross-channel calendar (WS4-R2 / 02 §6 / 05 H4.2).
@@ -47,10 +48,12 @@ function currentMonth(): string {
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<{ month?: string | string[]; view?: string | string[] }>;
 }) {
   const params = await searchParams;
   const requested = Array.isArray(params.month) ? params.month[0] : params.month;
+  const view = calendarVisibility(Array.isArray(params.view) ? params.view[0] : params.view);
+  const monthHref = (value: string) => `/calendar?month=${value}&view=${view}`;
 
   const months = await listCalendarMonths();
   const month =
@@ -75,7 +78,7 @@ export default async function CalendarPage({
               Everything going out, <span className="italic">on one page.</span>
             </>
           }
-          sub="Every channel's planned work — each item with its status, its why, and a door into its detail."
+          sub="Approved schedules and published work across your channels. Draft plans are available in All work."
         />
 
         {refresh.failures.length > 0 && <p role="status">Some social calendar cards could not be refreshed. The review page still reads the source posts.</p>}
@@ -86,20 +89,20 @@ export default async function CalendarPage({
             <h2 className="font-display text-[22px]">{monthLabel(month)}</h2>
             {items.length > 0 && (
               <span className="tnum text-[13px] text-ink-3">
-                {items.length} item{items.length === 1 ? "" : "s"}
+                {items.length} total record{items.length === 1 ? "" : "s"}
                 {channels.length > 0 ? ` · ${channels.join(", ")}` : ""}
               </span>
             )}
           </div>
           <div className="flex items-center gap-5 text-[14px]">
             <Link
-              href={`/calendar?month=${shiftMonth(month, -1)}`}
+              href={monthHref(shiftMonth(month, -1))}
               className="text-ink-2 transition-colors duration-[160ms] hover:text-gold"
             >
               ← {monthLabel(shiftMonth(month, -1))}
             </Link>
             <Link
-              href={`/calendar?month=${shiftMonth(month, 1)}`}
+              href={monthHref(shiftMonth(month, 1))}
               className="text-ink-2 transition-colors duration-[160ms] hover:text-gold"
             >
               {monthLabel(shiftMonth(month, 1))} →
@@ -110,6 +113,8 @@ export default async function CalendarPage({
         {items.length > 0 ? (
           <>
             <CalendarView
+              key={`${month}:${view}`}
+              view={view}
               timeZone={process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC"}
               month={month}
               items={items.map((i) => ({
@@ -141,7 +146,7 @@ export default async function CalendarPage({
                     Plan a month
                   </Link>
                   {months.length > 0 && (
-                    <Link href={`/calendar?month=${months[0]}`} className="arrow-link text-[15px]">
+                    <Link href={monthHref(months[0])} className="arrow-link text-[15px]">
                       Latest planned month
                     </Link>
                   )}
@@ -157,7 +162,7 @@ export default async function CalendarPage({
               Planned months
             </span>
             {months.map((mo) => (
-              <Link key={mo} href={`/calendar?month=${mo}`}>
+              <Link key={mo} href={monthHref(mo)}>
                 <Chip variant={mo === month ? "filled" : "outline"}>{mo}</Chip>
               </Link>
             ))}

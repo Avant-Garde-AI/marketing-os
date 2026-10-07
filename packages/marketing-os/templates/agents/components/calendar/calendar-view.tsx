@@ -21,6 +21,8 @@ import Link from "next/link";
 import { Chip } from "@/components/primitives";
 import { detailRouteFor } from "@/lib/calendar/routes";
 import type { CalendarItem } from "@/lib/calendar/console-data";
+import { CALENDAR_VIEWS, visibleOnCalendar } from "@/lib/calendar/visibility";
+import type { CalendarVisibility } from "@/lib/calendar/visibility";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -152,10 +154,11 @@ function FilterChip({
   );
 }
 
-export function CalendarView({ month, items, timeZone = "UTC" }: { month: string; items: CalendarItem[]; timeZone?: string }) {
+export function CalendarView({ month, items, timeZone = "UTC", view = "live" }: { month: string; items: CalendarItem[]; timeZone?: string; view?: CalendarVisibility }) {
+  const viewItems = items.filter(item => visibleOnCalendar(item, view));
   // Filter dimensions derive from the DATA — never from a hardcoded list.
   const channels = useMemo(() => [...new Set(items.map((i) => i.channel))].sort(), [items]);
-  const statuses = useMemo(() => [...new Set(items.map((i) => i.status))].sort(), [items]);
+  const statuses = [...new Set(viewItems.map((i) => i.status))].sort();
 
   const [channelFilter, setChannelFilter] = useState<Set<string>>(new Set());
   const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set());
@@ -167,7 +170,7 @@ export function CalendarView({ month, items, timeZone = "UTC" }: { month: string
     apply(next);
   }
 
-  const visible = items.filter(
+  const visible = viewItems.filter(
     (i) =>
       (channelFilter.size === 0 || channelFilter.has(i.channel)) &&
       (statusFilter.size === 0 || statusFilter.has(i.status))
@@ -196,6 +199,13 @@ export function CalendarView({ month, items, timeZone = "UTC" }: { month: string
 
   return (
     <div>
+      <nav aria-label="Calendar view" className="mb-3 flex flex-wrap gap-2">
+        {CALENDAR_VIEWS.map(option => <Link key={option.id} href={`/calendar?month=${month}&view=${option.id}`} aria-current={view === option.id ? "page" : undefined}
+          className={`border border-hairline px-3 py-2 text-[13px] ${view === option.id ? "bg-inverse text-paper" : "bg-raised text-ink-2 hover:border-gold"}`}>{option.label}</Link>)}
+      </nav>
+      <p className="mb-4 text-[13px] text-ink-3">Showing {visible.length} of {items.length} records.
+        {view !== "all" ? " Draft proposals and unapproved plans are hidden. Choose All work to see them." : " Suggested dates are planning placeholders, not publishing approvals."}</p>
+      {!visible.length && <p role="status" className="mb-4 text-sm text-ink-2">No posts match this calendar view. Choose All work or clear the channel and status filters.</p>}
       {/* Filters — visible only when there is something to narrow. */}
       {(channels.length > 1 || statuses.length > 1) && (
         <div className="animate-enter-2 mb-4 flex flex-wrap items-center gap-x-5 gap-y-2">

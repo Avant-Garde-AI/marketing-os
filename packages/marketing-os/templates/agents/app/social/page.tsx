@@ -2,234 +2,87 @@ import Link from "next/link";
 import { PageHeader, Chip, EmptyState } from "@/components/primitives";
 import { CopyLink } from "@/components/copy-link";
 import { getTenant } from "@/lib/tenant-context";
-import { listCalendarMonths, loadCalendar } from "@/lib/social/console-data";
 import { socialSheetLink } from "@/lib/social/review-links";
-import { postMonth } from "@/lib/social/projection";
+import { socialPostReviewHref } from "@/lib/calendar/review-routes";
+import { postMonth, postThumbnailUrl } from "@/lib/social/projection";
 import { listPostIds, parsePost, postPath } from "@/lib/social/artifacts";
 import { socialRepo } from "@/lib/social/repo";
+import { SOCIAL_STAGES, SOCIAL_STAGE_LABELS, socialWorkflow, socialStoryPrompt } from "@/lib/social/workflow";
+import type { SocialStage } from "@/lib/social/workflow";
 import type { SocialPost } from "@/lib/social/types";
-
-/**
- * Social — the worklist.
- *
- * This page used to render its own month grid, which made two calendars for
- * one business: /calendar already reads mos_calendar_items across every
- * channel, and social has written into it since SM2. Two grids of the same
- * month is not redundancy, it is a question about which one is right — and the
- * cross-channel one is, because a month of social only makes sense next to the
- * email going out around it.
- *
- * So this mirrors /email instead: the staged work as a list, each item with its
- * status and a door into its detail, plus one shareable link per month. Email
- * arrived at that shape by use, and social's workflow is the same shape —
- * things get staged, someone reads them, someone approves.
- *
- * Files are truth: the calendar names the slots, the post artifacts say what
- * would actually ship, and this reads both rather than a projection that could
- * drift from either.
- */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
-
-const PLAN_PROMPT =
-  "Plan next month's social calendar from our strategy and show me the proposal.";
-
-function monthLabel(month: string): string {
-  const [y, m] = month.split("-").map(Number);
-  return new Date(Date.UTC(y!, m! - 1, 1)).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+function monthLabel(month: string) {
+  return MONTH_RE.test(month) ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }) : "Undated work";
 }
-
-/** The day a post is FOR — scheduled if it has a time, else the slot it fills. */
-function dayLabel(scheduledAt: string | null | undefined, fallbackSlot: string | null): string {
-  const iso = (scheduledAt ?? "").slice(0, 10) || fallbackSlot || "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
+function headline(post: SocialPost) {
+  return post.copy.split("\n").map(line => line.trim()).find(Boolean) || `Post ${post.id}`;
 }
-
-/** First line of the copy — what someone scanning the month actually needs. */
-function headline(post: SocialPost): string {
-  const first = (post.copy ?? "").split("\n").map((l) => l.trim()).find(Boolean);
-  return first || `Post ${post.id}`;
-}
-
-/** Same three-state reading as email: done, in motion, still a draft. */
-function statusVariant(status: string): "filled" | "outline" | "attention" {
-  if (status === "published") return "filled";
-  if (status === "approved" || status === "scheduled" || status === "asset_ready") return "attention";
-  return "outline";
-}
-
-interface Row {
-  post: SocialPost;
-  slot: string | null;
-  pillar: string | null;
-}
-
-export default async function SocialPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const sp = await searchParams;
-  const { shop } = getTenant();
-
-  // Enumerate POSTS, then enrich from the calendar — never the other way round.
-  // Walking the calendar means a post nobody scheduled does not exist as far as
-  // this page is concerned: four composed posts with design surfaces sat
-  // invisible for a week because their month had no calendar file, and a fifth
-  // was orphaned by a slot that never referenced it. A post is a real artifact
-  // whether or not anything points at it, and a worklist that hides work is
-  // worse than no worklist.
-  const ids = await listPostIds(socialRepo);
-  const posts: SocialPost[] = [];
+export default async function SocialPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const sp = await searchParams, value = (key: string) => Array.isArray(sp[key]) ? sp[key][0] : sp[key];
+  const { shop } = getTenant(), timeZone = process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC", now = Date.now();
+  const ids = await listPostIds(socialRepo), posts: SocialPost[] = []; let unreadable = 0;
+  // Posts are truth, including work that has never entered a calendar slot.
   for (const id of ids) {
-    try {
-      const raw = await socialRepo.readFile(postPath(id));
-      if (raw !== null) posts.push(parsePost(raw));
-    } catch {
-      // A post that will not parse is the detail page's problem to explain.
-      // Dropping it beats failing the whole list over one bad artifact.
-    }
+    try { const raw = await socialRepo.readFile(postPath(id)); if (raw !== null) posts.push(parsePost(raw)); }
+    catch { unreadable++; }
   }
-
-  const requested = Array.isArray(sp.month) ? sp.month[0] : sp.month;
-
-  const byMonth = new Map<string, Row[]>();
-  for (const post of posts) {
-    const month = postMonth(post);
-    if (requested && MONTH_RE.test(requested) && month !== requested) continue;
-    const rows = byMonth.get(month) ?? [];
-    rows.push({ post, slot: null, pillar: null });
-    byMonth.set(month, rows);
-  }
-
-  // The calendar contributes the slot and its pillar where it references a
-  // post. A post it does not mention keeps a null slot and shows as
-  // unscheduled, which is a true statement about it rather than a disappearance.
-  for (const month of byMonth.keys()) {
-    if (!MONTH_RE.test(month)) continue;
-    const calendar = await loadCalendar(shop, month);
-    if (!calendar) continue;
-    const slotByPost = new Map(
-      calendar.slots.filter((s) => s.postId).map((s) => [s.postId!, s]),
-    );
-    for (const row of byMonth.get(month) ?? []) {
-      const slot = slotByPost.get(row.post.id);
-      if (slot) {
-        row.slot = slot.slot;
-        row.pillar = slot.pillar ?? null;
-      }
-    }
-  }
-
-  for (const [month, rows] of byMonth) {
-    rows.sort(
-      (a, b) =>
-        (a.slot ?? a.post.scheduledAt ?? a.post.id).localeCompare(
-          b.slot ?? b.post.scheduledAt ?? b.post.id,
-        ),
-    );
-    if (!rows.length) byMonth.delete(month);
-  }
-
-  const staged = [...byMonth.keys()];
-
-  return (
-    <div className="px-8 py-10">
-      <div className="mx-auto max-w-[1200px]">
-        <PageHeader
-          eyebrow="Social"
-          title={
-            <>
-              Posts, <span className="italic">accounted for.</span>
-            </>
-          }
-          sub="Every staged post with its pillar, its channel, and its record — planned in chat, reviewed by you, published on approval."
-        />
-
-        {staged.length === 0 ? (
-          <div className="animate-enter-2 border border-hairline bg-raised">
-            <EmptyState
-              headline={
-                <>
-                  Nothing staged yet. Ask your marketing agent to plan{" "}
-                  <span className="italic">a month of social.</span>
-                </>
-              }
-              sub="The agent lays out slots from your social strategy — cadence per channel, pillars rotated by weight — then writes the posts that fill them."
-              action={
-                <Link href={`/chat?prompt=${encodeURIComponent(PLAN_PROMPT)}`} className="arrow-link text-[15px]">
-                  Plan a month
-                </Link>
-              }
-            />
-          </div>
-        ) : (
-          <div className="animate-enter-2 space-y-8">
-            {staged.map((month) => (
-              <section key={month}>
-                <div className="mb-3 flex items-baseline gap-4">
-                  <h2 className="font-display text-[20px]">{monthLabel(month)}</h2>
-                  <Link href={`/calendar?month=${month}`} className="arrow-link text-[13px]">
-                    On the calendar
-                  </Link>
-                  <a
-                    href={socialSheetLink(shop, month).url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="arrow-link text-[13px]"
-                  >
-                    Open the review sheet
-                  </a>
-                </div>
-                {/* One link for the whole month. Per-post links are the right
-                    shape for discussing one post and the wrong one for
-                    circulating a month — that was the lesson from email. */}
-                <div className="mb-3">
-                  <CopyLink
-                    url={socialSheetLink(shop, month).url}
-                    label={`Share ${monthLabel(month)} for review`}
-                  />
-                </div>
-                <ul className="divide-y divide-hairline border border-hairline bg-raised">
-                  {byMonth.get(month)!.map(({ post, slot, pillar }) => (
-                    <li key={post.id}>
-                      <Link
-                        href={`/social/posts/${encodeURIComponent(post.id)}`}
-                        className="group flex items-baseline gap-4 px-5 py-3.5 transition-colors duration-[160ms] hover:bg-gold-quiet/60"
-                      >
-                        <span className="tnum w-20 shrink-0 text-xs text-ink-3">
-                          {dayLabel(post.scheduledAt, slot)}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] leading-snug">{headline(post)}</span>
-                          <span className="mt-0.5 block text-[12px] text-ink-3">
-                            {post.channel}
-                            {pillar ? ` · ${pillar}` : ""}
-                          </span>
-                        </span>
-                        <Chip variant={statusVariant(post.status)}>{post.status}</Chip>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </div>
+  const months = [...new Set(posts.map(postMonth))].sort().reverse();
+  const current = new Date(now).toLocaleDateString("en-CA", { timeZone }).slice(0, 7);
+  const requested = value("month"), month = requested && (MONTH_RE.test(requested) || requested === "unscheduled") ? requested : months.includes(current) ? current : months[0] ?? current;
+  const requestedStage = value("stage"), stage = SOCIAL_STAGES.includes(requestedStage as SocialStage) ? requestedStage as SocialStage : "all";
+  const monthPosts = posts.filter(post => postMonth(post) === month);
+  const counts = Object.fromEntries(SOCIAL_STAGES.map(s => [s, monthPosts.filter(post => socialWorkflow(post, now).stage === s).length]));
+  const visible = monthPosts.filter(post => stage === "all" || socialWorkflow(post, now).stage === stage)
+    .sort((a, b) => (a.scheduledAt ?? a.plannedAt ?? a.id).localeCompare(b.scheduledAt ?? b.plannedAt ?? b.id));
+  const href = (s: string, m = month) => `/social?${new URLSearchParams({ month: m, stage: s })}`;
+  return <main className="px-4 py-8 sm:px-8 sm:py-10"><div className="mx-auto max-w-[1200px]">
+    <PageHeader eyebrow="Social" title="Your social publishing workflow" sub="See what needs review, what will publish automatically, and what is already live." />
+    <div className="mb-6 flex flex-wrap gap-5 text-[14px]">
+      <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt())}`}>Develop a story</Link>
+      <Link className="arrow-link" href={`/social/schedule?month=${MONTH_RE.test(month) ? month : current}`}>Review media and approve schedules</Link>
+      <Link className="arrow-link" href={`/calendar?month=${MONTH_RE.test(month) ? month : current}`}>Open publishing calendar</Link>
     </div>
-  );
+    <nav aria-label="Social month" className="mb-5 flex flex-wrap items-center gap-2">
+      {months.map(m => <Link key={m} href={href(stage, m)} aria-current={month === m ? "page" : undefined}><Chip variant={month === m ? "filled" : "outline"}>{monthLabel(m)}</Chip></Link>)}
+    </nav>
+    <h2 className="mb-3 font-display text-[23px]">{monthLabel(month)}</h2>
+    <nav aria-label="Post workflow stage" className="mb-5 flex flex-wrap gap-2">
+      {[{ id: "all", label: "All posts", count: monthPosts.length }, ...SOCIAL_STAGES.map(s => ({ id: s, label: SOCIAL_STAGE_LABELS[s], count: counts[s] }))].map(s =>
+        <Link key={s.id} href={href(s.id)} aria-current={stage === s.id ? "page" : undefined} className="border border-hairline bg-raised px-3 py-2 text-[13px] hover:border-gold">
+          <span className={stage === s.id ? "font-semibold text-ink" : "text-ink-2"}>{s.label}</span> <span className="tnum text-ink-3">{s.count}</span>
+        </Link>)}
+    </nav>
+    <p className="mb-5 text-[13px] text-ink-3">Draft proposals and prepared media do not publish automatically. Only approved schedules enter the release queue. Times shown in {timeZone}.</p>
+    {unreadable > 0 && <p role="status" className="mb-4 text-sm">{unreadable} post record(s) could not be read. They are not included in the counts.</p>}
+    {MONTH_RE.test(month) && <details className="mb-6 text-[13px] text-ink-3"><summary className="cursor-pointer">Share this month for read-only review</summary><div className="mt-3"><CopyLink url={socialSheetLink(shop, month).url} label={`Share ${monthLabel(month)} for review`} /></div></details>}
+    {!visible.length ? <EmptyState headline="No posts in this view." sub="Choose another stage or develop a story with your agent." /> :
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visible.map(post => {
+        const state = socialWorkflow(post, now), thumbnail = postThumbnailUrl(post, process.env.MOS_AGENTS_PUBLIC_URL ?? ""), detail = `/social/posts/${encodeURIComponent(post.id)}`;
+        const date = state.stage === "published" ? post.platform?.publishedAt ?? post.scheduledAt : post.scheduledAt ?? post.plannedAt;
+        const dateLabel = state.stage === "published" ? "Published" : post.status === "scheduled" ? "Release" : "Suggested";
+        const format = post.renderedVideo ? "Video loop" : post.renderedSequence ? `${post.renderedSequence.slides.length}-slide carousel` : "Draft creative";
+        return <article key={post.id} className="flex flex-col border border-hairline bg-raised">
+          <Link href={detail} aria-label={`Open post: ${headline(post)}`}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {thumbnail ? <img src={thumbnail} alt={headline(post)} className="h-52 w-full border-b border-hairline object-contain" loading="lazy" /> : <div className="flex h-24 items-center justify-center border-b border-hairline text-sm text-ink-3">Media not prepared yet</div>}
+          </Link>
+          <div className="flex flex-1 flex-col p-4">
+            <div className="mb-2"><Chip variant={state.variant}>{state.label}</Chip></div>
+            <h3 className="mb-2 line-clamp-3 text-[16px] leading-snug"><Link href={detail}>{headline(post)}</Link></h3>
+            <p className="mb-2 text-[12px] text-ink-3">{post.channel}{post.channelAccount ? ` · @${post.channelAccount.username}` : ""} · {format}</p>
+            <p className="mb-3 text-[13px] leading-relaxed text-ink-2">{state.explanation}</p>
+            {date && <p className="mb-3 text-[12px] text-ink-2">{dateLabel}: {new Date(date).toLocaleString("en-US", { timeZone, dateStyle: "medium", timeStyle: "short" })}</p>}
+            <div className="mt-auto flex flex-wrap gap-x-4 gap-y-2 border-t border-hairline pt-3 text-[13px]">
+              {state.stage === "published" && post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
+              {state.stage === "ready" && <Link className="arrow-link" href={socialPostReviewHref(post, shop)}>Review this post</Link>}
+              <Link className="arrow-link" href={detail}>{state.stage === "attention" ? "Check delivery record" : "Post details"}</Link>
+              <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve story</Link>
+            </div>
+          </div>
+        </article>;
+      })}</div>}
+  </div></main>;
 }

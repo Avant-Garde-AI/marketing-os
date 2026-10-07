@@ -8,6 +8,8 @@ storyboard, imagery, publication, and learning. It incorporates the supplied
 research and TRD, the actual repository boundaries, and the live corpus pilot.
 Capabilities described as planned are not implemented merely by appearing here.
 
+**October 7 owner priority update:** the [operator/narrative roadmap](plans/storyboard-harness/OPERATOR-NARRATIVE-ROADMAP-2026-10-07.md) supersedes immediate rollout ordering: clarify console states; operate/measure the live batch; build operator briefs, shortlist/revision workflows and targeted category research; expand monthly production with corpus-supported narratives. Customer intelligence adapters remain deferred. The linked record distinguishes implemented console changes from planned workbench/research capabilities.
+
 ## Contents
 
 1. [Outcome and scope](#1-outcome-and-scope)

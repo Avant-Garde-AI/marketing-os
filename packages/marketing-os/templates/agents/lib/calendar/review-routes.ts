@@ -4,6 +4,8 @@ import { getTenant } from "../tenant-context";
 import { detailRouteFor } from "./routes";
 import { emailReviewLink } from "../email/review-links";
 import { socialReviewLink, socialCarouselReviewLink } from "../social/review-links";
+import type { SocialPost } from "../social/types";
+import { groupKey } from "../social/projection";
 
 /**
  * Where a calendar card clicks through to.
@@ -24,13 +26,19 @@ export const channelReviewRoute: Record<string, (itemId: string, shop: string) =
   // A social review room is keyed by GROUP. For an ungrouped post the group key
   // IS the post id, and loadPostGroup resolves a member id to its group, so an
   // item id is always a valid key.
-  social: (itemId, shop) => {
-    const repo = getTenant().githubRepo ?? process.env.GITHUB_REPO;
-    // The same signed repo scope is accepted by both generation and generic review rooms.
-    return repo ? socialCarouselReviewLink(shop, itemId, repo).url : socialReviewLink(shop, itemId).url;
-  },
+  // The index cannot distinguish carousel manifests, loops and legacy boards.
+  // The authenticated post record shows final media and chooses its real review route.
+  social: (itemId) => detailRouteFor("social", itemId)!,
   email: (itemId, shop) => emailReviewLink(shop, itemId).url,
 };
+
+/** Receipt-aware routing: a repo-scoped carousel link must never stand in for a generic/loop review. */
+export function socialPostReviewHref(post: SocialPost, shop: string): string {
+  const repo = getTenant().githubRepo ?? process.env.GITHUB_REPO;
+  if (repo && post.renderedSequence && "origin" in post.renderedSequence && post.renderedSequence.origin === "generation-delivery")
+    return socialCarouselReviewLink(shop, post.id, repo).url;
+  return socialReviewLink(shop, groupKey(post)).url;
+}
 
 export function calendarHrefFor(channel: string, itemId: string, shop: string): string | null {
   const review = channelReviewRoute[channel];

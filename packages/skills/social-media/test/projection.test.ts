@@ -42,6 +42,14 @@ function post(overrides: Partial<SocialPost> = {}): SocialPost {
 }
 
 describe("postMonth", () => {
+  it("uses actual publication time for history without fabricating a schedule", () => {
+    const p = post({ status: "published", platform: { id: "ig", permalink: "https://instagram.com/p/live", publishedAt: "2026-11-01T15:00:00Z" } });
+    expect(postMonth(p)).toBe("2026-11");
+    expect(postCalendarProjection(p, PUBLIC_URL).scheduledAt).toBe(p.platform!.publishedAt);
+    expect(postIndexRow(p).scheduledAt).toBeNull();
+    expect(p.approval).toBeUndefined();
+    expect(postMonth({ ...p, status: "proposed" })).toBe("2026-09");
+  });
   it("prefers the schedule", () => {
     expect(postMonth(post({ scheduledAt: "2026-10-02T15:00:00+00:00" }))).toBe("2026-10");
   });

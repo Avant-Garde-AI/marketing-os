@@ -6,7 +6,7 @@ import { getTenant } from "@/lib/tenant-context";
 import { loadPost } from "@/lib/social/console-data";
 import { postThumbnailUrl } from "@/lib/social/projection";
 import { socialWorkflow, socialStoryPrompt } from "@/lib/social/workflow";
-import { calendarHrefFor } from "@/lib/calendar/review-routes";
+import { socialPostReviewHref } from "@/lib/calendar/review-routes";
 
 /**
  * Social post detail (spec 24 §6): the post spec as the human reads it — the
@@ -124,7 +124,7 @@ export default async function SocialPostPage({
           {when && <p className="mb-3 text-sm">{state.stage === "published" ? "Published" : post.scheduledAt ? "Release time" : "Suggested time"}: {when}</p>}
           <div className="flex flex-wrap gap-5 text-sm">
             {post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
-            {state.stage === "ready" && <Link className="arrow-link" href={calendarHrefFor("social", post.id, shop) ?? `/social/schedule?month=${month ?? new Date().toISOString().slice(0, 7)}`}>Review and approve this post</Link>}
+            {state.stage === "ready" && <Link className="arrow-link" href={socialPostReviewHref(post, shop)}>Review this post</Link>}
             {month && <Link className="arrow-link" href={`/social/schedule?month=${month}`}>Review month's publishing schedule</Link>}
             <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve story with the agent</Link>
           </div>

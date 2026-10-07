@@ -3,7 +3,7 @@ import { PageHeader, Chip, EmptyState } from "@/components/primitives";
 import { CopyLink } from "@/components/copy-link";
 import { getTenant } from "@/lib/tenant-context";
 import { socialSheetLink } from "@/lib/social/review-links";
-import { calendarHrefFor } from "@/lib/calendar/review-routes";
+import { socialPostReviewHref } from "@/lib/calendar/review-routes";
 import { postMonth, postThumbnailUrl } from "@/lib/social/projection";
 import { listPostIds, parsePost, postPath } from "@/lib/social/artifacts";
 import { socialRepo } from "@/lib/social/repo";
@@ -77,7 +77,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
             {date && <p className="mb-3 text-[12px] text-ink-2">{dateLabel}: {new Date(date).toLocaleString("en-US", { timeZone, dateStyle: "medium", timeStyle: "short" })}</p>}
             <div className="mt-auto flex flex-wrap gap-x-4 gap-y-2 border-t border-hairline pt-3 text-[13px]">
               {state.stage === "published" && post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
-              {state.stage === "ready" && <Link className="arrow-link" href={calendarHrefFor("social", post.id, shop) ?? detail}>Review this post</Link>}
+              {state.stage === "ready" && <Link className="arrow-link" href={socialPostReviewHref(post, shop)}>Review this post</Link>}
               <Link className="arrow-link" href={detail}>{state.stage === "attention" ? "Check delivery record" : "Post details"}</Link>
               <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve story</Link>
             </div>

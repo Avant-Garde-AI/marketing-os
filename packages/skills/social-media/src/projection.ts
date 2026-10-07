@@ -63,6 +63,8 @@ const ID_DAY_RE = /^(\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01]))/;
  * this. A read model may say "which day" without the record claiming a time.
  */
 function plannedDay(post: SocialPost): string | null {
+  if ((post.status === "published" || post.status === "measured") && post.platform?.publishedAt)
+    return post.platform.publishedAt;
   if (post.scheduledAt) return post.scheduledAt;
   if (post.plannedAt) return post.plannedAt;
   const day = post.id.match(ID_DAY_RE)?.[1];
@@ -76,6 +78,8 @@ function plannedDay(post: SocialPost): string | null {
  * the shared calendar.
  */
 export function postMonth(post: SocialPost): string {
+  if ((post.status === "published" || post.status === "measured") && post.platform?.publishedAt)
+    return post.platform.publishedAt.slice(0, 7);
   if (post.scheduledAt) return post.scheduledAt.slice(0, 7);
   if (post.plannedAt) return post.plannedAt.slice(0, 7);
   return post.id.match(ID_MONTH_RE)?.[1] ?? UNSCHEDULED_MONTH;

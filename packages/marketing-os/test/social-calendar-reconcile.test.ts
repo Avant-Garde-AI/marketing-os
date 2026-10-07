@@ -5,6 +5,11 @@ vi.mock("../templates/agents/lib/social/index-sync",()=>({syncPostIndex:m.sync})
 vi.mock("../templates/agents/lib/social/publish-lock",()=>({withSocialPostLock:m.lock}));
 import { reconcileSocialCalendar } from "../templates/agents/lib/social/calendar-reconcile";
 import { serializePost } from "../templates/agents/lib/social/artifacts";
+it("includes an immediate publication with no planned date in calendar history",async()=>{
+  m.read.mockResolvedValue(serializePost({...p,plannedAt:undefined,status:"published",platform:{id:"ig-post",permalink:"https://instagram.com/p/result",publishedAt:"2099-01-04T15:00:42Z"}}));
+  expect((await reconcileSocialCalendar("store.myshopify.com","2099-01")).indexed).toBe(1);
+  expect(m.sync.mock.calls[0][1].scheduledAt).toBeUndefined();
+});
 const p={id:"2099-01-04-loop",channel:"instagram",copy:"caption",assetRefs:[],targetLink:"https://store.example",provenance:[],status:"asset_ready" as const,body:"",plannedAt:"2099-01-04T15:00:00Z"};
 beforeEach(()=>{vi.clearAllMocks();m.list.mockResolvedValue([`social/posts/${p.id}/post.md`]);m.read.mockResolvedValue(serializePost(p));m.sync.mockResolvedValue({ok:true});m.lock.mockImplementation(async(_id,run)=>run())});
 it("repairs dated cards from file truth within the publish lock without changing consent",async()=>{expect(await reconcileSocialCalendar("store.myshopify.com","2099-01")).toEqual({indexed:1,failures:[]});expect(m.sync).toHaveBeenCalledWith("store.myshopify.com",p);expect(m.lock).toHaveBeenCalledWith(p.id,expect.any(Function))});

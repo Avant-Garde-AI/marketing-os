@@ -3,6 +3,7 @@ import { socialRepo } from "./repo";
 import { parsePost } from "./artifacts";
 import { syncPostIndex } from "./index-sync";
 import { withSocialPostLock } from "./publish-lock";
+import { postMonth } from "./projection";
 export async function reconcileSocialCalendar(shop: string, month: string) {
   const report = { indexed: 0, failures: [] as string[] };
   try {
@@ -13,7 +14,7 @@ export async function reconcileSocialCalendar(shop: string, month: string) {
         const raw = await socialRepo.readFile(path);
         if (!raw) return;
         const post = parsePost(raw);
-        if (!post.plannedAt?.startsWith(month)) return;
+        if (postMonth(post) !== month || !(post.plannedAt || post.scheduledAt || post.platform?.publishedAt)) return;
         if (post.id !== id) throw new Error("Artifact ID differs from calendar path");
         const result = await syncPostIndex(shop, post);
         if (result.ok) report.indexed++;

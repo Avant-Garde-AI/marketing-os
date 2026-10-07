@@ -5,6 +5,8 @@ import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitiv
 import { getTenant } from "@/lib/tenant-context";
 import { loadPost } from "@/lib/social/console-data";
 import { postThumbnailUrl } from "@/lib/social/projection";
+import { socialWorkflow, socialStoryPrompt } from "@/lib/social/workflow";
+import { calendarHrefFor } from "@/lib/calendar/review-routes";
 
 /**
  * Social post detail (spec 24 §6): the post spec as the human reads it — the
@@ -15,13 +17,6 @@ import { postThumbnailUrl } from "@/lib/social/projection";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-function statusVariant(status: string): "filled" | "outline" | "attention" {
-  if (status === "published" || status === "measured") return "filled";
-  if (status === "approved" || status === "asset_ready" || status === "scheduled")
-    return "attention";
-  return "outline";
-}
 
 /** owner claims read as decisions, data claims as evidence, agent as proposal. */
 function originVariant(origin: string): "filled" | "outline" | "attention" {
@@ -72,16 +67,18 @@ export default async function SocialPostPage({
 
   const { post, studioPath } = detail;
 
-  const creativeSrc = postThumbnailUrl(post, publicUrl);
-  const month = post.scheduledAt?.slice(0, 7);
-  const when = post.scheduledAt
-    ? new Date(post.scheduledAt).toLocaleString("en-US", {
+  const creativeSrc = postThumbnailUrl(post, publicUrl), state = socialWorkflow(post);
+  const date = state.stage === "published" ? post.platform?.publishedAt ?? post.scheduledAt : post.scheduledAt ?? post.plannedAt;
+  const month = (post.scheduledAt ?? post.plannedAt)?.slice(0, 7);
+  const when = date
+    ? new Date(date).toLocaleString("en-US", {
         month: "long",
         day: "numeric",
         year: "numeric",
         hour: "numeric",
         minute: "2-digit",
-        timeZone: "UTC",
+        timeZone: process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC",
+        timeZoneName: "short",
       })
     : null;
 
@@ -93,7 +90,7 @@ export default async function SocialPostPage({
             href={month ? `/social?month=${month}` : "/social"}
             className="text-[13px] text-ink-3 transition-colors duration-[160ms] hover:text-gold"
           >
-            ← Back to the calendar
+            ← Back to Social
           </Link>
         </div>
 
@@ -110,7 +107,7 @@ export default async function SocialPostPage({
 
         {/* Status line */}
         <div className="animate-enter-2 mb-6 flex flex-wrap items-center gap-2">
-          <Chip variant={statusVariant(post.status)}>{post.status.replace(/_/g, " ")}</Chip>
+          <Chip variant={state.variant}>{state.label}</Chip>
           {post.copyFormulaRef && <Chip variant="outline">formula: {post.copyFormulaRef}</Chip>}
           <a
             href={post.targetLink}
@@ -118,10 +115,22 @@ export default async function SocialPostPage({
             rel="noreferrer"
             className="arrow-link ml-1 text-[13.5px]"
           >
-            {post.targetLink}
+            View referenced artwork or collection
           </a>
         </div>
 
+        <div className="mb-6 border border-hairline bg-raised p-5">
+          <p className="mb-3 text-[14px] text-ink-2">{state.explanation}</p>
+          {when && <p className="mb-3 text-sm">{state.stage === "published" ? "Published" : post.scheduledAt ? "Release time" : "Suggested time"}: {when}</p>}
+          <div className="flex flex-wrap gap-5 text-sm">
+            {post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
+            {state.stage === "ready" && <Link className="arrow-link" href={calendarHrefFor("social", post.id, shop) ?? `/social/schedule?month=${month ?? new Date().toISOString().slice(0, 7)}`}>Review and approve this post</Link>}
+            {month && <Link className="arrow-link" href={`/social/schedule?month=${month}`}>Review month's publishing schedule</Link>}
+            <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve story with the agent</Link>
+          </div>
+          {post.publishAttempt && <p className="mt-3 text-[13px] text-ink-3">Delivery attempt: {post.publishAttempt.state}{post.platform?.id ? ` · Platform post ${post.platform.id}` : ""}</p>}
+          {post.failure && <p role="status" className="mt-3 text-sm">{post.failure}</p>}
+        </div>
         <div className="animate-enter-2 space-y-6">
           {/* The copy — the artifact itself, quoted */}
           <SectionCard title="The copy">
@@ -168,7 +177,12 @@ export default async function SocialPostPage({
                 was showing perfectly well. Same export URL the review room and
                 the calendar thumbnail use: re-rendered on GET from the file id,
                 no signature, no expiry. */}
-            {creativeSrc ? (
+            {post.renderedVideo ? <video controls loop playsInline preload="metadata" poster={post.renderedVideo.poster.url} src={post.renderedVideo.video.url} className="mb-3 max-h-[620px] w-full" /> : post.renderedSequence ? <div className="grid gap-3 sm:grid-cols-3">
+              {post.renderedSequence.slides.map((slide, index) => <figure key={slide.sha256}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}<img src={slide.url} alt={`Slide ${index + 1}`} className="w-full border border-hairline object-contain" />
+                <figcaption className="mt-2 text-xs text-ink-3">Slide {index + 1}</figcaption>
+              </figure>)}
+            </div> : creativeSrc ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={creativeSrc}
@@ -177,13 +191,13 @@ export default async function SocialPostPage({
               />
             ) : null}
             {post.assetRefs.length > 0 ? (
-              <ul className="space-y-1.5">
+              <details className="mt-4 text-xs text-ink-3"><summary className="cursor-pointer">Source asset records</summary><ul className="mt-2 space-y-1.5">
                 {post.assetRefs.map((ref) => (
                   <li key={ref} className="tnum text-[13.5px] text-ink-2">
                     {ref}
                   </li>
                 ))}
-              </ul>
+              </ul></details>
             ) : creativeSrc ? null : (
               <p className="text-sm text-ink-2">
                 No creative yet — compose it on a Design Surface and it appears here.

@@ -121,7 +121,7 @@ export default async function SocialPostPage({
 
         <div className="mb-6 border border-hairline bg-raised p-5">
           <p className="mb-3 text-[14px] text-ink-2">{state.explanation}</p>
-          {when && <p className="mb-3 text-sm">{state.stage === "published" ? "Published" : post.scheduledAt ? "Release time" : "Suggested time"}: {when}</p>}
+          {when && <p className="mb-3 text-sm">{state.stage === "published" ? "Published" : post.status === "scheduled" ? "Release time" : "Suggested time"}: {when}</p>}
           <div className="flex flex-wrap gap-5 text-sm">
             {post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
             {state.stage === "ready" && <Link className="arrow-link" href={socialPostReviewHref(post, shop)}>Review this post</Link>}

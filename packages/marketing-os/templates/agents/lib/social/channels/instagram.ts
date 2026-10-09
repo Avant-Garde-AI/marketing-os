@@ -30,6 +30,7 @@
 
 import type { SocialChannelAdapter, SocialPost } from "../types";
 import type { ChannelTokenSource } from "./index";
+import { readInstagramOutcomes, InstagramReadRejected } from "../observations";
 
 const GRAPH_BASE = () =>
   (process.env.SOCIAL_IG_GRAPH_BASE ?? "https://graph.instagram.com/v23.0").replace(/\/$/, "");
@@ -94,6 +95,29 @@ async function verifiedDestination(tokens: ChannelTokenSource, post: SocialPost,
   if (identity.id !== post.channelAccount.id || identity.username !== post.channelAccount.username)
     throw new Error("Instagram destination changed since approval");
   return identity.id;
+}
+
+/** Readback only. The recorded destination must match the live connected account. */
+export async function instagramPostOutcomes(post: SocialPost, tokens: ChannelTokenSource, now = new Date()) {
+  const base = new URL(GRAPH_BASE());
+  if (base.protocol !== "https:" || !["graph.instagram.com", "graph.facebook.com"].includes(base.hostname) || base.username || base.password)
+    throw new Error("Instagram readback requires an official Graph API host");
+  if (post.channel !== "instagram" || !["published", "measured"].includes(post.status) || !post.platform?.id || !/^\d+$/.test(post.platform.id))
+    throw new Error("Outcome readback requires a published Instagram post");
+  if (!post.channelAccount) throw new Error("Outcome readback requires a recorded Instagram destination");
+  const identity = await instagramIdentity(tokens);
+  if (identity.id !== post.channelAccount.id || identity.username !== post.channelAccount.username)
+    throw new Error("Instagram destination differs from this post");
+  const token = await tokens.accessToken("instagram");
+  return readInstagramOutcomes(post, async (path, params) => {
+    const url = new URL(`${GRAPH_BASE()}${path}`);
+    for (const [name, parameter] of Object.entries(params)) url.searchParams.set(name, parameter);
+    const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new InstagramReadRejected();
+    const body: unknown = await response.json();
+    if (body && typeof body === "object" && "error" in body) throw new InstagramReadRejected();
+    return body;
+  }, now);
 }
 
 /** Step 1 — create the (inert) media container. Nothing publishes here. */

@@ -8,6 +8,9 @@
  */
 
 export * from "./types";
+export { observationSchema, observationPath, observationPrefix, postMediaHash, postCreativeHash,
+  readPostObservations, measureFrameDifferences, readInstagramOutcomes, InstagramReadRejected } from "./observations";
+export type { PostObservation, OutcomeMetric } from "./observations";
 export {
   STRATEGY_PATH,
   calendarPath,

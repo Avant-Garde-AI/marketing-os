@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitives";
 import { PostDecision } from "@/components/review/post-decision";
+import { PostObservations } from "@/components/review/post-observations";
 import { getTenant } from "@/lib/tenant-context";
 import { loadPost } from "@/lib/social/console-data";
 import { postThumbnailUrl } from "@/lib/social/projection";
@@ -37,7 +38,8 @@ export default async function SocialPostPage({
 }) {
   // Next delivers route params already URL-decoded; loadPost rejects bad ids.
   const { id } = await params;
-  const { shop } = getTenant();
+  const tenant = getTenant();
+  const { shop } = tenant;
   // Same public base the review room and calendar thumbnails use.
   const publicUrl = (process.env.MOS_AGENTS_PUBLIC_URL ?? "").replace(/\/$/, "");
   const detail = await loadPost(shop, id);
@@ -136,6 +138,7 @@ export default async function SocialPostPage({
           </div>
           {post.publishAttempt && <p className="mt-3 text-[13px] text-ink-3">Delivery attempt: {post.publishAttempt.state}{post.platform?.id ? ` · Platform post ${post.platform.id}` : ""}</p>}
           {post.failure && <p role="status" className="mt-3 text-sm">{post.failure}</p>}
+          <PostObservations post={post} tenant={tenant} />
         </div>
         <div className="animate-enter-2 space-y-6">
           {/* The creative */}

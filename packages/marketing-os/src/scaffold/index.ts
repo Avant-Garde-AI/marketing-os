@@ -1579,6 +1579,21 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/observations.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/observations.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/review/post-observations.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/post-observations.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/inspect-social-post.ts"),
+      targetPath: path.join(targetDir, "agents/scripts/inspect-social-post.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/api/social/scheduling/route.ts"),
       targetPath: path.join(targetDir, "agents/app/api/social/scheduling/route.ts"),
       overwrite: "skip",

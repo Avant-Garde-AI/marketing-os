@@ -32,6 +32,7 @@ import {
   serializePost,
 } from "../../../lib/social/artifacts";
 import { socialRepo } from "../../../lib/social/repo";
+import { observationSchema, readPostObservations } from "../../../lib/social/observations";
 import { paletteOf } from "../../../lib/imagery/palette";
 import { linkPostToCalendarSlot, upsertCalendar, upsertPost } from "../../../lib/social/authoring";
 import { scaffoldSocialSystem } from "../../../lib/social/scaffold";
@@ -132,6 +133,18 @@ const socialLinkDesign = createTool({
       postId: input.postId,
       studioPath: studioPath(input.teamId, input.fileId, input.pageId),
     };
+  },
+});
+
+const socialPostObservations = createTool({
+  id: "social_post_observations",
+  description: "Read stored motion diagnostics and Instagram outcome snapshots for the current post media/content revision. Older observations remain historical. Missing metrics are unavailable, never zero; frame changes do not prove story quality or artwork fidelity. This tool performs no provider calls, generation, pattern admission or scheduling writes.",
+  inputSchema: z.object({ postId: z.string().regex(/^[A-Za-z0-9_-][A-Za-z0-9._-]*$/) }),
+  outputSchema: z.object({ motion: observationSchema.nullable(), outcomes: observationSchema.nullable(), unreadable: z.number(), historical: z.number() }),
+  execute: async ({ postId }) => {
+    const raw = await socialRepo.readFile(postPath(postId));
+    if (!raw) throw new Error("Post not found");
+    return readPostObservations(socialRepo, parsePost(raw));
   },
 });
 
@@ -582,6 +595,7 @@ export const socialTools = {
   social_review_notes_resolve: socialReviewNotesResolve,
   social_calendar_upsert: socialCalendarUpsert,
   social_post_upsert: socialPostUpsert,
+  social_post_observations: socialPostObservations,
   social_plan_propose: toMastraTool(defs.social_plan_propose),
   social_calendar_read: toMastraTool(defs.social_calendar_read),
   social_post_read: toMastraTool(defs.social_post_read),

@@ -315,6 +315,9 @@ async function hostImagesOnKlaviyo(
     for (const block of (section as { blocks?: Array<Record<string, unknown>> }).blocks ?? []) {
       add(block.imageUrl, (u) => { block.imageUrl = u; });
       add(block.portraitUrl, (u) => { block.portraitUrl = u; });
+      // An `image` block carries its url as `src`. Missing it here let a
+      // campaign pass the preview and fail at execute, after approval.
+      if (block.kind === "image") add(block.src, (u) => { block.src = u; });
       for (const key of ["products", "pieces", "items"]) {
         for (const item of (block[key] as Array<Record<string, unknown>>) ?? []) {
           add(item.imageUrl, (u) => { item.imageUrl = u; });

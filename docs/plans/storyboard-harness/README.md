@@ -10,6 +10,7 @@ governed generation, evaluation, and rollout.
 | [Core plan](../../STORYBOARD-ARCHITECTURE-AND-IMPLEMENTATION.md) | Full architecture, contracts, research experiments, gates and implementation work packages |
 | [Spec 33](../../../spec/33-THE-STORYBOARD-HARNESS.md) | Diagnosis, invariants and implementation history |
 | [October 9 roadmap refresh](ROADMAP-REFRESH-2026-10-09.md) | Latest main/production audit, delivered post editing/approval, loop quality priorities, existing research/planner reuse and hosted parity gap |
+| [Post observations](POST-OBSERVATIONS-2026-10-09.md) | Implemented media-bound frame diagnostics and publication/content-bound Instagram outcome snapshots, review display and read tool |
 | [Production handover](PRODUCTION-HANDOVER-2026-10-04.md) | Shipped social recipes, live calendar/review/approval/publishing boundaries, and remaining research |
 | [Operator and narrative roadmap](OPERATOR-NARRATIVE-ROADMAP-2026-10-07.md) | Clear publication stages, operator brief/revisions, category research, creative evaluation and deferred customer adapters |
 | [Calendar scheduling](CALENDAR-SCHEDULING.md) | Implemented batch approval, planned versus scheduled dates, and governed Reels |

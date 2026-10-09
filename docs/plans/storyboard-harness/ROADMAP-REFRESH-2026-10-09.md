@@ -35,6 +35,8 @@ The email improvements provide a useful interaction pattern: inspect what goes o
 
 ## Revised delivery sequence
 
+**First implemented slice:** [Post observations](POST-OBSERVATIONS-2026-10-09.md) adds immutable motion diagnostics and outcome snapshots, exact revision matching, review display and an agent read tool. Scheduled collection, alerts, human sequence judgments and the narrative workbench remain open; diagnostics do not satisfy their acceptance gates.
+
 ### 1. Establish generated quality and outcome feedback
 
 First evaluate the new loop against the earlier near-still results. Record visible change across the three beats, seam continuity, exact-artwork fidelity and readability on a phone. Inspect actual output, not only the prompt. Keep failed/rejected examples and reasons. Add a sequence QA record before binding future generated assets; one frame or successful provider completion is insufficient. Do not silently regenerate or replace already approved releases.

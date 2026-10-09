@@ -24,6 +24,7 @@ import { socialRepo } from "@/lib/social/repo";
 import { parsePost, postPath } from "@/lib/social/artifacts";
 import type { SocialPost } from "@/lib/social/types";
 import { PostDecision } from "@/components/review/post-decision";
+import { PostObservations } from "@/components/review/post-observations";
 import { SocialPublishing } from "@/components/review/social-publishing";
 import { carouselManifestHash } from "@/lib/social/generation-publishing";
 import { loadGenerationCarousel, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
@@ -262,6 +263,7 @@ async function CarouselReviewRoom({ shop, parentPostId, githubRepo, token, exp }
       <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>Review all three slides in order. Publishing requires a separate approval.</p>
     </section>
     {ready === 3 && <SocialPublishing postId={parentPostId} manifestHash={carouselManifestHash(manifest)} />}
+    {boundPost && <PostObservations post={boundPost} tenant={{ shop, storeSlug, githubRepo }} />}
     <SocialReviewNotes groupKey={parentPostId} shop={shop} token={token} exp={exp} repo={githubRepo}
       endpoint="/api/social/carousel/review-notes" initial={notes} slots={manifest.slides.map((slide) => slide.postId)} />
     <p style={{ fontSize: "0.75rem", opacity: 0.55, marginTop: "2rem" }}>This link works for about {ttl} more day{ttl === 1 ? "" : "s"}.</p>
@@ -415,6 +417,7 @@ export default async function SocialReviewRoom({
               <PostDecision postId={post.id} kind={postKind(post)} account={post.channelAccount?.username ?? null}
                 status={post.status} when={post.platform?.publishedAt ?? post.scheduledAt ?? post.plannedAt ?? null}
                 caption={latestCopy} permalink={post.platform?.permalink ?? null} />
+              <div style={{ padding: "0 0.85rem 0.85rem" }}><PostObservations post={post} tenant={{ shop, storeSlug }} /></div>
               {assets.length > 0 ? (
                 <section aria-label={`${post.channel} final creative`}>
                   {video && (

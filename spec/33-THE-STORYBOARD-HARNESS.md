@@ -1202,3 +1202,15 @@ in the original artwork remain artwork, not a removable mat. The fit is recorded
 in the job-bound delivery receipt, and revised final JPEG hashes replace the
 parent's references. This is a delivery revision, not a new generation request
 or publishing consent; a later publish approval must bind those final hashes.
+
+**Observed quality/outcome readback, 2026-10-09.** Immutable sidecars under
+`social/observations/{postId}/{recordHash}.json` bind frame diagnostics to ordered
+media bytes and Instagram outcomes to exact content plus publication identity.
+They are separate from consent and pattern admission. Missing/denied metrics
+are explicit unavailable values, not zero; caption edits preserve matching
+media diagnostics but invalidate outcome display for the old content. Sampled
+pixel differences can identify near-still results but cannot approve beat gain,
+artwork fidelity or a seamless return. Post details, signed review and the agent
+read the same validated records. Initial capture is an offline/read-only tool
+with local output reviewed through a store PR; governed fixed-window jobs and
+sequence/human judgments remain open. See [post observations](../docs/plans/storyboard-harness/POST-OBSERVATIONS-2026-10-09.md).

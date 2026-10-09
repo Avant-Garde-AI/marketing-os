@@ -43,6 +43,8 @@ export const observationSchema = z.object({
   if (!record.motion && !record.outcomes) ctx.addIssue({ code: "custom", message: "An observation needs motion diagnostics or outcomes" });
   if (record.outcomes && Date.parse(record.outcomes.publishedAt) > Date.parse(record.observedAt))
     ctx.addIssue({ code: "custom", message: "Observation precedes publication" });
+  if (record.outcomes && Math.abs(record.outcomes.ageHours - (Date.parse(record.observedAt) - Date.parse(record.outcomes.publishedAt)) / 3_600_000) > 0.001)
+    ctx.addIssue({ code: "custom", message: "Post age differs from the recorded timestamps" });
 });
 
 export type PostObservation = z.infer<typeof observationSchema>;
@@ -132,7 +134,7 @@ export async function readInstagramOutcomes(post: SocialPost, query: GraphRead, 
       const response = z.object({ data: z.array(z.object({ name: z.string(), period: z.string().optional(),
         values: z.array(z.object({ value: z.unknown() })).optional(), total_value: z.object({ value: z.unknown() }).optional() })) }).safeParse(raw);
       if (!response.success) return absent;
-      const entry = response.data.data.find(item => item.name === name && (!item.period || item.period === "lifetime"));
+      const entry = response.data.data.find(item => item.name === name && item.period === "lifetime");
       return value(entry?.total_value?.value ?? (entry?.values?.length === 1 ? entry.values[0]!.value : undefined));
     } catch (error) {
       return { status: "unavailable", reason: error instanceof InstagramReadRejected ? "provider-rejected" : "request-failed" };

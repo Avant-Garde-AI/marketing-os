@@ -55,13 +55,14 @@ describe("post observation bindings", () => {
     const value = record(), repo = repoFor(value);
     repo.files.set(observationPath(value), JSON.stringify({ ...value, motion: { ...value.motion, firstLastPercent: 0 } }));
     expect(await readPostObservations(repo, post, now)).toMatchObject({ motion: null, unreadable: 1 });
-    const future = { ...record(), observedAt: "2026-10-10T18:00:00Z" };
+    const future = { ...record(), outcomes: undefined, observedAt: "2026-10-10T18:00:00Z" };
     expect(await readPostObservations(repoFor(future), post, now)).toMatchObject({ motion: null, unreadable: 1 });
   });
   it("disallows fake missing-metric zeros, traversal, empty evidence and unknown approval fields", () => {
     expect(() => observationSchema.parse({ ...record(), postId: "../other" })).toThrow();
     expect(() => observationSchema.parse({ ...record(), outcomes: undefined, motion: undefined })).toThrow();
     expect(() => observationSchema.parse({ ...record(), approved: true })).toThrow();
+    expect(() => observationSchema.parse({ ...record(), outcomes: { ...record().outcomes!, ageHours: 99 } })).toThrow();
     const value = record(); value.outcomes!.metrics.reach = { status: "unavailable", reason: "not-returned", value: 0 } as never;
     expect(() => observationSchema.parse(value)).toThrow();
   });

@@ -33,10 +33,15 @@ export function ScheduleMonth({ campaigns }: { campaigns: MonthCampaign[] }) {
   const [running, setRunning] = useState(false);
   const [rows, setRows] = useState<Record<string, RowState>>({});
 
-  const pending = campaigns.filter((c) => ["proposed", "approved", "drafted"].includes(c.status));
-  if (pending.length === 0) return null;
+  // Frozen when the panel opens: the page refreshes as each one finishes, and a
+  // row that vanished the moment it succeeded read as if it had been dropped.
+  const [frozen, setFrozen] = useState<MonthCampaign[] | null>(null);
+  const source = frozen ?? campaigns;
+  const pending = source.filter((c) => ["proposed", "approved", "drafted"].includes(c.status));
   const ready = pending.filter((c) => c.scheduledAt && new Date(c.scheduledAt).getTime() > Date.now() + LEAD_MS);
   const late = pending.filter((c) => !ready.includes(c));
+  // Nothing schedulable means no button at all, not a button that does nothing.
+  if (ready.length === 0 && !open) return null;
 
   async function runAll() {
     setRunning(true);
@@ -52,12 +57,13 @@ export function ScheduleMonth({ campaigns }: { campaigns: MonthCampaign[] }) {
           body: JSON.stringify({ campaignId: c.id, through: true }),
         });
         const body = (await res.json().catch(() => ({}))) as {
+          ok?: boolean;
           status?: string;
           error?: string;
           steps?: Array<{ label: string; ok: boolean; message: string }>;
         };
         const failed = body.steps?.find((s) => !s.ok);
-        if (res.ok && body.status === "scheduled") {
+        if (res.ok && body.ok === true && body.status === "scheduled") {
           setRows((r) => ({ ...r, [c.id]: { state: "done" } }));
         } else {
           setRows((r) => ({
@@ -76,14 +82,16 @@ export function ScheduleMonth({ campaigns }: { campaigns: MonthCampaign[] }) {
     router.refresh();
   }
 
+  const allDone = ready.length > 0 && ready.every((c) => rows[c.id]?.state === "done");
+
   if (!open) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => { setFrozen(campaigns); setOpen(true); }}
         className="border border-hairline-strong bg-inverse px-4 py-2 text-[12px] font-medium uppercase tracking-[0.14em] text-paper transition-opacity hover:opacity-90"
       >
-        Schedule all {pending.length} unsent
+        Schedule all {ready.length} ready to send
       </button>
     );
   }
@@ -126,19 +134,19 @@ export function ScheduleMonth({ campaigns }: { campaigns: MonthCampaign[] }) {
           <button
             type="button"
             onClick={runAll}
-            disabled={running}
+            disabled={running || allDone}
             className="border border-hairline-strong bg-inverse px-4 py-2 text-[12px] font-medium uppercase tracking-[0.14em] text-paper transition-opacity hover:opacity-90 disabled:opacity-40"
           >
-            {running ? "Working…" : `Confirm — schedule these ${ready.length}`}
+            {running ? "Working…" : allDone ? "All scheduled" : `Confirm — schedule these ${ready.length}`}
           </button>
         )}
         {!running && (
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => { setOpen(false); setFrozen(null); }}
             className="text-[13px] text-ink-3 underline-offset-2 hover:underline"
           >
-            Cancel
+            {allDone ? "Close" : "Cancel"}
           </button>
         )}
         {running && (

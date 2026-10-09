@@ -23,6 +23,7 @@ import { emailRepo } from "../../../../lib/email/repo";
 import { campaignPath, parseCampaign } from "../../../../lib/email/artifacts";
 import { nextGateStep } from "../../../../lib/email/next-step";
 import { proposeAction } from "../../../../lib/actions/propose";
+import { approveAtGate, proposeAndApprove } from "../../../../lib/actions/approve";
 import { socialReviewOperator } from "../../../../lib/social/review-operator";
 
 export const runtime = "nodejs";
@@ -41,20 +42,6 @@ const AFTER: Record<string, string> = {
 };
 
 type StepResult = { label: string; ok: boolean; message: string };
-
-async function approveAtGate(proposalId: string, actor: string): Promise<{ status: string; message: string }> {
-  const url = process.env.MARKETING_OS_API_URL?.replace(/\/$/, "");
-  const secret = process.env.ACTIONS_GATE_SECRET;
-  if (!url || !secret) throw new Error("approvals need MARKETING_OS_API_URL and ACTIONS_GATE_SECRET");
-  const res = await fetch(`${url}/api/actions/review`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json", Accept: "application/json" },
-    body: JSON.stringify({ proposalId, approve: true, actor }),
-  });
-  const body = (await res.json().catch(() => ({}))) as { status?: string; message?: string; error?: string };
-  if (!res.ok) throw new Error(`approval gate refused ${proposalId} (${res.status}): ${body.error ?? body.message ?? "unknown"}`);
-  return { status: body.status ?? "unknown", message: body.message ?? "" };
-}
 
 export async function POST(req: NextRequest) {
   const body = (await req.json().catch(() => null)) as {
@@ -100,24 +87,37 @@ export async function POST(req: NextRequest) {
     // it straight back can return the previous status.
     let status: string = campaign.status;
     const steps: StepResult[] = [];
+    let redrafted = false;
     for (let i = 0; i < 3; i++) {
       const step = nextGateStep({ id: campaignId, status, scheduledAt: when });
       if (!step.ok) break;
       try {
-        const proposed = await proposeAction({ kind: step.kind, params: step.params });
+        let proposed;
+        try {
+          proposed = await proposeAction({ kind: step.kind, params: step.params });
+        } catch (e) {
+          // The email was edited after it went to Klaviyo. Scheduling refuses a
+          // stale draft, correctly; the fix is mechanical, so do it rather than
+          // hand the owner an instruction. One retry only.
+          if (step.kind !== "klaviyo.schedule_campaign" || redrafted || !/changed since it was drafted/i.test(e instanceof Error ? e.message : "")) throw e;
+          redrafted = true;
+          await proposeAndApprove({ kind: "klaviyo.create_campaign_draft", params: { campaignId } }, actor);
+          steps.push({ label: "Update the Klaviyo draft", ok: true, message: "Pushed the latest edits to Klaviyo" });
+          proposed = await proposeAction({ kind: step.kind, params: step.params });
+        }
         const decision = await approveAtGate(proposed.proposalId, actor);
         if (decision.status !== "executed") {
           steps.push({ label: step.label, ok: false, message: decision.message || decision.status });
-          return NextResponse.json({ status, steps }, { status: 409 });
+          return NextResponse.json({ ok: false, status, steps }, { status: 409 });
         }
         steps.push({ label: step.label, ok: true, message: proposed.summary });
         status = AFTER[step.kind] ?? status;
       } catch (e) {
         steps.push({ label: step.label, ok: false, message: e instanceof Error ? e.message : String(e) });
-        return NextResponse.json({ status, steps }, { status: 409 });
+        return NextResponse.json({ ok: false, status, steps }, { status: 409 });
       }
       if (!through) break;
     }
-    return NextResponse.json({ status, steps, ...(status === "scheduled" && when ? { sendAt: when } : {}) });
+    return NextResponse.json({ ok: true, status, steps, ...(status === "scheduled" && when ? { sendAt: when } : {}) });
   });
 }

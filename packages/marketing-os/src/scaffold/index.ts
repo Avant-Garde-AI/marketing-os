@@ -759,6 +759,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/app/api/email/campaign-edit/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/campaign-edit/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/api/email/review-approvals/route.ts"),
       targetPath: path.join(targetDir, "agents/app/api/email/review-approvals/route.ts"),
       overwrite: "skip",
@@ -966,6 +971,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/lib/actions/propose.ts"),
       targetPath: path.join(targetDir, "agents/lib/actions/propose.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/actions/approve.ts"),
+      targetPath: path.join(targetDir, "agents/lib/actions/approve.ts"),
       overwrite: "skip",
     },
     {
@@ -1221,6 +1231,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/lib/email/next-step.ts"),
       targetPath: path.join(targetDir, "agents/lib/email/next-step.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/owner-edit.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/owner-edit.ts"),
       overwrite: "skip",
     },
     {

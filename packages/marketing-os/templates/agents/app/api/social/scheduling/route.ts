@@ -5,6 +5,9 @@ import { runWithTenant } from "../../../../lib/tenant-context";
 import { pendingScheduleBatch, scheduleBatchSchema } from "../../../../lib/social/schedule-batch";
 import { hashPreview } from "../../../../lib/actions/hash";
 import { proposeAction } from "../../../../lib/actions/propose";
+import { approvalHash } from "../../../../lib/social/actions";
+import { parsePost, postPath } from "../../../../lib/social/artifacts";
+import { socialRepo } from "../../../../lib/social/repo";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 const json = (value: unknown, status = 200) => NextResponse.json(value, { status, headers: { "Cache-Control": "no-store" } });
@@ -14,9 +17,33 @@ export async function POST(req: NextRequest) {
   if (!user) return json({ error: "Sign in to approve schedules." }, 401);
   const body = await req.json().catch(() => null);
   try {
-    const params = scheduleBatchSchema.parse(body?.params);
     const shop = process.env.SHOPIFY_STORE_URL ?? "";
     return await runWithTenant({ shop, storeSlug: shop.replace(/\.myshopify\.com$/, ""), githubRepo: process.env.GITHUB_REPO ?? null }, async () => {
+      // One click from the post's own screen: the signed-in owner is looking at
+      // the final creative, caption and time, so asking for a card and then
+      // approving it are the same decision. Both still go through the gate.
+      if (body?.operation === "schedule") {
+        if (typeof body.postId !== "string") return json({ error: "postId required" }, 400);
+        const raw = await socialRepo.readFile(postPath(body.postId));
+        if (!raw) return json({ error: "Post not found" }, 404);
+        const post = parsePost(raw);
+        if (post.status !== "asset_ready") return json({ error: `This post is ${post.status}; only a ready post can be scheduled.` }, 409);
+        const when = post.plannedAt;
+        if (!when || Date.parse(when) <= Date.now()) return json({ error: "Pick a time in the future first.", needsTime: true }, 409);
+        const one = scheduleBatchSchema.parse({ entries: [{ postId: post.id, scheduledAt: when,
+          expectedMaterialHash: approvalHash({ ...post, scheduledAt: when }) }] });
+        const proposal = (await pendingScheduleBatch(one)) ?? await proposeAction({ kind: "social.schedule_batch", params: one });
+        const base = process.env.MARKETING_OS_API_URL?.replace(/\/$/, ""), secret = process.env.ACTIONS_GATE_SECRET;
+        if (!base || !secret) throw new Error("Approval gate unavailable");
+        const decided = await fetch(`${base}/api/actions/review`, { method: "POST",
+          headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ proposalId: proposal.proposalId, approve: true, actor: `social-review:${user.id}` }) });
+        const decision = await decided.json().catch(() => ({}));
+        const ok = decided.ok && decision.status === "executed";
+        return json({ ok, scheduledAt: when, summary: decision.message,
+          ...(!ok ? { error: decision.message ?? "Scheduling did not complete" } : {}) }, ok ? 200 : 409);
+      }
+      const params = scheduleBatchSchema.parse(body?.params);
       if (body.operation === "propose") {
         const pending = await pendingScheduleBatch(params);
         return json(pending ?? await proposeAction({ kind: "social.schedule_batch", params }));

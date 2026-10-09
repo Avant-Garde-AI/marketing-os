@@ -2,6 +2,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitives";
+import { PostDecision } from "@/components/review/post-decision";
 import { getTenant } from "@/lib/tenant-context";
 import { loadPost } from "@/lib/social/console-data";
 import { postThumbnailUrl } from "@/lib/social/projection";
@@ -119,47 +120,24 @@ export default async function SocialPostPage({
           </a>
         </div>
 
-        <div className="mb-6 border border-hairline bg-raised p-5">
-          <p className="mb-3 text-[14px] text-ink-2">{state.explanation}</p>
-          {when && <p className="mb-3 text-sm">{state.stage === "published" ? "Published" : post.status === "scheduled" ? "Release time" : "Suggested time"}: {when}</p>}
-          <div className="flex flex-wrap gap-5 text-sm">
-            {post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
-            {state.stage === "ready" && <Link className="arrow-link" href={socialPostReviewHref(post, shop)}>Review this post</Link>}
-            {month && <Link className="arrow-link" href={`/social/schedule?month=${month}`}>Review month's publishing schedule</Link>}
-            <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve story with the agent</Link>
+        <div className="animate-enter-2 mb-6">
+          <PostDecision
+            postId={post.id}
+            kind={`${titleCase(post.channel)} ${post.renderedVideo ? "Reel" : post.renderedSequence ? "carousel" : "post"}`}
+            account={post.channelAccount?.username ?? null}
+            status={post.status}
+            when={date ?? null}
+            caption={post.copy}
+            permalink={post.platform?.permalink ?? null}
+          />
+          <div className="mt-3 flex flex-wrap gap-5 text-sm">
+            {month && <Link className="arrow-link" href={`/social/schedule?month=${month}`}>The whole month's schedule</Link>}
+            <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve the story with the agent</Link>
           </div>
           {post.publishAttempt && <p className="mt-3 text-[13px] text-ink-3">Delivery attempt: {post.publishAttempt.state}{post.platform?.id ? ` · Platform post ${post.platform.id}` : ""}</p>}
           {post.failure && <p role="status" className="mt-3 text-sm">{post.failure}</p>}
         </div>
         <div className="animate-enter-2 space-y-6">
-          {/* The copy — the artifact itself, quoted */}
-          <SectionCard title="The copy">
-            <blockquote className="whitespace-pre-wrap border-l-2 border-gold pl-4 font-display text-[17px] leading-relaxed">
-              {post.copy}
-            </blockquote>
-          </SectionCard>
-
-          {/* The why — rationale prose + provenance-tagged claims */}
-          <SectionCard title="Why this post">
-            {post.body ? (
-              <div className="text-[14.5px] leading-relaxed text-ink-2">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body}</ReactMarkdown>
-              </div>
-            ) : (
-              <p className="text-sm text-ink-3">No rationale recorded.</p>
-            )}
-            {post.provenance.length > 0 && (
-              <ul className="mt-4 space-y-2 border-t border-hairline pt-4">
-                {post.provenance.map((p, i) => (
-                  <li key={i} className="flex items-baseline gap-3 text-[13.5px]">
-                    <Chip variant={originVariant(p.origin)}>{p.origin}</Chip>
-                    <span className="text-ink-2">{p.claim}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SectionCard>
-
           {/* The creative */}
           <SectionCard
             title="Creative"
@@ -204,6 +182,28 @@ export default async function SocialPostPage({
               </p>
             )}
           </SectionCard>
+
+          {/* The why — rationale prose + provenance-tagged claims */}
+          <SectionCard title="Why this post">
+            {post.body ? (
+              <div className="text-[14.5px] leading-relaxed text-ink-2">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.body}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-sm text-ink-3">No rationale recorded.</p>
+            )}
+            {post.provenance.length > 0 && (
+              <ul className="mt-4 space-y-2 border-t border-hairline pt-4">
+                {post.provenance.map((p, i) => (
+                  <li key={i} className="flex items-baseline gap-3 text-[13.5px]">
+                    <Chip variant={originVariant(p.origin)}>{p.origin}</Chip>
+                    <span className="text-ink-2">{p.claim}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SectionCard>
+
         </div>
       </div>
     </div>

@@ -47,6 +47,10 @@ export async function middleware(request: NextRequest) {
     // Authenticated in-route via getUser(), never by the review token.
     request.nextUrl.pathname === "/api/social/carousel/publishing" ||
     request.nextUrl.pathname === "/api/social/scheduling" ||
+    // The review room's in-place edits. Same posture as scheduling: reached
+    // from a public review page, so it must answer 401 itself rather than be
+    // redirected to an HTML login page a fetch would mistake for success.
+    request.nextUrl.pathname === "/api/social/post-edit" ||
     request.nextUrl.pathname.startsWith("/api/email/preview/") ||
     // Campaign imagery, addressed by content hash and HMAC-tokened like the
     // preview. These URLs are embedded in assembled email HTML, so they must be

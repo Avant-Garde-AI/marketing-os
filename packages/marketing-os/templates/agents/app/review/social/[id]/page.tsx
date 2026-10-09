@@ -23,8 +23,7 @@ import { generationDeliveryRepoFromPreview, loadGenerationDelivery } from "@/lib
 import { socialRepo } from "@/lib/social/repo";
 import { parsePost, postPath } from "@/lib/social/artifacts";
 import type { SocialPost } from "@/lib/social/types";
-import { SocialScheduling } from "@/components/review/social-scheduling";
-import { approvalHash } from "@/lib/social/actions";
+import { PostDecision } from "@/components/review/post-decision";
 import { SocialPublishing } from "@/components/review/social-publishing";
 import { carouselManifestHash } from "@/lib/social/generation-publishing";
 import { loadGenerationCarousel, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
@@ -49,6 +48,18 @@ function Gate({ headline, sub }: { headline: string; sub: string }) {
       <p style={{ opacity: 0.75, lineHeight: 1.6 }}>{sub}</p>
     </main>
   );
+}
+
+/** What a person would call this post, not its storage id. */
+function postKind(post: SocialPost): string {
+  const channel = post.channel.charAt(0).toUpperCase() + post.channel.slice(1);
+  if (post.renderedVideo) return `${channel} Reel`;
+  if (post.renderedSequence) return `${channel} carousel`;
+  return `${channel} post`;
+}
+
+function reviewTitle(post: SocialPost | null, id: string): string {
+  return post ? postKind(post) : id;
 }
 
 /** Portrait/story/square all read correctly if the frame keeps the platform's
@@ -347,38 +358,28 @@ export default async function SocialReviewRoom({
   const month = group.posts.find((p) => p.post.scheduledAt)?.post.scheduledAt?.slice(0, 7) ??
     postMonth ?? generationJobs[0]?.createdAt.slice(0, 7) ?? null;
   const sheet = month ? socialSheetLink(shop, month, ttl) : null;
-  const anyApproved = group.posts.some((p) => p.post.status === "scheduled" || p.post.status === "published");
+
+  const boundArtifacts = new Set(group.posts.flatMap(({ post }) =>
+    post.renderedVideo && "origin" in post.renderedVideo ? [post.renderedVideo.artifactId] : []));
+  const generationPanel = (job: GenerationReview) => <GenerationPanel key={job.id} job={job}
+    delivery={deliveries.get(job.id)?.delivery ?? null} deliveryFailed={deliveries.get(job.id)?.failed ?? false}
+    renderUrl={sceneRenderUrl(shop, job.postId, ttl)}
+    reelUrl={loopExportUrl(shop, job.postId, ttl, "reel")} feedUrl={loopExportUrl(shop, job.postId, ttl, "feed")}
+    exportState={loopExports.get(job.id) ?? null} />;
 
   return (
     <main style={{ maxWidth: 1100, margin: "2.5rem auto 5rem", padding: "0 1.25rem", fontFamily: "system-ui, sans-serif" }}>
       <header style={{ marginBottom: "1.75rem" }}>
         <p style={{ fontSize: "0.75rem", letterSpacing: "0.08em", textTransform: "uppercase", opacity: 0.6, margin: 0 }}>
-          {group.posts.length > 0
-            ? `Social review · ${group.posts.length} variant${group.posts.length === 1 ? "" : "s"}`
-            : `Social review · ${generationJobs[0]?.mechanic === "collection-scene" ? "collection scene" : "artwork loop"}`}
+          {group.posts.length > 1 ? `Social review · ${group.posts.length} versions` : "Social review"}
         </p>
-        <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0 0" }}>{id}</h1>
+        <h1 style={{ fontSize: "1.5rem", margin: "0.35rem 0 0" }}>{reviewTitle(group.posts[0]?.post ?? null, id)}</h1>
         {sheet && (
           <p style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>
             <a href={sheet.url}>See the whole month ({month})</a>
           </p>
         )}
       </header>
-
-      {anyApproved && (
-        <p
-          style={{
-            border: "1px solid rgba(0,0,0,0.15)",
-            borderRadius: 6,
-            padding: "0.65rem 0.9rem",
-            fontSize: "0.85rem",
-            marginBottom: "1.5rem",
-          }}
-        >
-          Part of this group is already scheduled or published. Notes remain useful; changing what ships
-          requires a separate approval.
-        </p>
-      )}
 
       {group.unreadable > 0 && (
         <p role="alert" style={{ color: "#a11", fontSize: "0.85rem", marginBottom: "1.5rem" }}>
@@ -392,11 +393,9 @@ export default async function SocialReviewRoom({
         </p>
       )}
 
-      {generationJobs.map((job) => <GenerationPanel key={job.id} job={job}
-        delivery={deliveries.get(job.id)?.delivery ?? null} deliveryFailed={deliveries.get(job.id)?.failed ?? false}
-        renderUrl={sceneRenderUrl(shop, job.postId, ttl)}
-        reelUrl={loopExportUrl(shop, job.postId, ttl, "reel")} feedUrl={loopExportUrl(shop, job.postId, ttl, "feed")}
-        exportState={loopExports.get(job.id) ?? null} />)}
+      {/* Once a post carries the finished creative, the brief, source and export
+          receipts are reference material — one link, below the decision. */}
+      {generationJobs.filter((job) => !boundArtifacts.has(job.artifactId)).map((job) => generationPanel(job))}
 
       {group.posts.length > 0 && <div
         style={{
@@ -413,45 +412,32 @@ export default async function SocialReviewRoom({
           const latestCopy = generation ? deliveries.get(generation.id)?.delivery?.caption ?? generation.caption : post.copy;
           return (
             <article key={post.id} style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
-              <div style={{ padding: "0.6rem 0.85rem", borderBottom: "1px solid rgba(0,0,0,0.08)", fontSize: "0.8rem" }}>
-                <strong>{post.channel}</strong>
-                <span style={{ opacity: 0.65 }}>
-                  {" · "}
-                  {post.scheduledAt ? new Date(post.scheduledAt).toLocaleString() : "unscheduled"}
-                  {" · "}
-                  {post.status}
-                </span>
-              </div>
+              <PostDecision postId={post.id} kind={postKind(post)} account={post.channelAccount?.username ?? null}
+                status={post.status} when={post.platform?.publishedAt ?? post.scheduledAt ?? post.plannedAt ?? null}
+                caption={latestCopy} permalink={post.platform?.permalink ?? null} />
               {assets.length > 0 ? (
                 <section aria-label={`${post.channel} final creative`}>
                   {video && (
                     <div>
-                      <div style={{ padding: "0.85rem", background: "#f4f2ef", fontSize: "0.8rem", overflowWrap: "anywhere" }}>
-                        <strong>Rendered video · final creative for review</strong>
-                        <p>Storyboard: {"origin" in video ? video.artifactId : video.storyboardId} · {(video.video.durationMs / 1000).toFixed(1)} seconds</p>
-                        <p>1080 × 1920 Reel. Review the full artwork and loop seam before approving its schedule.</p>
-                        <details>
-                          <summary>Render provenance</summary>
-                          <p>Storyboard hash: <code>{"origin" in video ? video.inputHash : video.storyboardHash}</code></p>
-                          <p>Review hash: <code>{"origin" in video ? video.deliveryHash : video.reviewHash}</code></p>
-                          <p>Video SHA-256: <code>{video.video.sha256}</code></p>
-                          <p>Poster SHA-256: <code>{video.poster.sha256}</code></p>
-                          <p>{video.sources.length} source asset{video.sources.length === 1 ? "" : "s"} bound in the render receipt</p>
-                        </details>
-                      </div>
-                      {post.status === "asset_ready" && post.plannedAt && <SocialScheduling entries={[{
-                        postId: post.id, scheduledAt: post.plannedAt,
-                        expectedMaterialHash: approvalHash({ ...post, scheduledAt: post.plannedAt }),
-                      }]} />}
                       <video controls loop playsInline preload="metadata" poster={video.poster.url}
                         width={video.video.width} height={video.video.height}
-                        style={{ width: "100%", height: "auto", background: "#111", display: "block" }}>
+                        style={{ width: "100%", maxWidth: 420, height: "auto", margin: "0 auto", background: "#111", display: "block" }}>
                         <source src={video.video.url} type={video.video.mimeType} />
                         Your browser cannot play this video.
                       </video>
                       <p style={{ padding: "0.7rem 0.85rem", margin: 0, fontSize: "0.85rem" }}>
                         <a href={video.video.url} target="_blank" rel="noopener noreferrer">Open or download video</a>
                       </p>
+                      <details style={{ padding: "0 0.85rem 0.85rem", fontSize: "0.8rem", overflowWrap: "anywhere" }}>
+                        <summary>Details</summary>
+                        <p>1080 × 1920 Reel · {(video.video.durationMs / 1000).toFixed(1)} seconds · {"origin" in video ? video.artifactId : video.storyboardId}</p>
+                        <p>Input hash: <code>{"origin" in video ? video.inputHash : video.storyboardHash}</code></p>
+                        <p>Review hash: <code>{"origin" in video ? video.deliveryHash : video.reviewHash}</code></p>
+                        <p>Video SHA-256: <code>{video.video.sha256}</code></p>
+                        <p>Cover SHA-256: <code>{video.poster.sha256}</code></p>
+                        <p>{video.sources.length} source artwork{video.sources.length === 1 ? "" : "s"} bound in the render receipt</p>
+                        {generation && generationPanel(generation)}
+                      </details>
                     </div>
                   )}
                   {sequence && (
@@ -515,9 +501,8 @@ export default async function SocialReviewRoom({
                 </div>
               )}
               <div style={{ padding: "0.85rem" }}>
-                <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: "0.92rem", lineHeight: 1.5, margin: 0 }}>{latestCopy}</p>
-                <p style={{ fontSize: "0.8rem", marginTop: "0.6rem", opacity: 0.75, wordBreak: "break-all" }}>
-                  → {post.targetLink}
+                <p style={{ fontSize: "0.8rem", margin: 0, opacity: 0.75, wordBreak: "break-all" }}>
+                  Links to {post.targetLink}
                 </p>
                 {studioPath && (
                   <p style={{ fontSize: "0.8rem", marginTop: "0.4rem" }}>

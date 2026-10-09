@@ -5,6 +5,7 @@ import { emailSheetLink } from "@/lib/email/review-links";
 import { getTenant } from "@/lib/tenant-context";
 import { CopyLink } from "@/components/copy-link";
 import { EmailPerformanceBand } from "@/components/email/performance";
+import { ScheduleMonth } from "@/components/email/schedule-month";
 
 /**
  * Email — the campaign library (WS4-R3, list side). Month-grouped rows from
@@ -130,6 +131,17 @@ export default async function EmailPage() {
                   <CopyLink
                     url={emailSheetLink(shop, month).url}
                     label={`Share ${monthLabel(month)} for review`}
+                  />
+                </div>
+                <div className="mb-3">
+                  <ScheduleMonth
+                    campaigns={byMonth.get(month)!.map((c) => ({
+                      id: c.id,
+                      subject: c.subject ?? `Campaign ${c.id}`,
+                      status: c.status,
+                      scheduledAt: c.scheduledAt,
+                      audience: c.audienceRefs.map((a) => a.name ?? a.key ?? a.id).filter(Boolean).join(", "),
+                    }))}
                   />
                 </div>
                 <ul className="divide-y divide-hairline border border-hairline bg-raised">

@@ -848,7 +848,9 @@ function approveCampaign(deps: EmailActionDeps): Action<ApproveCampaignParams> {
           { claim: "approved for drafting by an owner through the Action gate", origin: "owner" },
         ],
       };
-      await deps.repo.writeFile(campaignPath(next.id), serializeCampaign(next));
+      // Through saveCampaign, not repo.writeFile: a direct write left the
+      // console showing "proposed" for campaigns the owner had approved.
+      await saveCampaign(deps.repo, next);
       return {
         ok: true,
         summary: `Campaign ${next.id} approved — ready for klaviyo.create_campaign_draft`,

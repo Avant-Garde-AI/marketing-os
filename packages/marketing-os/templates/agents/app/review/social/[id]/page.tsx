@@ -24,7 +24,6 @@ import { socialRepo } from "@/lib/social/repo";
 import { parsePost, postPath } from "@/lib/social/artifacts";
 import type { SocialPost } from "@/lib/social/types";
 import { PostDecision } from "@/components/review/post-decision";
-import { socialReviewOperator } from "@/lib/social/review-operator";
 import { SocialPublishing } from "@/components/review/social-publishing";
 import { carouselManifestHash } from "@/lib/social/generation-publishing";
 import { loadGenerationCarousel, readPersistedCarouselImage, type GenerationCarousel } from "@/lib/social/generation-carousel";
@@ -354,9 +353,6 @@ export default async function SocialReviewRoom({
     );
   }
 
-  // A review link shows the page to anyone holding it; only a signed-in owner
-  // sees the controls. The routes behind them check the session again.
-  const signedIn = (await socialReviewOperator().catch(() => null)) !== null;
   const ttl = ttlRemaining(exp);
   const postMonth = generationJobs[0]?.postId.match(/^(\d{4}-(?:0[1-9]|1[0-2]))-/)?.[1] ?? null;
   const month = group.posts.find((p) => p.post.scheduledAt)?.post.scheduledAt?.slice(0, 7) ??
@@ -418,7 +414,7 @@ export default async function SocialReviewRoom({
             <article key={post.id} style={{ minWidth: 0, border: "1px solid rgba(0,0,0,0.12)", borderRadius: 8, overflow: "hidden" }}>
               <PostDecision postId={post.id} kind={postKind(post)} account={post.channelAccount?.username ?? null}
                 status={post.status} when={post.platform?.publishedAt ?? post.scheduledAt ?? post.plannedAt ?? null}
-                caption={latestCopy} permalink={post.platform?.permalink ?? null} signedIn={signedIn} />
+                caption={latestCopy} permalink={post.platform?.permalink ?? null} />
               {assets.length > 0 ? (
                 <section aria-label={`${post.channel} final creative`}>
                   {video && (

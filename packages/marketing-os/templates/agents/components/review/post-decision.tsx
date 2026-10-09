@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { OutlineButton, PrimaryButton } from "../primitives";
 
@@ -49,7 +49,6 @@ export function PostDecision({
   when: initialWhen,
   caption: initialCaption,
   permalink,
-  signedIn = true,
 }: {
   postId: string;
   /** "Instagram Reel", "Instagram carousel" — what a person would call it. */
@@ -60,8 +59,6 @@ export function PostDecision({
   when: string | null;
   caption: string;
   permalink?: string | null;
-  /** False on a review link opened without a console session. */
-  signedIn?: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
@@ -71,7 +68,19 @@ export function PostDecision({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [signedOut, setSignedOut] = useState(!signedIn);
+  // null until the session is known: a review link is public, and controls
+  // must not flash at someone who cannot use them.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const signedOut = signedIn !== true;
+  const setSignedOut = (out: boolean) => setSignedIn(!out);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/social/post-edit", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { signedIn: false }))
+      .then((b: { signedIn?: boolean }) => { if (live) setSignedIn(b.signedIn === true); })
+      .catch(() => { if (live) setSignedIn(false); });
+    return () => { live = false; };
+  }, []);
 
   const editable = status === "proposed" || status === "asset_ready" || status === "scheduled";
   const future = when ? new Date(when).getTime() > Date.now() : false;
@@ -83,7 +92,9 @@ export function PostDecision({
       const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (res.status === 401) { setSignedOut(true); return null; }
       const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-      if (!res.ok) { setMessage(typeof body.error === "string" ? body.error : `Something went wrong (${res.status}).`); return null; }
+      // `ok: true` in the body, not just a 2xx: a redirect to an HTML page is
+      // also a 2xx and must never read as "saved" or "scheduled".
+      if (!res.ok || body.ok !== true) { setMessage(typeof body.error === "string" ? body.error : `Something went wrong (${res.status}).`); return null; }
       return body;
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Something went wrong.");
@@ -174,7 +185,9 @@ export function PostDecision({
 
       {/* The decision */}
       <div className="mt-4 border-t border-hairline pt-4">
-        {signedOut ? (
+        {signedIn === null ? (
+          <p className="text-ink-3">Checking your sign-in…</p>
+        ) : signedOut ? (
           <p><a href={loginHref} className="underline">Sign in to approve or edit.</a> A review link on its own can only view and leave notes.</p>
         ) : status === "asset_ready" ? (
           <div className="flex flex-wrap items-center gap-3">

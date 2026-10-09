@@ -8,6 +8,11 @@ export const maxDuration = 60;
 const json = (value: unknown, status = 200) => NextResponse.json(value, { status, headers: { "Cache-Control": "no-store" } });
 const POST_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/;
 
+/** Is the person looking at this review page a signed-in owner? Decides whether the controls show. */
+export async function GET() {
+  return json({ signedIn: (await socialReviewOperator().catch(() => null)) !== null });
+}
+
 export async function POST(req: NextRequest) {
   if (req.headers.get("origin") !== req.nextUrl.origin) return json({ error: "Same-origin request required" }, 403);
   const user = await socialReviewOperator();

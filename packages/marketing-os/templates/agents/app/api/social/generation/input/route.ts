@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runWithTenant } from "../../../../../lib/tenant-context";
 import { socialRepo } from "../../../../../lib/social/repo";
 import { readGenerationInput } from "../../../../../lib/social/generation-input";
+import { artworkLoopBriefProblems } from "../../../../../lib/social/generation-plan";
 import { socialGenerationReviewLink } from "../../../../../lib/social/review-links";
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -25,6 +26,12 @@ export async function POST(req: NextRequest) {
     const githubRepo = process.env.MARKETING_OS_MODE === "hosted" ? body.githubRepo as string : null;
     const result = await runWithTenant({ shop: body.shop, storeSlug: body.shop.replace(/\.myshopify\.com$/, ""), githubRepo },
       () => readGenerationInput(socialRepo, body.id));
+    // Only the platform's prepare and submit paths read this route, so a brief
+    // refused here is refused before any credit is quoted or spent. Plans that
+    // already published are read elsewhere and stay readable.
+    const problems = artworkLoopBriefProblems(result.plan);
+    if (problems.length)
+      return NextResponse.json({ error: `Artwork loop brief ${body.id} refused: ${problems.join("; ")}` }, { status: 422 });
     return NextResponse.json({ plan: result.plan, prepared: result.prepared, inputHash: result.inputHash,
       ...(body.includeBytes === true ? { base64: result.base64 } : {}),
       previewUrl: socialGenerationReviewLink(body.shop, body.id, result.inputHash, githubRepo).url,

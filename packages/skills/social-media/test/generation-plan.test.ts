@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createHash } from "node:crypto";
-import { generationPlanCreativeHash, generationPlanSchema } from "../src/generation-plan";
+import { artworkLoopBriefProblems, generationPlanCreativeHash, generationPlanSchema } from "../src/generation-plan";
 
 const sha = "a".repeat(64);
 const source = {
@@ -63,5 +63,16 @@ describe("generation pilot plan", () => {
     expect(() => generationPlanSchema.parse({ ...single, sources: legacy.sources })).toThrow(/one source/);
     expect(() => generationPlanSchema.parse({ ...plan, sceneComposition: "single-artwork" })).toThrow(/no scene/);
     expect(() => generationPlanSchema.parse({ ...single, sceneComposition: "three-artworks" })).toThrow();
+  });
+
+  it("refuses a new loop brief that asks for invisible motion, has no story, or times the caption", () => {
+    const story = "Beat 1: hold the work. Beat 2: wind bends the leaves through a wide arc. Beat 3: they settle.";
+    expect(artworkLoopBriefProblems({ ...plan, prompt: story })).toEqual([]);
+    expect(artworkLoopBriefProblems({ ...plan, prompt: `${story} A faint shimmer on the water.` }).join()).toMatch(/"faint"/);
+    expect(artworkLoopBriefProblems(plan).join()).toMatch(/three-beat story/);
+    expect(artworkLoopBriefProblems({ ...plan, prompt: story, caption: "Five seconds somewhere warmer." }).join()).toMatch(/clip's length/);
+    // Published plans written the old way must still parse.
+    expect(generationPlanSchema.parse({ ...plan, prompt: "A barely perceptible sway.", caption: "Five seconds." }).id).toBe(plan.id);
+    expect(artworkLoopBriefProblems({ ...plan, mechanic: "collection-scene", prompt: "A faint glow." })).toEqual([]);
   });
 });

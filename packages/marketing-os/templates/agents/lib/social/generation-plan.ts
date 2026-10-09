@@ -16,6 +16,16 @@ const source = z.object({
     ctx.addIssue({ code: "custom", message: "sourcePath must be content-addressed by sourceSha256" });
 });
 
+/**
+ * Words that ask a video model for motion nobody can see. Every October loop
+ * was briefed with one of these ("a faint shimmer", "barely perceptible sway")
+ * and every one published as what looked like a still image.
+ */
+const MINIMISED_MOTION = /\b(faint(ly)?|barely|imperceptibl[ey]|subtle|subtly|slight(ly)?|tiny|minimal|very small|very slow)\b/i;
+/** A caption is about the artwork, not the clip's running time. */
+const CLIP_DURATION = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|thirty|sixty)[\s-]*(seconds?|secs?)\b/i;
+const LOOP_BEATS = ["Beat 1", "Beat 2", "Beat 3"];
+
 export const generationPlanSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9-]{0,99}$/),
   postId: token,
@@ -62,4 +72,21 @@ export function generationPlanCreativeHash(plan: GenerationPlan): string {
     ...(parsed.sceneComposition ? { sceneComposition: parsed.sceneComposition } : {}),
     prompt: parsed.prompt, caption: parsed.caption, transform: parsed.transform,
   })).digest("hex");
+}
+
+/**
+ * What stops a NEW artwork-loop brief from being sent to the provider. Kept out
+ * of the schema on purpose: the schema also parses plans that already
+ * published, at review and publish time, and those must stay readable.
+ */
+export function artworkLoopBriefProblems(plan: GenerationPlan): string[] {
+  if (plan.mechanic !== "artwork-loop") return [];
+  const problems: string[] = [];
+  const weak = plan.prompt.match(MINIMISED_MOTION);
+  if (weak) problems.push(`motion must be obvious at phone size; "${weak[0]}" asks for motion nobody will see`);
+  const missing = LOOP_BEATS.filter((beat) => !plan.prompt.includes(beat));
+  if (missing.length) problems.push(`prompt must tell a three-beat story; missing ${missing.join(", ")}`);
+  const timed = plan.caption.match(CLIP_DURATION);
+  if (timed) problems.push(`caption must not mention the clip's length ("${timed[0]}")`);
+  return problems;
 }

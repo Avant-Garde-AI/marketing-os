@@ -754,6 +754,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/app/api/email/advance/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/email/advance/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/api/email/review-approvals/route.ts"),
       targetPath: path.join(targetDir, "agents/app/api/email/review-approvals/route.ts"),
       overwrite: "skip",
@@ -916,6 +921,16 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/components/email/performance.tsx"),
       targetPath: path.join(targetDir, "agents/components/email/performance.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/email/campaign-workflow.tsx"),
+      targetPath: path.join(targetDir, "agents/components/email/campaign-workflow.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/email/schedule-month.tsx"),
+      targetPath: path.join(targetDir, "agents/components/email/schedule-month.tsx"),
       overwrite: "skip",
     },
     {

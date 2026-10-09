@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { PageHeader, Chip, SectionCard, EmptyState } from "@/components/primitives";
 import { Approvals } from "@/components/approvals";
+import { CampaignWorkflow } from "@/components/email/campaign-workflow";
 import { loadCampaignDetail, type SectionView } from "@/lib/email/console-data";
 import { getTenant } from "@/lib/tenant-context";
 import { emailPreviewLink, emailReviewLink } from "@/lib/email/review-links";
@@ -201,6 +202,14 @@ export default async function EmailCampaignPage({
               expects to act on it. Renders nothing when nothing is pending, so a
               campaign with no open approval is unchanged. Overview keeps the full
               cross-campaign queue. */}
+          <CampaignWorkflow
+            campaignId={id}
+            // The artifact, not the index row: the row can lag an approval.
+            status={artifact?.status ?? status}
+            scheduledAt={scheduledAt}
+            audience={included.map((a) => a.name ?? a.key ?? a.id).filter(Boolean).join(", ")}
+          />
+
           <Approvals campaignId={id} />
 
           {/* Subject + candidates */}

@@ -332,7 +332,7 @@ export function planProductionMonth(input: ProductionMonthInput): ProductionMont
     for (const subject of selected) useCount.set(subject.handle, (useCount.get(subject.handle) ?? 0) + 1);
     const id = `${input.month}-${encodeURIComponent(input.channel)}-${date.slice(-2)}`;
     const direction = recipe.mechanic === "artwork-loop"
-      ? "Use the verified full master to build a repeatable, seamless artwork video loop. Keep the artwork accurate and review every crop and motion treatment."
+      ? "Use the verified full master to bring the artwork to life as a three-beat scene: Beat 1 holds the work as drawn, Beat 2 is one event passing through it that moves several existing elements through a wide, obvious arc, Beat 3 settles back. Motion must read at phone size; animate only what the artist drew, keep the full work in frame, and never mention the clip's length in the caption."
       : recipe.carousel
         ? `Create one three-slide carousel${recipe.selection ? ` about ${recipe.selection.theme}` : ""}, with ${recipe.carousel.composition === "one-hero-per-slide" ? "a different hero artwork on each slide" : "the coherent collection on every slide"}. Each slide has a distinct environment and placement; preserve the complete original art. One caption and one final ordered review cover the whole post.`
         : `Compose ${recipe.requiredDistinctSubjects} distinct artworks in a ${recipe.scene === "real-home" ? "real-home lifestyle setting" : "clearly imagined world"}. Preserve each artwork's identity; treat the setting as a creative proposal.`;

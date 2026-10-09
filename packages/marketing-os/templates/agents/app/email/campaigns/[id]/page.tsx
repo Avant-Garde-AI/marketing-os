@@ -164,7 +164,6 @@ export default async function EmailCampaignPage({
         {/* Status line */}
         <div className="animate-enter-2 mb-6 flex flex-wrap items-center gap-2">
           <Chip variant={statusVariant(status)}>{status}</Chip>
-          {when(scheduledAt) && <Chip variant="outline">sends {when(scheduledAt)}</Chip>}
           {row?.skeletonRef && (
             <Chip variant="outline">
               skeleton: {row.skeletonRef}
@@ -208,24 +207,18 @@ export default async function EmailCampaignPage({
             status={artifact?.status ?? status}
             scheduledAt={scheduledAt}
             audience={included.map((a) => a.name ?? a.key ?? a.id).filter(Boolean).join(", ")}
+            subject={subject}
+            previewText={artifact?.previewText ?? null}
           />
 
           <Approvals campaignId={id} />
 
-          {/* Subject + candidates */}
-          <SectionCard title="Subject & preview">
-            {subject ? (
-              <blockquote className="border-l-2 border-gold pl-4">
-                <div className="font-display text-[19px] leading-snug">{subject}</div>
-                {artifact?.previewText && (
-                  <div className="mt-1 text-[14px] text-ink-2">{artifact.previewText}</div>
-                )}
-              </blockquote>
-            ) : (
-              <p className="text-sm text-ink-3">No subject chosen yet.</p>
-            )}
-            {candidates.length > 0 && (
-              <ul className="mt-4 space-y-1.5 border-t border-hairline pt-4">
+          {/* The chosen subject and preview text live in the bar above, where they
+              can be edited. What is left here is the alternatives. */}
+          {candidates.length > 0 && (
+          <SectionCard title="Other subject options">
+            {(
+              <ul className="space-y-1.5">
                 {candidates.map((c) => (
                   <li key={c} className="text-[14px] text-ink-2">
                     <span className="mr-2 text-[10px] uppercase tracking-[0.14em] text-ink-3">
@@ -237,6 +230,7 @@ export default async function EmailCampaignPage({
               </ul>
             )}
           </SectionCard>
+          )}
 
           {/* The why — rationale prose + provenance-tagged claims */}
           {(artifact?.body || (artifact?.provenance.length ?? 0) > 0) && (

@@ -8,10 +8,13 @@ import { EmailPerformanceBand } from "@/components/email/performance";
 import { ScheduleMonth } from "@/components/email/schedule-month";
 
 /**
- * Email — the campaign library (WS4-R3, list side). Month-grouped rows from
- * the mos_email_campaigns index with status chips; each row opens the
- * campaign detail. Planning happens in chat; sends gate through Slack
- * approvals — this page reads.
+ * Email — what is going out, then what went out.
+ *
+ * The page used to open on results and list every month the same way, so the
+ * question an owner arrives with most days — "what is about to send, and does
+ * anything need me?" — was a scroll away and written in lifecycle words. It
+ * now leads with the unsent campaigns in send order, each with a plain status
+ * and one bulk action, and keeps results and the sent record below.
  */
 
 export const runtime = "nodejs";
@@ -46,17 +49,61 @@ function sendLabel(row: EmailCampaignRow): string {
   });
 }
 
+/** Lifecycle → what an owner would say. */
+function plainStatus(row: EmailCampaignRow, now: number): { label: string; variant: "filled" | "outline" | "attention" } {
+  const missed = row.scheduledAt ? new Date(row.scheduledAt).getTime() < now : false;
+  if (row.status === "scheduled") return { label: "Scheduled", variant: "filled" };
+  if (missed) return { label: "Missed its send time", variant: "attention" };
+  if (row.status === "drafted") return { label: "Ready to schedule", variant: "attention" };
+  if (row.status === "approved") return { label: "Approved, not scheduled", variant: "attention" };
+  return { label: "Needs your approval", variant: "outline" };
+}
+
+const SENT = new Set(["sent", "measured"]);
+/** An unsent campaign this far past its date is a leftover, not a plan. */
+const STALE_MS = 14 * 24 * 3600 * 1000;
+
+function CampaignRow({ c, chip }: { c: EmailCampaignRow; chip: { label: string; variant: "filled" | "outline" | "attention" } }) {
+  return (
+    <li>
+      <Link
+        href={`/email/campaigns/${encodeURIComponent(c.id)}`}
+        className="group flex items-baseline gap-4 px-5 py-3.5 transition-colors duration-[160ms] hover:bg-gold-quiet/60"
+      >
+        <span className="tnum w-20 shrink-0 text-xs text-ink-3">{sendLabel(c)}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] leading-snug">{c.subject ?? `Campaign ${c.id}`}</span>
+          <span className="mt-0.5 block text-[12px] text-ink-3">
+            {c.archetype}
+            {c.audienceRefs.length > 0 &&
+              ` · ${c.audienceRefs.map((a) => a.name ?? a.key ?? a.id).filter(Boolean).join(", ")}`}
+          </span>
+        </span>
+        <Chip variant={chip.variant}>{chip.label}</Chip>
+      </Link>
+    </li>
+  );
+}
+
 export default async function EmailPage() {
   const campaigns = await listCampaigns();
-
-  const byMonth = new Map<string, EmailCampaignRow[]>();
-  for (const c of campaigns) {
-    const list = byMonth.get(c.calendarMonth) ?? [];
-    list.push(c);
-    byMonth.set(c.calendarMonth, list);
-  }
-  const months = [...byMonth.keys()].sort().reverse();
   const { shop } = getTenant();
+  const now = Date.now();
+  const at = (c: EmailCampaignRow) => (c.scheduledAt ? new Date(c.scheduledAt).getTime() : Number.POSITIVE_INFINITY);
+
+  const unsent = campaigns.filter((c) => !SENT.has(c.status));
+  const upcoming = unsent.filter((c) => !c.scheduledAt || at(c) >= now - STALE_MS).sort((a, b) => at(a) - at(b));
+  const leftovers = unsent.filter((c) => !upcoming.includes(c)).sort((a, b) => at(b) - at(a));
+  const sent = campaigns.filter((c) => SENT.has(c.status));
+  const upcomingMonths = [...new Set(upcoming.map((c) => c.calendarMonth).filter((m) => /^\d{4}-\d{2}$/.test(m)))].sort();
+
+  const sentByMonth = new Map<string, EmailCampaignRow[]>();
+  for (const c of sent) {
+    const list = sentByMonth.get(c.calendarMonth) ?? [];
+    list.push(c);
+    sentByMonth.set(c.calendarMonth, list);
+  }
+  const sentMonths = [...sentByMonth.keys()].sort().reverse();
 
   return (
     <div className="px-8 py-10">
@@ -68,7 +115,7 @@ export default async function EmailPage() {
               Campaigns, <span className="italic">accounted for.</span>
             </>
           }
-          sub="Every campaign with its subject, its audience, and its record — proposed in chat, approved by you, measured after."
+          sub="What is about to send and whether it needs you, then how the sent ones did."
         />
 
         {campaigns.length === 0 ? (
@@ -82,98 +129,87 @@ export default async function EmailPage() {
               }
               sub="The agent lays out send slots from your email strategy — archetypes rotated, audiences within cadence caps — and every campaign carries its rationale."
               action={
-                <Link
-                  href={`/chat?prompt=${encodeURIComponent(PLAN_PROMPT)}`}
-                  className="arrow-link text-[15px]"
-                >
+                <Link href={`/chat?prompt=${encodeURIComponent(PLAN_PROMPT)}`} className="arrow-link text-[15px]">
                   Plan a month
                 </Link>
               }
             />
           </div>
         ) : (
-          <div className="animate-enter-2 space-y-8">
-            {/* Results first: the question people arrive with is "how did the
-                last one do", and the campaign list answers "what have we sent".
-                Renders nothing until something has actually been measured. */}
-            <EmailPerformanceBand
-              rows={campaigns}
-              currency={process.env.STORE_CURRENCY ?? "USD"}
-            />
-            {months.map((month) => (
-              <section key={month}>
-                <div className="mb-3 flex items-baseline gap-4">
-                  <h2 className="font-display text-[20px]">{monthLabel(month)}</h2>
-                  <Link
-                    href={`/calendar?month=${month}`}
-                    className="arrow-link text-[13px]"
-                  >
-                    On the calendar
-                  </Link>
-                  <a
-                    href={emailSheetLink(shop, month).url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="arrow-link text-[13px]"
-                  >
-                    Open the review sheet
-                  </a>
+          <div className="animate-enter-2 space-y-10">
+            {/* Going out — first, because it is the part that can need a decision. */}
+            <section>
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <h2 className="font-display text-[20px]">Going out</h2>
+                {upcomingMonths.map((month) => (
+                  <span key={month} className="flex items-baseline gap-4 text-[13px]">
+                    <Link href={`/calendar?month=${month}`} className="arrow-link">{monthLabel(month)} on the calendar</Link>
+                    <a href={emailSheetLink(shop, month).url} target="_blank" rel="noreferrer" className="arrow-link">Review sheet</a>
+                  </span>
+                ))}
+              </div>
+              {upcoming.length === 0 ? (
+                <div className="border border-hairline bg-raised px-5 py-4 text-[14px] text-ink-2">
+                  Nothing is waiting to send.{" "}
+                  <Link href={`/chat?prompt=${encodeURIComponent(PLAN_PROMPT)}`} className="arrow-link">Plan the next month</Link>
                 </div>
-                {/* The whole month, shareable.
-                    A review link already existed per campaign, on that
-                    campaign's own page — the right shape for one email and the
-                    wrong one for circulating seven, which meant opening seven
-                    pages and copying seven URLs. The sheet is a single link
-                    listing every campaign in the month with its own review
-                    link. Same signed-token posture as the rest: no console
-                    account needed, and it expires. */}
-                <div className="mb-3">
-                  <CopyLink
-                    url={emailSheetLink(shop, month).url}
-                    label={`Share ${monthLabel(month)} for review`}
-                  />
-                </div>
-                <div className="mb-3">
-                  <ScheduleMonth
-                    campaigns={byMonth.get(month)!.map((c) => ({
-                      id: c.id,
-                      subject: c.subject ?? `Campaign ${c.id}`,
-                      status: c.status,
-                      scheduledAt: c.scheduledAt,
-                      audience: c.audienceRefs.map((a) => a.name ?? a.key ?? a.id).filter(Boolean).join(", "),
-                    }))}
-                  />
-                </div>
-                <ul className="divide-y divide-hairline border border-hairline bg-raised">
-                  {byMonth.get(month)!.map((c) => (
-                    <li key={c.id}>
-                      <Link
-                        href={`/email/campaigns/${encodeURIComponent(c.id)}`}
-                        className="group flex items-baseline gap-4 px-5 py-3.5 transition-colors duration-[160ms] hover:bg-gold-quiet/60"
-                      >
-                        <span className="tnum w-20 shrink-0 text-xs text-ink-3">
-                          {sendLabel(c)}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[15px] leading-snug">
-                            {c.subject ?? `Campaign ${c.id}`}
-                          </span>
-                          <span className="mt-0.5 block text-[12px] text-ink-3">
-                            {c.archetype}
-                            {c.audienceRefs.length > 0 &&
-                              ` · ${c.audienceRefs
-                                .map((a) => a.name ?? a.key ?? a.id)
-                                .filter(Boolean)
-                                .join(", ")}`}
-                          </span>
-                        </span>
-                        <Chip variant={statusVariant(c.status)}>{c.status}</Chip>
-                      </Link>
-                    </li>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <ScheduleMonth
+                      campaigns={upcoming.map((c) => ({
+                        id: c.id,
+                        subject: c.subject ?? `Campaign ${c.id}`,
+                        status: c.status,
+                        scheduledAt: c.scheduledAt,
+                        audience: c.audienceRefs.map((a) => a.name ?? a.key ?? a.id).filter(Boolean).join(", "),
+                      }))}
+                    />
+                  </div>
+                  <ul className="divide-y divide-hairline border border-hairline bg-raised">
+                    {upcoming.map((c) => <CampaignRow key={c.id} c={c} chip={plainStatus(c, now)} />)}
+                  </ul>
+                  {/* The whole month, shareable: one link listing every campaign
+                      with its own review link. Signed and expiring, no console
+                      account needed. */}
+                  {upcomingMonths.map((month) => (
+                    <div key={month} className="mt-3">
+                      <CopyLink url={emailSheetLink(shop, month).url} label={`Share ${monthLabel(month)} for review`} />
+                    </div>
                   ))}
-                </ul>
+                </>
+              )}
+            </section>
+
+            {/* Sent — results, then the record. */}
+            {sent.length > 0 && (
+              <section className="space-y-6">
+                <h2 className="font-display text-[20px]">Sent</h2>
+                <EmailPerformanceBand rows={campaigns} currency={process.env.STORE_CURRENCY ?? "USD"} />
+                {sentMonths.map((month) => (
+                  <div key={month}>
+                    <h3 className="mb-2 text-[13px] uppercase tracking-[0.14em] text-ink-3">{monthLabel(month)}</h3>
+                    <ul className="divide-y divide-hairline border border-hairline bg-raised">
+                      {sentByMonth.get(month)!.map((c) => (
+                        <CampaignRow key={c.id} c={c} chip={{ label: c.status === "measured" ? "Sent, measured" : "Sent", variant: "filled" }} />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
               </section>
-            ))}
+            )}
+
+            {/* Leftovers: unsent and long past their date. Out of the way, not hidden. */}
+            {leftovers.length > 0 && (
+              <details>
+                <summary className="cursor-pointer text-[14px] text-ink-2">
+                  {leftovers.length} older draft{leftovers.length === 1 ? "" : "s"} that never sent
+                </summary>
+                <ul className="mt-3 divide-y divide-hairline border border-hairline bg-raised">
+                  {leftovers.map((c) => <CampaignRow key={c.id} c={c} chip={{ label: "Never sent", variant: "outline" }} />)}
+                </ul>
+              </details>
+            )}
           </div>
         )}
       </div>

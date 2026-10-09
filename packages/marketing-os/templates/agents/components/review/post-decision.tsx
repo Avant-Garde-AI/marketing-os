@@ -73,6 +73,9 @@ export function PostDecision({
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const signedOut = signedIn !== true;
   const setSignedOut = (out: boolean) => setSignedIn(!out);
+  // Times are formatted on the viewer's clock, which the server cannot know.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   useEffect(() => {
     let live = true;
     fetch("/api/social/post-edit", { cache: "no-store" })
@@ -147,7 +150,7 @@ export function PostDecision({
           <>
             <span className="text-[15px]">
               {status === "published" ? "Published" : status === "scheduled" ? "Goes out" : "Planned for"}{" "}
-              <strong>{timeLabel(when) ?? "no time yet"}</strong>
+              <strong>{mounted ? timeLabel(when) ?? "no time yet" : "…"}</strong>
             </span>
             {editable && !signedOut && (
               <button type="button" onClick={() => { setDraft(toLocalInput(future ? when : null)); setEditing("time"); setMessage(null); }}

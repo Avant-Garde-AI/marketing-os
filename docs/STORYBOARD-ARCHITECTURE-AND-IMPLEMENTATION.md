@@ -10,6 +10,8 @@ Capabilities described as planned are not implemented merely by appearing here.
 
 **October 7 owner priority update:** the [operator/narrative roadmap](plans/storyboard-harness/OPERATOR-NARRATIVE-ROADMAP-2026-10-07.md) supersedes immediate rollout ordering: clarify console states; operate/measure the live batch; build operator briefs, shortlist/revision workflows and targeted category research; expand monthly production with corpus-supported narratives. Customer intelligence adapters remain deferred. The linked record distinguishes implemented console changes from planned workbench/research capabilities.
 
+**October 9 production reconciliation:** the [roadmap refresh](plans/storyboard-harness/ROADMAP-REFRESH-2026-10-09.md) records current main and deployed Arthaus revisions. Final caption/time editing and scheduling are delivered; prioritize output quality and outcome feedback, the operator narrative workbench, reviewed category/corpus evidence and then broader production. Reuse the existing storyboard planner/critics and Brand Soul Gemini research foundation. Pooled hosted parity and social-specific governed research remain open; customer intelligence adapters remain deferred.
+
 ## Contents
 
 1. [Outcome and scope](#1-outcome-and-scope)

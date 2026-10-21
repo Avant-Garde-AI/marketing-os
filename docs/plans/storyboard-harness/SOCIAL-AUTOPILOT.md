@@ -40,8 +40,9 @@ UTC send time across daylight savings. A daily tick must not create a new
 fourteen-day overlapping horizon. Missed review lead time requires attention;
 never silently backfill a release in the past.
 
-Proposed recurring cap: **125 Higgsfield credits per fourteen-post batch**,
-subject to the owner's budget answer. With the current fixed provider profiles,
+Owner-confirmed on 2026-10-21: **125 Higgsfield credits per fortnight**, applied
+to each non-overlapping fourteen-post batch. The Arthaus deployment policy now
+records `maximumCredits: 125`. With the current fixed provider profiles,
 seven three-slide carousels and seven loops need 21 scenes and seven videos.
 Ceilings of three credits per scene and eight per loop reserve 119 credits.
 These ceilings must be enforced against fresh exact quotes; a rate increase
@@ -49,8 +50,9 @@ stops the batch. Historical prices are observations, not future spend grants.
 Reserve ceilings before submission, including failed/unknown attempts. A retry
 or reroll cannot release a reservation merely because its result was lost.
 
-The checked-in deployment policy starts disabled with no budget. A policy file
-is requested configuration; it never substitutes for an owner-approved grant.
+The checked-in deployment policy remains disabled with the confirmed budget.
+The budget decision is resolved; a policy file never substitutes for the
+platform standing grant or a functioning production worker.
 
 ## Work to complete, in execution order
 
@@ -102,7 +104,7 @@ is requested configuration; it never substitutes for an owner-approved grant.
    and published records. Default calendar filtering remains scheduled/published;
    show auto-scheduled ownership and review deadlines clearly on the Social board.
 7. **Production proof and rollout.** First exercise a bounded real batch after
-   owner budget configuration and account recovery. Confirm file truth, exact
+   confirmed budget configuration and account recovery. Confirm file truth, exact
    slot counts, successful Slack delivery, valid schedule consent and eventual
    Instagram IDs/permalinks. Test duplicate ticks, pause during rendering,
    pause after scheduling, revoked token, provider unknown outcome, price change,

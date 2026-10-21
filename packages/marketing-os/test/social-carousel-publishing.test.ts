@@ -14,6 +14,8 @@ vi.mock("../templates/agents/lib/social/generation-delivery", () => ({ loadGener
 vi.mock("../templates/agents/lib/storyboard/assets", () => ({ saveSocialImage: m.save, validateSocialAssetBase: vi.fn() }));
 import { GET, POST } from "../templates/agents/app/api/social/carousel/publishing/route";
 import { readPublishableCarousel, carouselManifestHash, persistCarouselBinding } from "../templates/agents/lib/social/generation-publishing";
+import { hashPreview } from "../templates/agents/lib/actions/hash";
+import { serializePost, parsePost } from "../templates/agents/lib/social/artifacts";
 import { runWithTenant } from "../templates/agents/lib/tenant-context";
 const postId = "2026-10-instagram-forest-carousel", shop = "store.myshopify.com";
 const manifest = { schemaVersion: 1, parentPostId: postId, caption: "Forest gallery @artist", slides: [1,2,3].map(n => ({ artifactId: `forest-slide-${n}`, postId: `2026-10-forest-slide-${n}`, inputHash: String(n).repeat(64), finalImage: { sha256: String(n+3).repeat(64) } })) };
@@ -38,5 +40,26 @@ describe("verified delivery binding",()=>{
  it("previews without writes, then saves immutable assets and honest ordered provenance",async()=>{const result=await read();expect(m.repo.writeFile).not.toHaveBeenCalled();expect(m.save).not.toHaveBeenCalled();expect(result.post.copy).toBe(manifest.caption);expect(result.post.renderedSequence).not.toHaveProperty("storyboardId");expect(result.post.renderedSequence!.slides.map(s=>s.sha256)).toEqual(manifest.slides.map(s=>s.finalImage.sha256));await runWithTenant({shop,storeSlug:"store"},()=>persistCarouselBinding(m.repo,result,"https://console.example"));expect(m.save).toHaveBeenCalledTimes(3);expect(m.repo.writeFile).toHaveBeenCalledTimes(1)});
  it("rejects incomplete jobs, altered sources and missing receipts",async()=>{m.job.mockResolvedValueOnce({...manifest.slides[0],state:"submitted"});await expect(read()).rejects.toThrow("incomplete");m.input.mockResolvedValueOnce({inputHash:"0".repeat(64),plan:{}});await expect(read()).rejects.toThrow("source binding");m.delivery.mockResolvedValueOnce(null);await expect(read()).rejects.toThrow("receipt missing")});
  it("rejects changed destination and damaged final images",async()=>{m.account.mockResolvedValueOnce({id:"999",username:"store"});await expect(read()).rejects.toThrow("account changed");m.image.mockRejectedValueOnce(Error("hash mismatch"));await expect(read()).rejects.toThrow("hash mismatch")});
+ it("binds a frozen editorial draft while preserving its rationale, provenance and planned date",async()=>{
+   const draft = { id:postId,channel:"instagram",copy:manifest.caption,assetRefs:[],targetLink:"https://store.example/collection",provenance:[],status:"proposed",plannedAt:"2026-10-31T15:00:00Z",body:"Keep the three-beat editorial rationale." };
+   const raw=serializePost(draft as any);m.repo.readFile.mockResolvedValue(raw);
+   const intent={...p,expectedDraftHash:hashPreview(parsePost(raw))};
+   const result=await runWithTenant({shop,storeSlug:"store",githubRepo:"Owner/store"},()=>readPublishableCarousel(m.repo,intent,"https://console.example"));
+   expect(result.post).toMatchObject({status:"asset_ready",body:draft.body,plannedAt:draft.plannedAt,targetLink:draft.targetLink,channelAccount:{id:"123",username:"store"}});
+   await runWithTenant({shop,storeSlug:"store"},()=>persistCarouselBinding(m.repo,result,"https://console.example"));
+   expect(parsePost(m.repo.writeFile.mock.calls[0][1])).toMatchObject({status:"asset_ready",body:draft.body});
+ });
+ it("refuses unfrozen drafts, existing media and changes between read and binding",async()=>{
+   const draft={id:postId,channel:"instagram",copy:manifest.caption,assetRefs:[],targetLink:"https://store.example",provenance:[],status:"proposed",body:"Rationale"};
+   const raw=serializePost(draft as any);m.repo.readFile.mockResolvedValue(raw);
+   await expect(read()).rejects.toThrow("Draft changed");
+   const intent={...p,expectedDraftHash:hashPreview(parsePost(raw))};
+   const material=await runWithTenant({shop,storeSlug:"store",githubRepo:"Owner/store"},()=>readPublishableCarousel(m.repo,intent,"https://console.example"));
+   m.repo.readFile.mockResolvedValue(serializePost({...draft,copy:"Operator edited"} as any));
+   await expect(runWithTenant({shop,storeSlug:"store"},()=>persistCarouselBinding(m.repo,material,"https://console.example"))).rejects.toThrow("changed during");
+   expect(m.repo.writeFile).not.toHaveBeenCalled();
+   const occupied=serializePost({...draft,assetRefs:["existing.jpeg"]} as any);m.repo.readFile.mockResolvedValue(occupied);
+   await expect(runWithTenant({shop,storeSlug:"store",githubRepo:"Owner/store"},()=>readPublishableCarousel(m.repo,{...p,expectedDraftHash:hashPreview(parsePost(occupied))},"https://console.example"))).rejects.toThrow("unrendered draft");
+ });
  it("never replaces bound copy silently",async()=>{const good=await read();const {serializePost}=await import("../templates/agents/lib/social/artifacts");m.repo.readFile.mockResolvedValue(serializePost({...good.post,copy:"changed"}));await expect(read()).rejects.toThrow("differs");expect(m.repo.writeFile).not.toHaveBeenCalled()});
 });

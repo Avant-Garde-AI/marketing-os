@@ -20,6 +20,8 @@ import { socialCarouselReviewLink } from "./review-links";
 export const carouselIntentSchema = z.object({
   postId: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/),
   expectedManifestHash: z.string().regex(/^[a-f0-9]{64}$/),
+  /** Freeze an existing, unrendered editorial draft before replacing its asset state. */
+  expectedDraftHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
   accountId: z.string().regex(/^\d+$/), accountUsername: z.string().min(1).max(100),
   scheduledAt: z.string().datetime({ offset: true }).optional(),
 }).strict();
@@ -67,20 +69,35 @@ export async function readPublishableCarousel(repo: SocialRepo, p: CarouselInten
   const raw = await repo.readFile(postPath(p.postId));
   if (raw) {
     const prior = parsePost(raw);
+    if (prior.status === "proposed") {
+      if (!p.expectedDraftHash || hashPreview(prior) !== p.expectedDraftHash)
+        throw new Error("Draft changed; reload the complete post before binding media");
+      if (prior.channel !== "instagram" || prior.copy !== candidate.copy || prior.assetRefs.length ||
+          prior.approval || prior.platform || prior.publishAttempt || prior.scheduledAt ||
+          prior.renderedSequence || prior.renderedVideo || prior.designSurface ||
+          (prior.channelAccount && JSON.stringify(prior.channelAccount) !== JSON.stringify(identity)))
+        throw new Error("Only an unchanged, unrendered draft can receive this delivery");
+      return { post: { ...prior, channelAccount: identity, assetRefs: candidate.assetRefs,
+        renderedSequence: sequence, status: "asset_ready" as const }, assets, expectedPriorRaw: raw };
+    }
     if (prior.channel !== candidate.channel || prior.copy !== candidate.copy ||
         JSON.stringify(prior.renderedSequence) !== JSON.stringify(sequence) ||
         JSON.stringify(prior.channelAccount) !== JSON.stringify(identity))
       throw new Error("Bound post differs from the reviewed delivery; rebind with a new review");
-    return { post: prior, assets };
+    return { post: prior, assets, expectedPriorRaw: raw };
   }
-  return { post: candidate, assets };
+  return { post: candidate, assets, expectedPriorRaw: null };
 }
 
 export async function persistCarouselBinding(repo: SocialRepo, material: Awaited<ReturnType<typeof readPublishableCarousel>>, base: string) {
   const { post, assets } = material;
   for (const bytes of assets) await saveSocialImage(repo, getTenant().shop, bytes, base);
-  // Never regress a scheduled/published post during binding.
-  if (!await repo.readFile(postPath(post.id))) await repo.writeFile(postPath(post.id), serializePost(post));
+  // The executor holds the existing post lock. Detect changes since preview/read,
+  // including a newly created draft, before writing any lifecycle state.
+  const current = await repo.readFile(postPath(post.id));
+  if (current !== material.expectedPriorRaw) throw new Error("Post changed during delivery binding");
+  if (current === null || parsePost(current).status === "proposed")
+    await repo.writeFile(postPath(post.id), serializePost(post));
 }
 
 function carouselAction(mode: "publish" | "schedule") {

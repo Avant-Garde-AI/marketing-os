@@ -1,6 +1,9 @@
 import { defineConfig } from "vitest/config";
+import unitConfig from "./vitest.config";
 
 export default defineConfig({
+  // This lane also includes unit suites; use their inert runtime SDK/DB seams.
+  resolve: unitConfig.resolve,
   test: {
     include: ["test/**/*.test.ts"],
     testTimeout: 240000, // 4 minutes for E2E tests

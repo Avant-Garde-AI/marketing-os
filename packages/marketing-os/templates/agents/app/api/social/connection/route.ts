@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   }); } catch (error) {
     // Only verifier messages are safe to return; broker/provider errors may carry secrets.
     const message = error instanceof Error ? error.message : "";
-    const safe = message.startsWith("This token does not belong") || message.startsWith("The token is missing") || message.startsWith("Instagram rejected") || message.startsWith("Enter a valid");
+    const safe = message.startsWith("This token does not belong") || message.startsWith("The token is missing") || message.startsWith("Instagram rejected") || message.startsWith("Instagram publishing access") || message.startsWith("Enter a valid");
     return json({error: safe ? message : "Instagram could not be reconnected. Nothing was scheduled; check the account and broker configuration."}, 409);
   }
 }

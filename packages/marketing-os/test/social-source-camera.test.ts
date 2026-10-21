@@ -8,6 +8,7 @@ vi.mock("../templates/agents/lib/social/channels/instagram",()=>({instagramIdent
 vi.mock("../templates/agents/lib/social/channels",()=>({brokerTokenSource:{}}));
 vi.mock("../templates/agents/lib/social/video-assets",()=>({readSocialVideo:m.video}));
 vi.mock("../templates/agents/lib/storyboard/assets",()=>({readSocialImage:m.poster,validateSocialAssetBase:vi.fn()}));
+import {ownerEditPost} from "../templates/agents/lib/social/owner-edit";
 import {sourceCameraManifestSchema,sourceCameraPath,validateSourceCamera,sourceCameraBindingAction} from "../templates/agents/lib/social/source-camera";
 import {runWithTenant} from "../templates/agents/lib/tenant-context";
 import {hashPreview} from "../templates/agents/lib/actions/hash";
@@ -44,4 +45,12 @@ describe("source-preserving camera delivery",()=>{
   const bound=parsePost(files.get(postPath(postId))!);expect(bound.status).toBe("asset_ready");expect(bound.body).toBe("Keep rationale");expect(bound.renderedVideo).toMatchObject({origin:"source-camera"});expect(bound.renderedVideo).not.toHaveProperty("storyboardId");
   await expect(runWithTenant(tenant,()=>action.execute(params))).rejects.toThrow("unchanged unrendered");
  });
+ it("keeps camera media bound on an owner caption edit while removing schedule consent",async()=>{
+  post.status="scheduled";post.scheduledAt="2099-01-01T16:00:00Z";post.approval={at:"2026-10-21T00:00:00Z",hash:"a".repeat(64)};
+  files.set(postPath(postId),serializePost(post));
+  const result=await runWithTenant(tenant,()=>ownerEditPost(postId,{copy:"A clearer reveal. @artist"},"verified owner"));
+  expect(result.unscheduled).toBe(true);expect(result.post.status).toBe("asset_ready");expect(result.post.approval).toBeUndefined();expect(result.post.scheduledAt).toBeUndefined();
+  const revised=JSON.parse(files.get(sourceCameraPath(postId))!);expect(revised.caption).toBe("A clearer reveal. @artist");expect(result.post.renderedVideo).toMatchObject({origin:"source-camera",manifestHash:hashPreview(revised),video:post.renderedVideo.video});
+ });
+
 });

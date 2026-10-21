@@ -64,7 +64,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
         const state = socialWorkflow(post, now), thumbnail = postThumbnailUrl(post, process.env.MOS_AGENTS_PUBLIC_URL ?? ""), detail = `/social/posts/${encodeURIComponent(post.id)}`;
         const date = state.stage === "published" ? post.platform?.publishedAt ?? post.scheduledAt : post.scheduledAt ?? post.plannedAt;
         const dateLabel = state.stage === "published" ? "Published" : post.status === "scheduled" ? "Release" : "Suggested";
-        const format = post.renderedVideo ? "Video loop" : post.renderedSequence ? `${post.renderedSequence.slides.length}-slide carousel` : "Draft creative";
+        const format = post.renderedVideo ? (post.channel === "instagram" ? "Reel" : "Video") : post.renderedSequence ? `${post.renderedSequence.slides.length}-slide carousel` : "Draft creative";
         return <article key={post.id} className="flex flex-col border border-hairline bg-raised">
           <Link href={detail} aria-label={`Open post: ${headline(post)}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}

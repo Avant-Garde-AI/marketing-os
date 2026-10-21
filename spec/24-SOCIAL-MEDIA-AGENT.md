@@ -199,3 +199,19 @@ schedule/publish gate revalidates source, timeline, caption, bytes and destinati
 at release. Editing the caption updates the timeline hash and removes schedule
 consent. The delivery type is part of the shared social pack; renderer and
 provider/runtime integration remain outside `packages/storyboard`.
+
+
+### Standing social policy contract (2026-10-21, worker not yet implemented)
+
+The pure `lib/social/autopilot.ts` contract validates an explicitly budgeted
+14-day policy with seven-day lead, exact account, local send time, recipe
+allowlist and successful Slack notice requirement. It computes stable
+non-overlapping windows, rejects ambiguous/nonexistent wall times, reserves
+paid ceilings and refuses incomplete/late/mismatched releases. It cannot
+enable a policy or approve an action.
+
+[Rolling production plan](../docs/plans/storyboard-harness/SOCIAL-AUTOPILOT.md)
+records the observed production blocker and the remaining platform grant,
+durable worker, rendering, Slack review, cancellation and production-proof
+work. Requested settings must remain disabled until the existing gate records
+an actual owner grant; no metadata or policy file grants standing authority.

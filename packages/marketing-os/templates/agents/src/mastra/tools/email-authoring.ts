@@ -92,35 +92,39 @@ const sectionSchema = z.union([
 /** Statuses whose artifact must not be edited in place — see module doc. */
 const FROZEN = new Set(["drafted", "scheduled", "sent", "measured"]);
 
+/** Exported so /api/mcp derives its JSON Schema from this rather than a
+ * hand-written copy that drifts — see lib/mcp/zod-schema.ts. */
+export const emailCampaignUpsertInputSchema = z.object({
+  id: z.string().min(1).describe("Campaign id, e.g. 2026-09-01-artist-mirimo."),
+  archetype: z.string().optional().describe("Required when creating: editorial, artist-drop, set-feature, room-recommendation, new-arrivals, seasonal…"),
+  subject: z.string().optional(),
+  subjectCandidates: z.array(z.string()).optional(),
+  headlineOptions: z
+    .array(z.object({
+      id: z.string().min(1).describe('Short stable slug, e.g. "occasion-led".'),
+      headline: z.string().min(1).describe("Becomes the subject line."),
+      subheadline: z.string().min(1).describe("Becomes the preview text."),
+      why: z.string().optional().describe("One sentence on the angle this takes, so a reviewer can tell the three apart."),
+    }))
+    .optional()
+    .describe("Three headline/subheadline pairs to choose from. ALWAYS supply three when writing or revising a campaign: the pair is the whole of what an inbox shows, and one unreviewed phrasing should not become the campaign's voice by default. Set `subject`/`previewText` to your recommended option as well, and selectedHeadlineId to its id."),
+  selectedHeadlineId: z.string().optional().describe("Which of headlineOptions is live. Keep it consistent with subject/previewText."),
+  previewText: z.string().optional(),
+  audienceIncluded: z.array(audienceRefSchema).optional().describe('Who receives it. Prefer the roster key email_plan_propose assigned to the slot — [{"key": "full-reach"}]. The store resolves it to the real Klaviyo list or segment; you do not need the id, and must not guess one.'),
+  audienceExcluded: z.array(audienceRefSchema).optional(),
+  sections: z.array(sectionSchema).optional().describe("The email body, in order. Replaces the existing sections wholesale when supplied."),
+  skeletonRef: z.string().optional(),
+  copyFormulaRef: z.string().optional().describe("The brand.md copy formula this instantiates."),
+  discountCode: z.string().optional().describe('The discount code this campaign promises, e.g. "LABORDAY15". Declare it here whenever the copy names one — the approval gate verifies it exists in Shopify and refuses a campaign that promises a code the store cannot honour.'),
+  body: z.string().optional().describe("Markdown rationale — why this campaign, why these pieces. Kept with the artifact."),
+  scheduledAt: z.string().optional().describe("Intended send time (ISO). Recording it here does NOT schedule anything."),
+});
+
 export const emailCampaignUpsert = createTool({
   id: "email_campaign_upsert",
   description:
     "Create or update a campaign's CONTENT in the store repo: subject, preview text, audience, and the ordered sections that make up the email. Writes only the repo artifact — nothing is created in Klaviyo and nothing sends; staging to the ESP is a separate approved Action. Pass only the fields you want to change; omitted fields are preserved. Refuses to edit a campaign already drafted into Klaviyo or scheduled (re-draft it instead, so the approval and the artifact cannot drift apart). Use email_render_preview afterwards to see it and check the invariant report.",
-  inputSchema: z.object({
-    id: z.string().min(1).describe("Campaign id, e.g. 2026-09-01-artist-mirimo."),
-    archetype: z.string().optional().describe("Required when creating: editorial, artist-drop, set-feature, room-recommendation, new-arrivals, seasonal…"),
-    subject: z.string().optional(),
-    subjectCandidates: z.array(z.string()).optional(),
-    headlineOptions: z
-      .array(z.object({
-        id: z.string().min(1).describe('Short stable slug, e.g. "occasion-led".'),
-        headline: z.string().min(1).describe("Becomes the subject line."),
-        subheadline: z.string().min(1).describe("Becomes the preview text."),
-        why: z.string().optional().describe("One sentence on the angle this takes, so a reviewer can tell the three apart."),
-      }))
-      .optional()
-      .describe("Three headline/subheadline pairs to choose from. ALWAYS supply three when writing or revising a campaign: the pair is the whole of what an inbox shows, and one unreviewed phrasing should not become the campaign's voice by default. Set `subject`/`previewText` to your recommended option as well, and selectedHeadlineId to its id."),
-    selectedHeadlineId: z.string().optional().describe("Which of headlineOptions is live. Keep it consistent with subject/previewText."),
-    previewText: z.string().optional(),
-    audienceIncluded: z.array(audienceRefSchema).optional().describe('Who receives it. Prefer the roster key email_plan_propose assigned to the slot — [{"key": "full-reach"}]. The store resolves it to the real Klaviyo list or segment; you do not need the id, and must not guess one.'),
-    audienceExcluded: z.array(audienceRefSchema).optional(),
-    sections: z.array(sectionSchema).optional().describe("The email body, in order. Replaces the existing sections wholesale when supplied."),
-    skeletonRef: z.string().optional(),
-    copyFormulaRef: z.string().optional().describe("The brand.md copy formula this instantiates."),
-    discountCode: z.string().optional().describe('The discount code this campaign promises, e.g. "LABORDAY15". Declare it here whenever the copy names one — the approval gate verifies it exists in Shopify and refuses a campaign that promises a code the store cannot honour.'),
-    body: z.string().optional().describe("Markdown rationale — why this campaign, why these pieces. Kept with the artifact."),
-    scheduledAt: z.string().optional().describe("Intended send time (ISO). Recording it here does NOT schedule anything."),
-  }),
+  inputSchema: emailCampaignUpsertInputSchema,
   execute: async (input: {
     id: string;
     archetype?: string;

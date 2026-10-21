@@ -124,6 +124,60 @@ describe("proposeEmailPlan", () => {
     }
     expect(byWeek.size).toBe(0);
   });
+
+  // November 2026 opens on a Sunday and closes on a Monday: two one-day edge
+  // weeks with no Tuesday or Thursday in them.
+  it("never falls back to a non-send day for an edge week (2026-11)", () => {
+    const nov = {
+      ...strategy,
+      campaignsPerMonth: 7,
+      guardrails: { maxCampaignsPerWeek: 3 },
+    };
+    const plan = proposeEmailPlan(nov, { month: "2026-11" });
+    expect(plan.slots).toHaveLength(7);
+    for (const slot of plan.slots) {
+      expect([2, 4]).toContain(new Date(`${slot.slot}T00:00:00Z`).getUTCDay());
+    }
+    const days = plan.slots.map((s) => s.slot);
+    expect(days).not.toContain("2026-11-01");
+    expect(days).not.toContain("2026-11-30");
+    expect(new Set(days).size).toBe(days.length);
+    expect(proposeEmailPlan(nov, { month: "2026-11" })).toEqual(plan);
+  });
+
+  it("names the shortfall when send days run out", () => {
+    // 4 full weeks x {tue, thu} = 8 send days in November 2026.
+    const over = { ...strategy, campaignsPerMonth: 10, guardrails: { maxCampaignsPerWeek: 3 } };
+    const plan = proposeEmailPlan(over, { month: "2026-11" });
+    expect(plan.slots).toHaveLength(8);
+    expect(plan.warnings.some((w) => w.includes("shortfall: 2 of 10"))).toBe(true);
+    expect(plan.summary).toContain("2 short of the 10-campaign target");
+  });
+
+  it("never assigns an audience with rotation: false", () => {
+    const roster = {
+      ...strategy,
+      campaignsPerMonth: 8,
+      audiences: [
+        { ...strategy.audiences[1]!, key: "full-reach-us", cadenceCap: 8, rotation: false },
+        { ...strategy.audiences[0]!, cadenceCap: 8 },
+        { ...strategy.audiences[2]!, key: "newsletter", cadenceCap: 8, rotation: false },
+        { ...strategy.audiences[2]!, cadenceCap: 8 },
+      ],
+    };
+    const plan = proposeEmailPlan(roster, { month: "2026-11" });
+    const used = new Set(plan.slots.map((s) => s.audience));
+    expect(used).toEqual(new Set(["engaged-30d", "collectors"]));
+  });
+
+  it("falls back to the first audience when none rotate", () => {
+    const none = {
+      ...strategy,
+      audiences: strategy.audiences.map((a) => ({ ...a, rotation: false })),
+    };
+    const plan = proposeEmailPlan(none, { month: "2026-09" });
+    expect(new Set(plan.slots.map((s) => s.audience))).toEqual(new Set(["engaged-30d"]));
+  });
 });
 
 // ---------------------------------------------------------------------------

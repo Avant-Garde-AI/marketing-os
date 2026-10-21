@@ -8,7 +8,7 @@
  */
 
 import { getAction, knownActionKinds } from "./registry";
-import { proposeToGate } from "./gate-client";
+import { proposeDelegatedToGate, proposeToGate } from "./gate-client";
 
 // The registry is populated by import side effects; the reader owns its data
 // rather than relying on some tool module having been loaded first.
@@ -64,4 +64,39 @@ export async function proposeAction(input: {
     summary: preview.summary,
     ...(preview.warnings?.length ? { warnings: preview.warnings } : {}),
   };
+}
+
+export interface DelegatedOutcome {
+  proposalId?: string;
+  released?: { status: string; message: string };
+  /** The gate's reason when the grant does not cover this proposal. */
+  refused?: string;
+}
+
+/**
+ * The autopilot stager's propose: identical validation and preview, but raised
+ * under a standing grant. Callable only from the service-authenticated stage
+ * route — no agent tool or MCP tool reaches this.
+ */
+export async function proposeDelegated(input: {
+  kind: string;
+  params: Record<string, unknown>;
+  delegation: { grantId: string; batchId: string; claims: unknown };
+}): Promise<DelegatedOutcome> {
+  const action = getAction(input.kind);
+  if (!action) throw new Error(`Unknown action kind "${input.kind}"`);
+  const parsed = action.paramsSchema.safeParse(input.params);
+  if (!parsed.success) throw new Error(`Invalid params for ${input.kind} — ${parsed.error.message}`);
+  const preview = await action.preview(parsed.data as never);
+  const raised = await proposeDelegatedToGate({
+    kind: input.kind,
+    title: action.title,
+    params: parsed.data,
+    risk: action.risk,
+    scopes: action.scopes,
+    preview,
+    delegation: input.delegation,
+  });
+  if ("refused" in raised) return { refused: raised.refused };
+  return { proposalId: raised.proposalId, ...(raised.released ? { released: raised.released } : {}) };
 }

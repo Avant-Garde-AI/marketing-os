@@ -129,15 +129,18 @@ export interface EmailPlanProposal {
 /**
  * Lay out a month's campaign slots from the strategy, deterministically:
  *
- * 1. `campaignsPerMonth` slots spread evenly across the month's weeks,
- *    respecting `maxCampaignsPerWeek`.
- * 2. Within a week, dates pick the strategy's preferred send days in
- *    declaration order (tuesday before thursday if declared so), skipping
- *    quiet-period days; a week with no eligible day drops its slot with a
- *    warning rather than violating a guardrail.
+ * 1. `campaignsPerMonth` slots spread evenly across the weeks that have an
+ *    eligible send day, respecting `maxCampaignsPerWeek`. A week's capacity is
+ *    its free send days, so a partial edge week holding no send day gets no
+ *    slot; slots it would have taken move to weeks with room, and any the
+ *    month cannot hold are dropped with a warning naming the shortfall.
+ * 2. Within a week, dates are the strategy's send days in declaration order
+ *    (tuesday before thursday if declared so), skipping quiet-period days. A
+ *    slot only ever lands on a declared send day, one slot per day.
  * 3. Archetypes rotate by weight (largest-deficit-first).
- * 4. Audiences rotate round-robin under their cadenceCaps; when every
- *    audience is at cap the slot is left unassigned ("—") with a warning —
+ * 4. Audiences with `rotation !== false` rotate round-robin under their
+ *    cadenceCaps (the first audience stands in if none rotate); when every
+ *    candidate is at cap the slot is left unassigned ("—") with a warning —
  *    a proposal never violates a cap.
  * 5. Seasonal arcs, top movers, and readback context weave into rationales;
  *    every third slot (deterministic) becomes a commercial feature slot when
@@ -157,69 +160,70 @@ export function proposeEmailPlan(
   const perWeekCap = strategy.guardrails?.maxCampaignsPerWeek ?? Infinity;
   const warnings: string[] = [];
 
-  // 1–2. Distribute slot counts across weeks, then pick concrete days.
-  const perWeek = new Array<number>(weeks.length).fill(0);
-  for (let n = 0; n < target; n++) {
-    // Even spread: week index by proportional position, then bump forward to
-    // the first week under the cap.
-    let w = Math.floor((n * weeks.length) / target);
-    let placed = false;
-    for (let probe = 0; probe < weeks.length; probe++) {
-      const candidate = (w + probe) % weeks.length;
-      if (perWeek[candidate]! < perWeekCap) {
-        perWeek[candidate] = perWeek[candidate]! + 1;
-        placed = true;
-        break;
+  // 1–2. Find each week's eligible send days, distribute slot counts across
+  // the weeks that have room, then take days in preference order.
+  const eligibleByWeek: string[][] = weeks.map((weekDays, week) => {
+    const eligible: string[] = [];
+    let quietSkipped = 0;
+    for (const prefDay of strategy.sendDays) {
+      for (const d of weekDays) {
+        if (weekdayOf(d) !== prefDay) continue;
+        if (inQuietPeriod(d, strategy).hit) quietSkipped++;
+        else eligible.push(d);
       }
     }
-    if (!placed) {
-      warnings.push(
-        `slot ${n + 1}/${target} dropped: every week is at maxCampaignsPerWeek=${perWeekCap}`,
-      );
+    if (eligible.length === 0 && quietSkipped > 0) {
+      warnings.push(`week ${week + 1}: every send day falls in a quiet period — no slot placed`);
     }
+    return eligible;
+  });
+  const capacity = eligibleByWeek.map((days) => Math.min(perWeekCap, days.length));
+  const openWeeks = capacity.flatMap((c, week) => (c > 0 ? [week] : []));
+
+  const perWeek = new Array<number>(weeks.length).fill(0);
+  let dropped = 0;
+  for (let n = 0; n < target; n++) {
+    // Even spread over the open weeks by proportional position, then bump
+    // forward (wrapping) to the first open week with a free send day.
+    let placed = false;
+    if (openWeeks.length > 0) {
+      const start = Math.floor((n * openWeeks.length) / target);
+      for (let probe = 0; probe < openWeeks.length; probe++) {
+        const week = openWeeks[(start + probe) % openWeeks.length]!;
+        if (perWeek[week]! < capacity[week]!) {
+          perWeek[week] = perWeek[week]! + 1;
+          placed = true;
+          break;
+        }
+      }
+    }
+    if (!placed) dropped++;
+  }
+  if (dropped > 0) {
+    const capNote = Number.isFinite(perWeekCap) ? `, maxCampaignsPerWeek=${perWeekCap}` : "";
+    warnings.push(
+      `shortfall: ${dropped} of ${target} slot(s) dropped — ${month} has room for ${target - dropped} on send days ${strategy.sendDays.join("/")}${capNote} outside quiet periods`,
+    );
   }
 
   const dates: { date: string; week: number }[] = [];
-  weeks.forEach((weekDays, week) => {
-    const wanted = perWeek[week]!;
-    if (wanted === 0) return;
-    // Preferred send days in declaration order, then any remaining weekday as
-    // fallback, skipping quiet periods.
-    const eligible: string[] = [];
-    for (const prefDay of strategy.sendDays) {
-      for (const d of weekDays) {
-        if (weekdayOf(d) === prefDay && !inQuietPeriod(d, strategy).hit) eligible.push(d);
-      }
-    }
-    for (const d of weekDays) {
-      if (!eligible.includes(d) && !inQuietPeriod(d, strategy).hit) eligible.push(d);
-    }
-    if (eligible.length === 0) {
-      warnings.push(`week ${week + 1}: all days in a quiet period — ${wanted} slot(s) dropped`);
-      return;
-    }
-    for (let i = 0; i < wanted; i++) {
-      const date = eligible[Math.min(i, eligible.length - 1)]!;
-      if (i >= eligible.length) {
-        warnings.push(
-          `week ${week + 1}: more slots (${wanted}) than eligible send days (${eligible.length}); doubling up on ${date}`,
-        );
-      }
-      dates.push({ date, week });
-    }
+  perWeek.forEach((wanted, week) => {
+    for (let i = 0; i < wanted; i++) dates.push({ date: eligibleByWeek[week]![i]!, week });
   });
   dates.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   // 3. Archetype rotation.
   const rotation = rotateArchetypes(strategy.archetypes, dates.length);
 
-  // 4. Audience rotation under cadenceCaps.
+  // 4. Audience rotation under cadenceCaps, over the audiences that opt in.
   const audienceUse = new Map<string, number>(strategy.audiences.map((a) => [a.key, 0]));
+  const rotating = strategy.audiences.filter((a) => a.rotation !== false);
+  const pool = rotating.length > 0 ? rotating : strategy.audiences.slice(0, 1);
   let audienceCursor = 0;
   function nextAudience(): string | null {
-    for (let probe = 0; probe < strategy.audiences.length; probe++) {
-      const idx = (audienceCursor + probe) % strategy.audiences.length;
-      const aud = strategy.audiences[idx]!;
+    for (let probe = 0; probe < pool.length; probe++) {
+      const idx = (audienceCursor + probe) % pool.length;
+      const aud = pool[idx]!;
       if (audienceUse.get(aud.key)! < aud.cadenceCap) {
         audienceUse.set(aud.key, audienceUse.get(aud.key)! + 1);
         audienceCursor = idx + 1;
@@ -282,7 +286,8 @@ export function proposeEmailPlan(
     notes: `Proposed by the email campaign agent from email/strategy.md (${target} campaigns/month target, send days ${strategy.sendDays.join("/")} at ${strategy.sendTime}). Every slot's rationale is in the proposal payload.`,
   });
 
-  const summary = `${slots.length} campaign slot(s) for ${month} across ${new Set(slots.map((s) => s.audience).filter(Boolean)).size} audience(s). Archetype rotation weighted over [${strategy.archetypes.map((a) => `${a.name}:${a.weight}`).join(", ")}].${warnings.length ? ` ${warnings.length} warning(s).` : ""}`;
+  const shortfall = target - slots.length;
+  const summary = `${slots.length} campaign slot(s) for ${month}${shortfall > 0 ? ` (${shortfall} short of the ${target}-campaign target)` : ""} across ${new Set(slots.map((s) => s.audience).filter(Boolean)).size} audience(s). Archetype rotation weighted over [${strategy.archetypes.map((a) => `${a.name}:${a.weight}`).join(", ")}].${warnings.length ? ` ${warnings.length} warning(s).` : ""}`;
 
   return { month, status: "proposed", slots, calendarMarkdown, summary, warnings };
 }

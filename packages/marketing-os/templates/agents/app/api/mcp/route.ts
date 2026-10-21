@@ -16,15 +16,17 @@ import { ga4 } from "@/lib/ga4";
 import { resolveImagery, listRooms } from "@/lib/imagery/resolve";
 import { createEmailTools } from "@/lib/email/tools";
 import { emailRepo } from "@/lib/email/repo";
+import { AUTOPILOT_AUTHOR_TOOLS, AUTOPILOT_POLICY_PATH, parseAutopilotPolicy } from "@/lib/email/autopilot";
+import { proposeAppActionToGate } from "@/lib/actions/gate-client";
 import { createKlaviyoClient } from "@/lib/email/klaviyo-client";
 import { emailTools } from "@/src/mastra/tools/email";
-import { emailAuthoringTools } from "@/src/mastra/tools/email-authoring";
+import { emailAuthoringTools, emailCampaignUpsertInputSchema } from "@/src/mastra/tools/email-authoring";
 import { actionTools } from "@/src/mastra/tools/actions";
 import { socialTools } from "@/src/mastra/tools/social";
 import { storyboardTools } from "@/src/mastra/tools/storyboard";
 import { designLibraryTools } from "@/src/mastra/tools/design-library";
 import { designSurfaceTools } from "@/src/mastra/tools/design-surfaces";
-import { mirrorTools } from "@/lib/mcp/zod-schema";
+import { jsonSchemaFromZod, mirrorTools } from "@/lib/mcp/zod-schema";
 import {
   STATIC_RESOURCES,
   RESOURCE_TEMPLATES,
@@ -443,31 +445,10 @@ const TOOLS: ToolDef[] = [
     name: "email_campaign_upsert",
     description:
       "Create or update a campaign's CONTENT in the store repo: subject, preview text, audience, and the ordered sections of the email. Writes only the repo artifact — nothing is created in Klaviyo and nothing sends. Pass only the fields you want to change; omitted fields are preserved. Refuses to edit a campaign already drafted or scheduled, so an approved send and its artifact cannot drift apart.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Campaign id, e.g. 2026-09-01-artist-mirimo." },
-        archetype: { type: "string", description: "Required when creating." },
-        subject: { type: "string" },
-        subjectCandidates: { type: "array", items: { type: "string" } },
-        previewText: { type: "string" },
-        audienceIncluded: {
-          type: "array",
-          items: { type: "object", properties: { type: { type: "string", enum: ["list", "segment"] }, id: { type: "string" }, label: { type: "string" } }, required: ["type", "id"] },
-        },
-        audienceExcluded: { type: "array", items: { type: "object" } },
-        sections: {
-          type: "array",
-          description: "The email body in order. An html section carries `blocks` (heading, paragraph, button, productRow, eyebrow, callout, ctaBand, featuredCard, list, swatches, chips, trustBadges, divider, image, graphCallout); a surface section carries `alt` plus an imageUrl (e.g. from imagery_resolve).",
-          items: { type: "object" },
-        },
-        skeletonRef: { type: "string" },
-        copyFormulaRef: { type: "string" },
-        body: { type: "string", description: "Markdown rationale kept with the artifact." },
-        scheduledAt: { type: "string", description: "Intended send time (ISO). Recording it does NOT schedule anything." },
-      },
-      required: ["id"],
-    },
+    // Derived, not hand-written: the hand-written copy fell behind the tool
+    // (no headlineOptions, selectedHeadlineId or discountCode), so clients
+    // guessed a string for headlineOptions and the tool's zod rejected it.
+    inputSchema: jsonSchemaFromZod(emailCampaignUpsertInputSchema),
     run: (a) => runMastra(emailAuthoringTools.email_campaign_upsert, a),
   },
   {
@@ -607,6 +588,18 @@ const TOOLS: ToolDef[] = [
       }),
   },
   {
+    name: "propose_email_autopilot_grant",
+    description:
+      "Ask the owner to grant email autopilot under the store's email/autopilot.md policy: every two weeks, campaigns for the next window are written, drafted and scheduled automatically, sending unless someone holds them within the policy's hold window. Posts ONE approval card showing the exact policy; nothing changes until a store admin approves it, and approving it is the owner's standing consent. Re-run after editing email/autopilot.md — a changed policy needs a new grant.",
+    inputSchema: { type: "object", properties: {} },
+    run: async () => {
+      const raw = await emailRepo.readFile(AUTOPILOT_POLICY_PATH);
+      if (!raw) throw new Error(`${AUTOPILOT_POLICY_PATH} does not exist — write the policy first.`);
+      const policy = parseAutopilotPolicy(raw);
+      return proposeAppActionToGate({ kind: "autopilot.grant", params: { channel: "email", policy } });
+    },
+  },
+  {
     name: "propose_email_approval",
     description:
       "Step 1 of 3: propose approving a `proposed` campaign for DRAFTING (email.approve_campaign) and post the approval card to Slack and the console. Approval moves it to `approved`; nothing touches Klaviyo and nothing sends. A human approves the card — it cannot be approved from here. Next: propose_email_draft (step 2), then propose_email_schedule (step 3).",
@@ -667,7 +660,9 @@ function rpcError(id: any, code: number, message: string) {
   return { jsonrpc: "2.0", id, error: { code, message } };
 }
 
-async function dispatch(msg: RpcRequest, clientProtocol?: string): Promise<object | null> {
+/** `allow`, when set, is the whole tool surface for this caller (an autopilot
+ * author token): unlisted tools are neither listed nor callable. */
+async function dispatch(msg: RpcRequest, clientProtocol?: string, allow?: ReadonlySet<string>): Promise<object | null> {
   const { id, method, params } = msg;
 
   // Notifications (no id) get no response.
@@ -689,12 +684,12 @@ async function dispatch(msg: RpcRequest, clientProtocol?: string): Promise<objec
 
     case "tools/list":
       return rpcResult(id, {
-        tools: TOOLS.map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+        tools: TOOLS.filter((t) => !allow || allow.has(t.name)).map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
       });
 
     case "tools/call": {
       const tool = TOOL_MAP.get(params?.name);
-      if (!tool) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
+      if (!tool || (allow && !allow.has(tool.name))) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
       try {
         const result = await tool.run(params?.arguments ?? {});
         return rpcResult(id, {
@@ -812,20 +807,23 @@ export async function POST(req: Request) {
     return Response.json(rpcError(null, -32700, "Parse error"), { status: 400, headers: CORS_HEADERS });
   }
 
-  const generationActor = tokenAuth.valid && tokenAuth.shop === tenant.shop && tokenAuth.connectorId &&
+  // The email autopilot's authoring token: reads, campaign upserts, renders —
+  // nothing that approves, drafts, schedules or spends (EMAIL-AUTOPILOT.md).
+  const authorOnly = tokenAuth.valid && tokenAuth.scopes?.includes("autopilot:author") ? AUTOPILOT_AUTHOR_TOOLS : undefined;
+  const generationActor = !authorOnly && tokenAuth.valid && tokenAuth.shop === tenant.shop && tokenAuth.connectorId &&
     tokenAuth.scopes?.includes("generation:run")
     ? { surface: "mcp_connector" as const, subject: `connector:${tokenAuth.connectorId}` }
     : null;
   return runWithTenant(tenant, () => runWithGenerationActor(generationActor, async () => {
     // Batch or single
     if (Array.isArray(payload)) {
-      const responses = (await Promise.all(payload.map((m) => dispatch(m as RpcRequest, clientProtocol)))).filter(
+      const responses = (await Promise.all(payload.map((m) => dispatch(m as RpcRequest, clientProtocol, authorOnly)))).filter(
         (r): r is object => r !== null
       );
       return Response.json(responses, { headers: { ...CORS_HEADERS, "Cache-Control": "no-store" } });
     }
 
-    const response = await dispatch(payload as RpcRequest, clientProtocol);
+    const response = await dispatch(payload as RpcRequest, clientProtocol, authorOnly);
     if (response === null) {
       // Notification — acknowledge with 202 and no body.
       return new Response(null, { status: 202, headers: CORS_HEADERS });

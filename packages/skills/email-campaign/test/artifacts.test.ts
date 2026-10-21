@@ -42,6 +42,16 @@ describe("strategy round-trip", () => {
     expect(parseStrategy(serializeStrategy(strategy))).toEqual(strategy);
   });
 
+  it("carries an audience's rotation flag through", () => {
+    const flagged = {
+      ...strategy,
+      audiences: strategy.audiences.map((a, i) => (i === 1 ? { ...a, rotation: false } : a)),
+    };
+    const back = parseStrategy(serializeStrategy(flagged));
+    expect(back.audiences[1]!.rotation).toBe(false);
+    expect(back.audiences[0]).not.toHaveProperty("rotation");
+  });
+
   it("rejects missing audiences", () => {
     const bad = serializeStrategy(strategy).replace(/audiences:[\s\S]*?archetypes:/, "archetypes:");
     expect(() => parseStrategy(bad)).toThrow(/audiences/);

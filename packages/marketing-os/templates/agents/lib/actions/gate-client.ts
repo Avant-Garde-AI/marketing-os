@@ -71,3 +71,60 @@ export async function invalidateAtGate(proposalId: string, reason: string): Prom
   const body = (await res.json().catch(() => ({}))) as { invalidated?: boolean };
   return res.ok && Boolean(body.invalidated);
 }
+
+export interface GateDelegated {
+  proposalId: string;
+  mode: "immediate" | "held";
+  released?: { status: string; message: string };
+}
+
+/**
+ * Raise a proposal under a standing grant (EMAIL-AUTOPILOT.md). The platform
+ * decides whether the grant covers it; a 409 is that refusal, returned as a
+ * reason rather than thrown so the stager can leave the campaign for a person.
+ */
+export async function proposeDelegatedToGate(input: {
+  kind: string;
+  title: string;
+  params: unknown;
+  risk: ActionRisk;
+  scopes: string[];
+  preview: ActionPreview;
+  delegation: { grantId: string; batchId: string; claims: unknown };
+}): Promise<GateDelegated | { refused: string }> {
+  const { apiUrl, secret } = gateConfig();
+  const tenant = getTenant();
+  const res = await fetch(`${apiUrl}/api/actions/propose`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+    body: JSON.stringify({
+      shop: tenant.shop,
+      kind: input.kind,
+      title: input.title,
+      params: input.params,
+      risk: input.risk,
+      scopes: input.scopes,
+      executor: "agents",
+      preview: input.preview,
+      delegation: input.delegation,
+    }),
+  });
+  const body = (await res.json().catch(() => ({}))) as Partial<GateDelegated> & { error?: string };
+  if (res.status === 409) return { refused: body.error ?? "not covered by the grant" };
+  if (!res.ok) throw new Error(`action gate propose failed (${res.status}): ${body.error ?? "unknown"}`);
+  return { proposalId: body.proposalId ?? "", mode: body.mode ?? "held", ...(body.released ? { released: body.released } : {}) };
+}
+
+/** Propose a PLATFORM-executed action (the platform runs its own preview). */
+export async function proposeAppActionToGate(input: { kind: string; params: unknown }): Promise<GateProposal & { error?: string }> {
+  const { apiUrl, secret } = gateConfig();
+  const tenant = getTenant();
+  const res = await fetch(`${apiUrl}/api/actions/propose-app`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+    body: JSON.stringify({ shop: tenant.shop, kind: input.kind, params: input.params, proposedBy: "agent" }),
+  });
+  const body = (await res.json().catch(() => ({}))) as Partial<GateProposal> & { error?: string };
+  if (!res.ok) throw new Error(`action gate propose failed (${res.status}): ${body.error ?? "unknown"}`);
+  return { proposalId: body.proposalId ?? "", posted: Boolean(body.posted), channel: body.channel ?? null };
+}

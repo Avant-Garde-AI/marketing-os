@@ -674,6 +674,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/app/api/autopilot/email/stage/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/autopilot/email/stage/route.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/api/actions/execute/route.ts"),
       targetPath: path.join(targetDir, "agents/app/api/actions/execute/route.ts"),
       overwrite: "skip",
@@ -1231,6 +1236,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "agents/lib/email/leaning-mockups.ts"),
       targetPath: path.join(targetDir, "agents/lib/email/leaning-mockups.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/email/autopilot.ts"),
+      targetPath: path.join(targetDir, "agents/lib/email/autopilot.ts"),
       overwrite: "skip",
     },
     {

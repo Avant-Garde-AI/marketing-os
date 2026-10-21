@@ -55,6 +55,13 @@ export interface StrategyAudience {
   description: string;
   /** Max campaigns per month that may target this audience (guardrail). */
   cadenceCap: number;
+  /**
+   * Whether the planner may assign this audience to an ordinary slot. Default
+   * true. False keeps a key on the roster for deliberate sends (a full-reach
+   * announcement, a newsletter list) without the round-robin landing routine
+   * campaigns on it.
+   */
+  rotation?: boolean;
 }
 
 /** Campaign archetypes are the email pack's pillars (02 §3): new-arrivals,

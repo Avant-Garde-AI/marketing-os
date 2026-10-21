@@ -137,6 +137,7 @@ const strategyFrontMatterSchema = z.object({
         }),
         description: z.string().min(1),
         cadenceCap: z.number().int().positive().describe("Max campaigns/month targeting this audience"),
+        rotation: z.boolean().optional().describe("False keeps the audience out of the planner's rotation"),
       }),
     )
     .min(1),

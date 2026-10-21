@@ -161,3 +161,21 @@ An existing approval, publish attempt, schedule, canvas or media binding blocks
 this transition. Re-read under the post lock before persistence; a changed draft
 requires a fresh review. This is asset binding, not permission to approve
 unrendered content or overwrite scheduled/published posts.
+
+
+### Reconnecting an invalidated Instagram Login credential (2026-10-21)
+
+`/social/connections` is a signed-in owner recovery surface over the existing
+platform `channel-token` broker seam. A stored expiry is not evidence that Meta
+still accepts a session: the status read checks live identity. Recovery accepts
+a replacement token from the operator, verifies the already-bound account and
+`instagram_business_content_publish` permission, and stores it only in the
+platform Vault. Multiple existing destinations require the platform operator
+flow. Review-link possession cannot inspect or change this connection.
+
+The new credential is sent in authorization headers, not URLs. Route responses
+and error messages never return the token or raw provider errors. Unknown
+expiry stays unknown until the normal refresh establishes it. Reconnection
+does not alter publishing consent, schedule posts, or claim OAuth onboarding
+is implemented. An invalidated token still needs a human to reauthorize in
+the existing Meta app dashboard.

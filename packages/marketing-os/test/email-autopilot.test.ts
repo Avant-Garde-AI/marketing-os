@@ -1,4 +1,9 @@
 import { beforeEach, expect, it, vi } from "vitest";
+// stageWindow is tested with its injected gate. Never load the production gate's
+// entire action registry (and generated-console dependencies) in this CLI unit suite.
+vi.mock("../templates/agents/lib/actions/propose", () => ({
+  proposeDelegated: vi.fn(() => { throw new Error("Use the injected gate in autopilot unit tests"); }),
+}));
 import { AUTOPILOT_AUTHOR_TOOLS, audienceKeysFor, eligibility, stageWindow, type EmailAutopilotPolicy } from "../templates/agents/lib/email/autopilot";
 import { campaignPath, parseCampaign, serializeCampaign, serializeStrategy } from "../templates/agents/lib/email/artifacts";
 import type { EmailCampaign, EmailStrategy } from "../templates/agents/lib/email/types";

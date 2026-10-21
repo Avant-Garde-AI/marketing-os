@@ -92,7 +92,11 @@ export function socialActionDeps(): SocialActionDeps {
       : socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
     withPostLock: withSocialPostLock,
     validateMaterial: async post => {
-      if (post.renderedVideo && "origin" in post.renderedVideo) {
+      if (post.renderedVideo && "origin" in post.renderedVideo && post.renderedVideo.origin === "source-camera") {
+        const { validateSourceCamera } = await import("./source-camera");
+        await validateSourceCamera(socialRepo, post, process.env.MOS_AGENTS_PUBLIC_URL ?? "");
+      }
+      if (post.renderedVideo && "origin" in post.renderedVideo && post.renderedVideo.origin === "generation-delivery") {
         const { validateGeneratedVideo } = await import("./generation-video");
         await validateGeneratedVideo(socialRepo, post, process.env.MOS_AGENTS_PUBLIC_URL ?? "");
       }

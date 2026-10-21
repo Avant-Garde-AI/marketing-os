@@ -358,11 +358,12 @@ export default async function SocialReviewRoom({
   const ttl = ttlRemaining(exp);
   const postMonth = generationJobs[0]?.postId.match(/^(\d{4}-(?:0[1-9]|1[0-2]))-/)?.[1] ?? null;
   const month = group.posts.find((p) => p.post.scheduledAt)?.post.scheduledAt?.slice(0, 7) ??
+    group.posts.find(p => p.post.plannedAt)?.post.plannedAt?.slice(0, 7) ??
     postMonth ?? generationJobs[0]?.createdAt.slice(0, 7) ?? null;
   const sheet = month ? socialSheetLink(shop, month, ttl) : null;
 
   const boundArtifacts = new Set(group.posts.flatMap(({ post }) =>
-    post.renderedVideo && "origin" in post.renderedVideo ? [post.renderedVideo.artifactId] : []));
+    post.renderedVideo && "origin" in post.renderedVideo && post.renderedVideo.origin === "generation-delivery" ? [post.renderedVideo.artifactId] : []));
   const generationPanel = (job: GenerationReview) => <GenerationPanel key={job.id} job={job}
     delivery={deliveries.get(job.id)?.delivery ?? null} deliveryFailed={deliveries.get(job.id)?.failed ?? false}
     renderUrl={sceneRenderUrl(shop, job.postId, ttl)}
@@ -433,9 +434,10 @@ export default async function SocialReviewRoom({
                       </p>
                       <details style={{ padding: "0 0.85rem 0.85rem", fontSize: "0.8rem", overflowWrap: "anywhere" }}>
                         <summary>Details</summary>
-                        <p>1080 × 1920 Reel · {(video.video.durationMs / 1000).toFixed(1)} seconds · {"origin" in video ? video.artifactId : video.storyboardId}</p>
+                        <p>1080 × 1920 Reel · {(video.video.durationMs / 1000).toFixed(1)} seconds · {"origin" in video ? video.origin === "source-camera" ? "Source-preserving camera edit" : video.artifactId : video.storyboardId}</p>
+                        {"origin" in video && video.origin === "source-camera" ? <p>Timeline hash: <code>{video.manifestHash}</code></p> : <>
                         <p>Input hash: <code>{"origin" in video ? video.inputHash : video.storyboardHash}</code></p>
-                        <p>Review hash: <code>{"origin" in video ? video.deliveryHash : video.reviewHash}</code></p>
+                        <p>Review hash: <code>{"origin" in video ? video.deliveryHash : video.reviewHash}</code></p></>}
                         <p>Video SHA-256: <code>{video.video.sha256}</code></p>
                         <p>Cover SHA-256: <code>{video.poster.sha256}</code></p>
                         <p>{video.sources.length} source artwork{video.sources.length === 1 ? "" : "s"} bound in the render receipt</p>

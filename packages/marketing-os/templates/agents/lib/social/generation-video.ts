@@ -13,7 +13,7 @@ import { readSocialImage, validateSocialAssetBase } from "../storyboard/assets";
 import { getTenant } from "../tenant-context";
 export async function validateGeneratedVideo(repo: SocialRepo, post: SocialPost, base: string) {
   const receipt = post.renderedVideo;
-  if (!receipt || !("origin" in receipt)) return;
+  if (!receipt || !("origin" in receipt) || receipt.origin !== "generation-delivery") return;
   validateSocialAssetBase(base);
   const account = await instagramIdentity(brokerTokenSource);
   if (!post.channelAccount || account.id !== post.channelAccount.id || account.username !== post.channelAccount.username)

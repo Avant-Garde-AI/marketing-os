@@ -179,3 +179,23 @@ expiry stays unknown until the normal refresh establishes it. Reconnection
 does not alter publishing consent, schedule posts, or claim OAuth onboarding
 is implemented. An invalidated token still needs a human to reauthorize in
 the existing Meta app dashboard.
+
+
+### Source-preserving editorial camera deliveries (2026-10-21)
+
+A trusted `source-camera` video receipt supports detail reveals and visual cuts
+without claiming either paid model generation or a selected storyboard. It
+binds an immutable timeline, source hashes and original lineage proofs, caption,
+1080×1920 H.264/yuv420p export and poster. The native crop floor rejects a zoom
+that would require enlarging source pixels. Camera motion and optional two-work
+payoff plates are deterministic; they do not animate or redraw artwork subjects.
+
+The offline `render-source-camera.ts` helper checks source bytes, renders at
+24 fps, probes the actual output codec, frame count and dimensions, and caps
+the output at 4 MiB for serverless asset delivery. It writes local artifacts
+only. The gated `social.bind_source_camera` action binds those files only to a
+hash-frozen unrendered editorial draft, preserving its rationale. The existing
+schedule/publish gate revalidates source, timeline, caption, bytes and destination
+at release. Editing the caption updates the timeline hash and removes schedule
+consent. The delivery type is part of the shared social pack; renderer and
+provider/runtime integration remain outside `packages/storyboard`.

@@ -198,7 +198,15 @@ export interface GeneratedSocialVideo {
   video: StoryboardSocialVideo["video"];
   poster: StoryboardSocialVideo["poster"];
 }
-export type RenderedSocialVideo = StoryboardSocialVideo | GeneratedSocialVideo;
+export interface SourceCameraSocialVideo {
+  version: 1;
+  origin: "source-camera";
+  manifestHash: string;
+  sources: StoryboardSocialVideo["sources"];
+  video: StoryboardSocialVideo["video"];
+  poster: StoryboardSocialVideo["poster"];
+}
+export type RenderedSocialVideo = StoryboardSocialVideo | GeneratedSocialVideo | SourceCameraSocialVideo;
 
 export interface SocialPost {
   /** Connected destination verified during preview and again before sending. */

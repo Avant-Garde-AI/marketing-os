@@ -16,6 +16,7 @@ import "../email/register-actions";
 import "../social/register-actions";
 import "../social/schedule-batch";
 import "../social/generation-publishing";
+import "../social/source-camera";
 import "../offers/register-actions";
 import "../storyboard/register-actions";
 import "../storyboard/realization";

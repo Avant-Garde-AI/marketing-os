@@ -24,6 +24,7 @@ import { runWithTenant } from "../../../../lib/tenant-context";
 import "../../../../lib/social/register-actions";
 import "../../../../lib/social/schedule-batch";
 import "../../../../lib/social/generation-publishing";
+import "../../../../lib/social/source-camera";
 import "../../../../lib/email/register-actions";
 import "../../../../lib/storyboard/register-actions";
 import "../../../../lib/storyboard/realization";

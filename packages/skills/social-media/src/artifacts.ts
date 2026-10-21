@@ -296,6 +296,8 @@ const videoReceiptFields = {
 };
 const uniqueVideoSources = (receipt: { sources: { ref: string }[] }) => new Set(receipt.sources.map(source => source.ref)).size === receipt.sources.length;
 export const renderedVideoSchema = z.union([
+  z.object({ version: z.literal(1), origin: z.literal("source-camera"), manifestHash: z.string().regex(/^[a-f0-9]{64}$/),
+    ...videoReceiptFields }).strict().refine(uniqueVideoSources, "video sources must have unique refs"),
   z.object({ version: z.literal(1), storyboardId: z.string().min(1),
     storyboardHash: z.string().regex(/^[a-f0-9]{64}$/), reviewHash: z.string().regex(/^[a-f0-9]{64}$/),
     ...videoReceiptFields }).strict().refine(uniqueVideoSources, "video sources must have unique refs"),

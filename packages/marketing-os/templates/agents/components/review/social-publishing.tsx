@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-type State = { account: { id: string; username: string }; status: string; expectedManifestHash: string;
+type State = { account: { id: string; username: string }; status: string; expectedManifestHash: string; expectedDraftHash?: string;
   scheduledAt: string | null; platform: { permalink: string; id: string } | null; attempt: string | null };
 /** The review remains readable by link holders; decisions require a verified console session. */
 export function SocialPublishing({ postId, manifestHash }: { postId: string; manifestHash: string }) {
@@ -20,7 +20,7 @@ export function SocialPublishing({ postId, manifestHash }: { postId: string; man
     setBusy(true); setMessage("");
     try {
       const res = await fetch("/api/social/carousel/publishing", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ postId, expectedManifestHash: manifestHash, ...body }) });
+        body: JSON.stringify({ postId, expectedManifestHash: manifestHash, ...(state?.expectedDraftHash ? { expectedDraftHash: state.expectedDraftHash } : {}), ...body }) });
       const out = await res.json();
       if (!res.ok || out.ok === false) throw new Error(out.error ?? out.summary ?? "The request did not complete");
       if (body.operation === "propose") setProposal({ ...out, mode: body.mode as "publish" | "schedule" });

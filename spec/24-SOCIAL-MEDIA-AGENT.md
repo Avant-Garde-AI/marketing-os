@@ -148,3 +148,16 @@ The Social console separates draft proposals, prepared media awaiting review, sc
 The shared calendar defaults to scheduled and published/sent history. Explicit Scheduled only and All work modes distinguish real release commitments from suggested dates. Unknown lifecycle strings and date-only plans do not silently enter the default queue. Visibility is a read-model filter, not a new authority or a change to approval hashing.
 
 Operator story shortcuts use the existing chat and ask for reader payoff, mood, format, source constraints and three contrasting beat sequences before new imagery. They are not a structured revision service. The next workbench, category research provider and research-to-pattern admission contract are planned in the [operator/narrative roadmap](../docs/plans/storyboard-harness/OPERATOR-NARRATIVE-ROADMAP-2026-10-07.md); optional customer intelligence adapters remain deferred.
+
+
+### Draft-to-delivery binding (2026-10-21)
+
+An existing `proposed` post may receive a verified generation carousel only
+through its publishing Action. The intent freezes both the delivery manifest
+and the parsed editorial draft. The executor preserves the draft rationale,
+source provenance, target link and planned date; it binds the connected account
+and immutable final assets, then uses the existing publish/schedule executor.
+An existing approval, publish attempt, schedule, canvas or media binding blocks
+this transition. Re-read under the post lock before persistence; a changed draft
+requires a fresh review. This is asset binding, not permission to approve
+unrendered content or overwrite scheduled/published posts.

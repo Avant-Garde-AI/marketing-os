@@ -8,6 +8,7 @@ import { socialRepo } from "../../../../../lib/social/repo";
 import { parsePost, postPath } from "../../../../../lib/social/artifacts";
 import { instagramIdentity } from "../../../../../lib/social/channels/instagram";
 import { brokerTokenSource } from "../../../../../lib/social/channels";
+import { hashPreview } from "../../../../../lib/actions/hash";
 import { proposeAction } from "../../../../../lib/actions/propose";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,8 @@ export async function GET(req: NextRequest) {
       const account = await instagramIdentity(brokerTokenSource);
       return json({ account, status: post?.status ?? "asset_ready", platform: post?.platform ?? null,
         scheduledAt: post?.scheduledAt ?? null, attempt: post?.publishAttempt?.state ?? null,
-        expectedManifestHash: carouselManifestHash(manifest) });
+        expectedManifestHash: carouselManifestHash(manifest),
+        ...(post?.status === "proposed" ? { expectedDraftHash: hashPreview(post) } : {}) });
     });
   } catch (e) { return json({ error: e instanceof Error ? e.message : "Publishing unavailable" }, 409); }
 }
@@ -53,6 +55,7 @@ export async function POST(req: NextRequest) {
         if (!["publish", "schedule"].includes(body.mode)) return json({ error: "Choose Publish or Schedule" }, 400);
         const params = carouselIntentSchema.parse({ postId: body.postId, expectedManifestHash: body.expectedManifestHash,
           accountId: body.accountId, accountUsername: body.accountUsername,
+          ...(body.expectedDraftHash ? { expectedDraftHash: body.expectedDraftHash } : {}),
           ...(body.mode === "schedule" ? { scheduledAt: body.scheduledAt } : {}) });
         const proposed = await proposeAction({ kind: `social.${body.mode}_carousel`, params });
         return json(proposed);

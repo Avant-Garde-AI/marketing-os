@@ -27,12 +27,19 @@ export async function verifyInstagramReplacement(token: string, expected: Instag
   const base = new URL(configured);
   if (base.protocol !== "https:" || base.hostname !== "graph.instagram.com" || base.username || base.password || base.port || base.search || base.hash || !/^\/v\d+\.\d+\/?$/.test(base.pathname))
     throw new Error("Reconnect requires the configured Instagram Login API");
-  const read = async (path: string, query = "") => {
+  const read = async (path: string, query = "", publishing = false) => {
     const response = await fetch(`${base.toString().replace(/\/$/, "")}/${path}${query}`, {
       headers: { Authorization: `Bearer ${token}` }, cache: "no-store", redirect: "error", signal: AbortSignal.timeout(15_000),
     });
     const body = await response.json().catch(() => null);
-    if (!response.ok || body?.error) throw new Error("Instagram rejected this token. Generate a fresh token for the existing account with publishing permission.");
+    if (!response.ok || body?.error) {
+      // Only numeric provider codes leave this verifier; raw messages can contain credentials.
+      const code = body?.error?.code;
+      const suffix = Number.isSafeInteger(code) && code >= 0 ? ` (Meta code ${code})` : "";
+      if (publishing && code !== 190)
+        throw new Error(`Instagram publishing access could not be verified${suffix}. Check content publishing permission and try again. Nothing was saved.`);
+      throw new Error(`Instagram rejected this token during ${publishing ? "publishing access" : "account"} verification${suffix}. Generate a fresh Instagram Login token for the existing account.`);
+    }
     return body;
   };
   const profile = await read("me", "?fields=user_id,username");
@@ -40,8 +47,18 @@ export async function verifyInstagramReplacement(token: string, expected: Instag
   const username = typeof profile?.username === "string" ? profile.username : "";
   if (id !== expected.id || username.toLowerCase() !== expected.username.toLowerCase())
     throw new Error(`This token does not belong to the existing @${expected.username} destination. Nothing was saved.`);
-  const permissions = await read("me/permissions");
-  if (!Array.isArray(permissions?.data) || !permissions.data.some((p: any) => p.permission === "instagram_business_content_publish" && p.status === "granted"))
-    throw new Error("The token is missing Instagram business content publishing permission. Nothing was saved.");
+  // Instagram Login does not expose the Facebook-style /me/permissions edge:
+  // valid tokens return code 100, "Tried accessing nonexisting field (permissions)".
+  // This read-only endpoint requires instagram_business_basic AND
+  // instagram_business_content_publish. It proves publishing access without
+  // creating a container, spending generation credits, or publishing a post.
+  // https://developers.facebook.com/documentation/instagram-platform/instagram-graph-api/reference/ig-user/content_publishing_limit
+  const quota = await read(`${id}/content_publishing_limit`, "?fields=quota_usage,config", true);
+  const entry = Array.isArray(quota?.data) && quota.data.length === 1 ? quota.data[0] : null;
+  if (!entry || !Number.isSafeInteger(entry.quota_usage) || entry.quota_usage < 0 ||
+      !Number.isSafeInteger(entry.config?.quota_total) || entry.config.quota_total <= 0 ||
+      !Number.isSafeInteger(entry.config?.quota_duration) || entry.config.quota_duration <= 0)
+    throw new Error("Instagram publishing access returned an unexpected response. Nothing was saved.");
+  // A full quota is still a valid connection; it is not an invalid credential.
   return { id, username };
 }

@@ -37,4 +37,11 @@ describe("rolling social production policy",()=>{
    expect(()=>assertAutopilotRelease(policy,batch,{...notice,deliveredAt:"2026-11-01T15:00:00Z"},slots,new Date("2026-11-01T15:10:00Z"))).toThrow("lead time");
    expect(()=>assertAutopilotRelease({...policy,enabled:false},batch,notice,slots,now)).toThrow("paused");
  });
+ it("rejects forged release windows and catches half-hour daylight-saving ambiguity",()=>{
+   const batch=autopilotWindow(policy,0),notice={channel:"C123",deliveredAt:"2026-10-25T17:00:00Z"},slots=batch.slots.map(s=>({...s,ready:true,accountId:"123"}));
+   expect(()=>assertAutopilotRelease(policy,{...batch,id:"forged"},notice,slots,new Date("2026-10-26T17:00:00Z"))).toThrow("authorized policy");
+   expect(()=>socialWallTime("2026-04-05","01:45","Australia/Lord_Howe")).toThrow("ambiguous");
+   expect(()=>assertBatchSpend(policy,[{id:"../escape",maximumCredits:1}])).toThrow("unique and bounded");
+ });
+
 });

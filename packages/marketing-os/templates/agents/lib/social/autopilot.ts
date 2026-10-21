@@ -84,7 +84,7 @@ export function dueAutopilotWindow(policyInput: SocialAutopilotPolicy, now = new
 export function assertBatchSpend(policyInput: SocialAutopilotPolicy, jobs: { id: string; maximumCredits: number }[]) {
   const policy = socialAutopilotPolicySchema.parse(policyInput);
   if (!policy.enabled || policy.maximumCredits === null) throw new Error("Autopilot is not armed with a budget");
-  if (!jobs.length || jobs.length > 42 || new Set(jobs.map(j => j.id)).size !== jobs.length)
+  if (!jobs.length || jobs.length > 42 || jobs.some(j => !/^[a-z0-9][a-z0-9-]{0,99}$/.test(j.id)) || new Set(jobs.map(j => j.id)).size !== jobs.length)
     throw new Error("Batch jobs must be unique and bounded");
   // Reserve the ceilings, not estimates. Every paid attempt keeps its reservation,
   // including failed/unknown submissions; rerolls require a new bounded grant.
@@ -105,6 +105,12 @@ export function assertAutopilotRelease(policyInput: SocialAutopilotPolicy, windo
     throw new Error("Slack review notice has not been delivered");
   if (slots.length !== 14 || new Set(slots.map(s => s.scheduledAt)).size !== 14)
     throw new Error("A release needs fourteen distinct daily posts");
+  const offset = (Date.parse(`${window.from}T00:00:00Z`) - Date.parse(`${policy.firstPostDate}T00:00:00Z`)) / DAY;
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset % policy.batchDays !== 0 ||
+      JSON.stringify(autopilotWindow(policy, offset / policy.batchDays)) !== JSON.stringify(window))
+    throw new Error("Release window differs from the authorized policy");
+  if (localCalendarDate(now, policy.timeZone) < window.prepareOn)
+    throw new Error("Release batch is not due for preparation yet");
   const expected = new Set(window.slots.map(s => s.scheduledAt));
   const deliveredAt = Date.parse(notice.deliveredAt);
   if (deliveredAt > now.getTime()) throw new Error("Invalid Slack delivery time");

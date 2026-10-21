@@ -909,6 +909,21 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/source-camera.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/source-camera.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/source-camera-contract.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/source-camera-contract.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/scripts/render-source-camera.ts"),
+      targetPath: path.join(targetDir, "agents/scripts/render-source-camera.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/social/page.tsx"),
       targetPath: path.join(targetDir, "agents/app/social/page.tsx"),
       overwrite: "skip",

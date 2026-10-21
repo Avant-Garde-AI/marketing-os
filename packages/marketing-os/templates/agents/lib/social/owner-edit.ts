@@ -14,6 +14,7 @@
  * is keep consent: editing a scheduled post takes it off the schedule, with
  * its time remembered, so the next click approves exactly what is on screen.
  */
+import { sourceCameraPath, sourceCameraManifestSchema } from "./source-camera";
 import { hashPreview } from "../actions/hash";
 import { parsePost, postPath, serializePost } from "./artifacts";
 import { generationCarouselPath, loadGenerationCarousel } from "./generation-carousel";
@@ -57,12 +58,20 @@ export async function ownerEditPost(
         const sequence = post.renderedSequence;
         if (video) {
           if (!("origin" in video)) throw new Error("This video's caption is part of its storyboard. Ask the agent to revise it.");
+          if (video.origin === "source-camera") {
+            const path = sourceCameraPath(postId), raw = await deps.repo.readFile(path);
+            if (!raw) throw new Error("Camera delivery record missing");
+            const manifest = sourceCameraManifestSchema.parse({ ...JSON.parse(raw), caption: copy });
+            await deps.repo.writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+            next.renderedVideo = { ...video, manifestHash: hashPreview(manifest) };
+          } else {
           const path = generationDeliveryPath(video.artifactId);
           const receiptRaw = await deps.repo.readFile(path);
           if (!receiptRaw) throw new Error("This video's delivery record is missing, so its caption cannot be changed here.");
           const receipt = generationDeliverySchema.parse({ ...JSON.parse(receiptRaw), caption: copy });
           await deps.repo.writeFile(path, `${JSON.stringify(receipt, null, 2)}\n`);
           next.renderedVideo = { ...video, deliveryHash: hashPreview(receipt) };
+          }
         } else if (sequence) {
           if (!("origin" in sequence)) throw new Error("These slides' caption is part of their storyboard. Ask the agent to revise it.");
           const path = generationCarouselPath(postId);

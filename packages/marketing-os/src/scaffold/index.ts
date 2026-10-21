@@ -894,6 +894,18 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/app/api/social/connection/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/connection/route.ts"),
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/social/connections/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/social/connections/page.tsx"),
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/connection.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/connection.ts"),
+    },
+    {
       templatePath: path.join(templateDir, "agents/app/social/page.tsx"),
       targetPath: path.join(targetDir, "agents/app/social/page.tsx"),
       overwrite: "skip",

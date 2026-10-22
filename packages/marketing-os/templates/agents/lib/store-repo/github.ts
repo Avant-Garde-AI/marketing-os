@@ -45,6 +45,13 @@ export interface GitHubStoreRepoOptions {
 
 const API = "https://api.github.com";
 const MAX_RAW_CONTENT_BYTES = 8 * 1024 * 1024;
+const WRITE_ATTEMPTS = 6;
+
+/** Jittered backoff so writers that collided once do not collide again in lockstep. */
+function retryDelayMs(attempt: number): number {
+  const base = 200 * 2 ** attempt;
+  return base + Math.floor(Math.random() * base);
+}
 
 interface CacheEntry {
   content: string | null;
@@ -174,36 +181,53 @@ export function createGitHubStoreRepo(opts: GitHubStoreRepoOptions): StoreRepo {
       assertSafePath(path);
       const fullPath = joinPath(rootPrefix, path);
 
-      // The sha must be the CURRENT one or GitHub rejects the write, so read
-      // through rather than trusting a cached sha — a stale sha turns a normal
-      // update into a 409 the caller can do nothing about.
-      const existing = await fetchFile(fullPath);
-      if (existing.content === content) {
-        // Identical content would still create an empty commit; skip it so the
-        // history stays a record of actual changes.
-        cache.set(fullPath, existing);
+      // The Contents API commits on the branch head, so a PUT races EVERY other
+      // write to the branch, not just writes to this file: seven drafts staged
+      // together lost their final saves to 409 "is at X but expected Y", and
+      // mirror mode then kept them only in the database. A 409 is retried only
+      // while this file's blob is the one we first read — if another writer
+      // changed this same file, overwriting it would silently drop their edit.
+      let baseSha: string | undefined | null = null;
+      for (let attempt = 0; ; attempt++) {
+        // The sha must be the CURRENT one or GitHub rejects the write, so read
+        // through rather than trusting a cached sha.
+        const existing = await fetchFile(fullPath);
+        if (existing.content === content) {
+          // Identical content would still create an empty commit; skip it so
+          // the history stays a record of actual changes.
+          cache.set(fullPath, existing);
+          return;
+        }
+        if (baseSha === null) baseSha = existing.sha;
+        else if (existing.sha !== baseSha) {
+          throw new Error(`GitHub write conflict for ${fullPath}: another writer changed this file while it was being saved`);
+        }
+
+        const verb = existing.sha ? "update" : "add";
+        const body: Record<string, unknown> = {
+          message: `chore(store): ${verb} ${path}`,
+          content: Buffer.from(content, "utf-8").toString("base64"),
+          ...(existing.sha ? { sha: existing.sha } : {}),
+          ...(branch ? { branch } : {}),
+          ...(opts.committer ? { committer: opts.committer } : {}),
+        };
+
+        const res = await gh(`${API}/repos/${repo}/contents/${encodeURI(fullPath)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 409 && attempt < WRITE_ATTEMPTS - 1) {
+          await new Promise((r) => setTimeout(r, retryDelayMs(attempt)));
+          continue;
+        }
+        if (!res.ok) {
+          throw new Error(`GitHub write failed (${res.status}) for ${fullPath}: ${await res.text()}`);
+        }
+        const json = (await res.json()) as { content?: { sha?: string } };
+        cache.set(fullPath, { content, sha: json.content?.sha, at: Date.now() });
         return;
       }
-
-      const verb = existing.sha ? "update" : "add";
-      const body: Record<string, unknown> = {
-        message: `chore(store): ${verb} ${path}`,
-        content: Buffer.from(content, "utf-8").toString("base64"),
-        ...(existing.sha ? { sha: existing.sha } : {}),
-        ...(branch ? { branch } : {}),
-        ...(opts.committer ? { committer: opts.committer } : {}),
-      };
-
-      const res = await gh(`${API}/repos/${repo}/contents/${encodeURI(fullPath)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        throw new Error(`GitHub write failed (${res.status}) for ${fullPath}: ${await res.text()}`);
-      }
-      const json = (await res.json()) as { content?: { sha?: string } };
-      cache.set(fullPath, { content, sha: json.content?.sha, at: Date.now() });
     },
 
     async list(prefix: string): Promise<string[]> {

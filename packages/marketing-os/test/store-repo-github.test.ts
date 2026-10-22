@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createGitHubStoreRepo } from "../templates/agents/lib/store-repo/github";
 
 const path = "social/production/sources/large.jpeg.b64";
@@ -74,5 +74,62 @@ describe("GitHub Contents large-file reads", () => {
       await expect(repo().readFile(path)).rejects.toThrow(/size mismatch|too large|blob SHA mismatch/);
       expect(calls).toBe(2);
     }
+  });
+});
+
+describe("GitHub Contents writes racing the branch head", () => {
+  const file = "email/campaigns/c/campaign.md";
+  const small = (text: string, sha: string) =>
+    Response.json({ type: "file", encoding: "base64", sha, content: Buffer.from(text).toString("base64") });
+  const branchMoved = () =>
+    Response.json({ message: "is at aaa but expected bbb", status: "409" }, { status: 409 });
+
+  /** Serve reads from `reads` in order (last one repeats) and PUTs from `puts`. */
+  function stub(reads: Array<() => Response>, puts: Array<() => Response>) {
+    const seen = { reads: 0, puts: [] as Record<string, unknown>[] };
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit = {}) => {
+      if (init.method === "PUT") {
+        seen.puts.push(JSON.parse(String(init.body)));
+        return puts[Math.min(seen.puts.length - 1, puts.length - 1)]!();
+      }
+      return reads[Math.min(seen.reads++, reads.length - 1)]!();
+    });
+    return seen;
+  }
+
+  beforeEach(() => {
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(((fn: () => void) => { fn(); return 0; }) as never);
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("retries a 409 caused by another file's commit and lands the write", async () => {
+    const seen = stub([() => small("status: approved\n", "sha-a")], [branchMoved, () => Response.json({ content: { sha: "sha-b" } })]);
+    await repo().writeFile(file, "status: drafted\n");
+    expect(seen.puts).toHaveLength(2);
+    expect(seen.puts.every((p) => p.sha === "sha-a")).toBe(true);
+  });
+
+  it("refuses to overwrite when the same file changed underneath it", async () => {
+    const seen = stub(
+      [() => small("status: approved\n", "sha-a"), () => small("status: held\n", "sha-other")],
+      [branchMoved],
+    );
+    await expect(repo().writeFile(file, "status: drafted\n")).rejects.toThrow(/another writer changed this file/);
+    expect(seen.puts).toHaveLength(1);
+  });
+
+  it("stops without a commit when the competing write already holds this content", async () => {
+    const seen = stub(
+      [() => small("status: approved\n", "sha-a"), () => small("status: drafted\n", "sha-other")],
+      [branchMoved],
+    );
+    await repo().writeFile(file, "status: drafted\n");
+    expect(seen.puts).toHaveLength(1);
+  });
+
+  it("gives up loudly when the branch never settles", async () => {
+    const seen = stub([() => small("status: approved\n", "sha-a")], [branchMoved]);
+    await expect(repo().writeFile(file, "status: drafted\n")).rejects.toThrow(/GitHub write failed \(409\)/);
+    expect(seen.puts).toHaveLength(6);
   });
 });

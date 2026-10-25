@@ -17,6 +17,7 @@ import "../social/register-actions";
 import "../social/schedule-batch";
 import "../social/generation-publishing";
 import "../social/source-camera";
+import "../social/autopilot-production";
 import "../offers/register-actions";
 import "../storyboard/register-actions";
 import "../storyboard/realization";

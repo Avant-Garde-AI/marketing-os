@@ -59,6 +59,8 @@ export async function POST(req:NextRequest){
       const result=await decided.json();
       return json({ok:decided.ok&&result.status==="executed",state:result.status,summary:result.message},decided.ok&&result.status==="executed"?200:409);
     }
+    const automation=await broker("/api/broker/social-autopilot");
+    if(automation.grant?.status==="active")return json({error:"Automatic production owns the current credit reservation. Use Continue production now above."},409);
     const job=loaded.batch.generationJobs.find(j=>j.artifactId===body.artifactId);
     if(!job)return json({error:"This generation is outside the approved batch reservation."},409);
     const actor={surface:"console" as const,subject:user.id};

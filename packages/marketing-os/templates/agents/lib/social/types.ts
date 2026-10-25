@@ -209,6 +209,8 @@ export interface SourceCameraSocialVideo {
 export type RenderedSocialVideo = StoryboardSocialVideo | GeneratedSocialVideo | SourceCameraSocialVideo;
 
 export interface SocialPost {
+  /** Owner-granted automation; checked again under the publish lock. */
+  automation?: { grantId: string; batchId: string; windowFrom: string };
   /** Connected destination verified during preview and again before sending. */
   channelAccount?: { id: string; username: string };
   /** Persisted before provider submission. Unresolved attempts block automatic retries. */

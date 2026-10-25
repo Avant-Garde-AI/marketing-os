@@ -39,6 +39,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
       <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt())}`}>Develop a story</Link>
       <Link className="arrow-link" href={`/social/schedule?month=${MONTH_RE.test(month) ? month : current}`}>Review media and approve schedules</Link>
             <Link className="arrow-link" href="/social/connections">Instagram connection</Link>
+      <Link className="arrow-link" href="/social/backlog">Production backlog</Link>
       <Link className="arrow-link" href={`/calendar?month=${MONTH_RE.test(month) ? month : current}`}>Open publishing calendar</Link>
     </div>
     <nav aria-label="Social month" className="mb-5 flex flex-wrap items-center gap-2">

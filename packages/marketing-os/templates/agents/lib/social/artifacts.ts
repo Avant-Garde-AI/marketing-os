@@ -316,6 +316,7 @@ const postFrontMatterSchema = z.object({
     .min(1)
     .optional()
     .describe("Post group this variant belongs to (spec 26 D3) — variants share it"),
+  automation: z.object({ grantId:z.string().uuid(), batchId:z.string(), windowFrom:z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }).strict().optional(),
   plannedAt: z.string().datetime({ offset: true }).optional().describe("Intended calendar time; not publish consent"),
   scheduledAt: z
     .string()
@@ -386,6 +387,7 @@ export function parsePost(raw: string): SocialPost {
     body: body.trim(),
   };
   if (fm.groupId !== undefined) post.groupId = fm.groupId;
+  if (fm.automation !== undefined) post.automation = fm.automation;
   if (fm.plannedAt !== undefined) post.plannedAt = fm.plannedAt;
   if (fm.scheduledAt !== undefined) post.scheduledAt = fm.scheduledAt;
   if (fm.copyFormulaRef !== undefined) post.copyFormulaRef = fm.copyFormulaRef;
@@ -403,6 +405,7 @@ export function parsePost(raw: string): SocialPost {
 export function serializePost(post: SocialPost): string {
   const fm: Record<string, unknown> = { id: post.id, channel: post.channel };
   if (post.groupId !== undefined) fm.groupId = post.groupId;
+  if (post.automation !== undefined) fm.automation = post.automation;
   if (post.plannedAt !== undefined) fm.plannedAt = post.plannedAt;
   if (post.scheduledAt !== undefined) fm.scheduledAt = post.scheduledAt;
   fm.copy = post.copy;

@@ -92,6 +92,15 @@ export function socialActionDeps(): SocialActionDeps {
       : socialReviewLink(getTenant().shop, post.groupId ?? post.id).url,
     withPostLock: withSocialPostLock,
     validateMaterial: async post => {
+      if (post.automation) {
+        const { apiBase, brokerHeaders } = await import("../broker-client");
+        const query=new URLSearchParams({grantId:post.automation.grantId,postId:post.id});
+        const response=await fetch(`${apiBase()}/api/broker/social-autopilot?${query}`,{headers:brokerHeaders(),cache:"no-store",redirect:"error",signal:AbortSignal.timeout(15000)});
+        const state=await response.json();
+        // Binding and schedule previews precede the scheduling receipt; only an
+        // already-scheduled publication requires send-time delegated authority.
+        if(post.status==="scheduled" && (!response.ok || !state.allowed))throw Error("Automatic publication is held, paused or no longer authorized");
+      }
       if (post.renderedVideo && "origin" in post.renderedVideo && post.renderedVideo.origin === "source-camera") {
         const { validateSourceCamera } = await import("./source-camera");
         await validateSourceCamera(socialRepo, post, process.env.MOS_AGENTS_PUBLIC_URL ?? "");

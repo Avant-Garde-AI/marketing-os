@@ -5,7 +5,7 @@ import { getTenant } from "@/lib/tenant-context";
 import { socialSheetLink } from "@/lib/social/review-links";
 import { socialPostReviewHref } from "@/lib/calendar/review-routes";
 import { postMonth, postThumbnailUrl } from "@/lib/social/projection";
-import { listPostIds, parsePost, postPath } from "@/lib/social/artifacts";
+import { loadSocialPostList } from "@/lib/social/post-list";
 import { socialRepo } from "@/lib/social/repo";
 import { SOCIAL_STAGES, SOCIAL_STAGE_LABELS, socialWorkflow, socialStoryPrompt } from "@/lib/social/workflow";
 import type { SocialStage } from "@/lib/social/workflow";
@@ -23,12 +23,7 @@ function headline(post: SocialPost) {
 export default async function SocialPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const sp = await searchParams, value = (key: string) => Array.isArray(sp[key]) ? sp[key][0] : sp[key];
   const { shop } = getTenant(), timeZone = process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC", now = Date.now();
-  const ids = await listPostIds(socialRepo), posts: SocialPost[] = []; let unreadable = 0;
-  // Posts are truth, including work that has never entered a calendar slot.
-  for (const id of ids) {
-    try { const raw = await socialRepo.readFile(postPath(id)); if (raw !== null) posts.push(parsePost(raw)); }
-    catch { unreadable++; }
-  }
+  const { posts, unreadable } = await loadSocialPostList(socialRepo);
   const months = [...new Set(posts.map(postMonth))].sort().reverse();
   const current = new Date(now).toLocaleDateString("en-CA", { timeZone }).slice(0, 7);
   const requested = value("month"), month = requested && (MONTH_RE.test(requested) || requested === "unscheduled") ? requested : months.includes(current) ? current : months[0] ?? current;
@@ -44,6 +39,7 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
       <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt())}`}>Develop a story</Link>
       <Link className="arrow-link" href={`/social/schedule?month=${MONTH_RE.test(month) ? month : current}`}>Review media and approve schedules</Link>
             <Link className="arrow-link" href="/social/connections">Instagram connection</Link>
+      <Link className="arrow-link" href="/social/backlog">Production backlog</Link>
       <Link className="arrow-link" href={`/calendar?month=${MONTH_RE.test(month) ? month : current}`}>Open publishing calendar</Link>
     </div>
     <nav aria-label="Social month" className="mb-5 flex flex-wrap items-center gap-2">

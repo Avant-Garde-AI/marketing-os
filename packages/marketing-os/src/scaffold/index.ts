@@ -914,6 +914,56 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/post-list.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/post-list.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/social/loading.tsx"),
+      targetPath: path.join(targetDir, "agents/app/social/loading.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/backlog.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/backlog.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/backlog/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/backlog/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/social/backlog/page.tsx"),
+      targetPath: path.join(targetDir, "agents/app/social/backlog/page.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/review/social-backlog-production.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/social-backlog-production.tsx"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/lib/social/autopilot-production.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/autopilot-production.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/autopilot/social/stage/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/autopilot/social/stage/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/app/api/social/autopilot/route.ts"),
+      targetPath: path.join(targetDir, "agents/app/api/social/autopilot/route.ts"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "agents/components/review/social-autopilot-controls.tsx"),
+      targetPath: path.join(targetDir, "agents/components/review/social-autopilot-controls.tsx"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/autopilot.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/autopilot.ts"),
       overwrite: "skip",

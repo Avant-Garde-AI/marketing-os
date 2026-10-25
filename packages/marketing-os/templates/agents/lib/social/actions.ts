@@ -126,6 +126,7 @@ export function publishMaterial(post: SocialPost): Record<string, unknown> {
     designSurface: post.designSurface ?? null,
     ...(post.renderedSequence ? { renderedSequence: post.renderedSequence } : {}),
     ...(post.renderedVideo ? { renderedVideo: post.renderedVideo } : {}),
+    ...(post.automation ? { automation: post.automation } : {}),
     scheduledAt: post.scheduledAt ?? null,
   };
 }

@@ -58,7 +58,7 @@ async function ensureImages(browser) {
 
 async function main() {
   const server = await startServer();
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: process.env.MOS_BROWSER_EXECUTABLE || undefined });
   await ensureImages(browser);
   mkdirSync(join(SHOTS, "mobile"), { recursive: true });
   mkdirSync(join(SHOTS, "desktop"), { recursive: true });
@@ -243,6 +243,49 @@ async function main() {
     mkdirSync(dirname(V1_SNAPSHOT), { recursive: true });
     writeFileSync(V1_SNAPSHOT, JSON.stringify(v1Sig, null, 1));
     console.log(`  wrote ${V1_SNAPSHOT} from ${RUNTIME}`);
+  }
+
+  for (const vp of Object.keys(VIEWPORTS)) {
+    await run(`responsive quiz ${vp}`, async () => {
+      reset();
+      const o = await open(vp, "/?fx=quiz");
+      const p = o.page;
+      await inCard(p, "quiz", ".opt").first().waitFor();
+      const immediate = await host(p, "quiz").evaluate((h) => {
+        const r = h.shadowRoot;
+        const opt = r.querySelector(".opt");
+        const visible = getComputedStyle(opt.closest(".ch")).animationName === "none";
+        const t = performance.now();
+        opt.click();
+        return { visible, advanced: !!r.querySelector("input"), ms: performance.now() - t };
+      });
+      check(`${vp}: answer advances synchronously under 100ms`, immediate.visible && immediate.advanced && immediate.ms < 100, immediate);
+      let release;
+      await p.route("**/surfaces/capture", async (route) => {
+        await new Promise((resolve) => { release = resolve; });
+        await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":false}' });
+      });
+      await inCard(p, "quiz", "input").fill("retry@example.com");
+      await inCard(p, "quiz", "button.cta").click();
+      await p.waitForFunction(() => document.querySelector('[data-mos-surface="quiz"]').shadowRoot.querySelector('[aria-busy="true"]'));
+      check(`${vp}: pending feedback visible`, await inCard(p, "quiz", ".status").textContent() === "Saving your email…");
+      await waitFor(() => !!release);
+      release();
+      await inCard(p, "quiz", "button.cta").waitFor({ state: "visible" });
+      await p.waitForFunction(() => !document.querySelector('[data-mos-surface="quiz"]').shadowRoot.querySelector('[aria-busy="true"]'));
+      check(`${vp}: retry preserves email and explains failure`, await inCard(p, "quiz", "input").inputValue() === "retry@example.com" && (await inCard(p, "quiz", ".status").textContent()).includes("try again"));
+      release = null;
+      await inCard(p, "quiz", "button.cta").click();
+      await waitFor(() => !!release);
+      check(`${vp}: submit disabled during pending retry`, await inCard(p, "quiz", "button.cta").isDisabled());
+      await host(p, "quiz").evaluate((h) => { h.shadowRoot.querySelector(".card").scrollTop = 10000; });
+      const close = inCard(p, "quiz", ".x");
+      if (vp === "mobile") await close.tap(); else await close.click();
+      check(`${vp}: one activation closes after scrolling`, await host(p, "quiz").count() === 0);
+      release();
+      check(`${vp}: closing restores page scrolling`, await p.evaluate(() => document.body.style.overflow) === "");
+      await o.done(`responsive quiz ${vp}`);
+    });
   }
 
   /* ── C. the 3-step zero-party quiz, live ─────────────────────────── */

@@ -517,8 +517,8 @@
       var focusables = card.querySelectorAll("input,button,a[href]");
       if (!focusables.length) return;
       var first = focusables[0], last = focusables[focusables.length - 1];
-      if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
-      else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
+      if (ev.shiftKey && (card.getRootNode().activeElement || document.activeElement) === first) { ev.preventDefault(); last.focus(); }
+      else if (!ev.shiftKey && (card.getRootNode().activeElement || document.activeElement) === last) { ev.preventDefault(); first.focus(); }
     }
     card.addEventListener("keydown", handler);
     return function () { card.removeEventListener("keydown", handler); };
@@ -871,6 +871,15 @@
     "@keyframes mf{from{opacity:0}}@keyframes mi{from{opacity:0;transform:translateY(16px)}}" +
     "@keyframes md{from{transform:scale(1.06)}}@keyframes mr{from{opacity:0;transform:translateY(8px)}}}";
 
+  V2_CSS +=
+    "button,a,input{touch-action:manipulation}" +
+    ".x{width:48px;height:48px}.x:before,.x:after{left:15px;top:23px;pointer-events:none}" +
+    ".overlay>.x,.takeover>.x{position:fixed;z-index:4;top:max(6px,env(safe-area-inset-top));right:max(6px,env(safe-area-inset-right))}" +
+    ".stepped>*{animation:none!important}.copy>.ch,.copy>.row,.copy>.cta,.copy>.dec{animation:none!important}" +
+    ".row{flex-wrap:wrap}.status{flex-basis:100%;font-size:13px;line-height:1.4}.status:empty{display:none}" +
+    ".opt:active{background:var(--ink);color:var(--bg)}" +
+    "@media(hover:none){.opt:hover:after{transform:none}.opt,.cta{transition:none}}";
+
   var PILL_CSS =
     ":host{all:initial}" +
     ".pill{--bg:#fff;--ink:#1a1a1a;--accent:#fff;position:fixed;z-index:2147483000;right:16px;bottom:16px;display:flex;align-items:center;gap:12px;min-height:48px;" +
@@ -896,7 +905,7 @@
     var place = surface.placement === "overlay" || surface.placement === "takeover" ? surface.placement : "corner";
     var isModal = place !== "corner";
     var comp = COMPS[variant.composition] || "card";
-    var answers = {}, reward = null, captured = false, idx = 0, busy = false, curSrc;
+    var answers = {}, reward = null, captured = false, idx = 0, busy = false, closed = false, curSrc;
     var start = Math.min(Math.max(ctl.startStep | 0, 0), steps.length - 1);
     // mos_step previews: earlier choices take their first option.
     for (var i = 0; i < start; i++) {
@@ -913,14 +922,15 @@
     root.appendChild(css);
     var wrap = el("div", "wrap " + place + " c-" + comp);
     wrap.setAttribute("style", tokenVars(variant.style));
-    var card = el("div", "card");
-    card.setAttribute("role", isModal ? "dialog" : "complementary");
-    if (isModal) card.setAttribute("aria-modal", "true");
+    var card = el("div", "card"), dialog = isModal ? wrap : card;
+    dialog.setAttribute("role", isModal ? "dialog" : "complementary");
+    if (isModal) dialog.setAttribute("aria-modal", "true");
     var x = el("button", "x");
     x.type = "button";
     x.setAttribute("aria-label", "Close");
     var media = el("div", "media"), copy = el("div", "copy");
-    card.appendChild(x);
+    // Modal close stays outside the scrolling/animated card.
+    (isModal ? wrap : card).appendChild(x);
     card.appendChild(media);
     card.appendChild(copy);
     wrap.appendChild(card);
@@ -975,12 +985,13 @@
         var btn = el("button", "opt", o.label);
         btn.type = "button";
         btn.addEventListener("click", function () {
-          if (busy) return;
+          if (busy || closed) return;
           busy = true;
           answers[b.answerKey] = o.value;
           btn.classList.add("on");
           ctl.track("answer", { answerKey: b.answerKey, answerValue: o.value, step: idx });
-          setTimeout(function () { busy = false; next(); }, DIAG ? 0 : 220);
+          busy = false;
+          next();
         });
         opts.appendChild(btn);
       });
@@ -990,6 +1001,9 @@
 
     function emailForm(b, consent) {
       var f = el("form", "row"), input = el("input"), btn = el("button", "cta", b.cta || "Join");
+      var status = el("p", "status");
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
       input.type = "email";
       input.name = "email";
       input.required = true;
@@ -999,14 +1013,19 @@
       btn.type = "submit";
       f.appendChild(input);
       f.appendChild(btn);
+      f.appendChild(status);
       f.addEventListener("submit", function (ev) {
         ev.preventDefault();
         if (busy) return;
         busy = true;
         btn.disabled = true;
-        btn.textContent = "…";
+        btn.textContent = "Submitting…";
+        f.setAttribute("aria-busy", "true");
+        status.textContent = "Saving your email…";
         ctl.capture(input.value, { answers: answers, consentText: consent ? consent.text : "" }).then(function (res) {
           busy = false;
+          if (closed) return;
+          f.removeAttribute("aria-busy");
           if (res && res.ok) {
             captured = true;
             reward = res.reward || null;
@@ -1014,9 +1033,7 @@
           } else {
             btn.disabled = false;
             btn.textContent = b.cta || "Join";
-            input.setAttribute("aria-invalid", "true");
-            input.placeholder = "That didn’t go through — try again";
-            input.value = "";
+            status.textContent = "That didn’t go through. Please try again.";
           }
         });
       });
@@ -1116,11 +1133,12 @@
         } catch (e) { oops(e); }
       });
       var h = copy.querySelector(".h");
-      card.setAttribute("aria-label", h ? h.textContent : "Offer");
+      dialog.setAttribute("aria-label", h ? h.textContent : "Offer");
       card.scrollTop = 0;
       copy.scrollTop = 0;
     }
     function show(n) {
+      if (n !== start) copy.classList.add("stepped");
       idx = n;
       setMedia(imageFor(n));
       fill((steps[n] && steps[n].blocks) || [], n);
@@ -1133,6 +1151,7 @@
       } catch (e) { oops(e); }
     }
     function next() {
+      if (closed) return;
       if (idx + 1 < steps.length) {
         show(idx + 1);
         ctl.track("step", { step: idx });
@@ -1154,9 +1173,11 @@
       prevOverflow = document.body.style.overflow;
       document.body.style.overflow = "hidden";
     }
-    var untrap = isModal ? trapFocus(card) : null;
+    var untrap = isModal ? trapFocus(wrap) : null;
     function onKey(ev) { if (ev.key === "Escape") close("dismiss"); }
     function close(reason) {
+      if (closed) return;
+      closed = true;
       if (prevOverflow !== null) document.body.style.overflow = prevOverflow;
       if (untrap) untrap();
       document.removeEventListener("keydown", onKey);

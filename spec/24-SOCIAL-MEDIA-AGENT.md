@@ -201,17 +201,33 @@ consent. The delivery type is part of the shared social pack; renderer and
 provider/runtime integration remain outside `packages/storyboard`.
 
 
-### Standing social policy contract (2026-10-21, worker not yet implemented)
+### Standing social production and release (2026-10-25)
 
 The pure `lib/social/autopilot.ts` contract validates an explicitly budgeted
 14-day policy with seven-day lead, exact account, local send time, recipe
-allowlist and successful Slack notice requirement. It computes stable
-non-overlapping windows, rejects ambiguous/nonexistent wall times, reserves
-paid ceilings and refuses incomplete/late/mismatched releases. It cannot
-enable a policy or approve an action.
+allowlist and confirmed Slack notice requirement. It resolves non-overlapping
+windows across DST. A policy file cannot approve actions or enable authority.
 
-[Rolling production plan](../docs/plans/storyboard-harness/SOCIAL-AUTOPILOT.md)
-records the observed production blocker and the remaining platform grant,
-durable worker, rendering, Slack review, cancellation and production-proof
-work. Requested settings must remain disabled until the existing gate records
-an actual owner grant; no metadata or policy file grants standing authority.
+The canonical console now supplies `lib/social/autopilot-production.ts`: a
+store-owned recipe pool becomes fourteen frozen drafts, source-bound generation
+inputs, verified scene/loop deliveries and final post bindings. The platform
+owns an owner-approved `social.autopilot.grant`, durable leased batch journal,
+whole-batch credit reservations and an independent cron. Every media submission,
+artifact mutation and schedule still executes through the existing action gate.
+Unknown paid outcomes retain their reservations and stop for reconciliation.
+
+A confirmed Slack notice precedes scheduling. The first publication must leave
+at least the configured review interval, with one hour of margin. Finished posts
+then appear on the calendar while the owner can hold one or pause the grant.
+Automatic post artifacts retain their grant identity in the consent hash; the
+publisher rechecks active authority, delivered review, exact gate schedule and
+per-post holds under its existing lock. Pause therefore blocks previously
+scheduled automatic releases as well as new production. Manual posts preserve
+their existing consent semantics.
+
+[Rolling production implementation](../docs/plans/storyboard-harness/SOCIAL-AUTOPILOT.md)
+documents ownership, failure handling and deployment proof. Code and passing
+tests are distinct from activation: record the live owner grant, real generation
+jobs, Slack receipt and actual schedule results before claiming a live backlog.
+The initial recipe pool and rollout target the client-owned Arthaus console;
+pooled-runtime adoption must preserve tenant-bound repository and broker seams.

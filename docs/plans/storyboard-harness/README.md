@@ -14,6 +14,8 @@ governed generation, evaluation, and rollout.
 | [Post observations](POST-OBSERVATIONS-2026-10-09.md) | Implemented media-bound frame diagnostics and publication/content-bound Instagram outcome snapshots, review display and read tool |
 | [Production handover](PRODUCTION-HANDOVER-2026-10-04.md) | Shipped social recipes, live calendar/review/approval/publishing boundaries, and remaining research |
 | [Operator and narrative roadmap](OPERATOR-NARRATIVE-ROADMAP-2026-10-07.md) | Clear publication stages, operator brief/revisions, category research, creative evaluation and deferred customer adapters |
+| [Fortnightly social autopilot](SOCIAL-AUTOPILOT.md) | Implemented recurring production, owner standing grant, credit reservations, Slack opt-out review, pause/hold checks and activation proof |
+| [October 25 recovery](SOCIAL-RECOVERY-2026-10-25.md) | Empty-queue diagnosis, merged recovery work, deployment status and real exporter verification |
 | [Calendar scheduling](CALENDAR-SCHEDULING.md) | Implemented batch approval, planned versus scheduled dates, and governed Reels |
 | [Carousel publishing](CAROUSEL-PUBLISHING.md) | Implemented generation receipt binding, authenticated publishing controls and retry discipline |
 | [Themed carousels](THEMED-SCENE-CAROUSELS-2026-09-30.md) | Owner correction: artwork-led themes, three distinct scenes, implemented planning and remaining delivery |

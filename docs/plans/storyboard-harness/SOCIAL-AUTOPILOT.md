@@ -72,3 +72,17 @@ scheduling results. Until those exist, describe this as implemented and tested,
 not activated or fully scheduled.
 
 Implementation: the open-core template owns planning, rendering, binding and console controls. The platform owns standing grants, leases, budgets, Slack and cron execution. Arthaus owns recipes, master lineage, editorial facts and desired policy.
+
+### Activation recovery, 2026-10-27
+
+A requested policy file is still not an active grant. The owner Enable control
+records standing consent through the gate. At first activation only, if the old
+first post date is too close or past, choose a fresh future date allowing the
+full review interval plus two calendar days for production and margin. Never
+begin paid generation for an already-missed initial window. After activation the
+grant's exact dates remain fixed; cron ticks do not move the cadence.
+
+The Email console now exposes the equivalent owner controls. Recurring review
+is opt-out for both channels. Historical manual generation requests are not
+adopted as extra paid attempts: decline them through the gate when replacing
+that manual batch with bounded automatic production.

@@ -93,3 +93,27 @@ normal three cards.
   still authored from Shopify and storefront data, and the digest says so.
 - Sandbox authoring costs model spend once per window. It is metered under the
   existing agent job caps.
+
+## Owner activation and recovery (2026-10-27)
+
+The Email console now exposes authenticated Enable, Pause/Resume, Continue and
+per-campaign Hold controls. A real Supabase console user signs the exact request
+for `/api/broker/email-autopilot`. Enable creates and approves `autopilot.grant`
+through the existing gate, recording that actual user once. Covered campaigns
+then need no individual approval; the Slack digest begins the granted opt-out
+period. Existing strategy cadence, audiences and excluded promotion types remain
+the scope of the grant. Two weeks means a calendar window, not daily email.
+
+First activation uses a fresh start date with a full production day and review
+period, instead of waiting for an old requested date weeks away. Subsequent
+windows retain that granted 14-day cadence and prepare seven days ahead. Existing
+campaigns are read before authoring to avoid duplicating planned or scheduled
+sends. Continue advances only the authenticated tenant; the cron still advances
+all installed tenants belonging to its app.
+
+Automatic sends waiting out their review period are excluded from the ordinary
+"waiting for approval" inbox. The Email list marks them "Automatic · review
+open" and excludes them from the manual bulk-schedule button. Explicitly held
+items return to the manual inbox; a paused grant remains paused in automation
+controls. The live status reads the actual gate decisions so a held or scheduled
+campaign cannot remain mislabeled as an automatic pending send.

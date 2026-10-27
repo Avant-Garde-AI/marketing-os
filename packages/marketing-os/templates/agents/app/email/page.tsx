@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { apiBase, brokerHeaders } from "@/lib/broker-client";
+import { EmailAutopilotControls } from "@/components/email/autopilot-controls";
 import { PageHeader, Chip, EmptyState } from "@/components/primitives";
 import { listCampaigns, type EmailCampaignRow } from "@/lib/email/console-data";
 import { emailSheetLink } from "@/lib/email/review-links";
@@ -86,7 +88,14 @@ function CampaignRow({ c, chip }: { c: EmailCampaignRow; chip: { label: string; 
 }
 
 export default async function EmailPage() {
-  const campaigns = await listCampaigns();
+  const [campaigns, automation] = await Promise.all([
+    listCampaigns(),
+    (async () => fetch(`${apiBase()}/api/broker/email-autopilot`, { headers: brokerHeaders(), cache: "no-store", signal: AbortSignal.timeout(8000) }))()
+      .then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  const automatic = new Set<string>(automation?.grant && ["active", "paused"].includes(automation.grant.status)
+    ? (automation.batches ?? []).flatMap((b: { staged?: { campaignId: string; state: string }[] }) =>
+        (b.staged ?? []).filter(c => c.state === "held").map(c => c.campaignId)) : []);
   const { shop } = getTenant();
   const now = Date.now();
   const at = (c: EmailCampaignRow) => (c.scheduledAt ? new Date(c.scheduledAt).getTime() : Number.POSITIVE_INFINITY);
@@ -117,6 +126,8 @@ export default async function EmailPage() {
           }
           sub="What is about to send and whether it needs you, then how the sent ones did."
         />
+
+        <EmailAutopilotControls />
 
         {campaigns.length === 0 ? (
           <div className="animate-enter-2 border border-hairline bg-raised">
@@ -157,7 +168,7 @@ export default async function EmailPage() {
                 <>
                   <div className="mb-3">
                     <ScheduleMonth
-                      campaigns={upcoming.map((c) => ({
+                      campaigns={upcoming.filter(c => !automatic.has(c.id)).map((c) => ({
                         id: c.id,
                         subject: c.subject ?? `Campaign ${c.id}`,
                         status: c.status,
@@ -167,7 +178,7 @@ export default async function EmailPage() {
                     />
                   </div>
                   <ul className="divide-y divide-hairline border border-hairline bg-raised">
-                    {upcoming.map((c) => <CampaignRow key={c.id} c={c} chip={plainStatus(c, now)} />)}
+                    {upcoming.map((c) => <CampaignRow key={c.id} c={c} chip={automatic.has(c.id) && c.status !== "scheduled" ? { label: automation.grant.status === "paused" ? "Automation paused" : "Automatic · review open", variant: "attention" } : plainStatus(c, now)} />)}
                   </ul>
                   {/* The whole month, shareable: one link listing every campaign
                       with its own review link. Signed and expiring, no console

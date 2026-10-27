@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/api/actions/execute") ||
     // Service-only autopilot stager verifies ACTIONS_GATE_SECRET in-route.
     request.nextUrl.pathname === "/api/autopilot/email/stage" ||
+    request.nextUrl.pathname === "/api/autopilot/social/stage" ||
     // Service-only generation input verifies ACTIONS_GATE_SECRET in-route.
     // Match this one path exactly; adjacent social routes still need sessions.
     request.nextUrl.pathname === "/api/social/generation/input" ||

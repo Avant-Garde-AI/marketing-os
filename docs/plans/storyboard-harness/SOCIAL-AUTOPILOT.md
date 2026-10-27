@@ -86,3 +86,18 @@ The Email console now exposes the equivalent owner controls. Recurring review
 is opt-out for both channels. Historical manual generation requests are not
 adopted as extra paid attempts: decline them through the gate when replacing
 that manual batch with bounded automatic production.
+
+### First live invocation correction (2026-10-27)
+
+The social planning endpoint was correctly secret-authenticated in-route but
+omitted from the middleware service-path allowlist. A real worker therefore
+received a login redirect before reaching that check. Match only
+`/api/autopilot/social/stage`, like email’s existing stager; adjacent routes
+still require their normal session. Anonymous requests must reach an in-route
+401, never a redirect and never planning data. The stopped initial batch had
+no generation jobs or artifact mutations and may restart its unchanged preflight.
+
+The Next server external package list also used `@mastra/*`, although the
+installed Next implementation builds a package-name regex without glob expansion.
+Use the six concrete Mastra package names to avoid bundling the whole server SDK
+into every compilation. No SDK versions or runtime capabilities change.

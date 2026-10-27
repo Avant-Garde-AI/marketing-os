@@ -7,7 +7,14 @@ const nextConfig: NextConfig = {
     "/**": ["./brand/**/*"],
   },
   serverExternalPackages: [
-    "@mastra/*",
+    // Next treats these as package names/regex fragments, not glob patterns.
+    // @mastra/* did not externalize @mastra/core and caused enormous rebuilds.
+    "@mastra/ai-sdk",
+    "@mastra/auth-supabase",
+    "@mastra/core",
+    "@mastra/memory",
+    "@mastra/pg",
+    "@mastra/mcp",
     // design-loop lazy-loads optional heavy adapters (playwright etc.)
     "@avant-garde/design-loop",
     "playwright",

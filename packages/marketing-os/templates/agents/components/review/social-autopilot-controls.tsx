@@ -40,7 +40,7 @@ export function SocialAutopilotControls() {
       <p className="my-3">
         Seven artwork loops and seven three-scene carousels. Prepare a fortnight seven days ahead,
         reserve up to 125 Higgsfield credits, notify you in Slack, and schedule them with at least
-        24 hours to review before the first publication. Pause also stops already-scheduled
+        24 hours to review before the first publication. Covered posts need no individual approval. Pause also stops already-scheduled
         automatic posts.
       </p>
       <p className="my-3">

@@ -9,6 +9,7 @@ import {
   runWithGenerationActor,
 } from "../../../../lib/social/generation-authority";
 import { socialAutopilotPolicySchema } from "../../../../lib/social/autopilot";
+import { activationStart } from "../../../../lib/autopilot/activation";
 const json = (b: unknown, status = 200) =>
   NextResponse.json(b, { status, headers: { "Cache-Control": "no-store" } });
 async function proxy(init?: RequestInit) {
@@ -46,6 +47,9 @@ export async function POST(req: NextRequest) {
         const raw = await socialRepo.readFile("social/autopilot/policy.json");
         if (!raw) return json({ error: "Store social policy is missing" }, 409);
         policy = socialAutopilotPolicySchema.parse({ ...JSON.parse(raw), enabled: true });
+        // An unactivated file can sit for days. Never spend on an already-missed first slot.
+        const earliest = activationStart(policy.timeZone, policy.minimumReviewHours);
+        if (policy.firstPostDate < earliest) policy = { ...policy, firstPostDate: earliest };
       }
       const actor = { surface: "console" as const, subject: user.id },
         body = JSON.stringify({

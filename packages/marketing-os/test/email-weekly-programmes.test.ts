@@ -6,6 +6,15 @@ vi.mock("../templates/agents/lib/actions/propose", () => ({
   proposeDelegated: vi.fn(() => { throw new Error("Use the injected gate in autopilot unit tests"); }),
 }));
 vi.mock("../templates/agents/lib/email/index-sync", () => ({ syncCampaignIndex: vi.fn() }));
+// The draft Action's assembly and discount checks reach generated-console
+// dependencies (htmlparser2, the Shopify client) this CLI suite does not install.
+vi.mock("../templates/agents/lib/email-assembly/invariants", () => ({
+  DEFAULT_ALLOWED_IMAGE_HOSTS: ["klaviyo.com"],
+  hostAllowed: () => true,
+}));
+vi.mock("../templates/agents/lib/email/discount-refs", () => ({
+  checkDiscounts: async () => ({ errors: [], warnings: [], checks: [] }),
+}));
 import { parseAutopilotPolicy, stageWindow, type EmailAutopilotPolicy } from "../templates/agents/lib/email/autopilot";
 import { activationStart } from "../templates/agents/lib/autopilot/activation";
 import { createEmailActions } from "../templates/agents/lib/email/actions";

@@ -1404,6 +1404,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/catalog/ams.ts"),
+      targetPath: path.join(targetDir, "agents/lib/catalog/ams.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/mcp/zod-schema.ts"),
       targetPath: path.join(targetDir, "agents/lib/mcp/zod-schema.ts"),
       overwrite: "skip",

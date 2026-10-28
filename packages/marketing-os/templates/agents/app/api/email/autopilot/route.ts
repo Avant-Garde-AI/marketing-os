@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       if (!raw) return json({ error: "Store email policy is missing" }, 409);
       policy = { ...parseAutopilotPolicy(raw), enabled: true };
       // Start the next fortnight now, even when an old setup draft names a distant month.
-      policy.firstWindowStart = activationStart(policy.timeZone, policy.holdHours);
+      policy.firstWindowStart = activationStart(policy.timeZone, policy.holdHours, new Date(), (policy.programmes ?? []).map((p) => p.sendDay));
     }
     const actor = { surface: "console" as const, subject: user.id };
     const body = JSON.stringify({ operation: input.operation, ...(policy ? { policy } : {}), ...(input.proposalId ? { proposalId: input.proposalId } : {}), actor });

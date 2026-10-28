@@ -32,6 +32,24 @@ export const emailAutopilotPolicySchema = z
     archetypes: z.array(z.string()).min(1),
     audiences: z.array(z.string()).min(1),
     maxCampaignsPerWindow: z.number().int().min(1).max(14),
+    // Weekly programmes (marketing-os-app autopilot-policy.ts). Parsed here so
+    // the owner can request a grant that carries them; the stager itself is
+    // always sent a narrowed, programme-free policy by the platform.
+    programmes: z
+      .array(
+        z
+          .object({
+            key: z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/),
+            archetype: z.string().min(1),
+            audience: z.string().min(1),
+            sendDay: z.enum(["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]),
+            localTime: z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+            prepareDaysBefore: z.number().int().min(2).max(6),
+          })
+          .strict(),
+      )
+      .max(4)
+      .optional(),
   })
   .strict();
 export type EmailAutopilotPolicy = z.infer<typeof emailAutopilotPolicySchema>;
@@ -52,12 +70,17 @@ export const AUTOPILOT_AUTHOR_TOOLS: ReadonlySet<string> = new Set([
   "email_campaign_retrospective", "artist_profile_read", "imagery_resolve", "imagery_rooms", "gallery_wall_sets_read",
   "check_design_library", "list_design_surfaces", "klaviyo_audiences_read", "klaviyo_audience_explain",
   "klaviyo_performance_read", "explore_schema", "describe_field", "query", "explain_query", "social_calendar_read",
+  "catalog_new_artists", "catalog_handle_artists", "artwork_image_read",
 ]);
 
 export interface StageWindow {
   from: string;
   through: string;
   slots: string[];
+  /** A programme week stages only its own archetype… */
+  onlyArchetypes?: string[];
+  /** …and a fortnight leaves programme archetypes to their own weeks. */
+  skipArchetypes?: string[];
 }
 
 export interface StagedItem {
@@ -163,6 +186,10 @@ export async function stageWindow(input: {
   let done = true;
 
   for (const listed of await windowCampaigns(input.repo, input.window)) {
+    // Campaigns a day either side of the window are listed; another batch's
+    // archetypes are that batch's business, not a "needs a person" line here.
+    if (input.window.onlyArchetypes && !input.window.onlyArchetypes.includes(listed.archetype)) continue;
+    if (input.window.skipArchetypes?.includes(listed.archetype)) continue;
     const base = {
       campaignId: listed.id,
       subject: listed.subject,

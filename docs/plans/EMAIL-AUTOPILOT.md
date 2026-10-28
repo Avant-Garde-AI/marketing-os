@@ -117,3 +117,49 @@ open" and excludes them from the manual bulk-schedule button. Explicitly held
 items return to the manual inbox; a paused grant remains paused in automation
 controls. The live status reads the actual gate decisions so a held or scheduled
 campaign cannot remain mislabeled as an automatic pending send.
+
+## Weekly programmes (2026-10-27)
+
+Some sends cannot be written a week ahead because their content is the week
+itself: Arthaus's Sunday "new artists this week" and its Friday follow-up to
+the people who clicked it. The grant can now carry `programmes`:
+
+```yaml
+programmes:
+  - { key: sunday-new-artists, archetype: new-artists-weekly, audience: engaged-or-new,
+      sendDay: sunday, localTime: "10:00", prepareDaysBefore: 3 }
+  - { key: friday-traction, archetype: artist-traction, audience: new-artists-clickers,
+      sendDay: friday, localTime: "10:00", prepareDaysBefore: 3 }
+```
+
+- **One batch per programme week.** A one-day window on the send date, opened
+  `prepareDaysBefore` days out, then the same authoring → staging → notice →
+  holding path, the same Slack Hold and Pause. At most one campaign.
+- **Scope is exactly one archetype to one audience.** A programme archetype
+  may not also be a rotation archetype, so neither batch kind can send the
+  other's campaigns. The platform verifies claims against the programme, and
+  sends the store's stager a narrowed policy with no `programmes` key (its
+  strict schema predates them). Fortnights skip programme archetypes and
+  programme weeks stage only their own, so neither lists the other as
+  "needs a person".
+- **No migration.** Batches stay keyed by `(grant_id, window_from)`; a one-day
+  batch is a programme week. No fortnight may start on a programme weekday
+  (validated; the console's Enable picks a start that avoids them), so the two
+  never collide.
+- **The brief is the strategy.** The programme prompt pins the slot, scope and
+  honesty rules and tells the author to follow the strategy's section for the
+  archetype, including its minimum for a send: an empty week writes nothing
+  and the digest says why.
+- **Follow-up audiences.** A strategy audience may declare
+  `follows: { archetype, metric: clicked_email }`. Klaviyo can only scope a
+  click to one campaign by id (by name it silently matches nobody), so the
+  draft Action re-points that standing segment at the latest scheduled or sent
+  campaign of the followed archetype from the previous two weeks, and refuses
+  when there is none.
+- **Catalogue reads.** A store that sets `AMS_INTERNAL_URL` and
+  `AMS_INTERNAL_API_KEY` offers `catalog_new_artists`, `catalog_handle_artists`
+  and `artwork_image_read` (the artwork itself as MCP image content, so the
+  author can look before it describes). All read-only; the key stays server-side.
+
+A policy without `programmes` hashes exactly as before, so existing grants are
+unaffected. Adding programmes is a policy change and needs a new grant.

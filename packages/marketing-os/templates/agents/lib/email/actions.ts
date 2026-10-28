@@ -28,6 +28,7 @@ import { checkDiscounts } from "./discount-refs";
 import { syncCampaignIndex } from "./index-sync";
 import { getTenant } from "../tenant-context";
 import { DEFAULT_ALLOWED_IMAGE_HOSTS, hostAllowed } from "../email-assembly/invariants";
+import { compile as compileAudience } from "./segments";
 import { z } from "zod";
 import type { Action, ActionPreview, ActionResult } from "../skill-kit";
 import type {
@@ -122,6 +123,66 @@ async function loadStrategy(repo: EmailRepo): Promise<EmailStrategy> {
   const raw = await repo.readFile(strategyPathFor(root));
   if (raw === null) throw new Error(`${strategyPathFor(root)} not found — co-create the strategy first`);
   return parseStrategy(raw);
+}
+
+/** A follows-audience resolved for one campaign: which segment, re-pointed at which send. */
+interface FollowedAudience {
+  key: string;
+  segmentId: string;
+  archetype: string;
+  followed: { id: string; klaviyoCampaignId: string; scheduledAt: string };
+}
+
+/** How far back a follows-audience may reach for the send it follows. */
+const FOLLOW_WINDOW_MS = 14 * 86_400_000;
+
+/**
+ * For each included audience whose roster entry `follows` an archetype, the
+ * latest send of that archetype (scheduled or sent, before this campaign, in
+ * the last two weeks) whose clickers it must contain. Refuses when there is
+ * none: a follow-up to a send that never happened has no audience, and
+ * silently sending it to last month's clickers would be worse than not sending.
+ */
+async function followedAudiences(repo: EmailRepo, campaign: EmailCampaign): Promise<FollowedAudience[]> {
+  const strategy = await loadStrategy(repo);
+  const out: FollowedAudience[] = [];
+  for (const ref of campaign.audience.included) {
+    const entry = strategy.audiences.find(
+      (a) => (ref.key && a.key === ref.key) || (a.klaviyoRef.type === ref.type && a.klaviyoRef.id === ref.id),
+    );
+    if (!entry?.follows) continue;
+    if (entry.klaviyoRef.type !== "segment") throw new Error(`audience ${entry.key} follows a send but is not a segment`);
+    const before = Date.parse(campaign.scheduledAt ?? "");
+    if (!Number.isFinite(before)) throw new Error(`campaign "${campaign.id}" has no send time, so it cannot follow a send`);
+    let best: EmailCampaign | null = null;
+    for (const file of (await repo.list("email/campaigns/")).filter((f) => f.endsWith("/campaign.md"))) {
+      const raw = await repo.readFile(file);
+      if (!raw) continue;
+      let c: EmailCampaign;
+      try {
+        c = parseCampaign(raw);
+      } catch {
+        continue;
+      }
+      const at = Date.parse(c.scheduledAt ?? "");
+      if (c.archetype !== entry.follows.archetype || !c.klaviyo?.campaignId) continue;
+      if (!["scheduled", "sent", "measured"].includes(c.status)) continue;
+      if (!(at < before && before - at <= FOLLOW_WINDOW_MS)) continue;
+      if (!best || at > Date.parse(best.scheduledAt!)) best = c;
+    }
+    if (!best) {
+      throw new Error(
+        `audience ${entry.key} follows the latest ${entry.follows.archetype} send, and none was scheduled or sent in the two weeks before ${campaign.scheduledAt} — there is no one to follow up with`,
+      );
+    }
+    out.push({
+      key: entry.key,
+      segmentId: entry.klaviyoRef.id,
+      archetype: entry.follows.archetype,
+      followed: { id: best.id, klaviyoCampaignId: best.klaviyo!.campaignId!, scheduledAt: best.scheduledAt! },
+    });
+  }
+  return out;
 }
 
 /** Skeleton version participates in every hash — re-ingestion re-arms cards. */
@@ -468,6 +529,7 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
     async preview(p) {
       const campaign = await loadCampaign(deps.repo, p.campaignId);
       const assembled = await draftReadiness(deps, campaign, { imagesWillBeRehosted: true });
+      const follows = await followedAudiences(deps.repo, campaign);
       // Real audience sizes for the card (recipient estimation needs a Klaviyo
       // campaign to exist — that's the SCHEDULE preview's number; here we show
       // live profile counts for the selected lists/segments).
@@ -482,6 +544,10 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
           { label: "Subject", value: campaign.subject!.slice(0, 60) },
           { label: "Preview text", value: campaign.previewText!.slice(0, 60) },
           { label: "Audience", value: audienceLabel(withSizes) },
+          ...follows.map((f) => ({
+            label: "Audience follows",
+            value: `${f.key} → clickers of ${f.followed.id} (re-pointed when drafted)`,
+          })),
           { label: "Sections", value: `${campaign.sections.length} (${campaign.sections.filter((s) => s.type === "surface").length} visual)` },
           { label: "Skeleton", value: campaign.skeletonRef },
         ],
@@ -548,6 +614,21 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
       }
       campaign.klaviyo = { ...campaign.klaviyo, templateId };
       await saveCampaign(deps.repo, campaign);
+
+      // Step 3b — point any follows-audience at the send it follows, before
+      // the campaign is created against it. Idempotent: the same rule each run.
+      for (const f of await followedAudiences(deps.repo, campaign)) {
+        if (!deps.klaviyo.updateSegmentDefinition) throw new Error("this Klaviyo client cannot update a segment's rule");
+        const definition = await compileAudience(
+          {
+            name: f.key,
+            anyOfGroups: [[{ kind: "did_for_campaign", metric: "clicked_email", campaignId: f.followed.klaviyoCampaignId }]],
+          },
+          deps.klaviyo,
+        );
+        await deps.klaviyo.updateSegmentDefinition(f.segmentId, definition);
+        steps.push(`audience:${f.key}->${f.followed.id}`);
+      }
 
       // Step 4 — campaign + message (resume: skip when campaignId recorded).
       if (!campaign.klaviyo.campaignId) {

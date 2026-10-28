@@ -526,6 +526,14 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
       return { id: seg.id, name: String((seg.attributes as { name?: string })?.name ?? input.name) };
     },
 
+    async updateSegmentDefinition(id: string, definition: Record<string, unknown>): Promise<void> {
+      await request({
+        method: "PATCH",
+        path: `${EP.segments}/${encodeURIComponent(id)}`,
+        body: { data: { type: "segment", id, attributes: { definition } } },
+      });
+    },
+
     /**
      * A segment's count and rule. Both come from the single-resource GET —
      * `additional-fields` is rejected on the collection endpoint, so there is

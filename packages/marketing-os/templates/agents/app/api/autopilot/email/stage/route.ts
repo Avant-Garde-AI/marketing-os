@@ -25,7 +25,7 @@ interface StageBody {
   grantId?: string;
   batchId?: string;
   policy?: unknown;
-  window?: { from?: string; through?: string; slots?: string[] };
+  window?: { from?: string; through?: string; slots?: string[]; onlyArchetypes?: string[]; skipArchetypes?: string[] };
 }
 
 export async function POST(req: NextRequest) {
@@ -49,7 +49,13 @@ export async function POST(req: NextRequest) {
         grantId: body.grantId!,
         batchId: body.batchId!,
         policy: policy.data,
-        window: { from: window.from!, through: window.through!, slots: window.slots! },
+        window: {
+          from: window.from!,
+          through: window.through!,
+          slots: window.slots!,
+          ...(Array.isArray(window.onlyArchetypes) ? { onlyArchetypes: window.onlyArchetypes.map(String) } : {}),
+          ...(Array.isArray(window.skipArchetypes) ? { skipArchetypes: window.skipArchetypes.map(String) } : {}),
+        },
         deadline: Date.now() + BUDGET_MS,
       }),
     );

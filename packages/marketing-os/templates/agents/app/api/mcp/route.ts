@@ -14,6 +14,7 @@ import { runExploreSchema, runDescribeField } from "@/src/mastra/semantics/intro
 import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
 import { resolveImagery, listRooms } from "@/lib/imagery/resolve";
+import { artworkImage, catalogAvailable, handleArtists, newArtists } from "@/lib/catalog/ams";
 import { createEmailTools } from "@/lib/email/tools";
 import { emailRepo } from "@/lib/email/repo";
 import { AUTOPILOT_AUTHOR_TOOLS, AUTOPILOT_POLICY_PATH, parseAutopilotPolicy } from "@/lib/email/autopilot";
@@ -124,6 +125,13 @@ interface ToolDef {
   description: string;
   inputSchema: Record<string, unknown>;
   run: (args: any) => Promise<unknown>;
+  /** Listed only when the deployment can serve it (e.g. a catalogue key is set). */
+  available?: () => boolean;
+}
+
+/** A tool result that is MCP content as-is (an image), not JSON to stringify. */
+class McpContent {
+  constructor(readonly content: Array<Record<string, unknown>>) {}
 }
 
 /**
@@ -359,6 +367,50 @@ const TOOLS: ToolDef[] = [
       required: ["artworkUrl", "artworkKey", "role"],
     },
     run: (a) => resolveImagery(a),
+  },
+  {
+    name: "catalog_new_artists",
+    description:
+      "Artists whose FIRST work went live on the store in the last `days` (default 7), from the store's own artwork system — the source for a weekly new-artists email. Each artist has their collection URL, live work count, `pageReady` (their page has its hero and About; never send people to a page that is not ready), the discovery topic(s) they were brought in for with the real search phrases behind each, and recent works (name, product handle, url, artworkId, previewUrl). Imported artists have no personal statement: describe the work, never invent biography. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        days: { type: "number", description: "Look-back window in days (1–90, default 7)." },
+        minLive: { type: "number", description: "Minimum live works for an artist to count (default 3)." },
+      },
+    },
+    run: (a) => newArtists(a ?? {}),
+    available: catalogAvailable,
+  },
+  {
+    name: "catalog_handle_artists",
+    description:
+      "Map product handles (the last segment of a /products/<handle> page path, e.g. from a GA4 site_events query) to their artist: artistId, name, collectionHandle and firstLiveAt (when the artist went live). Handles that are not a live product are left out. Use to sum product-page traffic per artist. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: { handles: { type: "array", items: { type: "string" }, description: "Product handles, up to 2000." } },
+      required: ["handles"],
+    },
+    run: (a) => handleArtists(a ?? {}),
+    available: catalogAvailable,
+  },
+  {
+    name: "artwork_image_read",
+    description:
+      "Show one artwork's image (its catalogue preview) so you can see it before featuring it: check what it depicts, its palette, and whether it contains text or anything unsuitable for a broad send. Describe only what you can see. Takes the artworkId from catalog_new_artists works. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: { artworkId: { type: "number", description: "The AMS artworkId." } },
+      required: ["artworkId"],
+    },
+    run: async (a) => {
+      const img = await artworkImage(a ?? {});
+      return new McpContent([
+        { type: "image", data: img.data, mimeType: img.mimeType },
+        { type: "text", text: `Artwork ${a.artworkId}` },
+      ]);
+    },
+    available: catalogAvailable,
   },
   {
     name: "imagery_rooms",
@@ -684,7 +736,7 @@ async function dispatch(msg: RpcRequest, clientProtocol?: string, allow?: Readon
 
     case "tools/list":
       return rpcResult(id, {
-        tools: TOOLS.filter((t) => !allow || allow.has(t.name)).map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
+        tools: TOOLS.filter((t) => (!allow || allow.has(t.name)) && (!t.available || t.available())).map((t) => ({ name: t.name, description: t.description, inputSchema: t.inputSchema })),
       });
 
     case "tools/call": {
@@ -692,6 +744,7 @@ async function dispatch(msg: RpcRequest, clientProtocol?: string, allow?: Readon
       if (!tool || (allow && !allow.has(tool.name))) return rpcError(id, -32602, `Unknown tool: ${params?.name}`);
       try {
         const result = await tool.run(params?.arguments ?? {});
+        if (result instanceof McpContent) return rpcResult(id, { content: result.content, isError: false });
         return rpcResult(id, {
           content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
           isError: false,

@@ -62,6 +62,14 @@ export interface StrategyAudience {
    * campaigns on it.
    */
   rotation?: boolean;
+  /**
+   * A standing segment that always means "clicked the latest send of this
+   * archetype" — the Friday traction audience is the Sunday send's clickers.
+   * A segment can only name one Klaviyo campaign id (matching by campaign NAME
+   * is accepted by Klaviyo and silently matches nobody), so the draft action
+   * re-points `klaviyoRef` at the latest such send before creating the draft.
+   */
+  follows?: { archetype: string; metric: "clicked_email" };
 }
 
 /** Campaign archetypes are the email pack's pillars (02 §3): new-arrivals,
@@ -434,6 +442,12 @@ export interface KlaviyoClient {
     name: string;
     definition: Record<string, unknown>;
   }): Promise<{ id: string; name: string }>;
+
+  /**
+   * Replace a segment's rule in place. Optional so test doubles need not grow
+   * it; the one caller (a "follows" audience at draft time) refuses without it.
+   */
+  updateSegmentDefinition?(id: string, definition: Record<string, unknown>): Promise<void>;
 
   /** A segment's count and its rule. `processing` while Klaviyo evaluates it. */
   describeSegment(id: string): Promise<{

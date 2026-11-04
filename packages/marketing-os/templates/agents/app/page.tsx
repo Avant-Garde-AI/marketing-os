@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { Approvals } from "@/components/approvals";
+import { AutomationOverview } from "@/components/automation-overview";
 import { createShopifyClient } from "@/lib/shopify";
 import {
   PageHeader,
@@ -24,7 +27,8 @@ async function getOrderCount(): Promise<number | null> {
     const shopify = createShopifyClient();
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
     const data = await shopify.rest<{ count: number }>(
-      `orders/count.json?status=any&created_at_min=${encodeURIComponent(since)}`
+      `orders/count.json?status=any&created_at_min=${encodeURIComponent(since)}`,
+      { signal: AbortSignal.timeout(5000) }
     );
     return data.count;
   } catch {
@@ -37,7 +41,7 @@ async function getPrs(state: "open" | "closed"): Promise<PrItem[] | null> {
   try {
     const res = await fetch(
       `https://api.github.com/repos/${GITHUB_REPO}/pulls?state=${state}&labels=marketing-os&per_page=8&sort=updated&direction=desc`,
-      { headers: { Authorization: `token ${GITHUB_TOKEN}` }, next: { revalidate: 60 } }
+      { headers: { Authorization: `token ${GITHUB_TOKEN}` }, next: { revalidate: 60 }, signal: AbortSignal.timeout(5000) }
     );
     if (!res.ok) return null;
     const prs = await res.json();
@@ -54,7 +58,7 @@ async function getPrs(state: "open" | "closed"): Promise<PrItem[] | null> {
   }
 }
 
-export default async function Overview() {
+async function OverviewDetails() {
   const [orderCount, openPrs, closedPrs] = await Promise.all([
     getOrderCount(),
     getPrs("open"),
@@ -64,13 +68,8 @@ export default async function Overview() {
   const merged = (closedPrs ?? []).filter((pr) => pr.merged_at);
 
   return (
-    <div className="px-8 py-10">
-      <div className="mx-auto max-w-[1200px]">
-        <PageHeader
-          eyebrow="Marketing OS"
-          title="Overview"
-          sub="Your store, your agents, and what needs your attention."
-        />
+    <div>
+
 
         {/* By the numbers */}
         <div className="animate-enter-2 mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -91,9 +90,9 @@ export default async function Overview() {
             }
           />
           <StatTile
-            label="Published"
+            label="Changes merged"
             value={closedPrs === null ? null : merged.length}
-            note={closedPrs === null ? "Connect GitHub to track changes" : "Recent agent changes, live"}
+            note={closedPrs === null ? "Connect GitHub to track changes" : "Code and store changes"}
           />
           <StatTile
             label="Playbooks"
@@ -199,7 +198,16 @@ export default async function Overview() {
             )}
           </SectionCard>
         </div>
-      </div>
     </div>
   );
+}
+
+
+export default function Overview() {
+  return <div className="px-8 py-10"><div className="mx-auto max-w-[1200px]">
+    <PageHeader eyebrow="Marketing OS" title="Overview" sub="What is running, what is going out, and anything that needs attention." />
+    <AutomationOverview />
+    <section className="mb-8"><h2 className="mb-3 font-display text-xl">Manual requests</h2><p className="mb-3 text-sm text-ink-3">Covered content runs automatically. Only requests outside the current automation policy need an approval here.</p><Approvals /></section>
+    <Suspense fallback={<p className="py-6 text-sm text-ink-3">Loading store activity…</p>}><OverviewDetails /></Suspense>
+  </div></div>;
 }

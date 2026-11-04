@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { reconcileSocialCalendar } from "@/lib/social/calendar-reconcile";
 import { PageHeader, Chip, EmptyState } from "@/components/primitives";
 import { CalendarView } from "@/components/calendar/calendar-view";
 import { calendarHrefFor } from "@/lib/calendar/review-routes";
@@ -64,7 +63,6 @@ export default async function CalendarPage({
         : (months[0] ?? currentMonth());
 
   const { shop } = getTenant();
-  const refresh = await reconcileSocialCalendar(shop, month);
   const items = await listCalendarItems(month);
   const channels = [...new Set(items.map((i) => i.channel))].sort();
 
@@ -81,7 +79,6 @@ export default async function CalendarPage({
           sub="Approved schedules and published work across your channels. Draft plans are available in All work."
         />
 
-        {refresh.failures.length > 0 && <p role="status">Some social calendar cards could not be refreshed. The review page still reads the source posts.</p>}
 
         {/* Month masthead */}
         <div className="animate-enter-2 mb-4 flex flex-wrap items-baseline justify-between gap-3">
@@ -124,7 +121,7 @@ export default async function CalendarPage({
             />
             <p className="animate-enter-3 mt-5 text-[11.5px] text-ink-3">
               Planned dates are suggestions; scheduled items have approval to send automatically.
-              {" "}<Link href={`/social/schedule?month=${month}`}>Review and approve social schedules →</Link>
+              {" "}<Link href={`/social/schedule?month=${month}`}>Review social content and schedules →</Link>
             </p>
           </>
         ) : (

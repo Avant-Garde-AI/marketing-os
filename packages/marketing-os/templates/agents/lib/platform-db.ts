@@ -20,7 +20,7 @@ let _pool: Pool | null = null;
 export function platformPool(): Pool | null {
   const cs = process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!cs) return null;
-  if (!_pool) _pool = new Pool({ connectionString: cs, max: 3 });
+  if (!_pool) _pool = new Pool({ connectionString: cs, max: 3, connectionTimeoutMillis: 5000, query_timeout: 8000, statement_timeout: 8000 });
   return _pool;
 }
 

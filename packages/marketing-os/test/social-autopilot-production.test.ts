@@ -121,6 +121,18 @@ describe("deterministic fortnightly social production", () => {
     expect(b.plans.some((p) => ids.has(p.id))).toBe(false);
     expect(b.batch.range.from).toBe("2026-11-11");
   });
+  it("keeps overlapping replacement windows separate and preserves legacy manifest ids", async () => {
+    const a = await planSocialWindow(input);
+    const b = await planSocialWindow({ ...input, policy: { ...policy, firstPostDate: "2026-11-01" } });
+    expect(a.batch.posts.some(p => b.batch.posts.some(q => p.id === q.id))).toBe(false);
+    expect(a.plans.some(p => b.plans.some(q => p.id === q.id))).toBe(false);
+    // A pre-existing legacy window must retain its immutable IDs and hashes.
+    const encoded = JSON.stringify(a.batch).replaceAll("-auto-2026-10-28-", "-auto-")
+      .replaceAll("auto-2026-10-28-2026-", "auto-2026-");
+    store.set("social/drafts/auto-2026-10-28/batch.json", encoded);
+    const legacy = await planSocialWindow(input);
+    expect(legacy.batch).toEqual(JSON.parse(encoded));
+  });
   it("refuses changed recipes, missing credits, lost disclosure and insufficient caps", async () => {
     await expect(planSocialWindow({ ...input, recipeHash: "b".repeat(64) })).rejects.toThrow();
     await expect(

@@ -123,7 +123,9 @@ export function AppShell({
               <Link
                 key={item.href}
                 href={item.href}
-                title={collapsed ? item.label : undefined}
+                title={item.label}
+                aria-label={item.label}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 text-[15px] transition-colors duration-[160ms]",
                   active

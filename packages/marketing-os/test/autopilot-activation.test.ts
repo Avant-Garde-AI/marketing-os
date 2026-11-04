@@ -16,3 +16,7 @@ describe("first unattended batch", () => {
     expect(b.from).toBe("2026-11-13");expect(b.prepareOn).toBe("2026-11-06");
   });
 });
+
+it("keeps a fortnight start off the weekly programme’s day",()=>{
+  expect(activationStart("America/Chicago",48,new Date("2026-11-04T15:00:00Z"),["sunday","friday"])).toBe("2026-11-09");
+});

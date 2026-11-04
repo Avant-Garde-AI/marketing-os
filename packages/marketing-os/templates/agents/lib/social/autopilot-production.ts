@@ -70,6 +70,13 @@ const variations = [
 export async function planSocialWindow(raw: Preparation) {
   const p = prepare.parse(raw),
     window = autopilotWindow(p.policy, p.index);
+  // A replacement future window can overlap abandoned drafts. Keep existing
+  // manifests stable; namespace new artifacts by window so recovery never
+  // overwrites another batch's immutable generation inputs.
+  const existing = await socialRepo.readFile(batchPath(window.from));
+  const legacyIds = existing
+    ? socialBacklogSchema.parse(JSON.parse(existing)).posts[0].id.startsWith(`${window.from}-instagram-auto-`)
+    : false;
   const source = await socialRepo.readFile("social/autopilot/recipes.json");
   if (!source || source.length > 250000 || digest(Buffer.from(source)) !== p.recipeHash)
     throw Error("Social recipes changed; re-read the source catalog");
@@ -100,7 +107,7 @@ export async function planSocialWindow(raw: Preparation) {
     const group = groups[n % 2],
       entry = group[(Math.floor(n / 2) + p.index * 7) % group.length];
     const slot = window.slots[n],
-      postId = `${slot.date}-instagram-auto-${entry.recipeId}`;
+      postId = legacyIds ? `${slot.date}-instagram-auto-${entry.recipeId}` : `${slot.date}-instagram-auto-${window.from}-${entry.recipeId}`;
     const caption = p.captions?.[n] ?? entry.caption;
     if (
       entry.artistHandles.some((h) => !caption.includes(h)) ||
@@ -110,7 +117,7 @@ export async function planSocialWindow(raw: Preparation) {
     const inputs: string[] = [];
     for (const [j, rawPlan] of entry.plans.entries()) {
       const prior = generationPlanSchema.parse(rawPlan),
-        artifactId = `auto-${slot.date}-${n % 2 === 0 ? "loop" : `scene-${j + 1}`}`;
+        artifactId = `auto-${legacyIds ? slot.date : `${window.from}-${slot.date}`}-${n % 2 === 0 ? "loop" : `scene-${j + 1}`}`;
       const plan = generationPlanSchema.parse({
         ...prior,
         id: artifactId,

@@ -21,6 +21,9 @@ maintain that projection; explicit reconciliation remains a repair utility.
 ## Implemented repair
 
 - Refuse an already-missed social window before model or generation spend.
+- Namespace new generation inputs and post IDs by window, allowing replacement
+  future windows to overlap abandoned dates without overwriting source drafts.
+  Existing legacy manifests retain their IDs and hashes.
 - Automatically retry only an untouched transient preflight, at most three
   times, five minutes apart, with no worker proposal/job and full review lead.
   Paid, frozen, unknown or paused work is never automatically retried.

@@ -12,7 +12,7 @@ export async function GET(req:NextRequest) {
       const r = await fetch(`${apiBase()}/api/broker/${channel}-autopilot`, {headers:brokerHeaders(),cache:"no-store",signal:AbortSignal.timeout(8000)});
       if (!r.ok) throw Error(`Status unavailable (${r.status})`);
       const b = await r.json();
-      return [channel, {grant:b.grant,worker:b.worker,batches:(b.batches ?? []).map((x:{id:string;phase:string;window_from:string;window_through:string;detail?:string;scheduled?:string[];held_post_ids?:string[];staged?:{state:string}[];updated_at?:string;progress?:Record<string,number>}) => ({id:x.id,phase:x.phase,from:x.window_from,through:x.window_through,detail:x.phase === "attention" ? x.detail?.slice(0,250) : undefined,scheduled:x.scheduled?.length ?? x.staged?.filter(y=>y.state === "scheduled").length ?? 0,held:x.held_post_ids?.length??0,progress:x.progress,updatedAt:x.updated_at}))}];
+      return [channel, {grant:b.grant,worker:b.worker,batches:(b.batches ?? []).map((x:{id:string;phase:string;window_from:string;window_through:string;detail?:string;scheduled?:string[];held_post_ids?:string[];finishing?:{complete:number;total:number};staged?:{state:string}[];updated_at?:string;progress?:Record<string,number>}) => ({id:x.id,phase:x.phase,from:x.window_from,through:x.window_through,detail:x.phase === "attention" ? x.detail?.slice(0,250) : undefined,scheduled:x.scheduled?.length ?? x.staged?.filter(y=>y.state === "scheduled").length ?? 0,held:x.held_post_ids?.length??0,finishing:x.finishing,progress:x.progress,updatedAt:x.updated_at}))}];
     } catch(e) { return [channel,{error:e instanceof Error ? e.message : "Status unavailable"}]; }
   }));
   return NextResponse.json(Object.fromEntries(entries),{headers:{"Cache-Control":"no-store"}});

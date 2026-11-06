@@ -252,7 +252,7 @@ const templatesReadOutput = z.object({
   ),
 });
 
-const performanceReadInput = z.object({
+export const klaviyoPerformanceReadInputSchema = z.object({
   campaignIds: z.array(z.string()).optional().describe("Klaviyo campaign ids; omit for timeframe-wide"),
   timeframe: z.object({
     start: z.string().datetime({ offset: true }),
@@ -309,7 +309,7 @@ export interface EmailTools {
   klaviyo_audiences_read: SkillToolDefinition<typeof audiencesReadInput, typeof audiencesReadOutput>;
   klaviyo_templates_read: SkillToolDefinition<typeof templatesReadInput, typeof templatesReadOutput>;
   klaviyo_performance_read: SkillToolDefinition<
-    typeof performanceReadInput,
+    typeof klaviyoPerformanceReadInputSchema,
     typeof performanceReadOutput
   >;
 }
@@ -466,7 +466,7 @@ export function createEmailTools(repo: EmailRepo, klaviyo: KlaviyoClient): Email
       id: "klaviyo_performance_read",
       description:
         "Campaign performance readback via Klaviyo's campaign-values-report: delivery, engagement (opens/clicks/CTOR), compliance (unsubs/spam), conversion (count, revenue, revenue-per-recipient). Always states the attribution basis — Klaviyo campaign reports count BY SEND DATE, which differs from event-time aggregates and from semantic-layer joins (three counting systems; never mix silently).",
-      inputSchema: performanceReadInput,
+      inputSchema: klaviyoPerformanceReadInputSchema,
       outputSchema: performanceReadOutput,
       execute: async (input) => {
         const start = Date.parse(input.timeframe.start);

@@ -194,6 +194,7 @@ registerAction("social.autopilot_prepare", () => ({
       if (old && old !== encoded) throw Error("Generation input already differs");
       if (!old) await socialRepo.writeFile(path, encoded);
     }
+    const deps = socialActionDeps();
     for (const item of batch.posts) {
       const path = postPath(item.id),
         old = await socialRepo.readFile(path);
@@ -201,11 +202,10 @@ registerAction("social.autopilot_prepare", () => ({
         const post = parsePost(old);
         if (post.copy !== item.caption || post.plannedAt !== item.plannedAt)
           throw Error("Draft already differs");
+        await deps.onPostSaved?.(post);
         continue;
       }
-      await socialRepo.writeFile(
-        path,
-        serializePost({
+      const encoded=serializePost({
           id: item.id,
           groupId: item.id,
           channel: "instagram",
@@ -217,8 +217,9 @@ registerAction("social.autopilot_prepare", () => ({
           targetLink: String(item.targetLink),
           provenance: [],
           body: String(item.body),
-        })
-      );
+        });
+      await socialRepo.writeFile(path,encoded);
+      await deps.onPostSaved?.(parsePost(encoded));
     }
     if (!prior)
       await socialRepo.writeFile(batchPath(batch.range.from), JSON.stringify(batch, null, 2));

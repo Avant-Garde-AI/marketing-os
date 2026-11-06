@@ -26,18 +26,12 @@
  * losing the projection loses speed, not content.
  */
 
-import { Pool } from "pg";
+import { platformPool } from "../platform-db";
 import { upsertCalendarItem } from "../calendar";
 import { postCalendarProjection, postIndexRow } from "./projection";
 import type { SocialPost } from "./types";
 
-let _pool: Pool | null = null;
-function pool(): Pool | null {
-  const cs = process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!cs) return null;
-  if (!_pool) _pool = new Pool({ connectionString: cs, max: 3 });
-  return _pool;
-}
+function pool() { return platformPool(); }
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -115,8 +109,8 @@ export async function syncPostIndex(shop: string, post: SocialPost): Promise<Soc
       `INSERT INTO pack_social.posts
          (tenant_id, id, channel, group_key, calendar_month, status, scheduled_at, target_link, copy,
           surface_file_id, surface_page_id, surface_revn, approval_hash, approval_at,
-          platform_id, platform_permalink, published_at, failure, repo_path)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+          platform_id, platform_permalink, published_at, failure, repo_path, post_snapshot)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb)
        ON CONFLICT (tenant_id, id) DO UPDATE SET
          channel = EXCLUDED.channel,
          group_key = EXCLUDED.group_key,
@@ -137,6 +131,7 @@ export async function syncPostIndex(shop: string, post: SocialPost): Promise<Soc
          published_at = COALESCE(EXCLUDED.published_at, pack_social.posts.published_at),
          failure = EXCLUDED.failure,
          repo_path = EXCLUDED.repo_path,
+         post_snapshot = EXCLUDED.post_snapshot,
          updated_at = now()`,
       [
         tenantId,
@@ -158,6 +153,7 @@ export async function syncPostIndex(shop: string, post: SocialPost): Promise<Soc
         row.publishedAt,
         row.failure,
         row.repoPath,
+        JSON.stringify(post),
       ],
     );
   } catch (e) {

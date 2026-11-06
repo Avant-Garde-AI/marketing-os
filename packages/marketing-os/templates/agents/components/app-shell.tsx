@@ -123,6 +123,7 @@ export function AppShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 title={item.label}
                 aria-label={item.label}
                 aria-current={active ? "page" : undefined}

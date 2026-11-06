@@ -407,4 +407,10 @@ CREATE TRIGGER trg_mos_review_notes_updated
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 `,
   },
+  {
+    name: "012_social_dashboard_snapshot.sql",
+    sql: `-- Read-only console material, rebuilt from post.md; never an approval source.
+ALTER TABLE pack_social.posts ADD COLUMN IF NOT EXISTS post_snapshot JSONB;
+`,
+  },
 ];

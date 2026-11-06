@@ -88,7 +88,7 @@ export function createGitHubStoreRepo(opts: GitHubStoreRepoOptions): StoreRepo {
   };
 
   async function gh(url: string, init?: RequestInit): Promise<Response> {
-    const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers ?? {}) } });
+    const res = await fetch(url, { signal:AbortSignal.timeout(15000), ...init, headers: { ...headers, ...(init?.headers ?? {}) } });
     if (res.status === 401 || res.status === 403) {
       // Distinguish "no permission" from "not found": a 403 that reads as an
       // empty repo would silently look like a store with no artifacts.

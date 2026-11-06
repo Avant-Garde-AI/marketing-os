@@ -15,7 +15,7 @@ import { runQuery, explainQuery } from "@/src/mastra/semantics/query";
 import { ga4 } from "@/lib/ga4";
 import { resolveImagery, listRooms } from "@/lib/imagery/resolve";
 import { artworkImage, catalogAvailable, handleArtists, newArtists } from "@/lib/catalog/ams";
-import { createEmailTools } from "@/lib/email/tools";
+import { createEmailTools, klaviyoPerformanceReadInputSchema } from "@/lib/email/tools";
 import { emailRepo } from "@/lib/email/repo";
 import { AUTOPILOT_AUTHOR_TOOLS, AUTOPILOT_POLICY_PATH, parseAutopilotPolicy } from "@/lib/email/autopilot";
 import { proposeAppActionToGate } from "@/lib/actions/gate-client";
@@ -149,11 +149,11 @@ class McpContent {
 async function emailTool(name: string, args: unknown): Promise<unknown> {
   const defs = createEmailTools(emailRepo, createKlaviyoClient()) as unknown as Record<
     string,
-    { execute: (i: unknown) => Promise<unknown> } | undefined
+    { inputSchema: { parse: (i: unknown) => unknown }; execute: (i: unknown) => Promise<unknown> } | undefined
   >;
   const def = defs[name];
   if (!def) throw new Error(`Unknown email tool: ${name}`);
-  return def.execute(args);
+  return def.execute(def.inputSchema.parse(args));
 }
 
 /** The runtime's Mastra email tools (email_render_preview lives here, not in the pack). */
@@ -474,14 +474,9 @@ const TOOLS: ToolDef[] = [
   {
     name: "klaviyo_performance_read",
     description: "Campaign performance from Klaviyo over a window. Always report the attribution basis it returns alongside the numbers.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        since: { type: "string", description: "ISO date" },
-        until: { type: "string", description: "ISO date" },
-        campaignIds: { type: "array", items: { type: "string" } },
-      },
-    },
+    // Share the pack's real timeframe contract; hand-written since/until
+    // inputs passed tools/list validation and then crashed on timeframe.start.
+    inputSchema: jsonSchemaFromZod(klaviyoPerformanceReadInputSchema),
     run: (a) => emailTool("klaviyo_performance_read", a ?? {}),
   },
 

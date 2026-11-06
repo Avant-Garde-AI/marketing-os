@@ -215,3 +215,10 @@ it("requires visual validation of the exact rendered bytes before automatic bind
  expect(()=>assertSceneVisualValidation(d,rendered)).not.toThrow();
  expect(()=>assertSceneVisualValidation(d,"b".repeat(64))).toThrow(/frame-fit/);
 });
+
+it('keeps old review confidence rules while accepting the explicit v2 all-criteria profile',()=>{
+ const receipt:any={scene:{visualValidation:{profile:'frame-fit-v1',sha256:'a'.repeat(64),passed:true,confidence:.9,model:'critic'}}};
+ expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
+ receipt.scene.visualValidation.profile='frame-fit-v2';expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).not.toThrow();
+ expect(()=>assertSceneVisualValidation(receipt,'b'.repeat(64))).toThrow();receipt.scene.visualValidation.confidence=.89;expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
+});

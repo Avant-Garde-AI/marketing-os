@@ -2,7 +2,7 @@ export interface AutomationStatus {
   error?: string;
   grant?: {status:string;policy?:{firstPostDate?:string;firstWindowStart?:string}} | null;
   worker?: {checkedAt:string;status:string;detail?:string} | null;
-  batches?: {id:string;phase:string;from:string;through:string;detail?:string;scheduled:number;held?:number;finishing?:{complete:number;total:number};progress?:Record<string,number>;updatedAt?:string}[];
+  batches?: {id:string;phase:string;from:string;through:string;detail?:string;scheduled:number;retryAt?:string;retryReason?:string;waitingRuntime?:boolean;held?:number;finishing?:{complete:number;total:number};progress?:Record<string,number>;updatedAt?:string}[];
 }
 export function describeAutomation(s:AutomationStatus | null, now=Date.now()): {label:string;detail:string;attention:boolean} {
   if (!s) return {label:"Checking",detail:"Reading live worker status…",attention:false};
@@ -12,6 +12,8 @@ export function describeAutomation(s:AutomationStatus | null, now=Date.now()): {
   const b=s.batches?.[0];
   if (b?.phase === "attention") return {label:"Needs attention",detail:b.detail ?? "Production stopped before it could finish.",attention:true};
   if (s.worker && (s.worker.status === "error" || !Number.isFinite(Date.parse(s.worker.checkedAt)) || now-Date.parse(s.worker.checkedAt)>20*60000)) return {label:"Worker needs attention",detail:s.worker.detail ?? "No successful production check in the last 20 minutes.",attention:true};
+  if(b?.waitingRuntime)return {label:"Finishing update in progress",detail:"Existing generations are retained. Placement, binding and scheduling wait for the compatible finishing runtime.",attention:false};
+  if(b?.retryAt && Date.parse(b.retryAt)>now)return {label:"Automatic retry queued",detail:`${b.retryReason??"A read service is temporarily unavailable."} Next attempt: ${new Date(b.retryAt).toLocaleString()}.`,attention:false};
   if (b && !["done","holding"].includes(b.phase)) {
     if (b.updatedAt && now-Date.parse(b.updatedAt)>2*3600000) return {label:"Production stalled",detail:`No progress since ${b.updatedAt}. ${b.scheduled} scheduled.`,attention:true};
     return {label:({generate:"Generating media",realize:"Finishing media",bind:"Building posts",notice:"Notifying for review",schedule:"Scheduling releases"} as Record<string,string>)[b.phase]??"Preparing content",detail:`${b.from.slice(0,10)}–${b.through.slice(0,10)} · ${b.scheduled} scheduled`,attention:false};

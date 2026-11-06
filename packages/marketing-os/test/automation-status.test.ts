@@ -18,6 +18,8 @@ describe("automation status describes work, not just consent",()=>{
     const b={id:"a",phase:"generate",from:"2026-11-07",through:"2026-11-20",scheduled:0,updatedAt:"2026-11-04T14:59:00Z"};
     expect(describeAutomation({...active,batches:[b]},now).label).toBe("Generating media");
     expect(describeAutomation({...active,batches:[{...b,phase:"realize",finishing:{complete:1,total:25}}]},now)).toMatchObject({label:"Finishing media",attention:false});
+    expect(describeAutomation({...active,batches:[{...b,waitingRuntime:true}]},now).label).toBe("Finishing update in progress");
+    expect(describeAutomation({...active,batches:[{...b,retryAt:"2026-11-04T15:01:00Z"}]},now).label).toBe("Automatic retry queued");
     expect(describeAutomation({...active,batches:[{...b,phase:"holding"}]},now).label).toBe("Review open · ships automatically");
     expect(describeAutomation({...active,batches:[{...b,phase:"done",scheduled:14}]},now)).toMatchObject({label:"Backlog ready",attention:false});
   });

@@ -23,7 +23,7 @@ vi.mock("../templates/agents/lib/tenant-context", () => ({
   HOSTED: false,
   getTenant: () => ({ shop: "a.myshopify.com" }),
 }));
-import { planSocialWindow } from "../templates/agents/lib/social/autopilot-production";
+import { inspectSocialWindow, planSocialWindow } from "../templates/agents/lib/social/autopilot-production";
 import { socialRepo } from "../templates/agents/lib/social/repo";
 import { parsePost, serializePost } from "../templates/agents/lib/social/artifacts";
 import { approvalHash } from "../templates/agents/lib/social/actions";
@@ -168,4 +168,10 @@ describe("deterministic fortnightly social production", () => {
     delete post.automation;
     expect(approvalHash(post)).toBe(manual);
   });
+});
+
+
+it("uses an ID-only worker projection during generation without reading every post and receipt",async()=>{
+ const {batch}=await planSocialWindow(input);store.set(`social/drafts/${batch.id}/batch.json`,JSON.stringify(batch));
+ const read=vi.spyOn(socialRepo,"readFile");try{read.mockClear();const p=await inspectSocialWindow(batch.range.from,"generate");expect(p?.posts).toHaveLength(14);expect(p?.posts.every(x=>x.status==="unread")).toBe(true);expect(p?.jobs).toEqual([]);expect(p?.realized).toEqual([]);expect(read.mock.calls.some(([path])=>path.includes("/posts/")||path.includes("/deliveries/"))).toBe(false);}finally{read.mockRestore();}
 });

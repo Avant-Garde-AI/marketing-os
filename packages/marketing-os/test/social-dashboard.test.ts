@@ -15,6 +15,11 @@ describe('social dashboard read model',()=>{
   expect(dashboardPost({...row,inactive_automation:true}).workflow.stage).toBe('closed');
   expect(dashboardPost({...row,status:'published',platform_id:'123',inactive_automation:true}).workflow.stage).toBe('published');
  });
+ it('surfaces an automatic hold while retaining a previously published receipt',()=>{
+  expect(dashboardPost({...row,held_automation:true}).workflow.label).toBe('Held · won’t publish');
+  expect(dashboardPost({...row,held_automation:true}).workflow.stage).toBe('attention');
+  expect(dashboardPost({...row,held_automation:true,status:'published',platform_id:'123'}).workflow.stage).toBe('published');
+ });
  it('bounds the post query and scopes both reads to the resolved tenant without artifact IO',async()=>{
   q.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
   expect(await readSocialDashboard('2026-11','active',2)).toEqual({summary:[],rows:[]});

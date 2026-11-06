@@ -35,3 +35,13 @@ automation/scaffold/production tests, runtime TypeScript, full CLI test suite,
 and a live production read after promotion. The release is only operationally
 complete when actual media, Slack notice and schedules are recorded. Merely
 activating a grant or starting one job is not that acceptance condition.
+
+A failed provider scene is now isolated to its parent post without replacing the
+paid generation. Held posts appear under Needs attention with an explicit
+“won’t publish” label, separate from drafts and confirmed publications. The
+production panel reports the held count alongside completed and in-progress
+jobs. Publication receipts remain historical truth even if a later hold exists.
+
+The production poll refreshes the read projection when a batch changes phase,
+scheduled count or held count. An open dashboard therefore follows the worker
+into scheduled content without leaving its post totals frozen at page load.

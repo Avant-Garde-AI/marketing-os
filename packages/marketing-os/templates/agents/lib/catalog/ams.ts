@@ -30,8 +30,15 @@ async function ams(path: string, init?: RequestInit): Promise<unknown> {
     cache: "no-store",
   });
   const body = (await res.json().catch(() => null)) as { success?: boolean; data?: unknown; error?: string } | null;
-  if (!res.ok || !body) throw new Error(`catalogue ${path} failed (${res.status}): ${body?.error ?? "no body"}`);
+  if (!res.ok || !body || body.success === false) throw new Error(`catalogue ${path} failed (${res.status}): ${body?.error ?? "no body"}`);
   return body.data ?? body;
+}
+
+/** AMS catalogue endpoints return named lists inside their data envelope. */
+function catalogueRows<T>(data: unknown, key: "artists" | "handles"): T[] {
+  const rows = Array.isArray(data) ? data : data && typeof data === "object" ? (data as Record<string, unknown>)[key] : undefined;
+  if (!Array.isArray(rows)) throw new Error(`catalogue response is missing the ${key} array`);
+  return rows as T[];
 }
 
 export const previewUrl = (artworkId: number | string) => `${PREVIEW_BASE}/api/internal/artworks/${artworkId}/preview`;
@@ -43,7 +50,7 @@ interface NewArtist { works?: NewArtistWork[]; [k: string]: unknown }
 export async function newArtists(input: { days?: number; minLive?: number }) {
   const days = Math.min(Math.max(Math.trunc(input.days ?? 7), 1), 90);
   const minLive = Math.min(Math.max(Math.trunc(input.minLive ?? 3), 1), 100);
-  const artists = (await ams(`/catalog/new-artists?days=${days}&minLive=${minLive}`)) as NewArtist[];
+  const artists = catalogueRows<NewArtist>(await ams(`/catalog/new-artists?days=${days}&minLive=${minLive}`), "artists");
   return {
     days,
     minLive,
@@ -59,7 +66,7 @@ export async function newArtists(input: { days?: number; minLive?: number }) {
 export async function handleArtists(input: { handles?: string[] }) {
   const handles = [...new Set((input.handles ?? []).map(String).filter(Boolean))].slice(0, 2000);
   if (!handles.length) return { artists: [] };
-  return { artists: await ams("/catalog/handle-artists", { method: "POST", body: JSON.stringify({ handles }) }) };
+  return { artists: catalogueRows(await ams("/catalog/handle-artists", { method: "POST", body: JSON.stringify({ handles }) }), "handles") };
 }
 
 /** The artwork itself, so a writer can describe what is actually there. */

@@ -949,6 +949,11 @@ async function prepareFiles(
       overwrite: "skip",
     },
     {
+      templatePath: path.join(templateDir, "agents/lib/social/dashboard.ts"),
+      targetPath: path.join(targetDir, "agents/lib/social/dashboard.ts"),
+      overwrite: "skip",
+    },
+    {
       templatePath: path.join(templateDir, "agents/lib/social/post-list.ts"),
       targetPath: path.join(targetDir, "agents/lib/social/post-list.ts"),
       overwrite: "skip",
@@ -2111,6 +2116,11 @@ async function prepareFiles(
     {
       templatePath: path.join(templateDir, "supabase/migrations/010_pack_social_group_key.sql"),
       targetPath: path.join(targetDir, "supabase/migrations/010_pack_social_group_key.sql"),
+      overwrite: "skip",
+    },
+    {
+      templatePath: path.join(templateDir, "supabase/migrations/012_social_dashboard_snapshot.sql"),
+      targetPath: path.join(targetDir, "supabase/migrations/012_social_dashboard_snapshot.sql"),
       overwrite: "skip",
     },
     {

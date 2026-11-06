@@ -1,85 +1,50 @@
 import Link from "next/link";
-import { PageHeader, Chip, EmptyState } from "@/components/primitives";
-import { CopyLink } from "@/components/copy-link";
-import { getTenant } from "@/lib/tenant-context";
-import { socialSheetLink } from "@/lib/social/review-links";
-import { socialPostReviewHref } from "@/lib/calendar/review-routes";
-import { postMonth, postThumbnailUrl } from "@/lib/social/projection";
-import { loadSocialPostList } from "@/lib/social/post-list";
-import { socialRepo } from "@/lib/social/repo";
-import { SOCIAL_STAGES, SOCIAL_STAGE_LABELS, socialWorkflow, socialStoryPrompt } from "@/lib/social/workflow";
-import type { SocialStage } from "@/lib/social/workflow";
-import type { SocialPost } from "@/lib/social/types";
-
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-const MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
-function monthLabel(month: string) {
-  return MONTH_RE.test(month) ? new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }) : "Undated work";
+import {Suspense} from "react";
+import {PageHeader,Chip,EmptyState} from "@/components/primitives";
+import {AutomationOverview} from "@/components/automation-overview";
+import {readSocialDashboard,dashboardPost} from "@/lib/social/dashboard";
+import {SOCIAL_STAGES,SOCIAL_STAGE_LABELS,socialStoryPrompt,type SocialStage} from "@/lib/social/workflow";
+export const runtime="nodejs";
+export const dynamic="force-dynamic";
+const MONTH=/^\d{4}-(0[1-9]|1[0-2])$/;
+const tz=process.env.SOCIAL_CALENDAR_TIME_ZONE??"UTC";
+const date=(value:string)=>new Date(value).toLocaleString("en-US",{timeZone:tz,dateStyle:"medium",timeStyle:"short"});
+async function PostBoard({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}) {
+  const sp=await searchParams,get=(key:string)=>Array.isArray(sp[key])?sp[key][0]:sp[key];
+  const current=new Date().toLocaleDateString("en-CA",{timeZone:tz}).slice(0,7);
+  const month=MONTH.test(get("month")??"")?get("month")!:current;
+  const stage=SOCIAL_STAGES.includes(get("stage") as SocialStage)?get("stage")!:get("stage")==="all"?"all":"active";
+  const page=Math.min(1000,Math.max(1,Number.parseInt(get("page")??"1",10)||1));
+  const data=await readSocialDashboard(month,stage,page);
+  if(!data)return <div role="status" className="border border-hairline p-5">The post index is unavailable. Production controls above remain separate; this is not a report of zero posts.</div>;
+  const counts=Object.fromEntries(SOCIAL_STAGES.map(s=>[s,data.summary.filter(r=>r.month===month&&r.stage===s).reduce((n,r)=>n+r.n,0)]));
+  const months=[...new Set([current,...data.summary.map(r=>r.month)])].filter(m=>MONTH.test(m)).sort().reverse();
+  const total=Object.values(counts).reduce((n,v)=>n+v,0),filtered=stage==="all"?total:stage==="active"?total-counts.closed:counts[stage];
+  const last=data.summary.filter(r=>r.stage==="published"&&r.last_published).map(r=>String(r.last_published instanceof Date?r.last_published.toISOString():r.last_published)).sort().at(-1);
+  const href=(s=stage,m=month,p=1)=>`/social?${new URLSearchParams({month:m,stage:s,page:String(p)})}`;
+  return <>
+    <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">{[["Published this month",counts.published],["Scheduled",counts.scheduled],["Drafts and prepared media",counts.draft+counts.ready],["Post issues",counts.attention]].map(([label,n])=><div key={label} className="border border-hairline bg-raised p-5"><p className="text-xs text-ink-3">{label}</p><p className="mt-2 font-display text-3xl">{n}</p></div>)}</div>
+    <p className="mb-6 text-sm text-ink-2">{last?`Last recorded publication: ${date(last)}.`:"No publication receipt is recorded yet."} A draft or completed generation is not a published post.</p>
+    <div className="mb-4 flex flex-wrap items-center gap-3"><h2 className="mr-auto font-display text-2xl">Posts</h2><nav aria-label="Social month" className="flex flex-wrap gap-2">{months.map(m=><Link key={m} href={href(stage,m)} prefetch={false} aria-current={month===m?"page":undefined}><Chip variant={m===month?"filled":"outline"}>{m}</Chip></Link>)}</nav></div>
+    <nav aria-label="Post workflow stage" className="mb-5 flex flex-wrap gap-2">{[{id:"active",label:"Current work",n:total-counts.closed},{id:"all",label:"All posts",n:total},...SOCIAL_STAGES.map(s=>({id:s,label:SOCIAL_STAGE_LABELS[s],n:counts[s]}))].map(s=><Link key={s.id} href={href(s.id)} prefetch={false} aria-current={stage===s.id?"page":undefined} className={`border px-3 py-2 text-sm ${stage===s.id?"border-ink bg-inverse text-page":"border-hairline"}`}>{s.label} · {s.n}</Link>)}</nav>
+    {!data.rows.length?<EmptyState headline="No posts in this view." sub="The production panel above shows whether the next batch is being generated or needs attention."/>:<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{data.rows.map(row=>{
+      const {post,workflow,thumbnail}=dashboardPost(row),detail=`/social/posts/${encodeURIComponent(post.id)}`;
+      const at=workflow.stage==="published"?post.platform?.publishedAt:post.scheduledAt??post.plannedAt;
+      return <article key={post.id} className="flex flex-col border border-hairline bg-raised">
+        <Link href={detail} prefetch={false} aria-label={`Open ${post.id}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {thumbnail?<img src={thumbnail} alt="Post artwork" width={540} height={360} loading="lazy" className="h-48 w-full border-b border-hairline object-contain"/>:<div className="flex h-28 items-center justify-center border-b border-hairline text-sm text-ink-3">Media in production</div>}
+        </Link><div className="flex flex-1 flex-col p-4"><div className="mb-3"><Chip variant={workflow.variant}>{workflow.label}</Chip></div><h3 className="mb-2 line-clamp-3 font-display text-lg"><Link href={detail} prefetch={false}>{post.copy.split("\n").find(l=>l.trim())??post.id}</Link></h3><p className="mb-3 text-sm text-ink-2">{workflow.stage==="draft"?"Planned content. It is not scheduled or published.":workflow.stage==="ready"?"Media and copy are prepared; this post has not entered the release queue.":workflow.explanation}</p>{at&&<p className="mb-3 text-xs text-ink-3">{workflow.stage==="published"?"Published":post.scheduledAt?"Release":"Proposed"}: {date(at)}</p>}<div className="mt-auto flex gap-4 pt-3 text-sm"><Link href={detail} prefetch={false} className="arrow-link">View post</Link>{workflow.stage==="published"&&post.platform?.permalink&&<a href={post.platform.permalink} target="_blank" rel="noreferrer" className="arrow-link">View on Instagram</a>}</div></div></article>;
+    })}</div>}
+    <nav aria-label="Post pages" className="mt-6 flex justify-between text-sm">{page>1?<Link href={href(stage,month,page-1)} prefetch={false}>← Previous posts</Link>:<span/>}<span>Page {page} · {filtered} posts</span>{page*24<filtered?<Link href={href(stage,month,page+1)} prefetch={false}>Next posts →</Link>:<span/>}</nav>
+    <p className="mt-4 text-xs text-ink-3">Times shown in {tz}. The calendar defaults to scheduled and published content. Post details read the current source before any action.</p>
+  </>;
 }
-function headline(post: SocialPost) {
-  return post.copy.split("\n").map(line => line.trim()).find(Boolean) || `Post ${post.id}`;
-}
-export default async function SocialPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const sp = await searchParams, value = (key: string) => Array.isArray(sp[key]) ? sp[key][0] : sp[key];
-  const { shop } = getTenant(), timeZone = process.env.SOCIAL_CALENDAR_TIME_ZONE ?? "UTC", now = Date.now();
-  const { posts, unreadable } = await loadSocialPostList(socialRepo);
-  const months = [...new Set(posts.map(postMonth))].sort().reverse();
-  const current = new Date(now).toLocaleDateString("en-CA", { timeZone }).slice(0, 7);
-  const requested = value("month"), month = requested && (MONTH_RE.test(requested) || requested === "unscheduled") ? requested : months.includes(current) ? current : months[0] ?? current;
-  const requestedStage = value("stage"), stage = SOCIAL_STAGES.includes(requestedStage as SocialStage) ? requestedStage as SocialStage : "all";
-  const monthPosts = posts.filter(post => postMonth(post) === month);
-  const counts = Object.fromEntries(SOCIAL_STAGES.map(s => [s, monthPosts.filter(post => socialWorkflow(post, now).stage === s).length]));
-  const visible = monthPosts.filter(post => stage === "all" || socialWorkflow(post, now).stage === stage)
-    .sort((a, b) => (a.scheduledAt ?? a.plannedAt ?? a.id).localeCompare(b.scheduledAt ?? b.plannedAt ?? b.id));
-  const href = (s: string, m = month) => `/social?${new URLSearchParams({ month: m, stage: s })}`;
-  return <main className="px-4 py-8 sm:px-8 sm:py-10"><div className="mx-auto max-w-[1200px]">
-    <PageHeader eyebrow="Social" title="Your social publishing workflow" sub="See what needs review, what will publish automatically, and what is already live." />
-    <div className="mb-6 flex flex-wrap gap-5 text-[14px]">
-      <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt())}`}>Develop a story</Link>
-      <Link className="arrow-link" href={`/social/schedule?month=${MONTH_RE.test(month) ? month : current}`}>Review media and approve schedules</Link>
-            <Link className="arrow-link" href="/social/connections">Instagram connection</Link>
-      <Link className="arrow-link" href="/social/backlog">Production backlog</Link>
-      <Link className="arrow-link" href={`/calendar?month=${MONTH_RE.test(month) ? month : current}`}>Open publishing calendar</Link>
-    </div>
-    <nav aria-label="Social month" className="mb-5 flex flex-wrap items-center gap-2">
-      {months.map(m => <Link key={m} href={href(stage, m)} aria-current={month === m ? "page" : undefined}><Chip variant={month === m ? "filled" : "outline"}>{monthLabel(m)}</Chip></Link>)}
-    </nav>
-    <h2 className="mb-3 font-display text-[23px]">{monthLabel(month)}</h2>
-    <nav aria-label="Post workflow stage" className="mb-5 flex flex-wrap gap-2">
-      {[{ id: "all", label: "All posts", count: monthPosts.length }, ...SOCIAL_STAGES.map(s => ({ id: s, label: SOCIAL_STAGE_LABELS[s], count: counts[s] }))].map(s =>
-        <Link key={s.id} href={href(s.id)} aria-current={stage === s.id ? "page" : undefined} className="border border-hairline bg-raised px-3 py-2 text-[13px] hover:border-gold">
-          <span className={stage === s.id ? "font-semibold text-ink" : "text-ink-2"}>{s.label}</span> <span className="tnum text-ink-3">{s.count}</span>
-        </Link>)}
-    </nav>
-    <p className="mb-5 text-[13px] text-ink-3">Draft proposals and prepared media do not publish automatically. Only approved schedules enter the release queue. Times shown in {timeZone}.</p>
-    {unreadable > 0 && <p role="status" className="mb-4 text-sm">{unreadable} post record(s) could not be read. They are not included in the counts.</p>}
-    {MONTH_RE.test(month) && <details className="mb-6 text-[13px] text-ink-3"><summary className="cursor-pointer">Share this month for read-only review</summary><div className="mt-3"><CopyLink url={socialSheetLink(shop, month).url} label={`Share ${monthLabel(month)} for review`} /></div></details>}
-    {!visible.length ? <EmptyState headline="No posts in this view." sub="Choose another stage or develop a story with your agent." /> :
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{visible.map(post => {
-        const state = socialWorkflow(post, now), thumbnail = postThumbnailUrl(post, process.env.MOS_AGENTS_PUBLIC_URL ?? ""), detail = `/social/posts/${encodeURIComponent(post.id)}`;
-        const date = state.stage === "published" ? post.platform?.publishedAt ?? post.scheduledAt : post.scheduledAt ?? post.plannedAt;
-        const dateLabel = state.stage === "published" ? "Published" : post.status === "scheduled" ? "Release" : "Suggested";
-        const format = post.renderedVideo ? (post.channel === "instagram" ? "Reel" : "Video") : post.renderedSequence ? `${post.renderedSequence.slides.length}-slide carousel` : "Draft creative";
-        return <article key={post.id} className="flex flex-col border border-hairline bg-raised">
-          <Link href={detail} aria-label={`Open post: ${headline(post)}`}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {thumbnail ? <img src={thumbnail} alt={headline(post)} className="h-52 w-full border-b border-hairline object-contain" loading="lazy" /> : <div className="flex h-24 items-center justify-center border-b border-hairline text-sm text-ink-3">Media not prepared yet</div>}
-          </Link>
-          <div className="flex flex-1 flex-col p-4">
-            <div className="mb-2"><Chip variant={state.variant}>{state.label}</Chip></div>
-            <h3 className="mb-2 line-clamp-3 text-[16px] leading-snug"><Link href={detail}>{headline(post)}</Link></h3>
-            <p className="mb-2 text-[12px] text-ink-3">{post.channel}{post.channelAccount ? ` · @${post.channelAccount.username}` : ""} · {format}</p>
-            <p className="mb-3 text-[13px] leading-relaxed text-ink-2">{state.explanation}</p>
-            {date && <p className="mb-3 text-[12px] text-ink-2">{dateLabel}: {new Date(date).toLocaleString("en-US", { timeZone, dateStyle: "medium", timeStyle: "short" })}</p>}
-            <div className="mt-auto flex flex-wrap gap-x-4 gap-y-2 border-t border-hairline pt-3 text-[13px]">
-              {state.stage === "published" && post.platform?.permalink && <a className="arrow-link" href={post.platform.permalink} target="_blank" rel="noreferrer">View live post</a>}
-              {state.stage === "ready" && <Link className="arrow-link" href={socialPostReviewHref(post, shop)}>Review this post</Link>}
-              <Link className="arrow-link" href={detail}>{state.stage === "attention" ? "Check delivery record" : "Post details"}</Link>
-              <Link className="arrow-link" href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt(post.id))}`}>Improve story</Link>
-            </div>
-          </div>
-        </article>;
-      })}</div>}
-  </div></main>;
+export default function SocialPage({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}) {
+  return <div className="px-4 py-8 sm:px-8 sm:py-10"><div className="mx-auto max-w-[1200px]">
+    <PageHeader eyebrow="Social" title="Social dashboard" sub="What is live, what is scheduled, and what is happening to your next batch."/>
+    <div className="mb-6 flex flex-wrap gap-5 text-sm"><Link href="/calendar" prefetch={false} className="arrow-link">Publishing calendar</Link><Link href="/social/backlog" prefetch={false} className="arrow-link">Production and hold controls</Link><Link href="/social/connections" prefetch={false} className="arrow-link">Instagram connection</Link><Link href={`/chat?prompt=${encodeURIComponent(socialStoryPrompt())}`} prefetch={false} className="arrow-link">Develop a story</Link></div>
+    <AutomationOverview channel="social"/>
+    <Suspense fallback={<p role="status" className="py-8 text-sm text-ink-3">Loading post totals and recent posts…</p>}><PostBoard searchParams={searchParams}/></Suspense>
+  </div></div>;
 }

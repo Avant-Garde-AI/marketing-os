@@ -45,3 +45,13 @@ jobs. Publication receipts remain historical truth even if a later hold exists.
 The production poll refreshes the read projection when a batch changes phase,
 scheduled count or held count. An open dashboard therefore follows the worker
 into scheduled content without leaving its post totals frozen at page load.
+
+Provider completion is a separate stage from artwork compositing and video
+export. The production card names finishing, post building, review notification
+and scheduling separately, and shows prepared final media against its active
+expected total. Successful generation alone never means a scheduled post.
+
+Concurrent console rollouts must release a build containing current merged
+main, then verify both the public console and configured service aliases. The
+November 5 rollout was consolidated with the parallel Klaviyo reporting change;
+a merged PR or one temporary alias receipt is not sufficient deployment proof.

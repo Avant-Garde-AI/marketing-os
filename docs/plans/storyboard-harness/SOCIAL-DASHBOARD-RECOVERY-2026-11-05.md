@@ -72,3 +72,13 @@ automatic binding rechecks the hash. A missing, uncertain or failed check cannot
 become scheduled content. Worker inspection reads only the source needed for its
 current phase, avoiding bulk post/receipt reads during generation. Execution
 continues to re-read the relevant source at the gate.
+
+Client-owned database correction: the console projection database and platform
+control-plane database are separate. The console must obtain grant and hold
+state through the tenant broker, not join platform grant tables in its local
+projection SQL. Unknown broker state is shown as unverified automation, not a
+safe schedule. The November 5 platform-database check was insufficient rollout
+proof: production logs subsequently identified a missing snapshot column in the
+actual console database. Apply migration 012 to that database and rebuild its
+projection from current files. Historical migration drift is not baselined or
+re-run as part of that additive repair.

@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {useRouter} from "next/navigation";
 import Link from "next/link";
 import { describeAutomation, type AutomationStatus } from "@/lib/automation-status";
 export function AutomationOverview({channel}:{channel?:"social"|"email"}={}) {
+  const router=useRouter(), signature=useRef<string|null>(null);
   const [state,setState]=useState<Record<string,AutomationStatus> | null>(null);
   useEffect(()=>{
     const controller=new AbortController();
@@ -13,6 +15,12 @@ export function AutomationOverview({channel}:{channel?:"social"|"email"}={}) {
     void refresh(); const id=setInterval(()=>{if(document.visibilityState==="visible")void refresh();},30000);
     return ()=>{controller.abort();clearInterval(id);};
   },[channel]);
+  useEffect(()=>{
+    if(!state)return;
+    const next=JSON.stringify(Object.entries(state).map(([key,value])=>[key,value.batches?.map(b=>[b.id,b.phase,b.scheduled,b.held??0])]));
+    if(signature.current!==null && signature.current!==next)router.refresh();
+    signature.current=next;
+  },[state,router]);
   return <section className="mb-8" aria-label="Live content automation">
     <div className="mb-3 flex items-baseline justify-between gap-4"><h2 className="font-display text-xl">{channel?"Automatic production":"Content on autopilot"}</h2><Link className="arrow-link text-sm" href="/calendar">Open calendar →</Link></div>
     <p className="mb-4 text-sm text-ink-3">Two-week backlogs run automatically within your policy. Finished batches arrive in Slack; Hold or Pause anything you don’t want to ship.</p>

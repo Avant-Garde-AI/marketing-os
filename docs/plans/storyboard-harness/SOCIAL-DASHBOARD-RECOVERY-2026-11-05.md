@@ -41,3 +41,7 @@ paid generation. Held posts appear under Needs attention with an explicit
 “won’t publish” label, separate from drafts and confirmed publications. The
 production panel reports the held count alongside completed and in-progress
 jobs. Publication receipts remain historical truth even if a later hold exists.
+
+The production poll refreshes the read projection when a batch changes phase,
+scheduled count or held count. An open dashboard therefore follows the worker
+into scheduled content without leaving its post totals frozen at page load.

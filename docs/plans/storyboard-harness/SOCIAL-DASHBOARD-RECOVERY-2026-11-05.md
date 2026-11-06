@@ -55,3 +55,13 @@ Concurrent console rollouts must release a build containing current merged
 main, then verify both the public console and configured service aliases. The
 November 5 rollout was consolidated with the parallel Klaviyo reporting change;
 a merged PR or one temporary alias receipt is not sufficient deployment proof.
+
+Visual QA found that a non-square locator image could produce a vertical
+coordinate reference inconsistent with the renderer. `square-1008-v1` uses a
+fixed square analysis viewport and maps its points back into original-image
+coordinates. The original generation pixels and artwork masters are retained.
+Existing automatic receipts can receive one hash-bound coordinate correction
+through the same Action gate, with the prior receipt archived before replacement.
+Binding rejects legacy automatic placements; no corrected post can use the bad
+cached render. New generation calls and speculative confidence rerolls are not
+part of this repair.

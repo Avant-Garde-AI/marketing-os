@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
+import {hashPreview} from "../templates/agents/lib/actions/hash";
 import sharp from "sharp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { readGenerationInput } from "../templates/agents/lib/social/generation-input";
-import { generationDeliveryPath, generationDeliverySchema, loadGenerationDelivery, renderGenerationScene } from "../templates/agents/lib/social/generation-delivery";
+import { prepareDeliveryUpdate, SCENE_LOCALIZATION_VERSION, generationDeliveryPath, generationDeliverySchema, loadGenerationDelivery, renderGenerationScene } from "../templates/agents/lib/social/generation-delivery";
 import { socialGenerationReviewLink, socialReviewLink } from "../templates/agents/lib/social/review-links";
 import { GET } from "../templates/agents/app/api/social/generation/render/[id]/route";
 
@@ -184,4 +185,23 @@ describe("signed scene render", () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(routeRepo.readFile).not.toHaveBeenCalled();
   });
+});
+
+
+describe("audited coordinate correction",()=>{
+ it("archives one hash-bound legacy correction and keeps a replay idempotent",async()=>{
+  const {receipt}=await fixture(),prior=generationDeliverySchema.parse(receipt),raw=JSON.stringify(prior,null,2);
+  const next=generationDeliverySchema.parse({...prior,scene:{...prior.scene,localizationVersion:SCENE_LOCALIZATION_VERSION,localizationConfidence:.99}});
+  const update=prepareDeliveryUpdate(raw,next,hashPreview(prior));expect(update.archive?.content).toBe(raw);expect(update.archive?.path).toContain(hashPreview(prior));
+  expect(prepareDeliveryUpdate(update.encoded,next,hashPreview(prior))).toMatchObject({changed:false});
+  expect(()=>prepareDeliveryUpdate(raw,next)).toThrow(/hash-bound/);
+ });
+ it("rejects source or caption changes and a second geometric rewrite",async()=>{
+  const {receipt}=await fixture(),prior=generationDeliverySchema.parse(receipt),raw=JSON.stringify(prior);
+  const next=generationDeliverySchema.parse({...prior,scene:{...prior.scene,localizationVersion:SCENE_LOCALIZATION_VERSION,localizationConfidence:.99}});
+  expect(()=>prepareDeliveryUpdate(raw,{...next,caption:"Different"},hashPreview(prior))).toThrow();
+  expect(()=>prepareDeliveryUpdate(raw,{...next,scene:{...next.scene!,backgroundSha256:"f".repeat(64)}},hashPreview(prior))).toThrow();
+  const changed=structuredClone(next);changed.scene!.placements[0].quad[0][0]+=.001;
+  expect(()=>prepareDeliveryUpdate(JSON.stringify(next),changed,hashPreview(next))).toThrow();
+ });
 });

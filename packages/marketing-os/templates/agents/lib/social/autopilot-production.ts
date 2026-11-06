@@ -13,6 +13,8 @@ import {
   generationDeliveryPath,
   generationDeliverySchema,
   renderGenerationScene,
+  SCENE_LOCALIZATION_VERSION,
+  prepareDeliveryUpdate,
 } from "./generation-delivery";
 import {
   generationCarouselPath,
@@ -241,6 +243,7 @@ const realize = z
     batchHash: hash,
     artifactId: id,
     delivery: generationDeliverySchema,
+    replacesDeliveryHash: hash.optional(),
     loop: z
       .object({
         manifest: z.unknown(),
@@ -272,6 +275,9 @@ async function realization(p: z.infer<typeof realize>) {
     throw Error("Immutable generation input changed");
   if (expected.mechanic === "collection-scene") {
     if (!p.delivery.scene || p.loop) throw Error("Scene geometry required");
+    if(p.delivery.scene.localizationVersion!==SCENE_LOCALIZATION_VERSION || p.delivery.scene.localizationConfidence===undefined)
+      throw Error("Current square-coordinate localization is required before finishing");
+    prepareDeliveryUpdate(await socialRepo.readFile(generationDeliveryPath(p.artifactId)),p.delivery,p.replacesDeliveryHash);
     return { job, expected, scene: await renderGenerationScene(socialRepo, job, p.delivery) };
   }
   if (!p.loop || p.delivery.scene) throw Error("Loop exports required");
@@ -304,10 +310,13 @@ registerAction("social.autopilot_realize", () => ({
   },
   async execute(p) {
     const r = await realization(p);
-    const path = generationDeliveryPath(p.artifactId),
-      encoded = JSON.stringify(p.delivery, null, 2),
-      prior = await socialRepo.readFile(path);
-    if (prior && prior !== encoded) throw Error("Delivery receipt already differs");
+    const path = generationDeliveryPath(p.artifactId), prior = await socialRepo.readFile(path);
+    const update=prepareDeliveryUpdate(prior,p.delivery,p.replacesDeliveryHash);
+    if(update.archive){
+      const archived=await socialRepo.readFile(update.archive.path);
+      if(archived!==null && archived!==update.archive.content)throw Error("Geometry archive already differs");
+      if(archived===null)await socialRepo.writeFile(update.archive.path,update.archive.content);
+    }
     // Receipt is written last: an interrupted realization resumes content-addressed writes.
     if (r.scene) {
       const sha = digest(r.scene);
@@ -336,7 +345,7 @@ registerAction("social.autopilot_realize", () => ({
         JSON.stringify({ sha256: digest(r.poster!) })
       );
     }
-    if (!prior) await socialRepo.writeFile(path, encoded);
+    if (update.changed) await socialRepo.writeFile(path, update.encoded);
     return {
       ok: true,
       summary: "Verified media persisted",
@@ -378,6 +387,8 @@ async function boundMaterial(p: z.infer<typeof bind>) {
       const receiptRaw = await socialRepo.readFile(generationDeliveryPath(job.artifactId));
       if (!receiptRaw) throw Error("Scene receipt missing");
       const receipt = generationDeliverySchema.parse(JSON.parse(receiptRaw));
+      if(receipt.scene?.localizationVersion!==SCENE_LOCALIZATION_VERSION || receipt.scene.localizationConfidence===undefined)
+        throw Error("Scene needs corrected coordinate placement before binding");
       const bytes = await renderGenerationScene(socialRepo, job, receipt),
         sha = digest(bytes);
       if (!(await socialRepo.readFile(`social/production/renders/${sha}.jpeg.b64`)))
@@ -516,10 +527,13 @@ export async function inspectSocialWindow(from: string) {
     })
   );
   const realized = await Promise.all(
-    loaded.batch.generationJobs.map(async (j) => ({
-      artifactId: j.artifactId,
-      ready: Boolean(await socialRepo.readFile(generationDeliveryPath(j.artifactId))),
-    }))
+    loaded.batch.generationJobs.map(async (j) => {
+      const raw=await socialRepo.readFile(generationDeliveryPath(j.artifactId));
+      if(!raw)return {artifactId:j.artifactId,ready:false};
+      const receipt=generationDeliverySchema.parse(JSON.parse(raw));
+      const legacy=j.mechanic==="collection-scene" && receipt.scene?.localizationVersion!==SCENE_LOCALIZATION_VERSION;
+      return {artifactId:j.artifactId,ready:!legacy,...(legacy?{replacesDeliveryHash:hashPreview(receipt)}:{})};
+    })
   );
   return { ...loaded, jobs, posts, realized };
 }

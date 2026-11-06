@@ -4,6 +4,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { runWithTenant } from "../../../../../lib/tenant-context";
 import { instagramIdentity } from "../../../../../lib/social/channels/instagram";
 import { brokerTokenSource } from "../../../../../lib/social/channels";
+import {SCENE_LOCALIZATION_VERSION} from "../../../../../lib/social/generation-delivery";
 import { parsePost, postPath } from "../../../../../lib/social/artifacts";
 import { socialRepo } from "../../../../../lib/social/repo";
 import { getAction } from "../../../../../lib/actions/registry";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       },
       async () => {
         if (body.operation === "identity")
-          return NextResponse.json({ account: await instagramIdentity(brokerTokenSource) });
+          return NextResponse.json({ account: await instagramIdentity(brokerTokenSource),finishingVersion:SCENE_LOCALIZATION_VERSION });
         if (body.operation === "recipes") {
           const raw = await socialRepo.readFile("social/autopilot/recipes.json");
           if (!raw) throw Error("Store social recipes missing");
@@ -78,9 +79,12 @@ export async function POST(req: NextRequest) {
       }
     );
   } catch (e) {
+    const message=e instanceof Error?e.message:"Production preview unavailable";
+    const transient=/^GitHub (?:read|tree|blob) failed \((?:408|429|500|502|503|504)\)/.test(message) ||
+      (e instanceof Error && ["TimeoutError","AbortError"].includes(e.name));
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : "Production preview unavailable" },
-      { status: 409 }
+      transient?{error:"Store read temporarily unavailable",code:"STORE_REPO_READ_TRANSIENT"}:{error:message},
+      {status:transient?503:409}
     );
   }
 }

@@ -8,6 +8,8 @@ import { compositeArtworkScene } from "./scene-composite";
 import { readGenerationInput } from "./generation-input";
 import type { GenerationReview } from "./generation-review";
 import { verifyLink } from "./review-links";
+import {hashPreview} from "../actions/hash";
+export const SCENE_LOCALIZATION_VERSION = "square-1008-v1" as const;
 
 type BoundJob = Pick<GenerationReview, "artifactId" | "postId" | "inputHash" | "mechanic" | "sourcePreviewUrl">;
 type SceneJob = BoundJob & Pick<GenerationReview, "state" | "imageUrl">;
@@ -30,6 +32,8 @@ export const generationDeliverySchema = z.object({
   scene: z.object({
     backgroundSha256: z.string().regex(hash),
     placements: z.array(placement).min(1).max(3),
+    localizationVersion: z.literal(SCENE_LOCALIZATION_VERSION).optional(),
+    localizationConfidence: z.number().min(0.94).max(1).optional(),
   }).strict().optional(),
 }).strict();
 export type GenerationDelivery = z.infer<typeof generationDeliverySchema>;
@@ -38,6 +42,23 @@ export function generationDeliveryPath(artifactId: string): string {
   if (!id.test(artifactId)) throw new Error("Invalid generation artifact ID");
   return `social/production/deliveries/${artifactId}.json`;
 }
+/** One audited upgrade from the old ambiguous locator; never a general overwrite. */
+export function prepareDeliveryUpdate(priorRaw:string|null,next:GenerationDelivery,replacesHash?:string) {
+  const normalized=generationDeliverySchema.parse(next),encoded=JSON.stringify(normalized,null,2);
+  if(!priorRaw)return {encoded,changed:true};
+  const prior=generationDeliverySchema.parse(JSON.parse(priorRaw));
+  if(hashPreview(prior)===hashPreview(normalized))return {encoded:priorRaw,changed:false};
+  const priorHash=hashPreview(prior);
+  const identity=["schemaVersion","artifactId","postId","inputHash","caption"] as const;
+  const metadata=(d:GenerationDelivery)=>d.scene?.placements.map(p=>({sourceRef:p.sourceRef,mat:p.mat,fit:p.fit??"contain"}));
+  if(replacesHash!==priorHash || !identity.every(k=>prior[k]===normalized[k]) ||
+    !prior.scene || !normalized.scene || prior.scene.localizationVersion!==undefined ||
+    normalized.scene.localizationVersion!==SCENE_LOCALIZATION_VERSION || normalized.scene.localizationConfidence===undefined ||
+    prior.scene.backgroundSha256!==normalized.scene.backgroundSha256 || hashPreview(metadata(prior))!==hashPreview(metadata(normalized)))
+    throw Error("Delivery receipt differs; only a hash-bound legacy coordinate correction is allowed");
+  return {encoded,changed:true,archive:{path:`social/production/deliveries/history/${next.artifactId}/${priorHash}.json`,content:priorRaw}};
+}
+
 const digest = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
 /** Repo choice comes from a second signed, hash-bound link returned by the broker. */

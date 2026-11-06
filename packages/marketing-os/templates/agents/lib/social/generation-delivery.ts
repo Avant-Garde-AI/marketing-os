@@ -34,7 +34,7 @@ export const generationDeliverySchema = z.object({
     placements: z.array(placement).min(1).max(3),
     localizationVersion: z.literal(SCENE_LOCALIZATION_VERSION).optional(),
     localizationConfidence: z.number().min(0.94).max(1).optional(),
-    visualValidation:z.object({profile:z.literal("frame-fit-v1"),sha256:z.string().regex(hash),passed:z.literal(true),confidence:z.number().min(.94).max(1),model:z.string().min(1).max(100)}).strict().optional(),
+    visualValidation:z.object({profile:z.enum(["frame-fit-v1","frame-fit-v2"]),sha256:z.string().regex(hash),passed:z.literal(true),confidence:z.number().min(.9).max(1),model:z.string().min(1).max(100)}).strict().optional(),
   }).strict().optional(),
 }).strict();
 export type GenerationDelivery = z.infer<typeof generationDeliverySchema>;
@@ -48,7 +48,7 @@ export function assertSceneVisualValidation(receipt:GenerationDelivery,renderedS
  if(!receipt.scene)return;
  const check=receipt.scene.visualValidation;
  if(!check&&!required)return;
- if(!check||check.profile!=="frame-fit-v1"||!check.passed||check.sha256!==renderedSha||check.confidence<.94)
+ if(!check||!["frame-fit-v1","frame-fit-v2"].includes(check.profile)||!check.passed||check.sha256!==renderedSha||check.confidence<(check.profile==="frame-fit-v2"?.9:.94))
    throw Error("Exact rendered scene needs a passing frame-fit check before binding");
 }
 

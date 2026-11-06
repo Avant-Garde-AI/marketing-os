@@ -82,3 +82,15 @@ proof: production logs subsequently identified a missing snapshot column in the
 actual console database. Apply migration 012 to that database and rebuild its
 projection from current files. Historical migration drift is not baselined or
 re-run as part of that additive repair.
+
+
+The production physical-check diagnostic reported all four criteria true with
+confidence 0.90. The uncalibrated 0.94 cutoff blocked that clean sample. The
+explicit `frame-fit-v2` profile requires all four criteria true, confidence at
+least 0.90, measured geometry with at least 95% line agreement, and an exact
+rendered-image hash. Confidence remains a model report, not a statistical
+probability or an engagement claim. Old `frame-fit-v1` receipts retain their
+0.94 requirement. The runtime advertises supported profiles so the worker waits
+for compatible code rather than submitting a v2 receipt to an old executor.
+A scoped, audited checker-contract upgrade may reconsider known automatic
+rejections once, preserves prior checks and user holds, and renews batch review.

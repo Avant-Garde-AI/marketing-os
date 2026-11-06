@@ -65,3 +65,10 @@ through the same Action gate, with the prior receipt archived before replacement
 Binding rejects legacy automatic placements; no corrected post can use the bad
 cached render. New generation calls and speculative confidence rerolls are not
 part of this repair.
+
+A separate physical frame-fit critic checks the proposed rendered JPEG before a
+realization Action can execute. Its passing result is bound to that pixel hash;
+automatic binding rechecks the hash. A missing, uncertain or failed check cannot
+become scheduled content. Worker inspection reads only the source needed for its
+current phase, avoiding bulk post/receipt reads during generation. Execution
+continues to re-read the relevant source at the gate.

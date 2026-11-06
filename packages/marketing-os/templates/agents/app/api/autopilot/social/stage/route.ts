@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         if (body.operation === "plan")
           return NextResponse.json(await planSocialWindow(body.params));
         if (body.operation === "inspect")
-          return NextResponse.json({ production: await inspectSocialWindow(body.from) });
+          return NextResponse.json({ production: await inspectSocialWindow(body.from,["generate","realize","bind","notice","schedule"].includes(body.phase)?body.phase:undefined) });
         if (!allowed.has(body.kind)) throw Error("Action is not a social production step");
         if (body.kind === "social.schedule_post") {
           const raw = await socialRepo.readFile(postPath(body.params?.postId ?? ""));
@@ -68,13 +68,15 @@ export async function POST(req: NextRequest) {
         const action = getAction(body.kind);
         if (!action) throw Error("Unknown action");
         const params = action.paramsSchema.parse(body.params);
+        const {renderProof,...preview}=await action.preview(params as never) as Awaited<ReturnType<typeof action.preview>>&{renderProof?:{sha256:string;jpegBase64:string}};
         return NextResponse.json({
           kind: action.kind,
           title: action.title,
           risk: action.risk,
           scopes: action.scopes,
           params,
-          preview: await action.preview(params as never),
+          preview,
+          ...(renderProof?{renderProof}:{}),
         });
       }
     );

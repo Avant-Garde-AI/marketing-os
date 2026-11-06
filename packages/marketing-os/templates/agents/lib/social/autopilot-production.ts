@@ -15,6 +15,7 @@ import {
   renderGenerationScene,
   SCENE_LOCALIZATION_VERSION,
   prepareDeliveryUpdate,
+  assertSceneVisualValidation,
 } from "./generation-delivery";
 import {
   generationCarouselPath,
@@ -255,7 +256,7 @@ const realize = z
       .optional(),
   })
   .strict();
-async function realization(p: z.infer<typeof realize>) {
+async function realization(p: z.infer<typeof realize>,requireVisual=false) {
   const loaded = await loadSocialBacklog(socialRepo, p.batchId);
   if (!loaded || loaded.hash !== p.batchHash) throw Error("Batch changed");
   const expected = loaded.batch.generationJobs.find((j) => j.artifactId === p.artifactId);
@@ -278,7 +279,9 @@ async function realization(p: z.infer<typeof realize>) {
     if(p.delivery.scene.localizationVersion!==SCENE_LOCALIZATION_VERSION || p.delivery.scene.localizationConfidence===undefined)
       throw Error("Current square-coordinate localization is required before finishing");
     prepareDeliveryUpdate(await socialRepo.readFile(generationDeliveryPath(p.artifactId)),p.delivery,p.replacesDeliveryHash);
-    return { job, expected, scene: await renderGenerationScene(socialRepo, job, p.delivery) };
+    const scene=await renderGenerationScene(socialRepo,job,p.delivery);
+    assertSceneVisualValidation(p.delivery,digest(scene),requireVisual);
+    return {job,expected,scene};
   }
   if (!p.loop || p.delivery.scene) throw Error("Loop exports required");
   const { manifest, entries } = parseLoopExportManifest(JSON.stringify(p.loop.manifest), job);
@@ -302,14 +305,15 @@ registerAction("social.autopilot_realize", () => ({
   scopes: ["social:write"],
   paramsSchema: realize,
   async preview(p) {
-    await realization(p);
+    const r = await realization(p);
     return {
       summary: `Persist verified final media for ${p.artifactId}`,
-      previewHash: hashPreview(p),
+      previewHash: r.scene ? hashPreview({p,sceneSha256:digest(r.scene)}) : hashPreview(p),
+      ...(r.scene ? {renderProof:{sha256:digest(r.scene),jpegBase64:r.scene.toString("base64")}} : {}),
     };
   },
   async execute(p) {
-    const r = await realization(p);
+    const r = await realization(p,true);
     const path = generationDeliveryPath(p.artifactId), prior = await socialRepo.readFile(path);
     const update=prepareDeliveryUpdate(prior,p.delivery,p.replacesDeliveryHash);
     if(update.archive){
@@ -391,6 +395,7 @@ async function boundMaterial(p: z.infer<typeof bind>) {
         throw Error("Scene needs corrected coordinate placement before binding");
       const bytes = await renderGenerationScene(socialRepo, job, receipt),
         sha = digest(bytes);
+      assertSceneVisualValidation(receipt,sha);
       if (!(await socialRepo.readFile(`social/production/renders/${sha}.jpeg.b64`)))
         throw Error("Scene bytes not persisted");
       slides.push({
@@ -513,27 +518,27 @@ registerAction("social.autopilot_bind", () => ({
 }));
 
 /** Read-only status the platform's durable worker uses after a lost response. */
-export async function inspectSocialWindow(from: string) {
+export async function inspectSocialWindow(from: string,phase?:string) {
   const loaded = await loadSocialBacklog(socialRepo, `auto-${from}`);
   if (!loaded) return null;
   const months = [...new Set(loaded.batch.posts.map((p) => p.date.slice(0, 7)))];
-  const jobs = (await Promise.all(months.map(loadGenerationJobsForMonth)))
-    .flat()
-    .filter((j) => loaded.batch.generationJobs.some((e) => e.artifactId === j.artifactId));
-  const posts = await Promise.all(
+  const jobs = !phase||phase==="realize" ? (await Promise.all(months.map(loadGenerationJobsForMonth)))
+    .flat().filter((j) => loaded.batch.generationJobs.some((e) => e.artifactId === j.artifactId)) : [];
+  // ID-only worker phases explicitly leave lifecycle unread; gate actions re-read source.
+  const posts = phase && ["generate","realize"].includes(phase) ? loaded.batch.posts.map(p=>({id:p.id,plannedAt:p.plannedAt,status:"unread"})) : await Promise.all(
     loaded.batch.posts.map(async (p) => {
       const raw = await socialRepo.readFile(postPath(p.id));
       return { id: p.id, plannedAt: p.plannedAt, status: raw ? parsePost(raw).status : "missing" };
     })
   );
-  const realized = await Promise.all(
+  const realized = !phase||phase==="realize" ? await Promise.all(
     loaded.batch.generationJobs.map(async (j) => {
       const raw=await socialRepo.readFile(generationDeliveryPath(j.artifactId));
       if(!raw)return {artifactId:j.artifactId,ready:false};
       const receipt=generationDeliverySchema.parse(JSON.parse(raw));
       const legacy=j.mechanic==="collection-scene" && receipt.scene?.localizationVersion!==SCENE_LOCALIZATION_VERSION;
-      return {artifactId:j.artifactId,ready:!legacy,...(legacy?{replacesDeliveryHash:hashPreview(receipt)}:{})};
+      return {artifactId:j.artifactId,ready:!legacy&&(!receipt.scene||Boolean(receipt.scene.visualValidation)),...(legacy?{replacesDeliveryHash:hashPreview(receipt)}:{})};
     })
-  );
+  ) : [];
   return { ...loaded, jobs, posts, realized };
 }

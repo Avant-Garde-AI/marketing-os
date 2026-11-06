@@ -34,6 +34,7 @@ export const generationDeliverySchema = z.object({
     placements: z.array(placement).min(1).max(3),
     localizationVersion: z.literal(SCENE_LOCALIZATION_VERSION).optional(),
     localizationConfidence: z.number().min(0.94).max(1).optional(),
+    visualValidation:z.object({profile:z.literal("frame-fit-v1"),sha256:z.string().regex(hash),passed:z.literal(true),confidence:z.number().min(.94).max(1),model:z.string().min(1).max(100)}).strict().optional(),
   }).strict().optional(),
 }).strict();
 export type GenerationDelivery = z.infer<typeof generationDeliverySchema>;
@@ -42,6 +43,15 @@ export function generationDeliveryPath(artifactId: string): string {
   if (!id.test(artifactId)) throw new Error("Invalid generation artifact ID");
   return `social/production/deliveries/${artifactId}.json`;
 }
+/** The gate binds a passing visual check to the exact rendered pixels. */
+export function assertSceneVisualValidation(receipt:GenerationDelivery,renderedSha:string,required=true){
+ if(!receipt.scene)return;
+ const check=receipt.scene.visualValidation;
+ if(!check&&!required)return;
+ if(!check||check.profile!=="frame-fit-v1"||!check.passed||check.sha256!==renderedSha||check.confidence<.94)
+   throw Error("Exact rendered scene needs a passing frame-fit check before binding");
+}
+
 /** One audited upgrade from the old ambiguous locator; never a general overwrite. */
 export function prepareDeliveryUpdate(priorRaw:string|null,next:GenerationDelivery,replacesHash?:string) {
   const normalized=generationDeliverySchema.parse(next),encoded=JSON.stringify(normalized,null,2);

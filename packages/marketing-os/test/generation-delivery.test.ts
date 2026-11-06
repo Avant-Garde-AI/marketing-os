@@ -4,7 +4,7 @@ import sharp from "sharp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { readGenerationInput } from "../templates/agents/lib/social/generation-input";
-import { prepareDeliveryUpdate, SCENE_LOCALIZATION_VERSION, generationDeliveryPath, generationDeliverySchema, loadGenerationDelivery, renderGenerationScene } from "../templates/agents/lib/social/generation-delivery";
+import { assertSceneVisualValidation, prepareDeliveryUpdate, SCENE_LOCALIZATION_VERSION, generationDeliveryPath, generationDeliverySchema, loadGenerationDelivery, renderGenerationScene } from "../templates/agents/lib/social/generation-delivery";
 import { socialGenerationReviewLink, socialReviewLink } from "../templates/agents/lib/social/review-links";
 import { GET } from "../templates/agents/app/api/social/generation/render/[id]/route";
 
@@ -204,4 +204,14 @@ describe("audited coordinate correction",()=>{
   const changed=structuredClone(next);changed.scene!.placements[0].quad[0][0]+=.001;
   expect(()=>prepareDeliveryUpdate(JSON.stringify(next),changed,hashPreview(next))).toThrow();
  });
+});
+
+
+it("requires visual validation of the exact rendered bytes before automatic binding",async()=>{
+ const {receipt}=await fixture();const d=generationDeliverySchema.parse(receipt),rendered="a".repeat(64);
+ expect(()=>assertSceneVisualValidation(d,rendered,false)).not.toThrow();
+ expect(()=>assertSceneVisualValidation(d,rendered)).toThrow(/frame-fit/);
+ d.scene!.visualValidation={profile:"frame-fit-v1",sha256:rendered,passed:true,confidence:.99,model:"test"};
+ expect(()=>assertSceneVisualValidation(d,rendered)).not.toThrow();
+ expect(()=>assertSceneVisualValidation(d,"b".repeat(64))).toThrow(/frame-fit/);
 });

@@ -1214,3 +1214,12 @@ artwork fidelity or a seamless return. Post details, signed review and the agent
 read the same validated records. Initial capture is an offline/read-only tool
 with local output reviewed through a store PR; governed fixed-window jobs and
 sequence/human judgments remain open. See [post observations](../docs/plans/storyboard-harness/POST-OBSERVATIONS-2026-10-09.md).
+
+**Physical frame correction, 2026-11-15.** Confidence alone must not disguise a
+real compositing defect. The automatic batch exposed an outer-edge detector
+selecting a decorative top bevel and leaving the old frame visible. Joint
+border measurement and explicit expansion-only refitting correct the pixels;
+detail-aware physical review inspects the full JPEG and an exact-pixel close-up
+without lowering the 0.90 threshold. Legacy render behavior is retained for
+existing receipts. This remains distinct from narrative/taste criticism and
+uses the existing owner grant and gate. See [the frame review contract](../docs/plans/storyboard-harness/FRAME-REVIEW-2026-11-15.md).

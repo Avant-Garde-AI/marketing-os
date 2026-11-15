@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { compositeArtworkScene, type SceneCompositeInput } from "../templates/agents/lib/social/scene-composite";
+import { compositeArtworkScene, fittedSceneFrame, sceneFrameReviewBounds, type SceneCompositeInput } from "../templates/agents/lib/social/scene-composite";
 
 async function solid(color: string, width = 120, height = 180) {
   return sharp({ create: { width, height, channels: 3, background: color } }).png().toBuffer();
@@ -127,4 +127,18 @@ it("refits a narrow empty physical frame to preserve the complete artwork ratio"
   expect((q[1][0]-q[0][0])*1080/((q[3][1]-q[0][1])*1350)).toBeCloseTo(600/900, 3);
   expect(fitted.placement.fit).toBe("contain");
   await expect(reframeSceneOpening(background, source, { ...placement, reframe: { outerQuad: placement.quad } })).rejects.toThrow("within");
+});
+
+it("expand-only fitting contains the original frame for narrower artwork and includes both frames in review", () => {
+ const placement={sourceRef:"art",mat:"#ffffff",quad:[[.3,.3],[.7,.3],[.7,.7],[.3,.7]] as const,reframe:{outerQuad:[[.28,.28],[.72,.28],[.72,.72],[.28,.72]] as const}};
+ const legacy=fittedSceneFrame(placement,2/3);
+ expect(legacy.outer[0][0]).toBeGreaterThan(.28);
+ const current={...placement,reframe:{...placement.reframe,mode:"expand-only-v2" as const}},fitted=fittedSceneFrame(current,2/3);
+ expect(fitted.outer[0][0]).toBe(.28);expect(fitted.outer[0][1]).toBeLessThan(.28);
+ expect(fitted.outer[2][0]).toBe(.72);expect(fitted.outer[2][1]).toBeGreaterThan(.72);
+ expect((fitted.opening[1][0]-fitted.opening[0][0])*1080/((fitted.opening[3][1]-fitted.opening[0][1])*1350)).toBeCloseTo(2/3,4);
+ const box=sceneFrameReviewBounds(current,2/3);
+ expect(box.x).toBeLessThan(.28);expect(box.y).toBeLessThan(fitted.outer[0][1]);
+ expect(box.x+box.width).toBeGreaterThan(.72);expect(box.y+box.height).toBeGreaterThan(fitted.outer[2][1]);
+ expect(()=>fittedSceneFrame({...current,quad:[[.3,.1],[.7,.1],[.7,.7],[.3,.7]],reframe:{outerQuad:[[.28,.08],[.72,.08],[.72,.72],[.28,.72]],mode:"expand-only-v2"}},.4)).toThrow(/safe area|limits/);
 });

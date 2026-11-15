@@ -9,7 +9,7 @@ type Point = readonly [number, number];
 type Quad = readonly [Point, Point, Point, Point];
 
 export interface SceneSource { ref: string; bytes: Buffer }
-export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad; mode?: "expand-only-v2" | "full-source-v3" } }
+export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad; mode?: "expand-only-v2" | "full-source-v3" | "pane-bleed-v4" } }
 export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[]; composition?: "single-artwork" }
 
 function cross(a: Point, b: Point, c: Point): number {
@@ -142,10 +142,13 @@ export async function reframeSceneOpening(background: Buffer, source: Buffer, pl
 }
 
 export async function compositeArtworkScene(input: SceneCompositeInput): Promise<Buffer> {
-  const projectOriginal = input.placements.some(p => p.reframe?.mode === "full-source-v3");
+  const projectOriginal = input.placements.some(p => p.reframe?.mode === "full-source-v3" || p.reframe?.mode === "pane-bleed-v4");
+  const paneBleed = input.placements.some(p => p.reframe?.mode === "pane-bleed-v4");
+  let bleedOuter: Quad | undefined;
   if (input.placements.some(p => p.reframe)) {
     if (input.composition !== "single-artwork" || input.sources.length !== 1 || input.placements.length !== 1)
       throw new Error("Frame refitting requires one reviewed artwork");
+    if (paneBleed) { const meta = await checkedImage(input.sources[0].bytes, "Artwork"); bleedOuter = fittedSceneFrame(input.placements[0], meta.width! / meta.height!).outer; }
     const fitted = await reframeSceneOpening(input.background, input.sources[0].bytes, input.placements[0]);
     input = { ...input, background: fitted.background, placements: [fitted.placement] };
   }
@@ -168,6 +171,8 @@ export async function compositeArtworkScene(input: SceneCompositeInput): Promise
     throw new Error("Scene background must be 4:5 without cropping");
   const sourceMap = new Map(input.sources.map(s => [s.ref, s.bytes]));
   const layers: { input: Buffer; left: number; top: number }[] = [];
+  const backdrop = paneBleed ? await sharp(input.background).resize(WIDTH, HEIGHT, {fit:"fill"}).removeAlpha().raw().toBuffer() : undefined;
+  const bleed = paneBleed ? 4 : 0;
   for (const placement of input.placements) {
     const source = sourceMap.get(placement.sourceRef)!;
     await checkedImage(source, "Artwork");
@@ -184,10 +189,10 @@ export async function compositeArtworkScene(input: SceneCompositeInput): Promise
     else texture = texture.resize(matWidth, matHeight, { fit: placement.fit ?? "contain", position: "centre", background: placement.mat });
     const { data: mat, info: textureInfo } = await texture.removeAlpha().raw().toBuffer({ resolveWithObject: true });
     if (projectOriginal) { matWidth = textureInfo.width; matHeight = textureInfo.height; }
-    const left = Math.max(0, Math.floor(Math.min(...q.map(p => p[0] * WIDTH))));
-    const top = Math.max(0, Math.floor(Math.min(...q.map(p => p[1] * HEIGHT))));
-    const right = Math.min(WIDTH, Math.ceil(Math.max(...q.map(p => p[0] * WIDTH))));
-    const bottom = Math.min(HEIGHT, Math.ceil(Math.max(...q.map(p => p[1] * HEIGHT))));
+    const left = Math.max(0, Math.floor(Math.min(...q.map(p => p[0] * WIDTH))) - bleed);
+    const top = Math.max(0, Math.floor(Math.min(...q.map(p => p[1] * HEIGHT))) - bleed);
+    const right = Math.min(WIDTH, Math.ceil(Math.max(...q.map(p => p[0] * WIDTH))) + bleed);
+    const bottom = Math.min(HEIGHT, Math.ceil(Math.max(...q.map(p => p[1] * HEIGHT))) + bleed);
     const layerWidth = right - left, layerHeight = bottom - top;
     const layer = Buffer.alloc(layerWidth * layerHeight * 4);
     const H = homography(q);
@@ -198,7 +203,16 @@ export async function compositeArtworkScene(input: SceneCompositeInput): Promise
       const det = A * E - B * D;
       if (Math.abs(det) < 1e-9) continue;
       const u = (C * E - B * F) / det, v = (A * F - C * D) / det;
-      if (u < 0 || u > 1 || v < 0 || v > 1) continue;
+      if (u < 0 || u > 1 || v < 0 || v > 1) {
+        if (!backdrop || !bleedOuter) continue;
+        // Edge extrusion only into measured bright-neutral pane halos, never
+        // across the physical outer rim or over dark/coloured frame material.
+        const index=(y*WIDTH+x)*3, rgb=[backdrop[index],backdrop[index+1],backdrop[index+2]];
+        if(Math.min(...rgb)<145 || Math.max(...rgb)-Math.min(...rgb)>42)continue;
+        if(!bleedOuter.every((a,i)=>{const b=bleedOuter![(i+1)%4];return (b[0]-a[0])*(py/HEIGHT-a[1])-(b[1]-a[1])*(px/WIDTH-a[0])>=0;}))continue;
+        const distance=Math.min(...q.map((a,i)=>{const b=q[(i+1)%4],dx=(b[0]-a[0])*WIDTH,dy=(b[1]-a[1])*HEIGHT,t=Math.max(0,Math.min(1,((px-a[0]*WIDTH)*dx+(py-a[1]*HEIGHT)*dy)/(dx*dx+dy*dy)));return Math.hypot(px-a[0]*WIDTH-t*dx,py-a[1]*HEIGHT-t*dy);}));
+        if(distance>bleed)continue;
+      }
       sample(mat, matWidth, matHeight, u, v, layer, ((y - top) * layerWidth + x - left) * 4);
     }
     layers.push({ input: await sharp(layer, { raw: { width: layerWidth, height: layerHeight, channels: 4 } }).png().toBuffer(), left, top });

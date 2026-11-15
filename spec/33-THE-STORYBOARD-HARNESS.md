@@ -1245,3 +1245,12 @@ remain binding. The platform records reference/view hashes and a versioned
 evidence contract; one archived reference-free rejection may receive the new
 evidence with identical final pixels. Already reference-aware failures cannot
 repeat. This does not establish taste, story quality or engagement effectiveness.
+
+**Pane halo correction, 2026-11-15.** A source-aware review isolated a remaining
+raster defect: neutral pixels from the old pane can survive outside the artwork
+quad after frame resampling. The original master has no such border. The
+versioned dark-frame renderer now extrudes source-edge colours by at most four
+pixels, only into neutral pane pixels inside the outer rim. The original artwork
+mapping and corner features remain intact, without cropping or painting over the
+wood. Legacy pixels are preserved. This is a changed-image repair subject to the
+same reference-aware physical checks, not an override of a rejected image.

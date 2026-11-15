@@ -224,3 +224,11 @@ it('keeps old review confidence rules while accepting the explicit v2 all-criter
  receipt.scene.visualValidation.confidence=.89;expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
  expect(()=>assertSceneVisualValidation(receipt,'b'.repeat(64))).toThrow();receipt.scene.visualValidation.confidence=.89;expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
 });
+
+it("V4 requires a complete physical inspection and exact pixels rather than a self-rated numerical cutoff",()=>{
+ const check:any={profile:"frame-fit-v4",sha256:"a".repeat(64),passed:true,confidence:.85,model:"critic",inspectionComplete:true};
+ const receipt:any={scene:{visualValidation:check}};
+ expect(()=>assertSceneVisualValidation(receipt,check.sha256)).not.toThrow();
+ expect(()=>assertSceneVisualValidation(receipt,"b".repeat(64))).toThrow();
+ delete check.inspectionComplete;expect(()=>assertSceneVisualValidation(receipt,check.sha256)).toThrow();
+});

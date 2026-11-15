@@ -142,3 +142,15 @@ it("expand-only fitting contains the original frame for narrower artwork and inc
  expect(box.x+box.width).toBeGreaterThan(.72);expect(box.y+box.height).toBeGreaterThan(fitted.outer[2][1]);
  expect(()=>fittedSceneFrame({...current,quad:[[.3,.1],[.7,.1],[.7,.7],[.3,.7]],reframe:{outerQuad:[[.28,.08],[.72,.08],[.72,.72],[.28,.72]],mode:"expand-only-v2"}},.4)).toThrow(/safe area|limits/);
 });
+
+it("projects the full source without inventing mat bands on an angled fitted frame", async () => {
+ const source=await solid("#ed261a",1371,1920),background=await solid("#103080",1080,1350);
+ const placement={sourceRef:"art",mat:"#ffffff",quad:[[.35,.2],[.55,.224],[.55,.55],[.35,.526]] as const,reframe:{outerQuad:[[.33,.18],[.57,.204],[.57,.57],[.33,.546]] as const,mode:"expand-only-v2" as const}};
+ const input={background,sources:[{ref:"art",bytes:source}],placements:[placement],composition:"single-artwork" as const};
+ const legacy=await compositeArtworkScene(input),current=await compositeArtworkScene({...input,placements:[{...placement,reframe:{...placement.reframe,mode:"full-source-v3"}}]});
+ const pale=async(bytes:Buffer)=>{const raw=await sharp(bytes).removeAlpha().raw().toBuffer();let count=0;for(let i=1;i<raw.length;i+=3)if(raw[i]>140)count++;return count;};
+ expect(await pale(legacy)).toBeGreaterThan(100);expect(await pale(current)).toBe(0);
+ const rgb=await pixel(current,520,450);expect(rgb[0]).toBeGreaterThan(200);expect(rgb[1]).toBeLessThan(70);
+ const bounds=sceneFrameReviewBounds({...placement,reframe:{...placement.reframe,mode:"full-source-v3"}},1371/1920);
+ expect(bounds.width).toBeGreaterThan(.3);
+});

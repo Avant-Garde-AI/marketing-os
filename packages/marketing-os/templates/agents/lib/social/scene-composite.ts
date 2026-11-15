@@ -9,7 +9,7 @@ type Point = readonly [number, number];
 type Quad = readonly [Point, Point, Point, Point];
 
 export interface SceneSource { ref: string; bytes: Buffer }
-export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad; mode?: "expand-only-v2" } }
+export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad; mode?: "expand-only-v2" | "full-source-v3" } }
 export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[]; composition?: "single-artwork" }
 
 function cross(a: Point, b: Point, c: Point): number {
@@ -98,12 +98,12 @@ export function fittedSceneFrame(placement: ScenePlacement, artworkAspect: numbe
   const centerY = q.reduce((sum, p) => sum + p[1], 0) / 4;
   // Shrinking the frame leaves its old border visible in the background.
   // V2 expands vertically for narrow artwork; no image erasure or inpainting.
-  const vertical = placement.reframe.mode === "expand-only-v2" && scale < 1;
+  const vertical = placement.reframe.mode !== undefined && scale < 1;
   const stretch = (quad: Quad): Quad => quad.map(([x, y]) => vertical
     ? [x, centerY + (y - centerY) / scale] as Point
     : [center + (x - center) * scale, y] as Point) as unknown as Quad;
   const target = stretch(outer), opening = stretch(q);
-  if (!quadIsValid(target) || target.some(p => p[0] < 0.04 || p[0] > 0.96 || (placement.reframe?.mode === "expand-only-v2" && (p[1] < .04 || p[1] > .96)))) throw new Error("Adjusted frame leaves scene safe area");
+  if (!quadIsValid(target) || target.some(p => p[0] < 0.04 || p[0] > 0.96 || (placement.reframe?.mode !== undefined && (p[1] < .04 || p[1] > .96)))) throw new Error("Adjusted frame leaves scene safe area");
   return { opening, outer: target };
 }
 
@@ -142,6 +142,7 @@ export async function reframeSceneOpening(background: Buffer, source: Buffer, pl
 }
 
 export async function compositeArtworkScene(input: SceneCompositeInput): Promise<Buffer> {
+  const projectOriginal = input.placements.some(p => p.reframe?.mode === "full-source-v3");
   if (input.placements.some(p => p.reframe)) {
     if (input.composition !== "single-artwork" || input.sources.length !== 1 || input.placements.length !== 1)
       throw new Error("Frame refitting requires one reviewed artwork");
@@ -171,11 +172,18 @@ export async function compositeArtworkScene(input: SceneCompositeInput): Promise
     const source = sourceMap.get(placement.sourceRef)!;
     await checkedImage(source, "Artwork");
     const q = placement.quad;
-    const matWidth = Math.min(1536, Math.max(128, Math.ceil(Math.max(distance(q[0], q[1]), distance(q[3], q[2])))));
-    const matHeight = Math.min(1536, Math.max(128, Math.ceil(Math.max(distance(q[0], q[3]), distance(q[1], q[2])))));
-    const { data: mat } = await sharp(source, { limitInputPixels: MAX_INPUT_PIXELS })
-      .flatten({ background: placement.mat }).resize(matWidth, matHeight, { fit: placement.fit ?? "contain", position: "centre", background: placement.mat })
-      .removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    let matWidth = Math.min(1536, Math.max(128, Math.ceil(Math.max(distance(q[0], q[1]), distance(q[3], q[2])))));
+    let matHeight = Math.min(1536, Math.max(128, Math.ceil(Math.max(distance(q[0], q[3]), distance(q[1], q[2])))));
+    let texture = sharp(source, { limitInputPixels: MAX_INPUT_PIXELS }).flatten({ background: placement.mat });
+    // Geometry already fits the real artwork ratio. A second contain resize
+    // uses the longest trapezoid edges and invents mat bands on angled frames.
+    // V3 projects the entire original texture directly; no crop, stretch-to-mat
+    // or generated artwork. A proportional prefilter avoids downsampling aliasing.
+    // Older receipts retain their previous raster path.
+    if (projectOriginal) texture = texture.resize({width: Math.min(1536, matWidth * 2), height: Math.min(1536, matHeight * 2), fit: "inside", withoutEnlargement: true});
+    else texture = texture.resize(matWidth, matHeight, { fit: placement.fit ?? "contain", position: "centre", background: placement.mat });
+    const { data: mat, info: textureInfo } = await texture.removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    if (projectOriginal) { matWidth = textureInfo.width; matHeight = textureInfo.height; }
     const left = Math.max(0, Math.floor(Math.min(...q.map(p => p[0] * WIDTH))));
     const top = Math.max(0, Math.floor(Math.min(...q.map(p => p[1] * HEIGHT))));
     const right = Math.min(WIDTH, Math.ceil(Math.max(...q.map(p => p[0] * WIDTH))));

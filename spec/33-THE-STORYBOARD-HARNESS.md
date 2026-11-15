@@ -1219,7 +1219,10 @@ sequence/human judgments remain open. See [post observations](../docs/plans/stor
 real compositing defect. The automatic batch exposed an outer-edge detector
 selecting a decorative top bevel and leaving the old frame visible. Joint
 border measurement and explicit expansion-only refitting correct the pixels;
-detail-aware physical review inspects the full JPEG and an exact-pixel close-up
-without lowering the 0.90 threshold. Legacy render behavior is retained for
+detail-aware physical review inspects the full JPEG and an exact-pixel close-up.
+Production V3 exposed an uncalibrated confidence cutoff and a second contain
+resize adding pale bands. V4 requires explicit complete inspection and all
+physical criteria; confidence is telemetry. Versioned full-source projection
+removes the second fit without cropping artwork. Legacy render behavior is retained for
 existing receipts. This remains distinct from narrative/taste criticism and
 uses the existing owner grant and gate. See [the frame review contract](../docs/plans/storyboard-harness/FRAME-REVIEW-2026-11-15.md).

@@ -45,3 +45,34 @@ Verification covers the top-bevel defect, expansion without residual frames,
 bounded exact-pixel crops, unchanged acceptance thresholds, legacy contracts,
 manual holds, successful child retention and no repeated paid submission. Live
 completion counts belong in the store's operational receipt after execution.
+
+## Correction after the production V3 run
+
+The first repair completed on November 15 with nine scheduled and five held;
+it was not a successful backlog repair. V3 fixed the two residual top borders,
+but three subsequent checks still marked every physical criterion true at 0.85.
+A 0.90 self-reported score has no calibrated interpretation. The full-resolution
+comparison also exposed a second compositor defect: after fitting the frame to
+the artwork ratio, a second `contain` resize used the longest trapezoid edges
+and introduced pale bands into the artwork texture.
+
+`full-source-v3` projects the complete original artwork texture into the fitted
+opening. A proportional downsample prefilter prevents aliasing; it adds no mat
+and crops no source edge. Existing receipts retain their exact raster path.
+The frame expands as in V2, preserving the original outside border.
+
+`frame-fit-v4` requires a valid response, explicit `inspectionComplete: true`,
+and all four physical criteria true. An unjudgeable criterion must be false.
+It still requires measured geometry (at least 0.95 agreement), the exact final
+JPEG hash, full-scene context and a geometry-bound crop. Confidence remains
+recorded in [0,1] as telemetry, not a calibrated acceptance threshold. This
+corrects the earlier numerical gate; legacy V1/V2/V3 receipt thresholds remain
+unchanged. This is not evidence of creative effectiveness.
+
+The source-fit migration is separate and bounded: only recorded V3 failures
+with `expand-only-v2` transforms can enter once. It archives their transforms
+and checks, preserves passing children, schedules and manual holds, and requires
+a changed final JPEG before any new review, including uncertainty-only failures.
+V4/full-source failures do not qualify. No paid generation is resubmitted.
+The platform checks the runtime advertises both V4 and the full-source mode.
+New additions require a renewed Slack notice and the full review lead.

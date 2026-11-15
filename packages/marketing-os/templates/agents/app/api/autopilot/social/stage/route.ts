@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       },
       async () => {
         if (body.operation === "identity")
-          return NextResponse.json({ account: await instagramIdentity(brokerTokenSource),finishingVersion:SCENE_LOCALIZATION_VERSION,frameReviewProfiles:["frame-fit-v1","frame-fit-v2","frame-fit-v3"] });
+          return NextResponse.json({ account: await instagramIdentity(brokerTokenSource),finishingVersion:SCENE_LOCALIZATION_VERSION,frameReviewProfiles:["frame-fit-v1","frame-fit-v2","frame-fit-v3","frame-fit-v4"],frameFitModes:["expand-only-v2","full-source-v3"] });
         if (body.operation === "recipes") {
           const raw = await socialRepo.readFile("social/autopilot/recipes.json");
           if (!raw) throw Error("Store social recipes missing");

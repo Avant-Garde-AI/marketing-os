@@ -220,5 +220,7 @@ it('keeps old review confidence rules while accepting the explicit v2 all-criter
  const receipt:any={scene:{visualValidation:{profile:'frame-fit-v1',sha256:'a'.repeat(64),passed:true,confidence:.9,model:'critic'}}};
  expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
  receipt.scene.visualValidation.profile='frame-fit-v2';expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).not.toThrow();
+ receipt.scene.visualValidation.profile='frame-fit-v3';expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).not.toThrow();
+ receipt.scene.visualValidation.confidence=.89;expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
  expect(()=>assertSceneVisualValidation(receipt,'b'.repeat(64))).toThrow();receipt.scene.visualValidation.confidence=.89;expect(()=>assertSceneVisualValidation(receipt,'a'.repeat(64))).toThrow();
 });

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import sharp from "sharp";
+import {sceneFrameReviewBounds} from "./scene-composite";
 import { socialRepo } from "./repo";
 import { parsePost, postPath, serializePost, renderedVideoSchema } from "./artifacts";
 import { generationPlanSchema } from "./generation-plan";
@@ -281,7 +282,9 @@ async function realization(p: z.infer<typeof realize>,requireVisual=false) {
     prepareDeliveryUpdate(await socialRepo.readFile(generationDeliveryPath(p.artifactId)),p.delivery,p.replacesDeliveryHash);
     const scene=await renderGenerationScene(socialRepo,job,p.delivery);
     assertSceneVisualValidation(p.delivery,digest(scene),requireVisual);
-    return {job,expected,scene};
+    const first=input.plan.sources[0];
+    const frameBounds=p.delivery.scene.placements.length===1?sceneFrameReviewBounds(p.delivery.scene.placements[0],first.width/first.height):undefined;
+    return {job,expected,scene,frameBounds};
   }
   if (!p.loop || p.delivery.scene) throw Error("Loop exports required");
   const { manifest, entries } = parseLoopExportManifest(JSON.stringify(p.loop.manifest), job);
@@ -309,7 +312,7 @@ registerAction("social.autopilot_realize", () => ({
     return {
       summary: `Persist verified final media for ${p.artifactId}`,
       previewHash: r.scene ? hashPreview({p,sceneSha256:digest(r.scene)}) : hashPreview(p),
-      ...(r.scene ? {renderProof:{sha256:digest(r.scene),jpegBase64:r.scene.toString("base64")}} : {}),
+      ...(r.scene ? {renderProof:{sha256:digest(r.scene),jpegBase64:r.scene.toString("base64"),frameBounds:r.frameBounds}} : {}),
     };
   },
   async execute(p) {

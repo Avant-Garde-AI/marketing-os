@@ -9,7 +9,7 @@ type Point = readonly [number, number];
 type Quad = readonly [Point, Point, Point, Point];
 
 export interface SceneSource { ref: string; bytes: Buffer }
-export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad } }
+export interface ScenePlacement { sourceRef: string; quad: Quad; mat: string; /** Explicit cover removes added mats by cropping edges; omission preserves the full source. */ fit?: "contain" | "cover"; /** Expand the generated frame to the real artwork ratio, preserving every source edge. */ reframe?: { outerQuad: Quad; mode?: "expand-only-v2" } }
 export interface SceneCompositeInput { background: Buffer; sources: SceneSource[]; placements: ScenePlacement[]; composition?: "single-artwork" }
 
 function cross(a: Point, b: Point, c: Point): number {
@@ -76,9 +76,9 @@ async function checkedImage(bytes: Buffer, label: string) {
   return meta;
 }
 
-/** Refit the empty physical frame rather than cropping or stretching the real artwork. */
-export async function reframeSceneOpening(background: Buffer, source: Buffer, placement: ScenePlacement) {
-  if (!placement.reframe) return { background, placement };
+/** Shared geometry for compositing and the exact-pixel review close-up. Legacy receipts retain their pixels. */
+export function fittedSceneFrame(placement: ScenePlacement, artworkAspect: number) {
+  if (!placement.reframe) return { opening: placement.quad, outer: placement.quad };
   const outer = placement.reframe.outerQuad, q = placement.quad;
   if (!quadIsValid(outer) || !quadIsValid(q)) throw new Error("Invalid frame geometry");
   // Initial rollout is deliberately limited to near-frontal, rectangular frames.
@@ -89,15 +89,39 @@ export async function reframeSceneOpening(background: Buffer, source: Buffer, pl
     if ((i === 0 || i === 3 ? point[0] <= outer[i][0] : point[0] >= outer[i][0]) ||
         (i < 2 ? point[1] <= outer[i][1] : point[1] >= outer[i][1])) throw new Error("Opening must sit within the physical frame");
   }
-  const meta = await checkedImage(source, "Artwork");
+  if (!Number.isFinite(artworkAspect) || artworkAspect <= 0) throw new Error("Invalid artwork aspect ratio");
   const width = (distance(q[0], q[1]) + distance(q[3], q[2])) / 2;
   const height = (distance(q[0], q[3]) + distance(q[1], q[2])) / 2;
-  const scale = meta.width! / meta.height! * height / width;
+  const scale = artworkAspect * height / width;
   if (scale < 0.75 || scale > 2.5) throw new Error("Frame ratio adjustment exceeds reviewed template limits");
   const center = q.reduce((sum, p) => sum + p[0], 0) / 4;
-  const stretch = (quad: Quad): Quad => quad.map(([x, y]) => [center + (x - center) * scale, y] as Point) as unknown as Quad;
+  const centerY = q.reduce((sum, p) => sum + p[1], 0) / 4;
+  // Shrinking the frame leaves its old border visible in the background.
+  // V2 expands vertically for narrow artwork; no image erasure or inpainting.
+  const vertical = placement.reframe.mode === "expand-only-v2" && scale < 1;
+  const stretch = (quad: Quad): Quad => quad.map(([x, y]) => vertical
+    ? [x, centerY + (y - centerY) / scale] as Point
+    : [center + (x - center) * scale, y] as Point) as unknown as Quad;
   const target = stretch(outer), opening = stretch(q);
-  if (!quadIsValid(target) || target.some(p => p[0] < 0.04 || p[0] > 0.96)) throw new Error("Adjusted frame leaves scene safe area");
+  if (!quadIsValid(target) || target.some(p => p[0] < 0.04 || p[0] > 0.96 || (placement.reframe?.mode === "expand-only-v2" && (p[1] < .04 || p[1] > .96)))) throw new Error("Adjusted frame leaves scene safe area");
+  return { opening, outer: target };
+}
+
+/** Normalized close-up including both original and fitted frame and surrounding wall. */
+export function sceneFrameReviewBounds(placement: ScenePlacement, artworkAspect: number) {
+  const fitted = fittedSceneFrame(placement, artworkAspect), points = [...fitted.outer, ...(placement.reframe?.outerQuad ?? placement.quad)];
+  const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+  const padX = Math.max(.025, (Math.max(...xs) - Math.min(...xs)) * .15), padY = Math.max(.025, (Math.max(...ys) - Math.min(...ys)) * .15);
+  const x = Math.max(0, Math.min(...xs) - padX), y = Math.max(0, Math.min(...ys) - padY);
+  return { x, y, width: Math.min(1, Math.max(...xs) + padX) - x, height: Math.min(1, Math.max(...ys) + padY) - y };
+}
+
+/** Refit the empty physical frame rather than cropping or stretching the real artwork. */
+export async function reframeSceneOpening(background: Buffer, source: Buffer, placement: ScenePlacement) {
+  if (!placement.reframe) return { background, placement };
+  const meta = await checkedImage(source, "Artwork");
+  const { opening, outer: target } = fittedSceneFrame(placement, meta.width! / meta.height!);
+  const outer = placement.reframe.outerQuad;
   const { data: raw } = await sharp(background).resize(WIDTH, HEIGHT, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const layer = Buffer.alloc(WIDTH * HEIGHT * 4), H = homography(target), O = homography(outer);
   for (let y = Math.floor(Math.min(...target.map(p => p[1] * HEIGHT))); y < Math.ceil(Math.max(...target.map(p => p[1] * HEIGHT))); y++)

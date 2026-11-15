@@ -154,3 +154,16 @@ it("projects the full source without inventing mat bands on an angled fitted fra
  const bounds=sceneFrameReviewBounds({...placement,reframe:{...placement.reframe,mode:"full-source-v3"}},1371/1920);
  expect(bounds.width).toBeGreaterThan(.3);
 });
+
+it("extrudes full-source edge colours into a bounded neutral pane halo without covering the rim or cropping artwork",async()=>{
+ const source=await sharp(await solid('#ed261a',600,900)).composite([{input:await solid('#00e0ff',20,20),left:0,top:0},{input:await solid('#10ff20',20,20),left:580,top:0},{input:await solid('#2030ff',20,20),left:580,top:880},{input:await solid('#ffe010',20,20),left:0,top:880}]).png().toBuffer();
+ const background=await sharp(await solid('#103080',1080,1350)).composite([{input:await solid('#542b12',260,368),left:410,top:383},{input:await solid('#f4f3ee',220,328),left:430,top:403}]).png().toBuffer();
+ const placement={sourceRef:'art',mat:'#f4f3ee',quad:[[.4,.3],[.6,.3],[.6,.54],[.4,.54]] as const,reframe:{outerQuad:[[.38,.284],[.62,.284],[.62,.556],[.38,.556]] as const,mode:'full-source-v3' as const}};
+ const input={background,sources:[{ref:'art',bytes:source}],placements:[placement],composition:'single-artwork' as const};
+ const before=await compositeArtworkScene(input),after=await compositeArtworkScene({...input,placements:[{...placement,reframe:{...placement.reframe,mode:'pane-bleed-v4'}}]});
+ expect((await pixel(before,430,500))[1]).toBeGreaterThan(220);expect((await pixel(after,430,500))[1]).toBeLessThan(80);expect((await pixel(after,430,500))[0]).toBeGreaterThan(180);
+ const wood=await pixel(after,427,500);expect(wood[0]).toBeLessThan(120);expect(wood[1]).toBeLessThan(80);expect(wood[2]).toBeLessThan(60);
+ expect((await pixel(after,400,500))[2]).toBeGreaterThan(100);
+ const corners=await Promise.all([[434,407],[645,407],[645,726],[434,726]].map(([x,y])=>pixel(after,x,y)));
+ expect(corners[0][1]).toBeGreaterThan(160);expect(corners[0][2]).toBeGreaterThan(180);expect(corners[1][1]).toBeGreaterThan(200);expect(corners[2][2]).toBeGreaterThan(180);expect(corners[3][0]).toBeGreaterThan(200);expect(corners[3][1]).toBeGreaterThan(160);
+});

@@ -117,3 +117,26 @@ This is not a same-input reroll. Only the old reference-free V4 failure with
 two passing siblings qualifies. A reference-aware failure remains held; owner
 holds, schedules and paid jobs remain intact. Fresh notice precedes additions.
 This physical evidence comparison remains separate from narrative/taste review.
+
+## Blank-pane raster halos
+
+Original-scene evidence cleared the empty-frame and artwork-spill flags, while
+the final image still failed fit and edge plausibility. The verified 1440×1920
+Space Runner master has no pale border. The sliver comes from original neutral
+pane pixels just outside the projected artwork quad after frame resampling.
+It must be corrected in pixels, not waived by another same-input review.
+
+`pane-bleed-v4` preserves the full-source projection and all original corner
+features. It extends clamped source-edge colours at most four output pixels
+outside the artwork quad, only into bright neutral pane pixels inside the
+measured outer rim. Dark/coloured frame material and the surrounding scene are
+untouched. It does not resize the artwork to an expanded quad or crop its edges.
+This is deliberately limited to the existing near-frontal dark wooden frame /
+neutral blank pane recipe. Earlier renderer modes retain their exact pixels.
+
+A bounded old-renderer halo repair may change only that mode for the failed
+child, retaining source and geometry and preserving its two successful siblings.
+The new final JPEG must change and must receive the same reference-aware V4
+physical check. It does not re-enter the evidence-only migration. A new-mode
+failure stays held. Runtime capability advertisement prevents execution before
+the updated template is deployed. No paid generation is submitted.

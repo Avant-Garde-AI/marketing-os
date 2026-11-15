@@ -76,3 +76,20 @@ a changed final JPEG before any new review, including uncertainty-only failures.
 V4/full-source failures do not qualify. No paid generation is resubmitted.
 The platform checks the runtime advertises both V4 and the full-source mode.
 New additions require a renewed Slack notice and the full review lead.
+
+## Independent material boundaries
+
+The source-fit run recovered four carousels and scheduled thirteen posts; the
+last December 4 space image still failed V4's physical checks. Its saved
+background showed that the detector forced the outer rim to share the inner
+bevel's slope. These boundaries can have different slopes and border widths.
+Independent outer measurements remove this corner mismatch without changing
+the renderer or weakening contrast, 95% sample agreement, enclosure or review.
+All 21 saved backgrounds remained measurable under the correction.
+
+The platform tags new measurements `frame-pixel-v3`. A separate bounded repair
+accepts only an unrealized V4 edge rejection from the old parallel-border
+profile with two passing siblings. It requires changed measured outer geometry,
+the same provider background and a changed final JPEG before another V4 check.
+Prior evidence is archived; existing schedules, owner holds and paid jobs remain
+intact. New-profile failures stay held. New additions need a fresh review notice.

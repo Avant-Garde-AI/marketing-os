@@ -1226,3 +1226,12 @@ physical criteria; confidence is telemetry. Versioned full-source projection
 removes the second fit without cropping artwork. Legacy render behavior is retained for
 existing receipts. This remains distinct from narrative/taste criticism and
 uses the existing owner grant and gate. See [the frame review contract](../docs/plans/storyboard-harness/FRAME-REVIEW-2026-11-15.md).
+
+**Outer-boundary measurement correction, 2026-11-15.** The final source-fit
+hold exposed a further geometric assumption: an inner bevel and outer material
+boundary were forced to be parallel. The detector now measures the outer slope
+independently under the same contrast, agreement and enclosure requirements.
+Only an old-profile failed edge can enter one changed-geometry/changed-JPEG
+repair; passing images and owner holds remain intact. V4 inspection is unchanged.
+This is implemented in the platform's generic scene localization seam and needs
+no renderer or Arthaus recipe change; see the physical frame review contract.

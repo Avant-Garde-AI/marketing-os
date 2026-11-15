@@ -93,3 +93,27 @@ profile with two passing siblings. It requires changed measured outer geometry,
 the same provider background and a changed final JPEG before another V4 check.
 Prior evidence is archived; existing schedules, owner holds and paid jobs remain
 intact. New-profile failures stay held. New additions need a fresh review notice.
+
+## Original-scene grounding
+
+The independent-border correction did not qualify the last image: V4 returned
+all four physical criteria false, including an empty frame in the visibly
+filled finished image. Thirteen posts remained scheduled; no successful 14/14
+result is claimed at this stage. The scene already contained a nebula outside
+the window, but the critic only received the final scene and frame close-up.
+
+New inspections add a third, explicitly labelled original-scene reference. The
+provider bytes must match the delivery background SHA; a bounded normalized
+view has its own recorded SHA. Its blank opening is comparison evidence only;
+criteria apply solely to the finished images. All four physical checks and
+complete inspection remain mandatory. The platform journals the versioned
+`frame-reference-v1` evidence and both source/view hashes before the call.
+The runtime's V4 final-JPEG contract is unchanged.
+
+One evidence upgrade can inspect the exact already geometry-corrected rejected
+JPEG with this previously absent independent input. Archive the old negative
+result, retain the transform and require identical final pixels on this path.
+This is not a same-input reroll. Only the old reference-free V4 failure with
+two passing siblings qualifies. A reference-aware failure remains held; owner
+holds, schedules and paid jobs remain intact. Fresh notice precedes additions.
+This physical evidence comparison remains separate from narrative/taste review.

@@ -1235,3 +1235,13 @@ Only an old-profile failed edge can enter one changed-geometry/changed-JPEG
 repair; passing images and owner holds remain intact. V4 inspection is unchanged.
 This is implemented in the platform's generic scene localization seam and needs
 no renderer or Arthaus recipe change; see the physical frame review contract.
+
+**Physical review evidence correction, 2026-11-15.** A final-only critic can
+mistake deliberately matching environmental imagery for pasted artwork spill.
+The physical reviewer now receives the hash-verified original scene as separate
+comparison evidence alongside the finished JPEG and its close-up. The original's
+blank opening must not be evaluated as a finished post. All physical criteria
+remain binding. The platform records reference/view hashes and a versioned
+evidence contract; one archived reference-free rejection may receive the new
+evidence with identical final pixels. Already reference-aware failures cannot
+repeat. This does not establish taste, story quality or engagement effectiveness.

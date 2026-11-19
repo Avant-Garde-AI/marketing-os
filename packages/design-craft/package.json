@@ -1,0 +1,37 @@
+{
+  "name": "@avant-garde/design-craft",
+  "version": "0.1.0",
+  "description": "The DTC design-craft vocabulary, perception labeling pipeline, and open label dataset behind Marketing OS's stroke-level design models (spec 35)",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "design-craft": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "corpus"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^1.6.0"
+  }
+}

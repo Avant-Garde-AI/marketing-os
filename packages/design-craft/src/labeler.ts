@@ -63,10 +63,13 @@ export const LABELER_SYSTEM = [
   "",
   "RULES FOR PROPOSALS:",
   "- `axis` names the DIMENSION being decided, not the treatment.",
-  "- `value` is a compound kebab-case treatment name of 2–6 words that you coin for what you see.",
-  "  FORMAT ONLY, from an unrelated field (architecture), never reuse: axis \"stair form\" → value \"cantilevered-glass-treads\".",
+  "- `value` is a lowercase kebab-case name of 2–6 words for the treatment you see.",
+  "- Use the PLAIN, LITERAL words a working web designer would use in a design review: name the",
+  "  element, its arrangement, and its behavior. No metaphors, no borrowed vocabulary from other",
+  "  fields (architecture, print, theatre…), no poetic coinages. Two designers looking at the same",
+  "  treatment should plausibly pick the same words.",
   "- `gloss` says what distinguishes this treatment from its siblings on the same axis.",
-  "- BAD values: \"clean\", \"modern\", \"minimal\", \"premium\", \"bold-colors\". They describe nothing reusable.",
+  "- Adjectives alone (clean, modern, minimal, premium, bold) describe nothing reusable.",
   "- Describe what is visibly on the page. Do not infer from brand reputation. Never name the brand in a value.",
 ].join("\n");
 

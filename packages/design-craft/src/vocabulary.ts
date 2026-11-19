@@ -51,6 +51,20 @@ export const valueEntrySchema = z.object({
   origin: z.enum(["earned", "proposed"]),
   /** Near-duplicate keys folded into this value. Kept so a reviewer can undo the merge. */
   aliases: z.array(z.string()).optional(),
+  /** How each alias got here: the evidence a reviewer needs to accept or undo a merge. */
+  merges: z
+    .array(
+      z.object({
+        key: z.string(),
+        method: z.enum(["token", "semantic"]),
+        score: z.number().optional(),
+        judge: z.string().optional(),
+        reason: z.string().optional(),
+        /** Brands the merged value brought with it, so an undo can restore support exactly. */
+        support: z.array(z.string()).default([]),
+      }),
+    )
+    .optional(),
   reward: rewardSchema.optional(),
 });
 export type ValueEntry = z.infer<typeof valueEntrySchema>;
@@ -133,23 +147,17 @@ export function rejectReason(value: unknown): string | null {
 }
 
 /**
- * Near-duplicate detection, deliberately CONSERVATIVE.
+ * Cheap merging is limited to EXACT REWORDINGS: the same content words in a
+ * different order (`carousel-text-bar` = `text-carousel-bar`). Everything else
+ * goes through the judged semantic pass (`merge.ts`).
  *
- * The Arthaus port used Jaccard over tokens longer than 2 chars at 0.5. On the
- * first live DTC run (5 stores, 2026-11-19) that folded opposites together:
- * `strict-two-column-grid` → `strict-four-column-grid` ("two"/"four" were
- * dropped as short tokens), `white-canvas-with-tinted-base` →
- * `tinted-canvas-with-white-cards`, and `inline-text-links` →
- * `centered-inline-links`, which then helped that value pass admission.
- *
- * The two failure modes are not symmetric. A missed merge only delays admission
- * and is recoverable by a later re-merge; a wrong merge inflates support and
- * corrupts the vocabulary. So: keep every content token (including numbers and
- * short words), ignore function words, refuse to merge across a known
- * opposition, require ≥0.6 overlap, and refuse when the same tokens appear in a
- * different X-with-Y order. Semantic synonyms with little word overlap
- * ("strikethrough-and-pill-tag" / "strikethrough-with-value-badge") are left
- * for the embedding/LLM merge planned for P2.
+ * History, so nobody re-widens this. The Arthaus port used Jaccard ≥0.5 over
+ * tokens longer than 2 chars. On live DTC labels (2026-11-19) it folded
+ * opposites (`two-column` → `four-column`, `uninterrupted-…` → `…-interrupted-…`,
+ * `monospace-body` → `sans-body`) and broad names into narrow ones
+ * (`inline-links` → `centered-inline-links`), and that produced admissions. Overlap
+ * cannot tell a qualifier from a synonym. A missed merge is recoverable; a
+ * wrong one corrupts the vocabulary.
  */
 const FUNCTION_WORDS = new Set(["and", "with", "the", "for", "of", "to", "on", "in", "by", "a", "an", "or", "over", "under", "into"]);
 
@@ -167,13 +175,25 @@ const OPPOSITIONS: string[][] = [
   ["inline", "stacked"],
   ["full", "partial", "contained"],
   ["grid", "stack", "stacked", "carousel", "list", "row", "masonry"],
+  ["serif", "sans", "monospace", "typewriter", "script", "slab", "handwritten"],
 ];
+
+/** `interrupted` vs `uninterrupted`, `sticky` vs `non-sticky`/`no-sticky`. */
+function negated(a: Set<string>, b: Set<string>, bTokens: string[]): boolean {
+  for (const t of a) {
+    if (b.has(`un${t}`) || b.has(`non${t}`)) return true;
+    const i = bTokens.indexOf(t);
+    if (i > 0 && (bTokens[i - 1] === "no" || bTokens[i - 1] === "non" || bTokens[i - 1] === "not")) return true;
+  }
+  return false;
+}
 
 const contentTokens = (k: string) => k.split("-").filter((t) => t && !FUNCTION_WORDS.has(t));
 
 function opposed(a: string[], b: string[]): boolean {
   const A = new Set(a);
   const B = new Set(b);
+  if (negated(A, B, b) || negated(B, A, a)) return true;
   for (const group of OPPOSITIONS) {
     const inA = group.filter((t) => A.has(t) && !B.has(t));
     const inB = group.filter((t) => B.has(t) && !A.has(t));
@@ -193,26 +213,20 @@ function swappedRoles(a: string, b: string): boolean {
   return overlap(t(a1!), t(b2)) && overlap(t(a2), t(b1!));
 }
 
-export function findNearDuplicate(axis: AxisEntry, key: string, threshold = 0.6): string | null {
-  const a = contentTokens(key);
-  if (a.length < 2) return null;
-  const A = new Set(a);
-  let best: string | null = null;
-  let bestScore = 0;
+/** The deterministic veto shared by token and semantic merging: opposites and role swaps never merge. */
+export function mergeVeto(a: string, b: string): boolean {
+  return opposed(contentTokens(a), contentTokens(b)) || swappedRoles(a, b);
+}
+
+export function findNearDuplicate(axis: AxisEntry, key: string): string | null {
+  const sig = (k: string) => contentTokens(k).sort().join("|");
+  const mine = sig(key);
+  if (contentTokens(key).length < 2) return null;
   for (const existing of Object.keys(axis.values)) {
     if (existing === key) return existing;
-    const b = contentTokens(existing);
-    if (opposed(a, b) || swappedRoles(key, existing)) continue;
-    const B = new Set(b);
-    const inter = [...A].filter((t) => B.has(t)).length;
-    const union = new Set([...A, ...B]).size;
-    const score = union ? inter / union : 0;
-    if (score > bestScore) {
-      bestScore = score;
-      best = existing;
-    }
+    if (sig(existing) === mine && !mergeVeto(key, existing)) return existing;
   }
-  return bestScore >= threshold ? best : null;
+  return null;
 }
 
 // ── Queries ──────────────────────────────────────────────────────────────────
@@ -306,13 +320,21 @@ export function observe(v: Vocabulary, obs: Observation): ObserveResult {
   const axisWasRecognized = ax.recognized;
 
   let canonical = key;
+  // A name already merged into another value resolves to that value.
   if (!ax.values[key]) {
+    const owner = Object.keys(ax.values).find((k) => ax.values[k]!.aliases?.includes(key));
+    if (owner) canonical = owner;
+  }
+  if (!ax.values[canonical]) {
     const dup = findNearDuplicate(ax, key);
     if (dup) {
       canonical = dup;
       const target = ax.values[dup]!;
       target.aliases ??= [];
-      if (!target.aliases.includes(key)) target.aliases.push(key);
+      if (!target.aliases.includes(key)) {
+        target.aliases.push(key);
+        (target.merges ??= []).push({ key, method: "token", support: obs.brand ? [obs.brand] : [] });
+      }
     }
   }
   const entry = (ax.values[canonical] ??= valueEntrySchema.parse({
@@ -342,6 +364,41 @@ export function observe(v: Vocabulary, obs: Observation): ObserveResult {
     ...(ax.recognized && !axisWasRecognized ? { axisRecognized: true as const } : {}),
     ...(canonical !== key ? { mergedFrom: key } : {}),
   };
+}
+
+// ── Merge (applied by the semantic pass, reversible) ─────────────────────────
+
+export interface MergeProvenance {
+  method: "token" | "semantic";
+  score?: number;
+  judge?: string;
+  reason?: string;
+}
+
+/**
+ * Fold value `from` into value `into` on one axis: support is unioned, aliases
+ * carried over, and the merge recorded with its evidence. Admission is
+ * recomputed from the merged support, so a merge can promote a value. That's
+ * why merges must be judged, never assumed.
+ */
+export function mergeValues(v: Vocabulary, axis: string, from: string, into: string, prov: MergeProvenance): boolean {
+  const ax = v.axes[axis];
+  const src = ax?.values[from];
+  const dst = ax?.values[into];
+  if (!ax || !src || !dst || from === into) return false;
+  for (const b of src.support) if (!dst.support.includes(b)) dst.support.push(b);
+  dst.aliases ??= [];
+  for (const k of [from, ...(src.aliases ?? [])]) if (!dst.aliases.includes(k)) dst.aliases.push(k);
+  (dst.merges ??= []).push({ key: from, ...prov, support: [...src.support] }, ...(src.merges ?? []));
+  if (!dst.gloss && src.gloss) dst.gloss = src.gloss;
+  if (src.origin === "earned") dst.origin = "earned";
+  if (src.reward) {
+    dst.reward = { offered: (dst.reward?.offered ?? 0) + src.reward.offered, chosen: (dst.reward?.chosen ?? 0) + src.reward.chosen };
+  }
+  dst.admitted = dst.admitted || src.admitted || dst.origin === "earned" || dst.support.length >= v.admissionThreshold;
+  delete ax.values[from];
+  ax.recognized = admittedValues(v, axis).length > 0 || ax.axisSupport.length >= v.axisThreshold;
+  return true;
 }
 
 // ── HARD register ────────────────────────────────────────────────────────────

@@ -100,6 +100,11 @@ describe("admission gate", () => {
       ["nav architecture", "centered-inline-links", "inline-text-links"],
       ["announcement bar treatment", "carousel-text-strip", "manual-carousel-strip"],
       ["brand story placement", "terminal-value-prop-grid", "terminal-value-prop-stack"],
+      ["collection grid density", "two-column-interrupted-grid", "uninterrupted-two-column-grid"],
+      ["type voice", "serif-display-sans-body", "serif-display-monospace-body"],
+      ["nav architecture", "centered-horizontal-text-links", "horizontal-text-links"],
+      ["product card anatomy", "image-title-price-swatches-quick-add", "image-title-price-swatches"],
+      ["nav architecture", "hamburger-menu-only", "hamburger-menu"],
     ];
     for (const [axis, first, second] of pairs) {
       const v = emptyVocabulary();
@@ -108,6 +113,12 @@ describe("admission gate", () => {
       expect(r.mergedFrom, `${second} must not merge into ${first}`).toBeUndefined();
       expect(r.key).toBe(second);
     }
+  });
+
+  it("folds exact rewordings (same words, any order)", () => {
+    const v = emptyVocabulary();
+    observe(v, { axis: "announcement bar treatment", value: "carousel-text-bar", brand: "a.com" });
+    expect(observe(v, { axis: "announcement bar treatment", value: "text-carousel-bar", brand: "b.com" }).key).toBe("carousel-text-bar");
   });
 
   it("still folds genuine rewordings", () => {
@@ -186,7 +197,10 @@ describe("no seeded values", () => {
       expect(a.description, a.axis).not.toMatch(/e\.g\.|such as|like /i);
     }
   });
-  it("keeps DTC treatment names out of the system prompt's format example", () => {
-    for (const leaked of ["sticky", "subscribe", "drawer", "carousel", "swatch"]) expect(LABELER_SYSTEM).not.toContain(leaked);
+  it("carries no example values at all, in any domain", () => {
+    // Even an off-domain example leaked its register: an architecture example
+    // produced "frieze-band-carousel" and "centered-text-colonnade" (2026-11-19).
+    expect(LABELER_SYSTEM).not.toMatch(/"[a-z0-9]+(-[a-z0-9]+)+"/);
+    for (const leaked of ["sticky", "subscribe", "drawer", "carousel", "swatch", "cantilever", "stair"]) expect(LABELER_SYSTEM).not.toContain(leaked);
   });
 });

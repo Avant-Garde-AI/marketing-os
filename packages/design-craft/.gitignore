@@ -1,3 +1,4 @@
 .captures/
 release/
 *.png
+.embeddings-cache.json

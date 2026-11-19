@@ -32,6 +32,10 @@ DESIGN_CRAFT_API_KEY=… design-craft label --captures .captures/manifest.jsonl 
 # 3. Fold labels into the vocabulary (idempotent: support is a set of brands).
 design-craft debrand --labels labels.jsonl --vocab vocabulary.json
 
+# 3b. Fold synonyms: embeddings retrieve candidates, guards veto, a judge model decides each merge.
+#     --block reviewed.json lists pairs a reviewer rejected; they are never merged again.
+design-craft merge --vocab vocabulary.json --base-url <endpoint>/v1 [--dry-run] [--report merge.json]
+
 # 4. Inspect, then export the open dataset (labels + vocabulary + DATASHEET.md, no pixels).
 design-craft vocab --vocab vocabulary.json
 design-craft dataset --labels labels.jsonl --vocab vocabulary.json --out release/
@@ -52,4 +56,7 @@ design-craft dataset --labels labels.jsonl --vocab vocabulary.json --out release
 
 - The dataset never carries pixels. Rows reference captures by sha256, and export strips unknown keys.
 - Model output is never trusted: unparseable replies fail the record, they don't produce empty labels.
+- Prompts carry no example values in any domain. Examples leak verbatim, or leak their register.
+- Merges are judged, never assumed from similarity. Labels are the source of truth: to undo a merge,
+  block the pair and replay `debrand` + `merge`.
 - API keys are passed by the caller and never written to records or logs.

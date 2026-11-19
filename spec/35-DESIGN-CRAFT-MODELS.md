@@ -1,6 +1,6 @@
 # 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
 
-> Status: **P1 BUILT** (2026-11-19) · P2 next · MVP defined 2026-11-18
+> Status: **P1 BUILT** · **P2 in progress: semantic merge built** (2026-11-19) · MVP defined 2026-11-18
 > Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
 > Origin: the "stroke-level decision model" idea, 2026-11-18.
 > Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
@@ -191,6 +191,26 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   Opposition and role-swap guards still apply. Re-run on the P1 smoke labels: synonyms such as
   `strikethrough-and-pill-tag` / `strikethrough-with-value-badge` should fold, and
   `two-column` / `four-column` must not.
+
+  **Built 2026-11-19 (`merge.ts`, `design-craft merge`).** Calibration changed the design. On
+  `gemini-embedding-2`, `two-column-uniform` / `four-column-uniform` scored **0.946**, higher than the
+  true synonyms `strikethrough-price-with-highlight-tag` / `strikethrough-and-pill-tag` (0.939). No
+  threshold separates them, so **embeddings only retrieve** (cosine ≥0.85, top-3), deterministic
+  guards veto (oppositions incl. negation and type families, role swap, reviewer block list), and a
+  **judge model decides every merge** (`gemini-3.1-pro-preview`, "when unsure, DIFFERENT"). Clustering
+  never chains A≈B≈C. Every merge records score, judge, reason and the support it brought.
+  The cheap in-`observe` merge is now **exact rewordings only** (same content words, any order).
+  Overlap merging also folded broad names into narrow ones (`inline-links` → `centered-inline-links`)
+  and `monospace` → `sans`. The undo is to block the pair and replay from labels (labels are the source
+  of truth, and the vocabulary is derived).
+
+  Smoke result (v2 labels): 182 values → 5 rewording merges + 20 judged merges (≈90% look right
+  on manual review), 3 values admitted, 17 axes recognized.
+
+- **Prompt finding: any example leaks.** The off-domain format example added in P1 ("architecture")
+  leaked its whole register into the labels: `frieze-band-carousel`, `centered-text-colonnade`,
+  50 occurrences across 20 labels. The labeler prompt now carries no example values at all
+  (test-enforced) plus a plain-design-review-language rule. Re-label: 0 occurrences.
 - Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
   home, food & bev, art/décor), selected for visual distinctiveness + public
   reputation. The selection rationale is recorded per store.

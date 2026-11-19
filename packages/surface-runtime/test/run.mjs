@@ -123,6 +123,8 @@ async function main() {
       const o = await open(vp, "/password-preview?fetch_manifest=1&mos_preview=tok&mos_arm=v1&mos_diag=1");
       await o.page.waitForFunction(() => document.documentElement.dataset.mosReady === "1", null, { timeout: 12000 });
       check(`${vp}: authenticated proxy preview renders`, (await host(o.page, "v1-welcome").count()) === 1);
+      check(`${vp}: theme empty-element reset cannot hide the offer`, await host(o.page, "v1-welcome").locator(".card").isVisible());
+      check(`${vp}: theme empty-element reset still applies elsewhere`, await o.page.locator("#embed-slot").evaluate((e) => getComputedStyle(e).display === "none"));
       check(`${vp}: password preview sends no writes`, server.log.length === 0, server.log);
       await o.done(`password preview ${vp}`);
     });

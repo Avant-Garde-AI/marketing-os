@@ -216,6 +216,10 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   `/products.json`) → `corpus/dtc-v1.json`: **72 stores with full page sets** (apparel 18, beauty 16,
   home 13, food-bev 10, accessories 6, wellness 5, pets 3, outdoor 1), 7 tagged `needs-pages`,
   5 dropped (403 to automated browsers). Rationales are drafts pending human review.
+- **Capture waves (decided 2026-11-19).** Wave 1 = Black Friday week (2026-11), captured now.
+  Wave 2 = mid-January 2027, same corpus, so every axis sees sale and non-sale creative
+  before any model trains on it. The datasheet breaks brands down by capture month. P3 training waits
+  for wave 2.
 - Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
   home, food & bev, art/décor), selected for visual distinctiveness + public
   reputation. The selection rationale is recorded per store.

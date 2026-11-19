@@ -22,6 +22,8 @@ export interface CaptureOptions {
   maxHeight?: number;
   userAgent?: string;
   onProgress?: (msg: string) => void;
+  /** `${viewport} ${url}` pairs already captured; skipped so a re-run only fills gaps. */
+  skip?: Set<string>;
 }
 
 const VIEWPORTS = {
@@ -78,6 +80,7 @@ export async function capturePages(pages: ResolvedPage[], opts: CaptureOptions):
       });
       const page = await ctx.newPage();
       for (const p of pages) {
+        if (opts.skip?.has(`${vp} ${p.url}`)) continue;
         const dir = path.join(opts.outDir, p.brand);
         await mkdir(dir, { recursive: true });
         const file = path.join(dir, `${p.type}-${slug(new URL(p.url).pathname)}-${vp}.png`);

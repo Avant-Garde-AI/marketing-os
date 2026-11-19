@@ -179,6 +179,7 @@ describe("dataset", () => {
     const sheet = datasheet([rec("a.com", []), rec("b.com", [], { category: "apparel" })], emptyVocabulary(), { name: "t", version: "0.1" });
     expect(sheet).toContain("Brands: 2");
     expect(sheet).toContain("No screenshots or page content");
+    expect(sheet).toContain("| 2026-11 | 2 |");
   });
 });
 

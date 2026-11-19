@@ -39,6 +39,8 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
   const labelers = [...new Set(records.map((r) => r.labeler.id))];
   const s = vocabularyStats(v);
   const dates = records.map((r) => r.capturedAt.slice(0, 10)).sort();
+  const byMonth = new Map<string, Set<string>>();
+  for (const r of records) (byMonth.get(r.capturedAt.slice(0, 7)) ?? byMonth.set(r.capturedAt.slice(0, 7), new Set()).get(r.capturedAt.slice(0, 7))!).add(r.brand);
 
   return [
     `# Datasheet: ${meta.name} v${meta.version}`,
@@ -55,6 +57,10 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
     "| Category | Brands |",
     "|---|--:|",
     ...[...byCategory.entries()].sort().map(([c, b]) => `| ${c} | ${b.size} |`),
+    "",
+    "| Capture month (wave) | Brands |",
+    "|---|--:|",
+    ...[...byMonth.entries()].sort().map(([m, b]) => `| ${m} | ${b.size} |`),
     "",
     "| Page type | Records |",
     "|---|--:|",

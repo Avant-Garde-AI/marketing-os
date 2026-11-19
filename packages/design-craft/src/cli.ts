@@ -113,7 +113,13 @@ async function main(argv: string[]) {
       const { capturePages } = await import("./adapters/playwright-capture.js");
       const { pages } = resolveCorpus(JSON.parse(await readFile(need(a.corpus, "corpus"), "utf8")));
       const outDir = need(a.out, "out");
+      // Resumable: anything already in the manifest is skipped, so a re-run after a
+      // network drop only fills the gaps.
+      const already = await readJsonl<Capture>(path.join(outDir, "manifest.jsonl"));
+      const skip = new Set(already.map((c) => `${c.viewport} ${c.url}`));
+      if (skip.size) console.error(`${skip.size} captures already in manifest; skipping them`);
       const { captures, failures } = await capturePages(pages, {
+        skip,
         outDir,
         viewports: a.viewports!.split(",") as ("desktop" | "mobile")[],
         fullPage: !a["first-screen"],

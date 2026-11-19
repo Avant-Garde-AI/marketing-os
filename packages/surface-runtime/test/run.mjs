@@ -117,6 +117,17 @@ async function main() {
     try { await fn(); } catch (e) { check(`${name}: threw`, false, String(e && e.stack || e)); }
   };
 
+  for (const vp of Object.keys(VIEWPORTS)) {
+    await run(`password-protected preview ${vp}`, async () => {
+      reset();
+      const o = await open(vp, "/password-preview?fetch_manifest=1&mos_preview=tok&mos_arm=v1&mos_diag=1");
+      await o.page.waitForFunction(() => document.documentElement.dataset.mosReady === "1", null, { timeout: 12000 });
+      check(`${vp}: authenticated proxy preview renders`, (await host(o.page, "v1-welcome").count()) === 1);
+      check(`${vp}: password preview sends no writes`, server.log.length === 0, server.log);
+      await o.done(`password preview ${vp}`);
+    });
+  }
+
   /* ── A. preview + diag across the matrix and every step of every flow ── */
   async function previewDiag(vp, fx, step, extra = "") {
     const q = `/?fx=${fx}&mos_preview=tok&mos_arm=v1&mos_diag=1&mos_step=${step}${extra}`;

@@ -47,7 +47,9 @@
 
 <script>
   // Fixture manifest (window.MOS_MANIFEST short-circuits the proxy fetch).
-  document.write('<script src="/fixture.js' + location.search + '"><\/script>');
+  if (!/[?&]fetch_manifest=1/.test(location.search)) {
+    document.write('<script src="/fixture.js' + location.search + '"><\/script>');
+  }
 </script>
 <script>
   // ?kl=1 — a fake Klaviyo popup (inline display, beatable by a stylesheet)

@@ -46,6 +46,16 @@ export function startServer() {
     }
 
     if (url.pathname === "/__log") return send(200, "application/json", JSON.stringify(log));
+    if (url.pathname === "/password-preview") {
+      res.setHeader("set-cookie", "storefront_digest=unlocked; Path=/; HttpOnly; SameSite=Lax");
+      return send(200, "text/html; charset=utf-8", readFileSync(join(HERE, "fixture.html")));
+    }
+    if (url.pathname === "/apps/mcp/surfaces") {
+      if (!req.headers.cookie?.includes("storefront_digest=unlocked")) {
+        return send(200, "text/html", "<h1>Enter store password</h1>");
+      }
+      return send(200, "application/json", JSON.stringify({ surfaces: [asPreview(FIXTURES.v1)] }));
+    }
     if (url.pathname === "/surface-runtime.js") return send(200, "text/javascript", readFileSync(RUNTIME));
     if (url.pathname === "/surface-diag.js") return send(200, "text/javascript", readFileSync(join(dirname(RUNTIME), "surface-diag.js")));
     if (url.pathname === "/fixture.js") {

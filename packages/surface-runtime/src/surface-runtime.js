@@ -1535,7 +1535,10 @@
     var ctl = new AbortController();
     var timer = setTimeout(function () { ctl.abort(); }, 3500);
     var pv = qparam("mos_preview");
-    fetch(PROXY + "/surfaces" + (pv ? "?preview=" + encodeURIComponent(pv) : ""), { signal: ctl.signal, credentials: "omit" })
+    // Password-protected Shopify stores require their storefront cookie even
+    // for this read. Omitting it returns the password HTML instead of JSON.
+    // same-origin never sends store cookies to a foreign proxy origin.
+    fetch(PROXY + "/surfaces" + (pv ? "?preview=" + encodeURIComponent(pv) : ""), { signal: ctl.signal, credentials: "same-origin" })
       .then(function (r) { clearTimeout(timer); return r.ok ? r.json() : null; })
       .then(boot)
       .catch(function () { /* invisible */ });

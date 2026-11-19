@@ -2,6 +2,7 @@
 /**
  * design-craft CLI (spec 35 P1): capture → label → debrand → vocab / dataset.
  *
+ *   design-craft corpus  --corpus corpus/dtc-v1.candidates.json --out corpus/dtc-v1.json
  *   design-craft capture --corpus corpus/smoke.json --out .captures
  *   design-craft label   --captures .captures/manifest.jsonl --vocab vocab.json --out labels.jsonl \
  *                        --base-url https://… --model <id>      # key: DESIGN_CRAFT_API_KEY
@@ -17,13 +18,13 @@ import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { resolveCorpus } from "./corpus.js";
+import { resolveCorpus, type CorpusPage } from "./corpus.js";
 import { datasheet, parseJsonl, toJsonl } from "./dataset.js";
 import { debrand } from "./debrand.js";
 import { labelCapture, LabelParseError, type Capture } from "./labeler.js";
 import { emptyVocabulary, recognizedEmergentAxes, vocabularySchema, vocabularyStats, admittedAxes, admittedValues, type Vocabulary } from "./vocabulary.js";
 
-const USAGE = `design-craft <capture|label|debrand|merge|vocab|dataset> [options]  (see spec/35-DESIGN-CRAFT-MODELS.md)`;
+const USAGE = `design-craft <corpus|capture|label|debrand|merge|vocab|dataset> [options]  (see spec/35-DESIGN-CRAFT-MODELS.md)`;
 
 async function loadVocab(p: string): Promise<Vocabulary> {
   if (!existsSync(p)) return emptyVocabulary();
@@ -72,6 +73,42 @@ async function main(argv: string[]) {
   });
 
   switch (cmd) {
+    case "corpus": {
+      // Resolve page sets for a candidate list. Unreachable stores are dropped and
+      // reported; non-Shopify stores keep their home page and get a `needs-pages` tag.
+      const { corpusSchema } = await import("./corpus.js");
+      const { resolveStorePages } = await import("./adapters/shopify-pages.js");
+      const input = corpusSchema.parse(JSON.parse(await readFile(need(a.corpus, "corpus"), "utf8")));
+      const kept = [];
+      const dropped: { url: string; notes: string[] }[] = [];
+      // Browser pass first: it sees stores exactly as capture will. Fetch fills gaps from /products.json.
+      const { resolvePagesInBrowser } = await import("./adapters/playwright-capture.js");
+      const viaBrowser = new Map((await resolvePagesInBrowser(input.stores, { onProgress: (m) => console.error(`  [browser] ${m}`) })).map((r) => [r.url, r]));
+      for (const store of input.stores) {
+        const b = viaBrowser.get(store.url)!;
+        const missing = !b.pages.some((p) => p.type === "product") || !b.pages.some((p) => p.type === "collection");
+        const fr = missing ? await resolveStorePages(store) : null;
+        const pages: CorpusPage[] = [...b.pages];
+        for (const p of fr?.pages ?? []) if (!pages.some((q) => q.type === p.type)) pages.push(p);
+        const r = { reachable: b.reachable || !!fr?.reachable, shopify: !!fr?.shopify, pages, notes: [...b.notes, ...(fr?.notes ?? [])] };
+        const flag = r.reachable ? (r.pages.length >= 3 ? "✓" : "~") : "✗";
+        console.error(`  ${flag} ${store.url} ${r.pages.map((p) => p.type).join(",")} ${r.notes.join("; ")}`);
+        if (!r.reachable) dropped.push({ url: store.url, notes: r.notes });
+        else {
+          const complete = ["home", "collection", "product"].every((t) => r.pages.some((p) => p.type === t));
+          kept.push({ ...store, pages: r.pages, tags: [...new Set([...store.tags, ...(r.shopify ? ["shopify"] : []), ...(complete ? [] : ["needs-pages"])])] });
+        }
+        await new Promise((res) => setTimeout(res, 500));
+      }
+      const out = need(a.out, "out");
+      await writeFile(out, JSON.stringify({ ...input, stores: kept }, null, 2) + "\n");
+      const cats = new Map<string, number>();
+      for (const st of kept) cats.set(st.category, (cats.get(st.category) ?? 0) + 1);
+      console.log(`kept ${kept.length}, dropped ${dropped.length} · ${[...cats].map(([c, n]) => `${c} ${n}`).join(" · ")}`);
+      for (const d of dropped) console.log(`  dropped ${d.url}: ${d.notes.join("; ")}`);
+      return;
+    }
+
     case "capture": {
       const { capturePages } = await import("./adapters/playwright-capture.js");
       const { pages } = resolveCorpus(JSON.parse(await readFile(need(a.corpus, "corpus"), "utf8")));

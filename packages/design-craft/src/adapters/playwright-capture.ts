@@ -132,3 +132,62 @@ export async function capturePages(pages: ResolvedPage[], opts: CaptureOptions):
   }
   return { captures, failures };
 }
+
+/**
+ * Resolve a store's page set from its own links, in a real browser (spec 35 P2).
+ *
+ * The fetch resolver can't see stores that block plain HTTP clients (403/429) or
+ * disable `/products.json`, though a browser loads them fine. Here we read the
+ * home page's same-origin links and pick a product page and a collection page,
+ * which also works off Shopify. Picks are heuristic and recorded, never guessed.
+ */
+export async function resolvePagesInBrowser(
+  stores: { url: string }[],
+  opts: { onProgress?: (msg: string) => void; delayMs?: number } = {},
+): Promise<{ url: string; reachable: boolean; pages: { type: "home" | "collection" | "product"; url: string }[]; notes: string[] }[]> {
+  let pw: typeof import("playwright");
+  try {
+    pw = await import("playwright");
+  } catch {
+    throw new Error("playwright is not installed.");
+  }
+  const browser = await pw.chromium.launch();
+  const out = [];
+  try {
+    const ctx = await browser.newContext({ viewport: VIEWPORTS.desktop, userAgent: undefined });
+    const page = await ctx.newPage();
+    for (const s of stores) {
+      const r = { url: s.url, reachable: false, pages: [] as { type: "home" | "collection" | "product"; url: string }[], notes: [] as string[] };
+      try {
+        const res = await page.goto(s.url, { waitUntil: "domcontentloaded", timeout: 45_000 });
+        await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+        if (!res || res.status() >= 400) {
+          r.notes.push(`home ${res?.status() ?? "no response"}`);
+        } else {
+          r.reachable = true;
+          r.pages.push({ type: "home", url: "/" });
+          const origin = new URL(page.url()).origin;
+          const hrefs: string[] = await page.$$eval("a[href]", (as) => as.map((a) => (a as HTMLAnchorElement).href));
+          const paths = [...new Set(hrefs.filter((h) => h.startsWith(origin)).map((h) => new URL(h).pathname.replace(/\/$/, "")))];
+          const bad = /gift|card|sample|account|login|cart|search|blog|journal|pages\/|policies|help|faq/i;
+          const product = paths.find((p) => /\/products?\/[^/]+$/.test(p) && !bad.test(p)) ?? paths.find((p) => /\/p\/[^/]+$/.test(p) && !bad.test(p));
+          const collection =
+            paths.find((p) => /\/collections\/[^/]+$/.test(p) && /best|new|shop|all|women|men/i.test(p) && !bad.test(p)) ??
+            paths.find((p) => /\/(collections|category|categories|shop)\/[^/]+$/.test(p) && !bad.test(p));
+          if (collection) r.pages.push({ type: "collection", url: collection });
+          else r.notes.push("no collection link on home");
+          if (product) r.pages.push({ type: "product", url: product });
+          else r.notes.push("no product link on home");
+        }
+      } catch (e) {
+        r.notes.push((e as Error).message.split("\n")[0]!);
+      }
+      opts.onProgress?.(`${r.reachable ? (r.pages.length === 3 ? "✓" : "~") : "✗"} ${s.url} ${r.pages.map((p) => `${p.type}=${p.url}`).join(" ")} ${r.notes.join("; ")}`);
+      out.push(r);
+      await new Promise((res) => setTimeout(res, opts.delayMs ?? 800));
+    }
+  } finally {
+    await browser.close();
+  }
+  return out;
+}

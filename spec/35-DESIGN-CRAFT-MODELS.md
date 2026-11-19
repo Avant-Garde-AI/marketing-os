@@ -211,6 +211,11 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   leaked its whole register into the labels: `frieze-band-carousel`, `centered-text-colonnade`,
   50 occurrences across 20 labels. The labeler prompt now carries no example values at all
   (test-enforced) plus a plain-design-review-language rule. Re-label: 0 occurrences.
+- **Corpus resolved 2026-11-19:** `corpus/dtc-v1.candidates.json` (84 draft candidates) →
+  `design-craft corpus` (browser pass reads each home page's own links, fetch pass fills from
+  `/products.json`) → `corpus/dtc-v1.json`: **72 stores with full page sets** (apparel 18, beauty 16,
+  home 13, food-bev 10, accessories 6, wellness 5, pets 3, outdoor 1), 7 tagged `needs-pages`,
+  5 dropped (403 to automated browsers). Rationales are drafts pending human review.
 - Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
   home, food & bev, art/décor), selected for visual distinctiveness + public
   reputation. The selection rationale is recorded per store.

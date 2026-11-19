@@ -1,0 +1,226 @@
+# 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
+
+> Status: **MVP DEFINED, P1 IN PROGRESS** · 2026-11-18
+> Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
+> Origin: the "stroke-level decision model" idea, 2026-11-18.
+> Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
+
+## 1. Thesis
+
+The open-source design executor (`packages/design-loop`, delegated to by a Claude
+Code orchestrator through the Design Work Contract) is meant to be **the agent
+built specifically for visual DTC execution**. Today it pairs a general LLM
+implementer with a general VLM critic. That's capable but undifferentiated.
+
+The differentiated version makes design decisions at the **stroke level**: one
+named craft decision at a time, drawn from an ontology extracted from the
+best DTC storefronts, chosen by a model that has learned what converts in the
+store's category across the Marketing OS network.
+
+This takes three assets, built in order:
+
+1. **The DTC craft vocabulary.** An ontology of named design axes (e.g.
+   `pdp-gallery-behavior`, `offer-framing`, `social-proof-density`) whose values
+   are *extracted from real storefronts* and admitted only when they recur across
+   distinct brands.
+2. **The perception model.** Screenshot → craft facets. Labels any rendered page
+   against the vocabulary.
+3. **The decision model.** (brand, category, page state) → ranked next strokes.
+   Trained first on public preferences, then tuned on network outcomes per
+   category.
+
+### 1.1 Prior art we are porting (Arthaus portfolios harness)
+
+The method is proven for artist portfolio sites in
+`Arthaus-Inc/portfolios` (`scripts/harness/`, `docs/harness/`):
+
+| Arthaus piece | Ported as |
+|---|---|
+| `library/vocabulary.json`: ~40 axes, glossed values | The DTC vocabulary store (same shape, new content) |
+| Three registers: HARD facets / PROSE / OPEN `(axis, value, gloss)` | Same three registers in the labeler output |
+| Admission gate: value recurs across ≥3 distinct artists; axis recognized at ≥3 | Same gate, where support = **distinct brands (store domains)** |
+| Specificity floor + near-duplicate folding | Ported verbatim (token overlap now, embeddings later) |
+| `de-artist.mjs`: finished builds → shared structure vs parameters | **de-brand**: finished storefronts → axis decisions (label the outcome, since we can't observe other brands' edit history) |
+| The shelf (trajectory store) | Label dataset + design-loop traces |
+| `ORACLE_IS_SELF_REFERENTIAL.md` | **The binding constraint on P4.** The vision judge swung 1.67 points on reference choice alone, and `rewardCoverage` stayed 0. Reward is fixed before any decision-model training |
+
+**The Arthaus vocabulary is method, not content.** No Arthaus axis value is
+imported. Axes that recur in DTC (accent economy, section seams, ground texture,
+type voice) must re-earn admission from the DTC corpus.
+
+## 2. MVP definition
+
+The MVP is done when **a store's design-loop run picks its next design move using a
+category-aware decision model served by Marketing OS, and that run measurably beats
+the current LLM implementer on the bench.**
+
+Concretely, all of:
+
+| # | MVP criterion | Measured by |
+|---|---|---|
+| M1 | A DTC craft vocabulary with ≥20 recognized axes and ≥100 admitted values, earned from ≥60 distinct storefronts across ≥4 categories | `design-craft vocab report` |
+| M2 | An open label dataset (labels, not pixels) covering the corpus, with a datasheet | `design-craft dataset export` + `DATASHEET.md` |
+| M3 | A perception model with ≥0.75 per-axis agreement against held-out human labels, distilled to an open VLM servable on an OpenAI-compatible endpoint | `design-craft eval perception` |
+| M4 | A reward pipeline with nonzero, stable coverage: rotated multi-reference pairwise judgements + action-gate approve/reject + tenant outcomes | reward coverage ≥0.5 of labeled runs, judge reference-swap drift ≤ noise floor |
+| M5 | A base decision model + at least one category-tuned layer, wired into design-loop as an `Implementer`/`CriticProvider` | `design-loop-bench`: fewer iterations-to-pass and fewer tokens at equal-or-better judged quality |
+| M6 | Hosted serving: the model is available to a tenant's Claude Code / build process through the store MCP, tenant-scoped | a live Arthaus design-loop run through the hosted endpoint |
+
+**Out of MVP:** per-brand adapters, continuous corpus re-extraction, an embedding-based
+near-duplicate merge, Penpot (spec 23) integration, any public-facing UI beyond a
+console read view.
+
+## 3. Architecture
+
+```
+                    ┌────────────────────── open core (marketing-os, MIT) ──────────────────────┐
+ corpus.json ─▶ capture (Playwright) ─▶ PerceptionLabeler ─▶ LabelRecord ─▶ de-brand ─▶ vocabulary.json
+ (URLs, category)     screenshots          (VLM endpoint)     (dataset row)   (observe)   (HARD/SOFT/OPEN)
+                      stay local                                   │
+                                                                   ▼
+                                                     dataset export (labels only)
+                                                                   │
+            design-loop ◀── StrokeImplementer / StrokeCritic ◀── DecisionModel (base, open weights)
+                 │                                                 ▲
+                 └── traces + bench ───────────────────────────────┘
+                    └──────────────────────────────────────────────────────────────────────────┘
+                    ┌────────────────────── hosted (marketing-os-app) ─────────────────────────┐
+                    │ category-tuned decision model ◀── tenant outcomes (approvals, offer/email/│
+                    │ served behind store MCP (mos_ token)   theme-edit results, consented)     │
+                    └──────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3.1 Package: `@avant-garde/design-craft` (new, `packages/design-craft/`)
+
+Open-source and MIT, same as design-loop. Pure logic with injected I/O, following
+design-loop's logic-vs-adapters rule:
+
+| Module | Responsibility |
+|---|---|
+| `vocabulary` | Store shape, `observe()` admission + axis gate, specificity floor, near-dup folding, `validateFacets()` (HARD), `softPrior()` (SOFT), reward fields. Storage-agnostic: pure functions on a store object |
+| `ontology` | DTC seed **axis prompts**: named dimensions + descriptions used only as the soft "recurring dimensions" prior. No seeded values |
+| `corpus` | Corpus manifest schema: store URL, category, selection rationale, page set (home / collection / PDP / cart) |
+| `labels` | `LabelRecord`, the dataset row and open-dataset contract |
+| `labeler` | `PerceptionLabeler` interface, prompt builder, strict response parser (applies HARD + OPEN registers) |
+| `debrand` | Folds label records into the vocabulary (support = brand domain) and returns admission events |
+| `dataset` | Export labels to JSONL + a generated datasheet. Never exports pixels |
+| `adapters/openai-vision` | Labeler over any OpenAI-compatible vision endpoint (frontier VLM now, our hosted open model later) |
+| `adapters/playwright-capture` | Lazy optional dependency. Captures a page set at desktop + mobile |
+| `cli` | `design-craft capture`, `label`, `vocab`, `dataset` |
+
+### 3.2 Three registers in a `LabelRecord`
+
+| Register | Field | Enforcement |
+|---|---|---|
+| HARD | `facets: Record<axis, value \| null>` | Coerced against admitted values. Unknown → `null` + recorded rejection |
+| PROSE | `notes` | Free text, never load-bearing |
+| OPEN | `proposals: {axis, value, gloss}[]` | Specificity floor → pending pool → admitted at ≥N distinct brands |
+
+`origin: 'earned'` (admitted on sight) is reserved for **human-confirmed** labels.
+It's the DTC analog of Arthaus's "shipped, build-green code". Model proposals
+are always `origin: 'proposed'`.
+
+### 3.3 Decision model layering
+
+```
+open base model   (public preference data, open weights)
+  └─ category layer (network outcomes per category; hosted)
+       └─ brand layer (brand.md / DESIGN.md adapter; hosted, post-MVP)
+```
+
+- **Action space** = admitted `(axis, value)` pairs. A stroke is "move axis A to
+  value V on page P". The design-loop implementer turns a stroke into code.
+- **Minimum-support rule for category layers**: a category gets its own tuning only
+  when ≥K distinct stores contribute outcomes (K starts at 5). Below that it falls
+  back to the parent category, then the base model. No single store's results can be
+  read back out of a category model.
+- **Guardrails stay deterministic**: WCAG, token fidelity, and the dark-pattern
+  blocklist run as design-loop gates, never as learned scores. Strokes resolve inside
+  the tenant's DESIGN.md tokens. The model chooses *which* axis to move, and the brand
+  decides *where* it can land.
+
+## 4. Open source & commercial shape
+
+| Open (OSS) | Hosted (Marketing OS subscription) |
+|---|---|
+| Vocabulary + admission tooling (`design-craft`) | Hosted inference via store MCP + design-loop provider, tenant-scoped (`mos_` token) |
+| Label dataset (labels, URLs, capture dates, derived features) | Category-tuned decision models trained on network outcomes |
+| Perception model weights | Per-brand adapters (post-MVP) |
+| Base decision model weights | Bleeding-edge tier: newest checkpoints, continuous re-extraction, ahead of OSS cadence |
+
+- **The moat is outcome data, category coverage, and freshness, not the weights.**
+- **Dataset licensing**: we never redistribute third-party storefront screenshots.
+  Rows carry URL + capture date + labels. Screenshots stay on the capturing machine.
+- **Tenant data** trains category layers only under explicit subscription terms,
+  aggregated under the minimum-support rule, and never ships in an OSS release.
+
+## 5. Phases
+
+Each phase leaves something useful behind, even if later phases slip.
+
+### P1 — Vocabulary engine + perception labeling pipeline (open core) · IN PROGRESS
+- `packages/design-craft`: vocabulary (ported admission logic), ontology seed
+  prompts, corpus/label schemas, labeler interface + OpenAI-compatible adapter,
+  de-brand, dataset export, Playwright capture adapter, CLI.
+- Unit tests for every gate (specificity floor, near-dup folding, value admission,
+  axis recognition, HARD coercion, parser robustness, dataset never carries pixels).
+- **Exit:** CLI runs capture → label → de-brand → export end to end on a 5-store smoke
+  corpus with a frontier VLM endpoint.
+
+### P2 — DTC corpus + first vocabulary
+- Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
+  home, food & bev, art/décor), selected for visual distinctiveness + public
+  reputation. The selection rationale is recorded per store.
+- Run labeling. A human review pass confirms a stratified sample (`origin: earned`)
+  and creates the held-out gold set for P3.
+- `design-craft vocab report`: recognized axes, admitted values, pending pool, ontology health
+  (hit rate, emergence rate, convergence. Arthaus `ontology-history` analog).
+- **Hook into design-loop now (no training needed):** the vocabulary's `softPrior()`
+  feeds the LLM implementer, and `validateFacets()` labels its output. Exit = M1, M2.
+
+### P3 — Perception model
+- Teacher = frontier VLM labels. Student = small open VLM, fine-tuned on (screenshot,
+  facets) pairs. Training code lives in `marketing-os-agents/` (Python).
+- Eval against the human gold set. Serve behind an OpenAI-compatible endpoint
+  (hosted GCP; also runnable locally from open weights).
+- Swap the `openai-vision` adapter's endpoint from teacher to student. Exit = M3.
+
+### P4 — Reward
+- Pairwise judge with **rotated multi-reference sets**: never self-reference, with reference
+  identity randomized. Measure swap drift against the noise floor before trusting
+  any score (the Arthaus lesson).
+- Outcome capture from the action gate (`marketing-os-app`): approve/reject on design
+  proposals, plus offer/email/theme-edit result readback, keyed to the strokes that
+  produced them.
+- Reward coverage tracked as a first-class metric. Exit = M4.
+
+### P5 — Decision model (base + category) and design-loop integration
+- Base model trained on public pairwise preferences over the label dataset.
+- `StrokeImplementer` (proposes N strokes → the LLM writes each) and `StrokeCritic`
+  (per-stroke deltas in `flags`) as optional design-loop providers.
+- Category layers trained on network outcomes under the minimum-support rule.
+- Bench vs the current implementer. Exit = M5.
+
+### P6 — Hosted serving + subscription
+- Serve category models behind the store MCP (`marketing-os-app`), tenant-scoped via
+  broker-issued credentials. design-loop picks up the endpoint from config.
+- Entitlement + metering in the platform app. First live tenant: Arthaus. Exit = M6.
+
+## 6. Risks
+
+| Risk | Mitigation |
+|---|---|
+| Judge bias distilled into the decision model | P4 gates P5. Swap-drift measurement is mandatory |
+| Vocabulary sprawl (Arthaus KG produced ~4 concepts/category at n=3) | Distinct-brand admission + axis gate + specificity floor + near-dup folding |
+| Copying brands instead of learning moves | Action space is axis values, not layouts. The implementer refusal stays. Bench near-duplicate check against corpus captures |
+| Screenshot/ToS exposure | Labels-only dataset. Captures never leave the capturing machine |
+| Category models leaking one store's results | Minimum-support rule (K distinct stores) |
+| "Top performing" unobservable for outside brands | Corpus selected on distinctiveness. Performance comes only from our own network outcomes |
+
+## 7. Open decisions
+
+- **D1** Teacher VLM for P2 labeling: Gemini (spec 16's chat default) vs Claude.
+  The adapter is endpoint-agnostic, so this is a cost/quality call made on the 5-store smoke.
+- **D2** Should the Arthaus artist vocabulary and the DTC vocabulary share one
+  domain-agnostic axis schema (spec 23's "packs are consumers" stance), or stay as siblings?
+- **D3** Student VLM base model family and size for P3.
+- **D4** Category taxonomy: Shopify's product taxonomy top level vs our own.

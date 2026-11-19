@@ -495,6 +495,14 @@
     return e;
   }
 
+  // A shadow host has no light-DOM children, so Shopify themes' :empty
+  // reset can hide it. Protect only our host; keep the theme's rule intact.
+  function shadowHost() {
+    var host = el("div");
+    host.style.setProperty("display", "block", "important");
+    return host;
+  }
+
   // Brand tokens → CSS custom properties; never free CSS from the manifest.
   var TOKENS = { bg: "bg", ink: "ink", ink2: "ink2", accent: "accent", line: "line", font: "f", fontDisplay: "fd", fontMono: "fm" };
   function tokenVars(st) {
@@ -536,7 +544,7 @@
   function renderCard(ctl) {
     var surface = ctl.surface, variant = ctl.variant;
     var isModal = surface.placement === "overlay" || surface.placement === "takeover";
-    var host = el("div");
+    var host = shadowHost();
     host.setAttribute("data-mos-surface", surface.id);
     var root = host.attachShadow({ mode: "open" });
 
@@ -710,7 +718,7 @@
    * loads, so it never becomes a second suppression loophole. */
   function renderTeaser(ctl) {
     var surface = ctl.surface;
-    var host = el("div");
+    var host = shadowHost();
     host.setAttribute("data-mos-surface", surface.id + "-teaser");
     var root = host.attachShadow({ mode: "open" });
     var styleEl = el("style");
@@ -914,7 +922,7 @@
       if (ofKind(steps[i], "email")) captured = true;
     }
 
-    var host = el("div");
+    var host = shadowHost();
     host.setAttribute("data-mos-surface", surface.id);
     var root = host.attachShadow({ mode: "open" });
     var css = el("style");
@@ -1211,7 +1219,7 @@
   // v2 teaser pill: search-arrival first step and corner re-open tab. Opens
   // on tap, or on exit intent when exitOpens (never on back/popstate).
   function renderPill(ctl, open, exitOpens) {
-    var host = el("div");
+    var host = shadowHost();
     host.setAttribute("data-mos-surface", ctl.surface.id + "-teaser");
     var root = host.attachShadow({ mode: "open" });
     var css = el("style");
@@ -1413,7 +1421,7 @@
   }
   function previewBadge(keys, current) {
     try {
-      var host = el("div");
+      var host = shadowHost();
       var root = host.attachShadow({ mode: "open" });
       var st = el("style");
       st.textContent = ":host{all:initial}.b{position:fixed;z-index:2147483001;left:16px;bottom:16px;display:flex;" +

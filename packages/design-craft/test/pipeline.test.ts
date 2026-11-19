@@ -42,6 +42,21 @@ describe("response parsing", () => {
     expect(() => extractJsonObject("I cannot see the image")).toThrow(LabelParseError);
     expect(() => parseLabelResponse('{"facets": "nope"}', emptyVocabulary())).toThrow(LabelParseError);
   });
+  it("folds facet answers the vocabulary can't admit into proposals (cold start)", () => {
+    const r = parseLabelResponse(
+      JSON.stringify({
+        facets: { "ground tone": "warm-paper-ground", "section seam": "overlapping-card-seams" },
+        proposals: [{ axis: "section seam", value: "overlapping card seams", gloss: "cards straddle the boundary" }],
+      }),
+      emptyVocabulary(),
+    );
+    expect(r.facets).toEqual({ "ground-tone": null, "section-seam": null });
+    expect(r.proposals).toEqual([
+      { axis: "section seam", value: "overlapping card seams", gloss: "cards straddle the boundary" },
+      { axis: "ground-tone", value: "warm-paper-ground" },
+    ]);
+  });
+
   it("drops malformed proposals but keeps good ones", () => {
     const r = parseLabelResponse(
       JSON.stringify({ facets: {}, proposals: [{ axis: "offer framing", value: "subscribe-save-default-on", gloss: "g" }, { value: "no-axis" }, "junk"] }),

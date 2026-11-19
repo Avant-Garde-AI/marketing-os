@@ -1,6 +1,6 @@
 # 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
 
-> Status: **MVP DEFINED, P1 IN PROGRESS** · 2026-11-18
+> Status: **P1 BUILT** (2026-11-19) · P2 next · MVP defined 2026-11-18
 > Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
 > Origin: the "stroke-level decision model" idea, 2026-11-18.
 > Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
@@ -166,7 +166,31 @@ Each phase leaves something useful behind, even if later phases slip.
 - **Exit:** CLI runs capture → label → de-brand → export end to end on a 5-store smoke
   corpus with a frontier VLM endpoint.
 
+**P1 result (2026-11-19):** exit met. 5 stores × 2 pages × 2 viewports = 20/20 captured and
+labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
+199 observations, **16 axes recognized** (most named by all 5 brands), **0 values admitted**,
+189 pending. Dataset export verified pixel- and path-free. Findings that changed the code:
+
+1. *Seed examples leak as values.* Example phrases in seed-axis descriptions came back nearly
+   verbatim ("stark-white", "hard-color-cuts"). Seeds are now example-free questions, and the
+   system prompt's format example comes from an unrelated field. Both are test-enforced.
+2. *Cold-start facets were being dropped.* With an empty vocabulary the teacher answers in
+   `facets`, which all coerce to null. Unadmittable facet answers now feed the open register.
+3. *Token-overlap merging is unsafe.* The Arthaus Jaccard merge folded opposites
+   (`two-column` → `four-column`, `white-canvas-with-tinted…` → `tinted-canvas-with-white…`), and
+   that produced all three of the first run's admissions. It's now conservative: function words
+   ignored, opposition groups, role-swap guard, ≥0.6. A missed merge is recoverable and a wrong one
+   corrupts. Values didn't recur verbatim across 5 brands (the Arthaus long tail), so admission
+   at scale depends on semantic merging. **That is P2's first task.**
+4. *Season.* All captures are Black Friday creative, which skews offer and hero axes. The datasheet
+   records the capture range, and P2 spreads capture dates.
+
 ### P2 — DTC corpus + first vocabulary
+- **First: semantic value merge.** Embed `value + gloss` and fold above a tight threshold (the
+  Arthaus KG pattern, ~0.92), with an LLM adjudicator for the band between retrieval and merge.
+  Opposition and role-swap guards still apply. Re-run on the P1 smoke labels: synonyms such as
+  `strikethrough-and-pill-tag` / `strikethrough-with-value-badge` should fold, and
+  `two-column` / `four-column` must not.
 - Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
   home, food & bev, art/décor), selected for visual distinctiveness + public
   reputation. The selection rationale is recorded per store.
@@ -218,8 +242,8 @@ Each phase leaves something useful behind, even if later phases slip.
 
 ## 7. Open decisions
 
-- **D1** Teacher VLM for P2 labeling: Gemini (spec 16's chat default) vs Claude.
-  The adapter is endpoint-agnostic, so this is a cost/quality call made on the 5-store smoke.
+- ~~**D1** Teacher VLM~~ **Resolved 2026-11-19:** Gemini, pinned `gemini-3.1-pro-preview` via the
+  OpenAI-compatible endpoint. Labels record the pinned id, so a teacher change is visible in the data.
 - **D2** Should the Arthaus artist vocabulary and the DTC vocabulary share one
   domain-agnostic axis schema (spec 23's "packs are consumers" stance), or stay as siblings?
 - **D3** Student VLM base model family and size for P3.

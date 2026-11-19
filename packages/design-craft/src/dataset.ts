@@ -38,6 +38,7 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
   const confirmed = records.filter((r) => r.confirmed).length;
   const labelers = [...new Set(records.map((r) => r.labeler.id))];
   const s = vocabularyStats(v);
+  const dates = records.map((r) => r.capturedAt.slice(0, 10)).sort();
 
   return [
     `# Datasheet: ${meta.name} v${meta.version}`,
@@ -49,6 +50,7 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
     `- Records: ${records.length} (${confirmed} human-confirmed)`,
     `- Brands: ${brands.size}`,
     `- Labelers: ${labelers.join(", ") || "none"}`,
+    `- Captured: ${dates.length ? `${dates[0]} to ${dates[dates.length - 1]}` : "n/a"}. Storefront creative is seasonal (sale periods skew offer and hero axes).`,
     "",
     "| Category | Brands |",
     "|---|--:|",

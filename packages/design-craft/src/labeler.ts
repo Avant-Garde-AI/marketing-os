@@ -17,7 +17,7 @@ import { z } from "zod";
 import type { PageType } from "./ontology.js";
 import { seedAxesFor } from "./ontology.js";
 import { labelRecordSchema, proposalSchema, type LabelRecord } from "./labels.js";
-import { softPrior, validateFacets, vocabularyStats, type Vocabulary } from "./vocabulary.js";
+import { normalizeAxis, normalizeValue, softPrior, validateFacets, vocabularyStats, type Vocabulary } from "./vocabulary.js";
 
 // ── Seams ────────────────────────────────────────────────────────────────────
 
@@ -62,8 +62,9 @@ export const LABELER_SYSTEM = [
   '{"facets": {"<axis>": "<value>" | null}, "proposals": [{"axis": "<dimension>", "value": "<treatment>", "gloss": "<one sentence>"}], "notes": "<optional>"}',
   "",
   "RULES FOR PROPOSALS:",
-  "- `axis` names the DIMENSION (e.g. \"pdp gallery behavior\"), not the treatment.",
-  "- `value` is a compound kebab-case treatment name of 2–6 words (e.g. \"sticky-thumb-rail\", \"subscribe-save-toggle-default-on\").",
+  "- `axis` names the DIMENSION being decided, not the treatment.",
+  "- `value` is a compound kebab-case treatment name of 2–6 words that you coin for what you see.",
+  "  FORMAT ONLY, from an unrelated field (architecture), never reuse: axis \"stair form\" → value \"cantilevered-glass-treads\".",
   "- `gloss` says what distinguishes this treatment from its siblings on the same axis.",
   "- BAD values: \"clean\", \"modern\", \"minimal\", \"premium\", \"bold-colors\". They describe nothing reusable.",
   "- Describe what is visibly on the page. Do not infer from brand reputation. Never name the brand in a value.",
@@ -135,6 +136,17 @@ export function parseLabelResponse(raw: string, v: Vocabulary): ParsedLabel {
     const ok = proposalSchema.safeParse(p);
     if (ok.success) proposals.push(ok.data);
     else malformed++;
+  }
+  // Cold start: a facet answer on an axis with no admitted value (or a value the
+  // vocabulary doesn't know) is the model naming a treatment, which is a proposal.
+  // Feed it to the open register so admission can see it; otherwise it is lost.
+  const proposed = new Set(proposals.map((p) => `${normalizeAxis(p.axis)}|${normalizeValue(p.value)}`));
+  for (const r of rejected) {
+    const k = `${normalizeAxis(r.axis)}|${normalizeValue(r.value)}`;
+    if (!proposed.has(k)) {
+      proposed.add(k);
+      proposals.push({ axis: r.axis, value: r.value });
+    }
   }
   const notes = typeof parsed.data.notes === "string" && parsed.data.notes.trim() ? parsed.data.notes.trim() : undefined;
   return { facets: values, rejectedFacets: rejected, proposals, malformedProposals: malformed, ...(notes ? { notes } : {}) };

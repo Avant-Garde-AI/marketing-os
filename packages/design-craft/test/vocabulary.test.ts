@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { DTC_SEED_AXES } from "../src/ontology.js";
+import { LABELER_SYSTEM } from "../src/labeler.js";
 import {
   admittedValues,
   brandKey,
@@ -90,6 +92,32 @@ describe("admission gate", () => {
     expect(v.axes["pdp-gallery-behavior"]!.values["sticky-thumbnail-rail-left"]!.aliases).toEqual(["left-sticky-thumbnail-rail"]);
   });
 
+  it("never folds opposites together (regressions from the first live run)", () => {
+    const pairs: [string, string, string][] = [
+      ["collection grid density", "strict-four-column-grid", "strict-two-column-grid"],
+      ["collection grid density", "four-column-uniform", "two-column-uniform"],
+      ["ground tone", "tinted-canvas-with-white-cards", "white-canvas-with-tinted-base"],
+      ["nav architecture", "centered-inline-links", "inline-text-links"],
+      ["announcement bar treatment", "carousel-text-strip", "manual-carousel-strip"],
+      ["brand story placement", "terminal-value-prop-grid", "terminal-value-prop-stack"],
+    ];
+    for (const [axis, first, second] of pairs) {
+      const v = emptyVocabulary();
+      observe(v, { axis, value: first, brand: "a.com" });
+      const r = observe(v, { axis, value: second, brand: "b.com" });
+      expect(r.mergedFrom, `${second} must not merge into ${first}`).toBeUndefined();
+      expect(r.key).toBe(second);
+    }
+  });
+
+  it("still folds genuine rewordings", () => {
+    const v = emptyVocabulary();
+    observe(v, { axis: "type voice", value: "high-contrast-serif-sans-pairing", brand: "a.com" });
+    expect(observe(v, { axis: "type voice", value: "high-contrast-serif-and-sans-pairing", brand: "b.com" }).key).toBe("high-contrast-serif-sans-pairing");
+    observe(v, { axis: "hero composition", value: "centered-text-over-full-bleed-media", brand: "a.com" });
+    expect(observe(v, { axis: "hero composition", value: "centered-text-full-bleed-media", brand: "b.com" }).key).toBe("centered-text-over-full-bleed-media");
+  });
+
   it("rejects degenerate proposals without touching the store", () => {
     const v = emptyVocabulary();
     expect(observe(v, { axis: "hero", value: "bold", brand: "a.com" }).status).toBe("rejected");
@@ -148,5 +176,17 @@ describe("stats", () => {
     observe(v, { axis: "a axis", value: "one-two", brand: "x.com", origin: "earned" });
     observe(v, { axis: "b axis", value: "three-four", brand: "y.com" });
     expect(vocabularyStats(v)).toEqual({ axes: 2, recognizedAxes: 1, admittedAxes: 1, admittedValues: 1, pendingValues: 1, brands: 2 });
+  });
+});
+
+describe("no seeded values", () => {
+  it("phrases every seed axis as a question with no example answers", () => {
+    for (const a of DTC_SEED_AXES) {
+      expect(a.description, a.axis).toMatch(/\?$/);
+      expect(a.description, a.axis).not.toMatch(/e\.g\.|such as|like /i);
+    }
+  });
+  it("keeps DTC treatment names out of the system prompt's format example", () => {
+    for (const leaked of ["sticky", "subscribe", "drawer", "carousel", "swatch"]) expect(LABELER_SYSTEM).not.toContain(leaked);
   });
 });

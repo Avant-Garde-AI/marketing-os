@@ -133,23 +133,79 @@ export function rejectReason(value: unknown): string | null {
 }
 
 /**
- * Near-duplicate detection by token overlap (Jaccard over tokens longer than 2
- * chars). Without it the recurrence gate never fires: models name the same
- * treatment two ways (`hairline-pinned-flat` / `flat-artboard-hairline`).
- * Embed-and-match on value+gloss is the principled upgrade once the corpus
- * justifies the cost (spec 35, post-MVP).
+ * Near-duplicate detection, deliberately CONSERVATIVE.
+ *
+ * The Arthaus port used Jaccard over tokens longer than 2 chars at 0.5. On the
+ * first live DTC run (5 stores, 2026-11-19) that folded opposites together:
+ * `strict-two-column-grid` → `strict-four-column-grid` ("two"/"four" were
+ * dropped as short tokens), `white-canvas-with-tinted-base` →
+ * `tinted-canvas-with-white-cards`, and `inline-text-links` →
+ * `centered-inline-links`, which then helped that value pass admission.
+ *
+ * The two failure modes are not symmetric. A missed merge only delays admission
+ * and is recoverable by a later re-merge; a wrong merge inflates support and
+ * corrupts the vocabulary. So: keep every content token (including numbers and
+ * short words), ignore function words, refuse to merge across a known
+ * opposition, require ≥0.6 overlap, and refuse when the same tokens appear in a
+ * different X-with-Y order. Semantic synonyms with little word overlap
+ * ("strikethrough-and-pill-tag" / "strikethrough-with-value-badge") are left
+ * for the embedding/LLM merge planned for P2.
  */
-export function findNearDuplicate(axis: AxisEntry, key: string, threshold = 0.5): string | null {
-  const toks = (k: string) => new Set(k.split("-").filter((t) => t.length > 2));
-  const a = toks(key);
-  if (a.size < 2) return null;
+const FUNCTION_WORDS = new Set(["and", "with", "the", "for", "of", "to", "on", "in", "by", "a", "an", "or", "over", "under", "into"]);
+
+const OPPOSITIONS: string[][] = [
+  ["one", "single", "two", "three", "four", "five", "six", "1", "2", "3", "4", "5", "6"],
+  ["left", "right", "centered", "center", "split"],
+  ["top", "bottom"],
+  ["light", "dark"],
+  ["white", "tinted", "black", "colored", "saturated"],
+  ["sticky", "static", "fixed"],
+  ["horizontal", "vertical"],
+  ["manual", "auto", "autoplay", "automatic"],
+  ["serif", "sans"],
+  ["minimal", "dense", "maximal"],
+  ["inline", "stacked"],
+  ["full", "partial", "contained"],
+  ["grid", "stack", "stacked", "carousel", "list", "row", "masonry"],
+];
+
+const contentTokens = (k: string) => k.split("-").filter((t) => t && !FUNCTION_WORDS.has(t));
+
+function opposed(a: string[], b: string[]): boolean {
+  const A = new Set(a);
+  const B = new Set(b);
+  for (const group of OPPOSITIONS) {
+    const inA = group.filter((t) => A.has(t) && !B.has(t));
+    const inB = group.filter((t) => B.has(t) && !A.has(t));
+    if (inA.length && inB.length) return true;
+  }
+  return false;
+}
+
+/** "white-canvas-with-tinted-base" vs "tinted-canvas-with-white-cards": the same words, roles swapped. */
+function swappedRoles(a: string, b: string): boolean {
+  const split = (k: string) => k.split(/-with-|-over-|-on-/);
+  const [a1, a2] = split(a);
+  const [b1, b2] = split(b);
+  if (!a2 || !b2) return false;
+  const t = (s: string) => new Set(contentTokens(s));
+  const overlap = (x: Set<string>, y: Set<string>) => [...x].some((w) => y.has(w));
+  return overlap(t(a1!), t(b2)) && overlap(t(a2), t(b1!));
+}
+
+export function findNearDuplicate(axis: AxisEntry, key: string, threshold = 0.6): string | null {
+  const a = contentTokens(key);
+  if (a.length < 2) return null;
+  const A = new Set(a);
   let best: string | null = null;
   let bestScore = 0;
   for (const existing of Object.keys(axis.values)) {
     if (existing === key) return existing;
-    const b = toks(existing);
-    const inter = [...a].filter((t) => b.has(t)).length;
-    const union = new Set([...a, ...b]).size;
+    const b = contentTokens(existing);
+    if (opposed(a, b) || swappedRoles(key, existing)) continue;
+    const B = new Set(b);
+    const inter = [...A].filter((t) => B.has(t)).length;
+    const union = new Set([...A, ...B]).size;
     const score = union ? inter / union : 0;
     if (score > bestScore) {
       bestScore = score;

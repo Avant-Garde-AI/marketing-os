@@ -287,6 +287,17 @@ export interface ObserveResult {
   reason?: string;
 }
 
+/**
+ * Page context the labeler is GIVEN (category, page type, viewport). On the
+ * wave-1 corpus the teacher echoed these back as axes, and `category` and
+ * `page-type` crossed the recognition threshold. They're metadata, not craft.
+ */
+export const META_AXES = new Set([
+  "category", "product-category", "store-category", "industry", "vertical", "niche",
+  "page-type", "page", "template", "viewport", "device", "breakpoint",
+  "brand", "brand-name", "store", "url", "platform",
+]);
+
 /** Canonical brand key from a URL or domain: `https://www.Example.com/x` → `example.com`. */
 export function brandKey(urlOrDomain: string): string {
   let host = urlOrDomain.trim().toLowerCase();
@@ -309,6 +320,9 @@ export function observe(v: Vocabulary, obs: Observation): ObserveResult {
 
   if (!axisKey) {
     return { status: "rejected", axis: axisKey, key, support: 0, axisSupport: 0, reason: "empty axis" };
+  }
+  if (META_AXES.has(axisKey)) {
+    return { status: "rejected", axis: axisKey, key, support: 0, axisSupport: 0, reason: `"${axisKey}" is page metadata, not a design decision` };
   }
   if (origin === "proposed") {
     const reason = rejectReason(obs.value);

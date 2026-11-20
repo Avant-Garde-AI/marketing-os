@@ -46,7 +46,8 @@ describe("semanticMerge", () => {
       ["four-column-uniform", ["b.com"]],
     ]);
     const judge = fakeJudge(() => true);
-    const r = await semanticMerge(v, { embedder: fakeEmbedder({ "two-column-uniform": 0, "four-column-uniform": 1 }), judge });
+    const r = await semanticMerge(v, {
+      recognizedOnly: false, embedder: fakeEmbedder({ "two-column-uniform": 0, "four-column-uniform": 1 }), judge });
     expect(judge.seen).toHaveLength(0);
     expect(r.vetoed).toHaveLength(1);
     expect(r.merged).toHaveLength(0);
@@ -58,6 +59,7 @@ describe("semanticMerge", () => {
       ["strikethrough-with-value-badge", ["c.com"]],
     ]);
     const r = await semanticMerge(v, {
+      recognizedOnly: false,
       embedder: fakeEmbedder({ "strikethrough-and-pill-tag": 0, "strikethrough-with-value-badge": 20 }),
       judge: fakeJudge(() => true),
     });
@@ -78,6 +80,7 @@ describe("semanticMerge", () => {
     ]);
     const judge = fakeJudge(() => false);
     const r = await semanticMerge(v, {
+      recognizedOnly: false,
       embedder: fakeEmbedder({ "split-image-and-copy": 0, "full-bleed-video-loop": 20, "product-on-flat-ground": 60 }),
       judge,
     });
@@ -94,6 +97,7 @@ describe("semanticMerge", () => {
     ]);
     // A–B at 5°, B–C at 5°, A–C at 10°: all retrieved, but the judge says A≉C.
     const r = await semanticMerge(v, {
+      recognizedOnly: false,
       embedder: fakeEmbedder({ "rotating-text-strip": 0, "paginated-text-strip": 5, "paginated-link-row": 10 }),
       judge: fakeJudge((a, b) => !(new Set([a, b]).has("rotating-text-strip") && new Set([a, b]).has("paginated-link-row"))),
     });
@@ -109,12 +113,56 @@ describe("semanticMerge", () => {
     ]);
     const judge = fakeJudge(() => true);
     const r = await semanticMerge(v, {
+      recognizedOnly: false,
       embedder: fakeEmbedder({ "hero-cta-to-featured-product": 0, "hero-cta-to-featured-section": 5 }),
       judge,
       blocked: [{ axis: "merchandising-entry", a: "hero-cta-to-featured-section", b: "hero-cta-to-featured-product" }],
     });
     expect(judge.seen).toHaveLength(0);
     expect(r.merged).toHaveLength(0);
+  });
+
+  it("survives a failed judge batch and leaves those pairs unmerged", async () => {
+    const v = vocab("offer framing", [
+      ["strikethrough-and-pill-tag", ["a.com"]],
+      ["strikethrough-with-value-badge", ["b.com"]],
+    ]);
+    const r = await semanticMerge(v, {
+      recognizedOnly: false,
+      embedder: fakeEmbedder({ "strikethrough-and-pill-tag": 0, "strikethrough-with-value-badge": 5 }),
+      judge: { id: "down", judge: async () => { throw new Error("429 quota"); } },
+    });
+    expect(r.errors).toEqual([{ axis: "offer-framing", pairs: 1, error: "429 quota" }]);
+    expect(r.merged).toHaveLength(0);
+    expect(Object.keys(v.axes["offer-framing"]!.values)).toHaveLength(2);
+  });
+
+  it("skips unrecognized axes by default", async () => {
+    const v = emptyVocabulary();
+    observe(v, { axis: "rare axis", value: "one-two", brand: "a.com" });
+    observe(v, { axis: "rare axis", value: "one-two-three", brand: "a.com" });
+    const judge = fakeJudge(() => true);
+    await semanticMerge(v, { embedder: fakeEmbedder({ "one-two": 0, "one-two-three": 1 }), judge });
+    expect(judge.seen).toHaveLength(0);
+    await semanticMerge(v, { embedder: fakeEmbedder({ "one-two": 0, "one-two-three": 1 }), judge, recognizedOnly: false });
+    expect(judge.seen).toHaveLength(1);
+  });
+
+  it("reuses cached verdicts, so a dry run makes the real run free", async () => {
+    const mk = () =>
+      vocab("offer framing", [
+        ["strikethrough-and-pill-tag", ["a.com"]],
+        ["strikethrough-with-value-badge", ["b.com"]],
+      ]);
+    const verdictCache = new Map<string, { same: boolean; reason?: string }>();
+    const emb = fakeEmbedder({ "strikethrough-and-pill-tag": 0, "strikethrough-with-value-badge": 5 });
+    const judge = fakeJudge(() => true);
+    await semanticMerge(mk(), { recognizedOnly: false, embedder: emb, judge, verdictCache, dryRun: true });
+    const v = mk();
+    const r = await semanticMerge(v, { recognizedOnly: false, embedder: emb, judge, verdictCache });
+    expect(judge.seen).toHaveLength(1);
+    expect(r.cachedVerdicts).toBe(1);
+    expect(r.merged).toHaveLength(1);
   });
 
   it("dry run judges but changes nothing", async () => {
@@ -124,6 +172,7 @@ describe("semanticMerge", () => {
     ]);
     const before = JSON.stringify(v);
     const r = await semanticMerge(v, {
+      recognizedOnly: false,
       embedder: fakeEmbedder({ "strikethrough-and-pill-tag": 0, "strikethrough-with-value-badge": 5 }),
       judge: fakeJudge(() => true),
       dryRun: true,
@@ -139,8 +188,10 @@ describe("semanticMerge", () => {
     ]);
     const emb = fakeEmbedder({ "strikethrough-and-pill-tag": 0, "free-ship-threshold-bar": 80 });
     const cache = new Map<string, number[]>();
-    await semanticMerge(v, { embedder: emb, judge: fakeJudge(() => false), cache });
-    await semanticMerge(v, { embedder: emb, judge: fakeJudge(() => false), cache });
+    await semanticMerge(v, {
+      recognizedOnly: false, embedder: emb, judge: fakeJudge(() => false), cache });
+    await semanticMerge(v, {
+      recognizedOnly: false, embedder: emb, judge: fakeJudge(() => false), cache });
     expect(emb.calls).toBe(1);
   });
 });

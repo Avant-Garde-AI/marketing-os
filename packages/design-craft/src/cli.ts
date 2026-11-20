@@ -69,6 +69,8 @@ async function main(argv: string[]) {
       report: { type: "string" },
       "dry-run": { type: "boolean", default: false },
       block: { type: "string" },
+      retries: { type: "string", default: "8" },
+      "all-axes": { type: "boolean", default: false },
     },
   });
 
@@ -190,19 +192,34 @@ async function main(argv: string[]) {
       // Vector cache lives beside the vocabulary by default (gitignored, regenerable).
       const cachePath = a.cache ?? path.join(path.dirname(path.resolve(a.vocab!)), ".embeddings-cache.json");
       const cache = new Map<string, number[]>(existsSync(cachePath) ? Object.entries(JSON.parse(await readFile(cachePath, "utf8"))) : []);
+      const verdictPath = path.join(path.dirname(path.resolve(a.vocab!)), ".verdicts-cache.json");
+      const verdictCache = new Map<string, { same: boolean; reason?: string }>(
+        existsSync(verdictPath) ? Object.entries(JSON.parse(await readFile(verdictPath, "utf8"))) : [],
+      );
+      const persist = async () => {
+        await writeFile(cachePath, JSON.stringify(Object.fromEntries(cache)));
+        await writeFile(verdictPath, JSON.stringify(Object.fromEntries(verdictCache)));
+      };
       const r = await semanticMerge(v, {
-        embedder: createOpenAIEmbedder({ baseUrl, apiKey, model: a["embed-model"]! }),
-        judge: createOpenAIMergeJudge({ baseUrl, apiKey, model: a["judge-model"]! }),
+        embedder: createOpenAIEmbedder({ baseUrl, apiKey, model: a["embed-model"]!, retry: { retries: Number(a.retries) } }),
+        judge: createOpenAIMergeJudge({ baseUrl, apiKey, model: a["judge-model"]!, retry: { retries: Number(a.retries) } }),
+        recognizedOnly: !a["all-axes"],
+        verdictCache,
+        onAxisDone: async (axis) => {
+          await persist();
+          console.error(`  · ${axis} done`);
+        },
         candidateThreshold: Number(a.threshold),
         cache,
         dryRun: a["dry-run"],
         blocked: a.block && existsSync(a.block) ? JSON.parse(await readFile(a.block, "utf8")) : [],
       });
-      await writeFile(cachePath, JSON.stringify(Object.fromEntries(cache)));
+      await persist();
       if (!a["dry-run"]) await saveVocab(a.vocab!, v);
       if (a.report) await writeFile(a.report, JSON.stringify(r, null, 2) + "\n");
-      console.log(`${r.values} values · ${r.candidates} candidates · ${r.vetoed.length} vetoed · ${r.judged} judged`);
+      console.log(`${r.values} values · ${r.candidates} candidates · ${r.vetoed.length} vetoed · ${r.judged} judged · ${r.cachedVerdicts} from cache`);
       console.log(`merged ${r.merged.length} · rejected ${r.rejected.length} · deferred ${r.deferred.length}${a["dry-run"] ? " (dry run)" : ""}`);
+      if (r.errors.length) console.log(`  ! ${r.errors.length} judge batches failed (${r.errors.reduce((n, e) => n + e.pairs, 0)} pairs left unmerged); re-run to retry them`);
       for (const m of r.merged) console.log(`  ⊂ ${m.axis}: ${m.from} → ${m.into} (${m.score.toFixed(3)}) ${m.reason ?? ""}`);
       for (const p of r.promoted) console.log(`  ↑ ${p.axis} = ${p.key} (${p.support} brands)`);
       return;

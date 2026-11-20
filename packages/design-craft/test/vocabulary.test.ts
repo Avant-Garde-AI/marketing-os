@@ -129,6 +129,13 @@ describe("admission gate", () => {
     expect(observe(v, { axis: "hero composition", value: "centered-text-full-bleed-media", brand: "b.com" }).key).toBe("centered-text-over-full-bleed-media");
   });
 
+  it("rejects page metadata echoed back as an axis", () => {
+    const v = emptyVocabulary();
+    expect(observe(v, { axis: "category", value: "beauty-skincare", brand: "a.com" }).status).toBe("rejected");
+    expect(observe(v, { axis: "Page type", value: "product-detail-page", brand: "a.com" }).reason).toMatch(/metadata/);
+    expect(v.axes).toEqual({});
+  });
+
   it("rejects degenerate proposals without touching the store", () => {
     const v = emptyVocabulary();
     expect(observe(v, { axis: "hero", value: "bold", brand: "a.com" }).status).toBe("rejected");

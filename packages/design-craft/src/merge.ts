@@ -19,7 +19,7 @@
  * pair with that cluster's canonical value, and two multi-member clusters are
  * never merged in one pass. Chained "A≈B, B≈C" never silently makes A≈C.
  */
-import { mergeValues, mergeVeto, type Vocabulary } from "./vocabulary.js";
+import { isRecognized, mergeValues, mergeVeto, type Vocabulary } from "./vocabulary.js";
 
 export interface Embedder {
   readonly id: string;
@@ -64,6 +64,18 @@ export interface SemanticMergeOptions {
    * which are the source of truth. The vocabulary is derived.
    */
   blocked?: { axis: string; a: string; b: string }[];
+  /**
+   * Only merge on recognized axes (default true). Recognition depends on brand
+   * support per axis, not on its values, so skipping unrecognized axes loses nothing.
+   */
+  recognizedOnly?: boolean;
+  /**
+   * Judge verdicts keyed by judge + axis + both texts. A dry run fills it, so the
+   * real run (and any replay from labels) only pays for pairs never judged before.
+   */
+  verdictCache?: Map<string, { same: boolean; reason?: string }>;
+  /** Called after each axis, so callers can persist caches as they go. */
+  onAxisDone?: (axis: string) => void | Promise<void>;
 }
 
 export interface MergeDecision {
@@ -84,6 +96,10 @@ export interface SemanticMergeReport {
   /** Accepted by the judge but skipped by the conservative clustering rule. */
   deferred: MergeDecision[];
   promoted: { axis: string; key: string; support: number }[];
+  /** Judge batches that failed after retries. Their pairs were not merged (the safe default). */
+  errors: { axis: string; pairs: number; error: string }[];
+  /** Pairs answered from the verdict cache instead of the judge. */
+  cachedVerdicts: number;
 }
 
 /** The text that represents a value for embedding and judging. */
@@ -123,13 +139,14 @@ export async function semanticMerge(v: Vocabulary, opts: SemanticMergeOptions): 
   const threshold = opts.candidateThreshold ?? 0.85;
   const blocked = new Set((opts.blocked ?? []).flatMap(({ axis, a, b }) => [`${axis}|${a}|${b}`, `${axis}|${b}|${a}`]));
   const k = opts.maxCandidatesPerValue ?? 3;
-  const report: SemanticMergeReport = { values: 0, candidates: 0, vetoed: [], judged: 0, rejected: [], merged: [], deferred: [], promoted: [] };
+  const report: SemanticMergeReport = { values: 0, candidates: 0, vetoed: [], judged: 0, rejected: [], merged: [], deferred: [], promoted: [], errors: [], cachedVerdicts: 0 };
   const admittedBefore = new Set(
     Object.entries(v.axes).flatMap(([a, ax]) => Object.entries(ax.values).filter(([, e]) => e.admitted).map(([key]) => `${a}|${key}`)),
   );
 
   for (const axis of Object.keys(v.axes).sort()) {
     if (opts.axes && !opts.axes.includes(axis)) continue;
+    if ((opts.recognizedOnly ?? true) && !isRecognized(v, axis)) continue;
     const entries = Object.entries(v.axes[axis]!.values);
     report.values += entries.length;
     if (entries.length < 2) continue;
@@ -165,10 +182,26 @@ export async function semanticMerge(v: Vocabulary, opts: SemanticMergeOptions): 
 
     // Judge in batches so one axis with many values stays within a sane prompt size.
     const verdicts = new Map<string, Verdict>();
-    for (let o = 0; o < pairs.length; o += 30) {
-      const batch = pairs.slice(o, o + 30);
-      for (const vd of await opts.judge.judge(axis, batch)) verdicts.set(vd.id, vd);
-      report.judged += batch.length;
+    const cacheKey = (p: CandidatePair) => `${opts.judge.id}|${axis}|${[p.a.text, p.b.text].sort().join("||")}`;
+    const toJudge: CandidatePair[] = [];
+    for (const p of pairs) {
+      const hit = opts.verdictCache?.get(cacheKey(p));
+      if (hit) verdicts.set(p.id, { id: p.id, ...hit });
+      else toJudge.push(p);
+    }
+    for (let o = 0; o < toJudge.length; o += 30) {
+      const batch = toJudge.slice(o, o + 30);
+      try {
+        for (const vd of await opts.judge.judge(axis, batch)) {
+          verdicts.set(vd.id, vd);
+          const p = batch.find((x) => x.id === vd.id);
+          if (p) opts.verdictCache?.set(cacheKey(p), { same: vd.same, ...(vd.reason ? { reason: vd.reason } : {}) });
+        }
+        report.judged += batch.length;
+      } catch (e) {
+        // One failed batch must not discard the whole pass. Unjudged pairs stay unmerged.
+        report.errors.push({ axis, pairs: batch.length, error: (e as Error).message.slice(0, 200) });
+      }
     }
 
     // Conservative clustering over accepted pairs, strongest first.
@@ -211,12 +244,14 @@ export async function semanticMerge(v: Vocabulary, opts: SemanticMergeOptions): 
       report.merged.push(decision);
     }
 
+    report.cachedVerdicts += pairs.length - toJudge.length;
     if (!opts.dryRun) {
       // Apply in dependency order: every `from` is a singleton absorbed into a canonical.
       for (const m of report.merged.filter((d) => d.axis === axis)) {
         mergeValues(v, axis, m.from, m.into, { method: "semantic", score: Number(m.score.toFixed(4)), judge: opts.judge.id, reason: m.reason });
       }
     }
+    await opts.onAxisDone?.(axis);
   }
 
   if (!opts.dryRun) {

@@ -10,6 +10,7 @@
  * written into label records (the record carries only `model:<id>`).
  */
 import type { VisionModel } from "../labeler.js";
+import { fetchWithRetry, type RetryOptions } from "./retry.js";
 
 export interface OpenAIVisionConfig {
   /** e.g. https://generativelanguage.googleapis.com/v1beta/openai or http://localhost:8000/v1 */
@@ -20,6 +21,7 @@ export interface OpenAIVisionConfig {
   timeoutMs?: number;
   /** Injectable for tests. */
   fetch?: typeof fetch;
+  retry?: RetryOptions;
 }
 
 export function createOpenAIVisionModel(cfg: OpenAIVisionConfig): VisionModel {
@@ -32,7 +34,7 @@ export function createOpenAIVisionModel(cfg: OpenAIVisionConfig): VisionModel {
         { type: "text", text },
         ...images.map((img) => ({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } })),
       ];
-      const res = await doFetch(url, {
+      const res = await fetchWithRetry(() => doFetch(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
@@ -48,7 +50,7 @@ export function createOpenAIVisionModel(cfg: OpenAIVisionConfig): VisionModel {
           response_format: { type: "json_object" },
         }),
         signal: AbortSignal.timeout(cfg.timeoutMs ?? 120_000),
-      });
+      }), cfg.retry);
       if (!res.ok) {
         // Body may echo request details; truncate, and never include headers.
         const body = (await res.text()).slice(0, 500);

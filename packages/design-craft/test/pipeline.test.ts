@@ -227,11 +227,39 @@ describe("openai-vision adapter", () => {
     expect(headers.authorization).toBe("Bearer sk-test");
   });
 
+  it("retries 429 with backoff, then succeeds", async () => {
+    let n = 0;
+    const model = createOpenAIVisionModel({
+      baseUrl: "https://vlm.example/v1",
+      model: "m",
+      retry: { sleep: async () => {} },
+      fetch: (async () =>
+        ++n < 3
+          ? new Response("slow down", { status: 429 })
+          : new Response(JSON.stringify({ choices: [{ message: { content: "{}" } }] }), { status: 200 })) as any,
+    });
+    expect(await model.complete({ system: "s", text: "t", images: [] })).toBe("{}");
+    expect(n).toBe(3);
+  });
+
+  it("does not retry a 400", async () => {
+    let n = 0;
+    const model = createOpenAIVisionModel({
+      baseUrl: "https://vlm.example/v1",
+      model: "m",
+      retry: { sleep: async () => {} },
+      fetch: (async () => (n++, new Response("bad", { status: 400 }))) as any,
+    });
+    await expect(model.complete({ system: "s", text: "t", images: [] })).rejects.toThrow(/400/);
+    expect(n).toBe(1);
+  });
+
   it("surfaces endpoint errors without leaking the key", async () => {
     const model = createOpenAIVisionModel({
       baseUrl: "https://vlm.example/v1",
       model: "m",
       apiKey: "sk-secret",
+      retry: { retries: 0 },
       fetch: (async () => new Response("quota exceeded", { status: 429 })) as any,
     });
     await expect(model.complete({ system: "s", text: "t", images: [] })).rejects.toThrow(/429: quota exceeded/);

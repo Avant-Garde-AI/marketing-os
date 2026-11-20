@@ -4,6 +4,7 @@
  * a frontier provider, a self-hosted open model, and the hosted Marketing OS plane.
  */
 import { extractJsonObject } from "../labeler.js";
+import { fetchWithRetry, type RetryOptions } from "./retry.js";
 import { MERGE_JUDGE_SYSTEM, mergeJudgePrompt, type Embedder, type MergeJudge, type Verdict } from "../merge.js";
 
 export interface OpenAIEndpointConfig {
@@ -12,15 +13,16 @@ export interface OpenAIEndpointConfig {
   apiKey?: string;
   timeoutMs?: number;
   fetch?: typeof fetch;
+  retry?: RetryOptions;
 }
 
 async function post(cfg: OpenAIEndpointConfig, path: string, body: unknown): Promise<any> {
-  const res = await (cfg.fetch ?? fetch)(`${cfg.baseUrl.replace(/\/$/, "")}${path}`, {
+  const res = await fetchWithRetry(() => (cfg.fetch ?? fetch)(`${cfg.baseUrl.replace(/\/$/, "")}${path}`, {
     method: "POST",
     headers: { "content-type": "application/json", ...(cfg.apiKey ? { authorization: `Bearer ${cfg.apiKey}` } : {}) },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(cfg.timeoutMs ?? 120_000),
-  });
+  }), cfg.retry);
   if (!res.ok) throw new Error(`${path} ${res.status}: ${(await res.text()).slice(0, 500)}`);
   return res.json();
 }

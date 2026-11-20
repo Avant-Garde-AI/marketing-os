@@ -137,6 +137,27 @@ describe("semanticMerge", () => {
     expect(Object.keys(v.axes["offer-framing"]!.values)).toHaveLength(2);
   });
 
+  it("skips an axis whose embeddings fail and still merges the others", async () => {
+    const v = vocab("offer framing", [
+      ["strikethrough-and-pill-tag", ["a.com"]],
+      ["strikethrough-with-value-badge", ["b.com"]],
+    ]);
+    for (const [value, brand] of [["two-column-uniform", "a.com"], ["two-column-even", "b.com"]]) observe(v, { axis: "collection grid density", value, brand });
+    const cache = new Map<string, number[]>([
+      ["cached|offer framing: strikethrough and pill tag", [1, 0]],
+      ["cached|offer framing: strikethrough with value badge", [Math.cos(0.05), Math.sin(0.05)]],
+    ]);
+    const r = await semanticMerge(v, {
+      recognizedOnly: false,
+      embedder: { id: "cached", embed: async () => { throw new Error("spend cap"); } },
+      judge: fakeJudge(() => true),
+      cache,
+    });
+    expect(r.errors).toEqual([{ axis: "collection-grid-density", pairs: 0, error: "embed: spend cap" }]);
+    expect(r.merged.map((m) => m.axis)).toEqual(["offer-framing"]);
+    expect(Object.keys(v.axes["collection-grid-density"]!.values)).toHaveLength(2);
+  });
+
   it("skips unrecognized axes by default", async () => {
     const v = emptyVocabulary();
     observe(v, { axis: "rare axis", value: "one-two", brand: "a.com" });

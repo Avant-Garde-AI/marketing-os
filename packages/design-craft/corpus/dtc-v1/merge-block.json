@@ -1,0 +1,19 @@
+[
+  {"axis":"accent-economy","a":"sparse-accent-color","b":"brand-color-badges","why":"broad into narrow"},
+  {"axis":"accent-economy","a":"sparing-accent-color","b":"sparing-sale-badges","why":"broad into narrow"},
+  {"axis":"accent-economy","a":"promotional-accent-color","b":"sale-driven-red-accents","why":"broad into narrow (adds a hue)"},
+  {"axis":"accent-economy","a":"sparse-promotional-highlight","b":"header-restricted-accent","why":"adds a location"},
+  {"axis":"ground-tone","a":"white-with-dark-sections","b":"white-with-image-breaks","why":"tonal sections are not image breaks"},
+  {"axis":"ground-tone","a":"white-with-full-bleed-media","b":"white-with-color-blocking","why":"media is not color blocking"},
+  {"axis":"ground-tone","a":"tinted-off-white-ground","b":"light-gray-base","why":"off-white vs gray: when unsure, different"},
+  {"axis":"buy-box-structure","a":"sticky-add-to-cart","b":"sticky-bottom-bar-cta","why":"broad into narrow (adds placement)"},
+  {"axis":"collection-grid-density","a":"three-column-grid","b":"three-column-interrupted-grid","why":"broad into narrow"},
+  {"axis":"collection-grid-density","a":"four-column-grid","b":"uniform-four-column-grid","why":"broad into narrow"},
+  {"axis":"hero-message-mode","a":"sale-promotion","b":"promotional-takeover","why":"broad into narrow"},
+  {"axis":"hero-message-mode","a":"standalone-text-block","b":"oversized-inline-text","why":"adds scale"},
+  {"axis":"brand-story-placement","a":"lower-funnel-sustainability-module","b":"pre-footer-lifestyle-block","why":"different content"},
+  {"axis":"brand-story-placement","a":"pre-footer-block","b":"pre-footer-lifestyle-block","why":"broad into narrow"},
+  {"axis":"brand-story-placement","a":"interspersed-community-blocks","b":"interspersed-mission-blocks","why":"different content"},
+  {"axis":"cart-surface","a":"header-icon-only","b":"header-icon-badge","why":"no count vs count badge"},
+  {"axis":"filter-presentation","a":"persistent-left-sidebar","b":"left-sidebar-accordions","why":"broad into narrow"}
+]

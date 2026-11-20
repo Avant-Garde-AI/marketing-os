@@ -1,6 +1,6 @@
 # 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
 
-> Status: **P1 BUILT** · **P2 in progress: semantic merge built** (2026-11-19) · MVP defined 2026-11-18
+> Status: **P1 BUILT** · **P2 in progress: wave 1 captured, labeled, half-merged** (2026-11-19) · MVP defined 2026-11-18
 > Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
 > Origin: the "stroke-level decision model" idea, 2026-11-18.
 > Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
@@ -220,6 +220,21 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   Wave 2 = mid-January 2027, same corpus, so every axis sees sale and non-sale creative
   before any model trains on it. The datasheet breaks brands down by capture month. P3 training waits
   for wave 2.
+- **Wave 1 result (2026-11-19), `corpus/dtc-v1/`.** 450 captures (79 brands × home/collection/product
+  × desktop/mobile, home only for `needs-pages` stores), all labeled by the teacher. 5,210 observations.
+  Debrand alone admitted 244 values on verbatim recurrence. The judged merge then ran on 12 of 24
+  recognized axes before the Gemini project hit its **monthly spend cap**: 254 merges proposed, **17
+  blocked on manual review (≈93% precise)**, 238 kept → **266 admitted values, 24 recognized axes**.
+  The dominant judge error is still broad-into-narrow (`pre-footer-block` → `pre-footer-lifestyle-block`,
+  `header-icon-only` → `header-icon-badge`) despite the rule. The block list and all 2,742 verdicts
+  (384 same) ship with the dataset; the verdicts double as judge training pairs. An embedding failure
+  now skips that axis instead of aborting the pass, and `merge --cached-only` replays from the caches
+  with no network, so the 12 remaining axes cost only their own calls once the cap is raised.
+- **Finding: seeds dominate, and emergent axes fragment.** All 24 recognized axes are seed axes.
+  The 15 emergent axes are each below 3 brands because the teacher names the same axis several ways
+  (`sub-category-navigation` / `subcategory-navigation` / `secondary-nav-treatment`). Next: an
+  **axis-level merge** (same retrieve → veto → judge shape, over axis names and their values) before
+  the emergence rate (M1) can be read honestly.
 - Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
   home, food & bev, art/décor), selected for visual distinctiveness + public
   reputation. The selection rationale is recorded per store.

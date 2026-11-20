@@ -96,7 +96,7 @@ export interface SemanticMergeReport {
   /** Accepted by the judge but skipped by the conservative clustering rule. */
   deferred: MergeDecision[];
   promoted: { axis: string; key: string; support: number }[];
-  /** Judge batches that failed after retries. Their pairs were not merged (the safe default). */
+  /** Judge batches (or a whole axis's embedding call, `pairs: 0`) that failed after retries. Nothing there was merged (the safe default). */
   errors: { axis: string; pairs: number; error: string }[];
   /** Pairs answered from the verdict cache instead of the judge. */
   cachedVerdicts: number;
@@ -152,7 +152,15 @@ export async function semanticMerge(v: Vocabulary, opts: SemanticMergeOptions): 
     if (entries.length < 2) continue;
 
     const texts = entries.map(([key, e]) => valueText(axis, e.label || key, e.gloss));
-    const vecs = await embedAll(opts.embedder, texts, opts.cache);
+    // An embedding failure (quota, outage) skips this axis untouched instead of
+    // aborting the pass, so axes already merged are still saved.
+    let vecs: number[][];
+    try {
+      vecs = await embedAll(opts.embedder, texts, opts.cache);
+    } catch (e) {
+      report.errors.push({ axis, pairs: 0, error: `embed: ${(e as Error).message.slice(0, 200)}` });
+      continue;
+    }
 
     // Retrieval: each value's top-k neighbours above the threshold, unordered pairs deduped.
     const seen = new Set<string>();

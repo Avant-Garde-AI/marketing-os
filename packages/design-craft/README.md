@@ -35,6 +35,8 @@ design-craft debrand --labels labels.jsonl --vocab vocabulary.json
 # 3b. Fold synonyms: embeddings retrieve candidates, guards veto, a judge model decides each merge.
 #     --block reviewed.json lists pairs a reviewer rejected; they are never merged again.
 design-craft merge --vocab vocabulary.json --base-url <endpoint>/v1 [--dry-run] [--report merge.json]
+#     --cached-only replays from .embeddings-cache.json / .verdicts-cache.json with no network:
+#     uncached axes are skipped and uncached pairs stay unmerged (the safe default).
 
 # 4. Inspect, then export the open dataset (labels + vocabulary + DATASHEET.md, no pixels).
 design-craft vocab --vocab vocabulary.json

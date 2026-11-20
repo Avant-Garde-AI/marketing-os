@@ -7,7 +7,7 @@
  *   design-craft label   --captures .captures/manifest.jsonl --vocab vocab.json --out labels.jsonl \
  *                        --base-url https://… --model <id>      # key: DESIGN_CRAFT_API_KEY
  *   design-craft debrand --labels labels.jsonl --vocab vocab.json
- *   design-craft merge   --vocab vocab.json --base-url https://… [--embed-model …] [--judge-model …] [--dry-run]
+ *   design-craft merge   --vocab vocab.json --base-url https://… [--embed-model …] [--judge-model …] [--dry-run] [--cached-only]
  *   design-craft vocab   --vocab vocab.json [--json]
  *   design-craft dataset --labels labels.jsonl --vocab vocab.json --out release/ --name dtc-craft --version 0.1
  *
@@ -71,6 +71,7 @@ async function main(argv: string[]) {
       block: { type: "string" },
       retries: { type: "string", default: "8" },
       "all-axes": { type: "boolean", default: false },
+      "cached-only": { type: "boolean", default: false },
     },
   });
 
@@ -186,7 +187,10 @@ async function main(argv: string[]) {
     case "merge": {
       const { createOpenAIEmbedder, createOpenAIMergeJudge } = await import("./adapters/openai-text.js");
       const { semanticMerge } = await import("./merge.js");
-      const baseUrl = need(a["base-url"] ?? process.env.DESIGN_CRAFT_BASE_URL, "base-url");
+      // --cached-only replays from the embedding and verdict caches with no network:
+      // anything uncached fails safe (axis skipped, pair left unmerged).
+      const offline = a["cached-only"];
+      const baseUrl = offline ? "" : need(a["base-url"] ?? process.env.DESIGN_CRAFT_BASE_URL, "base-url");
       const apiKey = process.env.DESIGN_CRAFT_API_KEY;
       const v = await loadVocab(a.vocab!);
       // Vector cache lives beside the vocabulary by default (gitignored, regenerable).
@@ -201,8 +205,12 @@ async function main(argv: string[]) {
         await writeFile(verdictPath, JSON.stringify(Object.fromEntries(verdictCache)));
       };
       const r = await semanticMerge(v, {
-        embedder: createOpenAIEmbedder({ baseUrl, apiKey, model: a["embed-model"]!, retry: { retries: Number(a.retries) } }),
-        judge: createOpenAIMergeJudge({ baseUrl, apiKey, model: a["judge-model"]!, retry: { retries: Number(a.retries) } }),
+        embedder: offline
+          ? { id: a["embed-model"]!, embed: async () => { throw new Error("not cached (--cached-only)"); } }
+          : createOpenAIEmbedder({ baseUrl, apiKey, model: a["embed-model"]!, retry: { retries: Number(a.retries) } }),
+        judge: offline
+          ? { id: a["judge-model"]!, judge: async () => { throw new Error("not cached (--cached-only)"); } }
+          : createOpenAIMergeJudge({ baseUrl, apiKey, model: a["judge-model"]!, retry: { retries: Number(a.retries) } }),
         recognizedOnly: !a["all-axes"],
         verdictCache,
         onAxisDone: async (axis) => {
@@ -219,7 +227,10 @@ async function main(argv: string[]) {
       if (a.report) await writeFile(a.report, JSON.stringify(r, null, 2) + "\n");
       console.log(`${r.values} values · ${r.candidates} candidates · ${r.vetoed.length} vetoed · ${r.judged} judged · ${r.cachedVerdicts} from cache`);
       console.log(`merged ${r.merged.length} · rejected ${r.rejected.length} · deferred ${r.deferred.length}${a["dry-run"] ? " (dry run)" : ""}`);
-      if (r.errors.length) console.log(`  ! ${r.errors.length} judge batches failed (${r.errors.reduce((n, e) => n + e.pairs, 0)} pairs left unmerged); re-run to retry them`);
+      const skipped = [...new Set(r.errors.filter((e) => e.pairs === 0).map((e) => e.axis))];
+      const failedBatches = r.errors.filter((e) => e.pairs > 0);
+      if (skipped.length) console.log(`  ! ${skipped.length} axes skipped, embeddings unavailable: ${skipped.join(", ")}`);
+      if (failedBatches.length) console.log(`  ! ${failedBatches.length} judge batches failed (${failedBatches.reduce((n, e) => n + e.pairs, 0)} pairs left unmerged); re-run to retry them`);
       for (const m of r.merged) console.log(`  ⊂ ${m.axis}: ${m.from} → ${m.into} (${m.score.toFixed(3)}) ${m.reason ?? ""}`);
       for (const p of r.promoted) console.log(`  ↑ ${p.axis} = ${p.key} (${p.support} brands)`);
       return;

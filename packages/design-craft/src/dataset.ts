@@ -7,7 +7,7 @@
  * caller attached can never ride out in a release.
  */
 import { labelRecordSchema, type LabelRecord } from "./labels.js";
-import { vocabularyStats, type Vocabulary } from "./vocabulary.js";
+import { isRecognized, vocabularyStats, type Vocabulary } from "./vocabulary.js";
 
 export function toJsonl(records: Iterable<unknown>): string {
   const lines: string[] = [];
@@ -70,6 +70,7 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
     "",
     `- Recognized axes: ${s.recognizedAxes} · axes with admitted values: ${s.admittedAxes}`,
     `- Admitted values: ${s.admittedValues} · pending: ${s.pendingValues}`,
+    ...mergeState(v),
     "",
     "## What is NOT included",
     "",
@@ -83,4 +84,17 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
     "- Labels describe a page at `capturedAt`. Storefronts change.",
     "",
   ].join("\n");
+}
+
+/** Which recognized axes have been through the judged semantic merge. Unmerged axes still carry synonym variants as separate values. */
+function mergeState(v: Vocabulary): string[] {
+  const recognized = Object.keys(v.axes).filter((a) => isRecognized(v, a)).sort();
+  const merged = recognized.filter((a) => Object.values(v.axes[a]!.values).some((e) => e.merges?.some((m) => m.method === "semantic")));
+  const n = Object.values(v.axes).reduce((t, ax) => t + Object.values(ax.values).reduce((u, e) => u + (e.merges?.filter((m) => m.method === "semantic").length ?? 0), 0), 0);
+  if (!n) return ["- Semantic merge: not run. Synonym variants are separate values."];
+  const pending = recognized.filter((a) => !merged.includes(a));
+  return [
+    `- Semantic merge: ${n} judged merges across ${merged.length} of ${recognized.length} recognized axes.`,
+    ...(pending.length ? [`- Not yet merged (synonym variants still separate): ${pending.join(", ")}`] : []),
+  ];
 }

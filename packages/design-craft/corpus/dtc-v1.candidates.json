@@ -1,0 +1,427 @@
+{
+  "name": "dtc-v1",
+  "version": "1",
+  "description": "P2 corpus candidates (spec 35). Category spread over 8 top-level categories. Every rationale is a draft pending human review; resolve with `design-craft corpus`.",
+  "stores": [
+    {
+      "url": "https://www.allbirds.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.gymshark.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.outdoorvoices.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.kotn.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.taylorstitch.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.buckmason.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.vuoriclothing.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.tentree.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.bombas.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.rothys.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.cariuma.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.girlfriend.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.pangaia.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.ministryofsupply.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.chubbiesshorts.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.wearpact.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.aloyoga.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.skims.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.knix.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.thursdayboots.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.nisolo.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.glossier.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.kyliecosmetics.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.colourpop.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.rarebeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.summerfridays.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.tower28beauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.meritbeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.iliabeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.jonesroadbeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.kosas.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.saiehello.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.necessaire.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.theouai.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.youthtothepeople.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.glowrecipe.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.mytopicals.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://starface.world",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.brooklinen.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.parachutehome.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.fromourplace.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.greatjonesgoods.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.carawayhome.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.misen.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.burrow.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.floydhome.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.bollandbranch.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.coyuchi.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.ruggable.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.thesill.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.hellotushy.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://graza.co",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.omsom.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.eatfishwife.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://brightland.co",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.magicspoon.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.drinkolipop.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.drinkpoppi.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.liquiddeath.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.athleticbrewing.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.flybyjing.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.sietefoods.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.takearecess.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.ritual.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.seed.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.therabody.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://lunya.co",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.getquip.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.hims.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.drinkag1.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.mejuri.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.catbirdnyc.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.awaytravel.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.bellroy.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.dagnedover.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.cuyana.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.baggu.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.stanley1913.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.wildone.com",
+      "category": "pets",
+      "rationale": "Draft candidate: widely cited pets DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.fablepets.com",
+      "category": "pets",
+      "rationale": "Draft candidate: widely cited pets DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.maxbone.com",
+      "category": "pets",
+      "rationale": "Draft candidate: widely cited pets DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.solostove.com",
+      "category": "outdoor",
+      "rationale": "Draft candidate: widely cited outdoor DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.cotopaxi.com",
+      "category": "outdoor",
+      "rationale": "Draft candidate: widely cited outdoor DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    },
+    {
+      "url": "https://www.yeti.com",
+      "category": "outdoor",
+      "rationale": "Draft candidate: widely cited outdoor DTC storefront. Pending human review for visual distinctiveness before P2 labeling."
+    }
+  ]
+}

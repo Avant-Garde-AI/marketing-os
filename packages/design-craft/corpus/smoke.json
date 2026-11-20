@@ -1,0 +1,12 @@
+{
+  "name": "dtc-smoke",
+  "version": "1",
+  "description": "P1 exit corpus: five widely cited Shopify DTC storefronts across four categories, used only to prove capture → label → debrand → export end to end. Not the P2 corpus.",
+  "stores": [
+    { "url": "https://www.glossier.com", "category": "beauty", "rationale": "Frequently cited for a distinctive, restrained brand system in beauty DTC.", "pages": [{ "type": "home", "url": "/" }, { "type": "collection", "url": "/collections/all" }], "tags": ["shopify"] },
+    { "url": "https://www.allbirds.com", "category": "apparel", "rationale": "Reference DTC footwear storefront with a clear product-led merchandising system.", "pages": [{ "type": "home", "url": "/" }, { "type": "collection", "url": "/collections/mens" }], "tags": ["shopify"] },
+    { "url": "https://www.brooklinen.com", "category": "home", "rationale": "Widely referenced home-goods DTC with strong offer and bundle framing.", "pages": [{ "type": "home", "url": "/" }, { "type": "collection", "url": "/collections/all" }], "tags": ["shopify"] },
+    { "url": "https://www.graza.co", "category": "food-bev", "rationale": "Visually distinctive food DTC brand with an illustration-led system.", "pages": [{ "type": "home", "url": "/" }, { "type": "collection", "url": "/collections/all" }], "tags": ["shopify"] },
+    { "url": "https://fromourplace.com", "category": "home", "rationale": "Kitchenware DTC known for color-led product presentation.", "pages": [{ "type": "home", "url": "/" }, { "type": "collection", "url": "/collections/all" }], "tags": ["shopify"] }
+  ]
+}

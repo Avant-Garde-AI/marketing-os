@@ -1,0 +1,1555 @@
+{
+  "name": "dtc-v1",
+  "version": "1",
+  "description": "P2 corpus candidates (spec 35). Category spread over 8 top-level categories. Every rationale is a draft pending human review; resolve with `design-craft corpus`.",
+  "stores": [
+    {
+      "url": "https://www.allbirds.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/bfcm-mens"
+        },
+        {
+          "type": "product",
+          "url": "/products/mens-tree-runner-nz-medium-grey"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.gymshark.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/equipment"
+        },
+        {
+          "type": "product",
+          "url": "/products/gymshark-softsense-mid-rise-straight-leg-leggings-leggings-black-aw26"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.outdoorvoices.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-women"
+        },
+        {
+          "type": "product",
+          "url": "/products/gloss-puffer-moonlight"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.kotn.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/unisex-new-arrivals"
+        },
+        {
+          "type": "product",
+          "url": "/products/ankle-sock-in-white"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.taylorstitch.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/mens-new-arrivals"
+        },
+        {
+          "type": "product",
+          "url": "/products/corp-jacket-in-heather-olive-wool-2611"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.buckmason.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/mens-new-arrivals"
+        },
+        {
+          "type": "product",
+          "url": "/products/longshore-navy-japanese-sateen-cargo-pant"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.vuoriclothing.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/womens-outerwear"
+        },
+        {
+          "type": "product",
+          "url": "/products/womens-taika-snow-bib-french-roast"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.tentree.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/womens"
+        },
+        {
+          "type": "product",
+          "url": "/products/skyline-vest-ashwood"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.bombas.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/new-releases"
+        },
+        {
+          "type": "product",
+          "url": "/products/womens-gripper-slipper-bootie-sherpa-lined"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.rothys.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all-shoes-bags"
+        },
+        {
+          "type": "product",
+          "url": "/products/womens-penny-clog-revelvet-portobello"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.cariuma.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    },
+    {
+      "url": "https://www.girlfriend.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/black-compressive-high-rise-legging"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.pangaia.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/womens-cashmere-and-merino-wool-blend-zip-up-hoodie-soft-void"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.chubbiesshorts.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-khakinators-everywear-pant-1"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.wearpact.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    },
+    {
+      "url": "https://www.aloyoga.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/womens-shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/a1219u-alo-sherpa-sunset-sneaker-mule-rich-chestnut-ivory"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.skims.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/new-arrivals"
+        },
+        {
+          "type": "product",
+          "url": "/products/skims-ultimate-teardrop-push-up-bra-clay"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.knix.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/last-call-sleep"
+        },
+        {
+          "type": "product",
+          "url": "/products/essential-no-show-boyshort"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.thursdayboots.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/womens-boots"
+        },
+        {
+          "type": "product",
+          "url": "/products/mens-commuter-messenger-bag-old-english"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.nisolo.com",
+      "category": "apparel",
+      "rationale": "Draft candidate: widely cited apparel DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/cara-chelsea-boot-black"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.glossier.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/glossier-you"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.kyliecosmetics.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/kylie-cosmetics-new"
+        },
+        {
+          "type": "product",
+          "url": "/products/creme-lipstick"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.colourpop.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/new-arrivals"
+        },
+        {
+          "type": "product",
+          "url": "/products/pokemon-x-colourpop-eeveelution-collection"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.rarebeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/soft-pinch-must-haves-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.summerfridays.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/sunlit-vanilla-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.tower28beauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/bestsellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/swipe-serum-concealer"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.meritbeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all-products"
+        },
+        {
+          "type": "product",
+          "url": "/products/flush-balm"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.iliabeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/multi-stick-cream-blush-stick-lip-cheek-tint"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.jonesroadbeauty.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-lip-trio"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.kosas.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop"
+        },
+        {
+          "type": "product",
+          "url": "/products/air-brow-tinted"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.saiehello.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/bestsellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/glowy-super-gel-luminizer"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.necessaire.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-body-retinol"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.theouai.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/detox-shampoo"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.glowrecipe.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-roll-bag"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.mytopicals.com",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/faded-under-eye-masks-dark-mode"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://starface.world",
+      "category": "beauty",
+      "rationale": "Draft candidate: widely cited beauty DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/big-hello-kitty-mystery-compact"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.brooklinen.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all-sheets"
+        },
+        {
+          "type": "product",
+          "url": "/products/classic-core-sheet-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.parachutehome.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/classic-turkish-cotton-towels-white"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.fromourplace.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/titanium-pro-cookware-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.greatjonesgoods.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-dutchess"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.carawayhome.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/coffee-maker"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.misen.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/misenware-18-piece-mixed-red"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.burrow.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/listo-dining-table"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.floydhome.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-bed-frame"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.bollandbranch.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/holiday-shop"
+        },
+        {
+          "type": "product",
+          "url": "/products/signature-fitted-crib-sheet"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.coyuchi.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/bestsellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/the-marin-rem-mattress"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.ruggable.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/plush-all-in-one-rugs"
+        },
+        {
+          "type": "product",
+          "url": "/products/spot-cleaner"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.thesill.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/new-arrivals-indoor"
+        },
+        {
+          "type": "product",
+          "url": "/products/orchid-plant-subscription"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.hellotushy.com",
+      "category": "home",
+      "rationale": "Draft candidate: widely cited home DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/tushy-bidet-attachments"
+        },
+        {
+          "type": "product",
+          "url": "/products/classic-dual-nozzle-bidet-attachment"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://graza.co",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/duo-glass"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.omsom.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    },
+    {
+      "url": "https://www.eatfishwife.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/smoked-salmon-with-flybyjing-sichuan-chili-crisp"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://brightland.co",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/awake"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.magicspoon.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/custom-mixed-bundle-6-box"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.drinkolipop.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-9g-fiber"
+        },
+        {
+          "type": "product",
+          "url": "/products/pomegranate-sparkle"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.drinkpoppi.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/drinks"
+        },
+        {
+          "type": "product",
+          "url": "/products/cranberry-fizz"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.liquiddeath.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/scary-strawberry"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.athleticbrewing.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/athletic-lite-lime-salt"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.flybyjing.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop"
+        },
+        {
+          "type": "product",
+          "url": "/products/sichuan-flavor-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.sietefoods.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    },
+    {
+      "url": "https://www.takearecess.com",
+      "category": "food-bev",
+      "rationale": "Draft candidate: widely cited food-bev DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/recess-mood-pink-lemonade"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.ritual.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/women"
+        },
+        {
+          "type": "product",
+          "url": "/products/synbiotic-plus-for-gut-health"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.therabody.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-theragun"
+        },
+        {
+          "type": "product",
+          "url": "/products/theragun-prime-plus"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://lunya.co",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/womens-all"
+        },
+        {
+          "type": "product",
+          "url": "/products/womens-organic-pima-button-down-ankle-pant-winter-berry-stripe"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.getquip.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/air-quip-ultra-lite-sonic-electric-toothbrush"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.drinkag1.com",
+      "category": "wellness",
+      "rationale": "Draft candidate: widely cited wellness DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/shop/black-friday"
+        },
+        {
+          "type": "product",
+          "url": "/products/ag1-pro-travel-packs"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.mejuri.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/tube-huggie-hoops"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.catbirdnyc.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-by-stone.html"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    },
+    {
+      "url": "https://www.awaytravel.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/best-sellers"
+        },
+        {
+          "type": "product",
+          "url": "/products/foldaway-travel-tote-cherry-red"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.bellroy.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/products/category/outlet"
+        },
+        {
+          "type": "product",
+          "url": "/products/laneway-tote"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.dagnedover.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    },
+    {
+      "url": "https://www.cuyana.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/small-leather-goods"
+        },
+        {
+          "type": "product",
+          "url": "/products/nova-bag-croco-v1"
+        }
+      ],
+      "tags": [
+        "shopify"
+      ]
+    },
+    {
+      "url": "https://www.baggu.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/metallics"
+        },
+        {
+          "type": "product",
+          "url": "/products/standard-baggu-silver-metallic-polka-dot"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.stanley1913.com",
+      "category": "accessories",
+      "rationale": "Draft candidate: widely cited accessories DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/new-arrivals"
+        },
+        {
+          "type": "product",
+          "url": "/products/quencher-protour-flipstraw-tumbler"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.wildone.com",
+      "category": "pets",
+      "rationale": "Draft candidate: widely cited pets DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all"
+        },
+        {
+          "type": "product",
+          "url": "/products/poop-bag-carrier"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.fablepets.com",
+      "category": "pets",
+      "rationale": "Draft candidate: widely cited pets DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop"
+        },
+        {
+          "type": "product",
+          "url": "/products/best-selling-rest-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.maxbone.com",
+      "category": "pets",
+      "rationale": "Draft candidate: widely cited pets DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/shop-all-products"
+        },
+        {
+          "type": "product",
+          "url": "/products/ocean-wf-salmon"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.cotopaxi.com",
+      "category": "outdoor",
+      "rationale": "Draft candidate: widely cited outdoor DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        },
+        {
+          "type": "collection",
+          "url": "/collections/all-packs"
+        },
+        {
+          "type": "product",
+          "url": "/products/cubo-expandable-packing-cube-set"
+        }
+      ],
+      "tags": []
+    },
+    {
+      "url": "https://www.yeti.com",
+      "category": "outdoor",
+      "rationale": "Draft candidate: widely cited outdoor DTC storefront. Pending human review for visual distinctiveness before P2 labeling.",
+      "pages": [
+        {
+          "type": "home",
+          "url": "/"
+        }
+      ],
+      "tags": [
+        "needs-pages"
+      ]
+    }
+  ]
+}

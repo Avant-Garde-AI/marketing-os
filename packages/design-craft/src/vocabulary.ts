@@ -41,6 +41,17 @@ export const rewardSchema = z.object({
 });
 export type Reward = z.infer<typeof rewardSchema>;
 
+/** How a key got folded into another: the evidence a reviewer needs to accept or undo a merge. */
+export const mergeRecordSchema = z.object({
+  key: z.string(),
+  method: z.enum(["token", "semantic"]),
+  score: z.number().optional(),
+  judge: z.string().optional(),
+  reason: z.string().optional(),
+  /** Brands the merged key brought with it, so an undo can restore support exactly. */
+  support: z.array(z.string()).default([]),
+});
+
 export const valueEntrySchema = z.object({
   label: z.string(),
   /** Contrastive description: what distinguishes this value from its siblings. */
@@ -52,19 +63,7 @@ export const valueEntrySchema = z.object({
   /** Near-duplicate keys folded into this value. Kept so a reviewer can undo the merge. */
   aliases: z.array(z.string()).optional(),
   /** How each alias got here: the evidence a reviewer needs to accept or undo a merge. */
-  merges: z
-    .array(
-      z.object({
-        key: z.string(),
-        method: z.enum(["token", "semantic"]),
-        score: z.number().optional(),
-        judge: z.string().optional(),
-        reason: z.string().optional(),
-        /** Brands the merged value brought with it, so an undo can restore support exactly. */
-        support: z.array(z.string()).default([]),
-      }),
-    )
-    .optional(),
+  merges: z.array(mergeRecordSchema).optional(),
   reward: rewardSchema.optional(),
 });
 export type ValueEntry = z.infer<typeof valueEntrySchema>;
@@ -77,6 +76,10 @@ export const axisEntrySchema = z.object({
   axisSupport: z.array(z.string()).default([]),
   recognized: z.boolean().default(false),
   values: z.record(z.string(), valueEntrySchema).default({}),
+  /** Axis names folded into this one by the axis merge. Observations under an alias land here. */
+  aliases: z.array(z.string()).optional(),
+  /** Provenance per folded axis; `support` is the axis support it brought. */
+  merges: z.array(mergeRecordSchema).optional(),
 });
 export type AxisEntry = z.infer<typeof axisEntrySchema>;
 
@@ -316,19 +319,20 @@ export function brandKey(urlOrDomain: string): string {
 export function observe(v: Vocabulary, obs: Observation): ObserveResult {
   const origin = obs.origin ?? "proposed";
   const key = normalizeValue(obs.value);
-  const axisKey = normalizeAxis(obs.axis);
+  const rawAxisKey = normalizeAxis(obs.axis);
 
-  if (!axisKey) {
-    return { status: "rejected", axis: axisKey, key, support: 0, axisSupport: 0, reason: "empty axis" };
+  if (!rawAxisKey) {
+    return { status: "rejected", axis: rawAxisKey, key, support: 0, axisSupport: 0, reason: "empty axis" };
   }
-  if (META_AXES.has(axisKey)) {
-    return { status: "rejected", axis: axisKey, key, support: 0, axisSupport: 0, reason: `"${axisKey}" is page metadata, not a design decision` };
+  if (META_AXES.has(rawAxisKey)) {
+    return { status: "rejected", axis: rawAxisKey, key, support: 0, axisSupport: 0, reason: `"${rawAxisKey}" is page metadata, not a design decision` };
   }
   if (origin === "proposed") {
     const reason = rejectReason(obs.value);
-    if (reason) return { status: "rejected", axis: axisKey, key, support: 0, axisSupport: v.axes[axisKey]?.axisSupport.length ?? 0, reason };
+    if (reason) return { status: "rejected", axis: rawAxisKey, key, support: 0, axisSupport: v.axes[resolveAxis(v, rawAxisKey)]?.axisSupport.length ?? 0, reason };
   }
 
+  const axisKey = resolveAxis(v, rawAxisKey);
   const ax = (v.axes[axisKey] ??= axisEntrySchema.parse({}));
   if (obs.brand && !ax.axisSupport.includes(obs.brand)) ax.axisSupport.push(obs.brand);
   const axisWasRecognized = ax.recognized;
@@ -400,6 +404,14 @@ export function mergeValues(v: Vocabulary, axis: string, from: string, into: str
   const src = ax?.values[from];
   const dst = ax?.values[into];
   if (!ax || !src || !dst || from === into) return false;
+  foldValue(v, dst, from, src, prov);
+  delete ax.values[from];
+  ax.recognized = admittedValues(v, axis).length > 0 || ax.axisSupport.length >= v.axisThreshold;
+  return true;
+}
+
+/** Fold value entry `src` (key `from`) into `dst`: support, aliases, provenance, reward, admission. */
+function foldValue(v: Vocabulary, dst: ValueEntry, from: string, src: ValueEntry, prov: MergeProvenance): void {
   for (const b of src.support) if (!dst.support.includes(b)) dst.support.push(b);
   dst.aliases ??= [];
   for (const k of [from, ...(src.aliases ?? [])]) if (!dst.aliases.includes(k)) dst.aliases.push(k);
@@ -410,8 +422,39 @@ export function mergeValues(v: Vocabulary, axis: string, from: string, into: str
     dst.reward = { offered: (dst.reward?.offered ?? 0) + src.reward.offered, chosen: (dst.reward?.chosen ?? 0) + src.reward.chosen };
   }
   dst.admitted = dst.admitted || src.admitted || dst.origin === "earned" || dst.support.length >= v.admissionThreshold;
-  delete ax.values[from];
-  ax.recognized = admittedValues(v, axis).length > 0 || ax.axisSupport.length >= v.axisThreshold;
+}
+
+/** An axis name, or the axis it was folded into by the axis merge. */
+export function resolveAxis(v: Vocabulary, axisKey: string): string {
+  if (v.axes[axisKey]) return axisKey;
+  return Object.keys(v.axes).find((a) => v.axes[a]!.aliases?.includes(axisKey)) ?? axisKey;
+}
+
+/**
+ * Fold axis `from` into axis `into` (the axis merge). Axis support is unioned and
+ * every value moves across: a value `into` already has (by key or alias) is folded
+ * into it, anything else moves as-is. Admission is recomputed on the merged support,
+ * so an axis merge can promote values, which is why it is judged, never assumed.
+ * A seeded axis is never absorbed.
+ */
+export function mergeAxes(v: Vocabulary, from: string, into: string, prov: MergeProvenance): boolean {
+  const src = v.axes[from];
+  const dst = v.axes[into];
+  if (!src || !dst || from === into || src.origin === "seeded") return false;
+  for (const b of src.axisSupport) if (!dst.axisSupport.includes(b)) dst.axisSupport.push(b);
+  for (const [key, e] of Object.entries(src.values)) {
+    const owner = dst.values[key] ? key : Object.keys(dst.values).find((k) => dst.values[k]!.aliases?.includes(key));
+    if (owner) foldValue(v, dst.values[owner]!, key, e, { method: "token" });
+    else dst.values[key] = e;
+  }
+  for (const e of Object.values(dst.values)) {
+    if (!e.admitted && e.support.length >= v.admissionThreshold) e.admitted = true;
+  }
+  dst.aliases ??= [];
+  for (const k of [from, ...(src.aliases ?? [])]) if (!dst.aliases.includes(k)) dst.aliases.push(k);
+  (dst.merges ??= []).push({ key: from, ...prov, support: [...src.axisSupport] }, ...(src.merges ?? []));
+  delete v.axes[from];
+  dst.recognized = admittedValues(v, into).length > 0 || dst.axisSupport.length >= v.axisThreshold;
   return true;
 }
 

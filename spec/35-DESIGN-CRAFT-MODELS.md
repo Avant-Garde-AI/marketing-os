@@ -1,6 +1,6 @@
 # 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
 
-> Status: **P1 BUILT** · **P2 in progress: wave 1 captured, labeled, half-merged** (2026-11-19) · MVP defined 2026-11-18
+> Status: **P1 BUILT** · **P2 in progress: wave 1 labeled, value merge resuming, axis merge built** (2026-11-25) · MVP defined 2026-11-18
 > Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
 > Origin: the "stroke-level decision model" idea, 2026-11-18.
 > Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
@@ -230,11 +230,25 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   (384 same) ship with the dataset; the verdicts double as judge training pairs. An embedding failure
   now skips that axis instead of aborting the pass, and `merge --cached-only` replays from the caches
   with no network, so the 12 remaining axes cost only their own calls once the cap is raised.
-- **Finding: seeds dominate, and emergent axes fragment.** All 24 recognized axes are seed axes.
-  The 15 emergent axes are each below 3 brands because the teacher names the same axis several ways
-  (`sub-category-navigation` / `subcategory-navigation` / `secondary-nav-treatment`). Next: an
-  **axis-level merge** (same retrieve → veto → judge shape, over axis names and their values) before
-  the emergence rate (M1) can be read honestly.
+- **Finding: seeds dominate, and emergent axes fragment.** All 24 recognized axes were seed axes.
+  The 15 emergent axes were each below 3 brands because the teacher names the same axis several ways
+  (`sub-category-navigation` / `subcategory-navigation` / `secondary-nav-treatment`).
+- **Axis merge built (2026-11-25, `axis-merge.ts`, `design-craft merge-axes`).** The value-merge shape
+  applied to axes, with three axis rules: only emergent axes are absorbed (seeds are never merged,
+  not even with each other); the judged question is directional ("would every value seen under FROM
+  be a specific answer to INTO's question?"); and passes repeat until one merges nothing, each pass
+  judging the surviving canonical axes directly, so nothing is inferred through a chain. `observe`
+  resolves axis aliases, so replays and new labels land on the canonical axis. Pipeline order is
+  debrand → merge-axes → merge. On wave 1: 7 merges over 3 passes, and **3 emergent axes recognized**,
+  the first emergence signal for M1: `sticky-buy-behavior` (4 brands, 3 names folded),
+  `sub-category-navigation` (4), `promotional-overlay` (3). The judge refused broad-into-narrow
+  (`sticky-element-behavior` → `sticky-buy-behavior`) until pass 2 showed that its values were all
+  sticky buy boxes.
+  Fixed on the way: debrand never marked seed axes `seeded`, so every axis read as emergent.
+- **Process loss: wave-1 pixels.** The captures lived in a session temp dir that was cleaned on 2026-11-24.
+  Labels, vocabulary and verdicts are safe in git, but P3 needs (screenshot, facets) pairs, so the
+  Black Friday pixels are gone for training. Captures now go to the package's gitignored `.captures/`.
+  P3 can train on wave 2 pixels plus a fresh wave-1 recapture (labels re-run on the new pixels).
 - Curate `corpus/dtc-v1.json`: ~80 stores across ≥4 categories (apparel, beauty,
   home, food & bev, art/décor), selected for visual distinctiveness + public
   reputation. The selection rationale is recorded per store.

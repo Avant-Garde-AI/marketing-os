@@ -14,5 +14,6 @@ export * from "./labeler.js";
 export * from "./debrand.js";
 export * from "./dataset.js";
 export * from "./merge.js";
+export * from "./axis-merge.js";
 export { createOpenAIVisionModel, type OpenAIVisionConfig } from "./adapters/openai-vision.js";
-export { createOpenAIEmbedder, createOpenAIMergeJudge, parseVerdicts, type OpenAIEndpointConfig } from "./adapters/openai-text.js";
+export { createOpenAIAxisJudge, createOpenAIEmbedder, createOpenAIMergeJudge, parseVerdicts, type OpenAIEndpointConfig } from "./adapters/openai-text.js";

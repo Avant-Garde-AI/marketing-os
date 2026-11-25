@@ -23,6 +23,8 @@ pnpm --filter @avant-garde/design-craft build
 D=packages/design-craft; node $D/dist/cli.js <command>
 
 # 1. Capture (Playwright, optional dep). Screenshots stay in --out; never commit them.
+#    Keep --out durable (the gitignored .captures/ here, not a temp dir): P3 trains on these pixels,
+#    and storefront creative can't be recaptured once it changes.
 design-craft capture --corpus corpus/smoke.json --out .captures
 
 # 2. Label with any OpenAI-compatible vision endpoint (teacher VLM now, our open model later).
@@ -32,7 +34,12 @@ DESIGN_CRAFT_API_KEY=… design-craft label --captures .captures/manifest.jsonl 
 # 3. Fold labels into the vocabulary (idempotent: support is a set of brands).
 design-craft debrand --labels labels.jsonl --vocab vocabulary.json
 
-# 3b. Fold synonyms: embeddings retrieve candidates, guards veto, a judge model decides each merge.
+# 3a. Fold synonym AXES first: same retrieve → judge shape, emergent axes only (seeds are never
+#     absorbed), directional ("is every value of FROM an answer to INTO's question?"), repeated
+#     until a pass merges nothing. Later labels under a folded name land on the canonical axis.
+design-craft merge-axes --vocab vocabulary.json --base-url <endpoint>/v1 [--dry-run] [--block axis-block.json]
+
+# 3b. Fold synonym values: embeddings retrieve candidates, guards veto, a judge model decides each merge.
 #     --block reviewed.json lists pairs a reviewer rejected; they are never merged again.
 design-craft merge --vocab vocabulary.json --base-url <endpoint>/v1 [--dry-run] [--report merge.json]
 #     --cached-only replays from .embeddings-cache.json / .verdicts-cache.json with no network:

@@ -120,7 +120,7 @@ export function cosine(a: number[], b: number[]): number {
   return na && nb ? dot / Math.sqrt(na * nb) : 0;
 }
 
-async function embedAll(embedder: Embedder, texts: string[], cache?: Map<string, number[]>): Promise<number[][]> {
+export async function embedAll(embedder: Embedder, texts: string[], cache?: Map<string, number[]>): Promise<number[][]> {
   const keyOf = (t: string) => `${embedder.id}|${t}`;
   const missing = [...new Set(texts.filter((t) => !cache?.has(keyOf(t))))];
   const fresh = new Map<string, number[]>();

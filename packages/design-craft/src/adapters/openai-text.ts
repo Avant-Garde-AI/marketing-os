@@ -6,6 +6,7 @@
 import { extractJsonObject } from "../labeler.js";
 import { fetchWithRetry, type RetryOptions } from "./retry.js";
 import { MERGE_JUDGE_SYSTEM, mergeJudgePrompt, type Embedder, type MergeJudge, type Verdict } from "../merge.js";
+import { AXIS_JUDGE_SYSTEM, axisJudgePrompt, type AxisJudge } from "../axis-merge.js";
 
 export interface OpenAIEndpointConfig {
   baseUrl: string;
@@ -44,23 +45,32 @@ export function createOpenAIEmbedder(cfg: OpenAIEndpointConfig & { batchSize?: n
   };
 }
 
+async function judgeJson(cfg: OpenAIEndpointConfig, system: string, user: string, ids: string[]): Promise<Verdict[]> {
+  const d = await post(cfg, "/chat/completions", {
+    model: cfg.model,
+    temperature: 0,
+    response_format: { type: "json_object" },
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  });
+  const raw = d?.choices?.[0]?.message?.content;
+  if (typeof raw !== "string") throw new Error("merge judge returned no content");
+  return parseVerdicts(raw, ids);
+}
+
 export function createOpenAIMergeJudge(cfg: OpenAIEndpointConfig): MergeJudge {
   return {
     id: cfg.model,
-    async judge(axis, pairs) {
-      const d = await post(cfg, "/chat/completions", {
-        model: cfg.model,
-        temperature: 0,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: MERGE_JUDGE_SYSTEM },
-          { role: "user", content: mergeJudgePrompt(axis, pairs) },
-        ],
-      });
-      const raw = d?.choices?.[0]?.message?.content;
-      if (typeof raw !== "string") throw new Error("merge judge returned no content");
-      return parseVerdicts(raw, pairs.map((p) => p.id));
-    },
+    judge: (axis, pairs) => judgeJson(cfg, MERGE_JUDGE_SYSTEM, mergeJudgePrompt(axis, pairs), pairs.map((p) => p.id)),
+  };
+}
+
+export function createOpenAIAxisJudge(cfg: OpenAIEndpointConfig): AxisJudge {
+  return {
+    id: cfg.model,
+    judge: (pairs) => judgeJson(cfg, AXIS_JUDGE_SYSTEM, axisJudgePrompt(pairs), pairs.map((p) => p.id)),
   };
 }
 

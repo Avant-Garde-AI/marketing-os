@@ -7,6 +7,7 @@
  *   design-craft label   --captures .captures/manifest.jsonl --vocab vocab.json --out labels.jsonl \
  *                        --base-url https://… --model <id>      # key: DESIGN_CRAFT_API_KEY
  *   design-craft debrand --labels labels.jsonl --vocab vocab.json
+ *   design-craft merge-axes --vocab vocab.json --base-url https://… [--axis-threshold 0.75] [--block axis-block.json] [--dry-run] [--cached-only]
  *   design-craft merge   --vocab vocab.json --base-url https://… [--embed-model …] [--judge-model …] [--dry-run] [--cached-only]
  *   design-craft vocab   --vocab vocab.json [--json]
  *   design-craft dataset --labels labels.jsonl --vocab vocab.json --out release/ --name dtc-craft --version 0.1
@@ -72,6 +73,8 @@ async function main(argv: string[]) {
       retries: { type: "string", default: "8" },
       "all-axes": { type: "boolean", default: false },
       "cached-only": { type: "boolean", default: false },
+      "axis-threshold": { type: "string", default: "0.75" },
+      passes: { type: "string", default: "3" },
     },
   });
 
@@ -181,6 +184,52 @@ async function main(argv: string[]) {
       console.log(`promoted ${s.promoted.length}, merged ${s.merged.length}, rejected ${s.rejected.length}`);
       for (const ax of s.axesRecognized) console.log(`  ◆ axis recognized: ${ax}`);
       for (const p of s.promoted) console.log(`  ↑ ${p.axis} = ${p.key} (${p.support} brands)`);
+      return;
+    }
+
+    case "merge-axes": {
+      // Fold synonym AXES before the value merge (debrand → merge-axes → merge).
+      const { createOpenAIEmbedder, createOpenAIAxisJudge } = await import("./adapters/openai-text.js");
+      const { axisMerge } = await import("./axis-merge.js");
+      const offline = a["cached-only"];
+      const baseUrl = offline ? "" : need(a["base-url"] ?? process.env.DESIGN_CRAFT_BASE_URL, "base-url");
+      const apiKey = process.env.DESIGN_CRAFT_API_KEY;
+      const v = await loadVocab(a.vocab!);
+      const dir = path.dirname(path.resolve(a.vocab!));
+      const cachePath = a.cache ?? path.join(dir, ".embeddings-cache.json");
+      const verdictPath = path.join(dir, ".axis-verdicts-cache.json");
+      const load = async <T>(p: string) => new Map<string, T>(existsSync(p) ? Object.entries(JSON.parse(await readFile(p, "utf8"))) : []);
+      const cache = await load<number[]>(cachePath);
+      const verdictCache = await load<{ same: boolean; reason?: string }>(verdictPath);
+      // Repeat until a pass merges nothing. A later pass judges the surviving canonical
+      // axes directly (with their merged values in view), so it never infers through a chain.
+      const reports = [];
+      for (let pass = 1; pass <= Number(a.passes); pass++) {
+        const r = await axisMerge(v, {
+          embedder: offline
+            ? { id: a["embed-model"]!, embed: async () => { throw new Error("not cached (--cached-only)"); } }
+            : createOpenAIEmbedder({ baseUrl, apiKey, model: a["embed-model"]!, retry: { retries: Number(a.retries) } }),
+          judge: offline
+            ? { id: a["judge-model"]!, judge: async () => { throw new Error("not cached (--cached-only)"); } }
+            : createOpenAIAxisJudge({ baseUrl, apiKey, model: a["judge-model"]!, retry: { retries: Number(a.retries) } }),
+          candidateThreshold: Number(a["axis-threshold"]),
+          cache,
+          verdictCache,
+          dryRun: a["dry-run"],
+          blocked: a.block && existsSync(a.block) ? JSON.parse(await readFile(a.block, "utf8")) : [],
+        });
+        reports.push(r);
+        console.log(`pass ${pass}: ${r.axes} axes (${r.emergent} emergent) · ${r.candidates} candidates · ${r.judged} judged · ${r.cachedVerdicts} from cache`);
+        console.log(`  merged ${r.merged.length} · rejected ${r.rejected.length} · deferred ${r.deferred.length}${a["dry-run"] ? " (dry run)" : ""}`);
+        if (r.errors.length) console.log(`  ! ${r.errors.length} judge batches failed (${r.errors.reduce((n, e) => n + e.pairs, 0)} pairs left unmerged)`);
+        for (const m of r.merged) console.log(`  ⊂ ${m.from} → ${m.into} (${m.score.toFixed(3)}) ${m.reason ?? ""}`);
+        for (const m of r.recognized) console.log(`  ◆ axis recognized: ${m.axis} (${m.brands} brands)`);
+        if (!r.merged.length || a["dry-run"]) break;
+      }
+      await writeFile(cachePath, JSON.stringify(Object.fromEntries(cache)));
+      await writeFile(verdictPath, JSON.stringify(Object.fromEntries(verdictCache)));
+      if (!a["dry-run"]) await saveVocab(a.vocab!, v);
+      if (a.report) await writeFile(a.report, JSON.stringify(reports, null, 2) + "\n");
       return;
     }
 

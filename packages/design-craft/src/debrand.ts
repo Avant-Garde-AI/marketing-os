@@ -12,7 +12,8 @@
  */
 import type { LabelRecord } from "./labels.js";
 import { labelRecordSchema } from "./labels.js";
-import { observe, type ObserveResult, type Vocabulary } from "./vocabulary.js";
+import { DTC_SEED_AXES } from "./ontology.js";
+import { observe, type AxisPrompt, type ObserveResult, type Vocabulary } from "./vocabulary.js";
 
 export interface DebrandEvent extends ObserveResult {
   brand: string;
@@ -28,7 +29,11 @@ export interface DebrandSummary {
   merged: DebrandEvent[];
 }
 
-export function debrand(v: Vocabulary, records: Iterable<LabelRecord | unknown>): DebrandSummary {
+export function debrand(
+  v: Vocabulary,
+  records: Iterable<LabelRecord | unknown>,
+  opts: { seedAxes?: AxisPrompt[] } = {},
+): DebrandSummary {
   const summary: DebrandSummary = { records: 0, observations: 0, promoted: [], axesRecognized: [], rejected: [], merged: [] };
   for (const input of records) {
     const rec = labelRecordSchema.parse(input);
@@ -50,6 +55,14 @@ export function debrand(v: Vocabulary, records: Iterable<LabelRecord | unknown>)
       if (res.mergedFrom) summary.merged.push(ev);
       if (res.axisRecognized) summary.axesRecognized.push(res.axis);
     }
+  }
+  // Mark seed axes as seeded and carry their question, so the axis merge never absorbs
+  // a seed and can judge emergent axes against what each seed actually asks.
+  for (const seed of opts.seedAxes ?? DTC_SEED_AXES) {
+    const ax = v.axes[seed.axis];
+    if (!ax) continue;
+    ax.origin = "seeded";
+    ax.description ??= seed.description;
   }
   return summary;
 }

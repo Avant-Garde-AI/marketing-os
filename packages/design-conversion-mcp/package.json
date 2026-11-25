@@ -1,0 +1,39 @@
+{
+  "name": "@avant-garde/design-conversion-mcp",
+  "version": "0.1.0",
+  "description": "Conversion-oriented design MCP: audit a storefront page against the open DTC craft vocabulary and its category's conventions, and get the next design moves (spec 35)",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "design-conversion-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "@avant-garde/design-craft": "workspace:^",
+    "zod": "^3.25.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^1.6.0"
+  }
+}

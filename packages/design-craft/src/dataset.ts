@@ -7,6 +7,7 @@
  * caller attached can never ride out in a release.
  */
 import { labelRecordSchema, type LabelRecord } from "./labels.js";
+import type { Taxonomy } from "./taxonomy.js";
 import { isRecognized, vocabularyStats, type Vocabulary } from "./vocabulary.js";
 
 export function toJsonl(records: Iterable<unknown>): string {
@@ -29,7 +30,7 @@ export function parseJsonl(text: string): LabelRecord[] {
     });
 }
 
-export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: string; version: string }): string {
+export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: string; version: string; taxonomy?: Taxonomy; season?: string }): string {
   const brands = new Set(records.map((r) => r.brand));
   const byCategory = new Map<string, Set<string>>();
   for (const r of records) (byCategory.get(r.category) ?? byCategory.set(r.category, new Set()).get(r.category)!).add(r.brand);
@@ -71,6 +72,13 @@ export function datasheet(records: LabelRecord[], v: Vocabulary, meta: { name: s
     `- Recognized axes: ${s.recognizedAxes} · axes with admitted values: ${s.admittedAxes}`,
     `- Admitted values: ${s.admittedValues} · pending: ${s.pendingValues}`,
     ...mergeState(v),
+    ...(meta.taxonomy
+      ? [
+          `- Taxonomy (\`taxonomy.json\`): ${Object.keys(meta.taxonomy.axes).length} axes grouped into ${Object.values(meta.taxonomy.axes).reduce((n, a) => n + a.families.length, 0)} families (decisions) by \`${meta.taxonomy.grouper ?? "unknown"}\`. Each family partitions its axis's admitted values; reviewer overrides apply on top.`,
+          "- Benchmarks (`benchmarks.json`): per category (≥5 brands, else the cross-category benchmark) and per viewport, the brands using each value and each family.",
+        ]
+      : []),
+    ...(meta.season ? [`- **Season: ${meta.season}.** Every capture falls in a sale period, so promotional axes (hero message, offer framing, overlays) describe the season. Consumers should not treat those conventions as standing ones.`] : []),
     "",
     "## What is NOT included",
     "",

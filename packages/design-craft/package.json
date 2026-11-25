@@ -8,7 +8,13 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    }
+    },
+    "./capture": {
+      "types": "./dist/adapters/playwright-capture.d.ts",
+      "default": "./dist/adapters/playwright-capture.js"
+    },
+    "./corpus/*": "./corpus/*",
+    "./package.json": "./package.json"
   },
   "bin": {
     "design-craft": "./dist/cli.js"
@@ -20,7 +26,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
     "zod": "^3.25.0"

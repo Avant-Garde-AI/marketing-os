@@ -7,6 +7,7 @@ import { extractJsonObject } from "../labeler.js";
 import { fetchWithRetry, type RetryOptions } from "./retry.js";
 import { MERGE_JUDGE_SYSTEM, mergeJudgePrompt, type Embedder, type MergeJudge, type Verdict } from "../merge.js";
 import { AXIS_JUDGE_SYSTEM, axisJudgePrompt, type AxisJudge } from "../axis-merge.js";
+import { TAXONOMY_SYSTEM, taxonomyPrompt, type FamilyGrouper } from "../taxonomy.js";
 
 export interface OpenAIEndpointConfig {
   baseUrl: string;
@@ -71,6 +72,27 @@ export function createOpenAIAxisJudge(cfg: OpenAIEndpointConfig): AxisJudge {
   return {
     id: cfg.model,
     judge: (pairs) => judgeJson(cfg, AXIS_JUDGE_SYSTEM, axisJudgePrompt(pairs), pairs.map((p) => p.id)),
+  };
+}
+
+/** Groups an axis's values into families (taxonomy.ts). Returns the raw JSON; `parseFamilies` validates it. */
+export function createOpenAITaxonomyGrouper(cfg: OpenAIEndpointConfig): FamilyGrouper {
+  return {
+    id: `${cfg.model}+families@1`,
+    async group(input) {
+      const d = await post(cfg, "/chat/completions", {
+        model: cfg.model,
+        temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: TAXONOMY_SYSTEM },
+          { role: "user", content: taxonomyPrompt(input) },
+        ],
+      });
+      const raw = d?.choices?.[0]?.message?.content;
+      if (typeof raw !== "string") throw new Error("taxonomy grouper returned no content");
+      return raw;
+    },
   };
 }
 

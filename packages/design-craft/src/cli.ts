@@ -10,6 +10,9 @@
  *   design-craft merge-axes --vocab vocab.json --base-url https://… [--axis-threshold 0.75] [--block axis-block.json] [--dry-run] [--cached-only]
  *   design-craft merge   --vocab vocab.json --base-url https://… [--embed-model …] [--judge-model …] [--dry-run] [--cached-only]
  *   design-craft vocab   --vocab vocab.json [--json]
+ *   design-craft report  --vocab vocab.json --labels labels.jsonl [--json]          # M1 + conversion-lens coverage
+ *   design-craft taxonomy --vocab vocab.json --out taxonomy.json --base-url https://… [--judge-model …] [--block overrides.json] [--cached-only]
+ *   design-craft benchmarks --vocab vocab.json --labels labels.jsonl --out benchmarks.json [--taxonomy taxonomy.json] [--season black-friday-2026] [--min-brands 5]
  *   design-craft dataset --labels labels.jsonl --vocab vocab.json --out release/ --name dtc-craft --version 0.1
  *
  * Every step is resumable: `label` skips captures already labeled (by sha256),
@@ -25,7 +28,7 @@ import { debrand } from "./debrand.js";
 import { labelCapture, LabelParseError, type Capture } from "./labeler.js";
 import { emptyVocabulary, recognizedEmergentAxes, vocabularySchema, vocabularyStats, admittedAxes, admittedValues, type Vocabulary } from "./vocabulary.js";
 
-const USAGE = `design-craft <corpus|capture|label|debrand|merge|vocab|dataset> [options]  (see spec/35-DESIGN-CRAFT-MODELS.md)`;
+const USAGE = `design-craft <corpus|capture|label|debrand|merge-axes|merge|vocab|report|benchmarks|dataset> [options]  (see spec/35-DESIGN-CRAFT-MODELS.md)`;
 
 async function loadVocab(p: string): Promise<Vocabulary> {
   if (!existsSync(p)) return emptyVocabulary();
@@ -75,6 +78,9 @@ async function main(argv: string[]) {
       "cached-only": { type: "boolean", default: false },
       "axis-threshold": { type: "string", default: "0.75" },
       passes: { type: "string", default: "3" },
+      "min-brands": { type: "string", default: "5" },
+      taxonomy: { type: "string" },
+      season: { type: "string" },
     },
   });
 
@@ -302,6 +308,55 @@ async function main(argv: string[]) {
       return;
     }
 
+    case "report": {
+      const { vocabularyReport, formatReport } = await import("./report.js");
+      const v = await loadVocab(a.vocab!);
+      const records = parseJsonl(await readFile(need(a.labels, "labels"), "utf8"));
+      const r = vocabularyReport(v, records);
+      console.log(a.json ? JSON.stringify(r, null, 2) : formatReport(r));
+      return;
+    }
+
+    case "taxonomy": {
+      // Families per axis (taxonomy.ts). Cached beside --out, so a replay costs nothing.
+      const { buildTaxonomy } = await import("./taxonomy.js");
+      const { createOpenAITaxonomyGrouper } = await import("./adapters/openai-text.js");
+      const { vocabularyRef } = await import("./labeler.js");
+      const v = await loadVocab(a.vocab!);
+      const out = need(a.out, "out");
+      const cachePath = path.join(path.dirname(path.resolve(out)), ".taxonomy-cache.json");
+      const cache = new Map<string, string>(existsSync(cachePath) ? Object.entries(JSON.parse(await readFile(cachePath, "utf8"))) : []);
+      const model = a["judge-model"]!;
+      const grouper = a["cached-only"]
+        ? { id: `${model}+families@1`, group: async () => { throw new Error("not cached (--cached-only)"); } }
+        : createOpenAITaxonomyGrouper({ baseUrl: need(a["base-url"], "base-url"), model, apiKey: process.env.DESIGN_CRAFT_API_KEY, retry: { retries: Number(a.retries) } });
+      const overrides = a.block && existsSync(a.block) ? JSON.parse(await readFile(a.block, "utf8")) : [];
+      const { taxonomy, report } = await buildTaxonomy(v, { grouper, cache, vocabularyRef: vocabularyRef(v), overrides });
+      await writeFile(cachePath, JSON.stringify(Object.fromEntries(cache)) + "\n");
+      await writeFile(out, JSON.stringify(taxonomy, null, 2) + "\n");
+      console.log(`taxonomy: ${report.axes} axes (${report.grouped} grouped now, ${report.cached} from cache), ${report.repaired.length} repairs, ${report.errors.length} errors → ${out}`);
+      for (const [axis, t] of Object.entries(taxonomy.axes)) console.log(`  ${axis}: ${t.families.map((f) => `${f.key}(${f.values.length})`).join(" · ")}`);
+      for (const r of report.repaired) console.log(`  repaired ${r.axis}/${r.value}: ${r.fix}`);
+      for (const e of report.errors) console.log(`  ERROR ${e.axis}: ${e.error}`);
+      return;
+    }
+
+    case "benchmarks": {
+      const { buildBenchmarks } = await import("./conversion.js");
+      const { vocabularyRef } = await import("./labeler.js");
+      const v = await loadVocab(a.vocab!);
+      const records = parseJsonl(await readFile(need(a.labels, "labels"), "utf8"));
+      const taxonomy = a.taxonomy ? JSON.parse(await readFile(a.taxonomy, "utf8")) : undefined;
+      const b = buildBenchmarks(v, records, { minBrands: Number(a["min-brands"]), vocabularyRef: vocabularyRef(v), ...(taxonomy ? { taxonomy } : {}), ...(a.season ? { season: a.season } : {}) });
+      const out = need(a.out, "out");
+      // Compact: a derived artifact, rebuilt from labels + vocabulary + taxonomy, never hand-edited.
+      await writeFile(out, JSON.stringify(b) + "\n");
+      const own = Object.entries(b.categories).filter(([, c]) => !c.fallback).map(([k, c]) => `${k} (${c.brands} brands, ${Object.keys(c.axes).length} axes)`);
+      const fb = Object.entries(b.categories).filter(([, c]) => c.fallback).map(([k, c]) => `${k} (${c.brands})`);
+      console.log(`wrote ${out}: ${own.join(", ")}${fb.length ? `; below ${b.minBrands} brands, falls back to all: ${fb.join(", ")}` : ""}`);
+      return;
+    }
+
     case "dataset": {
       const v = await loadVocab(a.vocab!);
       const records = parseJsonl(await readFile(need(a.labels, "labels"), "utf8"));
@@ -309,7 +364,8 @@ async function main(argv: string[]) {
       await mkdir(out, { recursive: true });
       await writeFile(path.join(out, "labels.jsonl"), toJsonl(records));
       await writeFile(path.join(out, "vocabulary.json"), JSON.stringify(v, null, 2) + "\n");
-      await writeFile(path.join(out, "DATASHEET.md"), datasheet(records, v, { name: a.name!, version: a.version! }));
+      const taxonomy = a.taxonomy ? JSON.parse(await readFile(a.taxonomy, "utf8")) : undefined;
+      await writeFile(path.join(out, "DATASHEET.md"), datasheet(records, v, { name: a.name!, version: a.version!, ...(taxonomy ? { taxonomy } : {}), ...(a.season ? { season: a.season } : {}) }));
       console.log(`wrote ${records.length} labels + vocabulary + datasheet to ${out}`);
       return;
     }

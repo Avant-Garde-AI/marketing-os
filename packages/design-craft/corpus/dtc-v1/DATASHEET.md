@@ -1,4 +1,4 @@
-# Datasheet: dtc-craft-labels v0.2.0
+# Datasheet: dtc-craft-labels v0.3.0
 
 Design-craft labels for DTC storefront pages (Marketing OS spec 35).
 
@@ -37,6 +37,9 @@ Design-craft labels for DTC storefront pages (Marketing OS spec 35).
 - Semantic merge: 491 judged merges across 25 of 27 recognized axes.
 - No judged value merges (not run, or none accepted): promotional-overlay, sub-category-navigation
 - Axis merge: sticky-buy-behavior ← sticky-cta-behavior, secondary-buy-action, sticky-element-behavior; sub-category-navigation ← subcategory-navigation, category-navigation; promotional-overlay ← promotional-drawer-treatment; secondary-nav-treatment ← sub-navigation-treatment
+- Taxonomy (`taxonomy.json`): 23 axes grouped into 87 families (decisions) by `gemini-3.1-pro-preview+families@1`. Each family partitions its axis's admitted values; reviewer overrides apply on top.
+- Benchmarks (`benchmarks.json`): per category (≥5 brands, else the cross-category benchmark) and per viewport, the brands using each value and each family.
+- **Season: black-friday-2026.** Every capture falls in a sale period, so promotional axes (hero message, offer framing, overlays) describe the season. Consumers should not treat those conventions as standing ones.
 
 ## What is NOT included
 

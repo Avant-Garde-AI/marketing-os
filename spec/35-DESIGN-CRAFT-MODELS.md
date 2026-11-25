@@ -1,6 +1,6 @@
 # 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
 
-> Status: **P1 BUILT** · **P2 in progress: wave-1 vocabulary complete (v0.2.0); wave 2 + gold set next** (2026-11-25) · MVP defined 2026-11-18
+> Status: **P1 BUILT** · **P2: M1 MET on wave 1 (dataset v0.3.0: taxonomy + benchmarks); Design Conversion MCP built; wave 2 + gold set next** (2026-11-25) · MVP defined 2026-11-18
 > Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
 > Origin: the "stroke-level decision model" idea, 2026-11-18.
 > Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
@@ -103,6 +103,9 @@ design-loop's logic-vs-adapters rule:
 | `labeler` | `PerceptionLabeler` interface, prompt builder, strict response parser (applies HARD + OPEN registers) |
 | `debrand` | Folds label records into the vocabulary (support = brand domain) and returns admission events |
 | `dataset` | Export labels to JSONL + a generated datasheet. Never exports pixels |
+| `conversion` | Conversion lens (stage, lever, question per axis), category × viewport benchmarks, `suggestStrokes` |
+| `taxonomy` | Value families (axis → decision → value): grouped by a model, partition-validated, reviewer-overridable |
+| `report` | M1 criteria, stage coverage, emergence, reward coverage |
 | `adapters/openai-vision` | Labeler over any OpenAI-compatible vision endpoint (frontier VLM now, our hosted open model later) |
 | `adapters/playwright-capture` | Lazy optional dependency. Captures a page set at desktop + mobile |
 | `cli` | `design-craft capture`, `label`, `vocab`, `dataset` |
@@ -137,6 +140,21 @@ open base model   (public preference data, open weights)
   blocklist run as design-loop gates, never as learned scores. Strokes resolve inside
   the tenant's DESIGN.md tokens. The model chooses *which* axis to move, and the brand
   decides *where* it can land.
+
+### 3.4 Delivery surface: the Design Conversion MCP
+
+`packages/design-conversion-mcp` (MIT) puts the vocabulary, taxonomy, benchmarks and stroke ranking in front
+of any MCP client, with conversion orientation as the organizing idea: every answer is framed by the
+purchase-path stage it serves, and every stroke carries its evidence and its caveats. The same transport-free
+core runs two ways:
+
+| | Open (local) | Hosted (Marketing OS) |
+|---|---|---|
+| Transport | stdio (`npx @avant-garde/design-conversion-mcp`) | Stateless Streamable HTTP (`createHttpHandler`) |
+| Auth | none | Account-scoped token, issued at registration (no Shopify install needed), or a tenant `mos_` token |
+| Vision model | the user's key (any OpenAI-compatible VLM) | ours, metered per audit through `authorize` |
+| Capture | local Playwright | screenshots first (no browser on serverless) |
+| Ranking | convention baseline | the same baseline until category outcome layers exist (P5), then outcome-tuned |
 
 ## 4. Open source & commercial shape
 
@@ -256,6 +274,42 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   The 6,594 value verdicts (880 same) and the axis verdicts ship with the dataset.
   **Next for the judge:** a deterministic qualifier guard, or a judge prompt that lists each name's
   qualifiers before deciding, so review stops being the main precision control.
+- **Judge qualifier guard: measured, not shipped (2026-11-25).** Three guards were measured against the reviewed
+  wave-1 set (491 kept merges, 69 blocks). A token-subset veto caught 8/69 bad merges and killed 78/491 good ones.
+  A closed qualifier-family veto (position, shape, indicator, type style, count) caught 25/69 and killed 56/491, or
+  4/69 and 18/491 when the other side's gloss counted as cover. A second-stage LLM audit that lists each side's
+  unmatched qualifiers caught 33-41/69 and overturned 179-293/491. It also missed `hamburger-menu-left` →
+  `hamburger-menu` and was noisy run to run. None beats reviewer blocks, so blocks stay the precision control,
+  and the gold-set pass is where judge precision gets fixed (a judge trained on the 6,594 verdicts + 69 blocks).
+- **M1 met (2026-11-25, `design-craft report`):** 27 recognized axes (target 20), 296 admitted values (100),
+  79 storefronts (60), 6 categories with ≥5 brands (4). Emergence 3/27. Reward coverage 0/296, as expected
+  before P4.
+- **Conversion lens + benchmarks + strokes (`conversion.ts`).** Every recognized axis has a hypothesized
+  purchase-path stage (attention → orientation → evaluation → confidence → commitment → basket), a lever, and
+  a conversion question. `buildBenchmarks` counts brands per value per category (K=5 minimum-support rule,
+  else the cross-category benchmark) and per viewport. `suggestStrokes` ranks moves by (convention share − page
+  share) × page-type stage weight × confidence. That is the decision model's action space and its transparent
+  baseline. Live audits shaped four rules: compare desktop with desktop (pooled viewports told Everlane's
+  desktop header to adopt the mobile hamburger); never suggest identity axes (type, ground, photography, motion,
+  story), only report them as distinctive; hold back motivation-lever strokes when the benchmark is one sale
+  season (`--season black-friday-2026`: "run a sale hero" was the season talking); and skip a "move" to a near
+  rewording of the page's own value.
+- **Taxonomy: axis → family → value (`taxonomy.ts`, dataset v0.3.0).** With 20-30 specific values per axis,
+  brands spread thin across near-variants, and live audits found zero strengths. One grouper call per axis
+  proposes families (the decisions a designer chooses between). A validator makes every family set partition the
+  admitted values (omitted → `other`, duplicates dropped, inventions ignored). The groupings are cached, and a
+  reviewer override file can move any value. Wave 1: 87 families on 23 axes, 0 repairs. Conventions, strengths
+  and strokes are measured on families, and a stroke targets the family's most-used value in the category.
+- **Design Conversion MCP (`packages/design-conversion-mcp`).** The open, conversion-oriented delivery surface
+  for the vocabulary. Six read-only tools: `design_audit_page` (Playwright capture → teacher VLM label →
+  strokes), `design_audit_screenshot`, `design_suggest_strokes` (no model call), `design_benchmark`,
+  `design_vocabulary`, `design_report`. Resources: method, lens, taxonomy, per-category benchmarks. Prompt:
+  `conversion_design_review`. The core is transport-free JSON-RPC with a stdio transport (local, bring your own
+  key) and a stateless Streamable HTTP handler (`authenticate` + `authorize` hooks for hosted tokens and audit
+  quotas). Capture refuses private and metadata addresses. Verified end to end over stdio on three live non-corpus
+  pages (Everlane desktop home, Ugmonk mobile home + desktop product), ~45-50 s per audit. The teacher's labels
+  vary somewhat run to run (6 vs 9 facets on one page), so the docs say to re-audit before acting on a
+  borderline stroke.
 - **Process loss: wave-1 pixels.** The captures lived in a session temp dir that was cleaned on 2026-11-24.
   Labels, vocabulary and verdicts are safe in git, but P3 needs (screenshot, facets) pairs, so the
   Black Friday pixels are gone for training. Captures now go to the package's gitignored `.captures/`.
@@ -317,3 +371,7 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   domain-agnostic axis schema (spec 23's "packs are consumers" stance), or stay as siblings?
 - **D3** Student VLM base model family and size for P3.
 - **D4** Category taxonomy: Shopify's product taxonomy top level vs our own.
+- **D5** Pre-install registration for the hosted MCP: where people register (avant-garde.ai site, a public
+  marketing-os-app route, or OAuth from an MCP client), how the account is verified, and the audit quota per account.
+- **D6** Publish `@avant-garde/design-craft` + `@avant-garde/design-conversion-mcp` to npm. The hosted mount
+  and the `npx` quick start both depend on it.

@@ -45,10 +45,23 @@ design-craft merge --vocab vocabulary.json --base-url <endpoint>/v1 [--dry-run] 
 #     --cached-only replays from .embeddings-cache.json / .verdicts-cache.json with no network:
 #     uncached axes are skipped and uncached pairs stay unmerged (the safe default).
 
-# 4. Inspect, then export the open dataset (labels + vocabulary + DATASHEET.md, no pixels).
-design-craft vocab --vocab vocabulary.json
-design-craft dataset --labels labels.jsonl --vocab vocabulary.json --out release/
+# 4. Group each axis's admitted values into families (decisions): one model call per axis,
+#    validated to partition the values exactly, cached for replay. --block takes reviewer overrides
+#    [{axis, value, family, label?, why?}].
+design-craft taxonomy --vocab vocabulary.json --out taxonomy.json --base-url <endpoint>/v1 [--cached-only]
+
+# 5. Category benchmarks: brands per value and per family, per category (≥5 brands) and viewport.
+#    --season marks a single-sale-season corpus, so promotional conventions are reported, not suggested.
+design-craft benchmarks --vocab vocabulary.json --labels labels.jsonl --taxonomy taxonomy.json --out benchmarks.json [--season black-friday-2026]
+
+# 6. Inspect (M1 criteria, stage coverage, emergence), then export the open dataset (no pixels).
+design-craft report --vocab vocabulary.json --labels labels.jsonl
+design-craft dataset --labels labels.jsonl --vocab vocabulary.json --out release/ --taxonomy taxonomy.json [--season …]
 ```
+
+The conversion layer (`conversion.ts`) maps every axis to a purchase-path stage and lever, builds
+the benchmarks, and ranks strokes (`suggestStrokes`). `@avant-garde/design-conversion-mcp` serves it
+over MCP.
 
 `label` is resumable: it skips captures already present in `--out` (by sha256).
 

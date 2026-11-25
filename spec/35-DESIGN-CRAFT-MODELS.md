@@ -1,6 +1,6 @@
 # 35 — Design Craft Models: the DTC craft vocabulary, perception model, and decision model
 
-> Status: **P1 BUILT** · **P2 in progress: wave 1 labeled, value merge resuming, axis merge built** (2026-11-25) · MVP defined 2026-11-18
+> Status: **P1 BUILT** · **P2 in progress: wave-1 vocabulary complete (v0.2.0); wave 2 + gold set next** (2026-11-25) · MVP defined 2026-11-18
 > Owner project: `marketing-os/` (open core). Hosted serving + outcome data live in `marketing-os-app/`.
 > Origin: the "stroke-level decision model" idea, 2026-11-18.
 > Builds on: spec 21 (Brand Conversion Design Agent), the shipped `packages/design-loop` executor, spec 22 (brand.md), spec 23 (Design Surfaces), spec 20 (Action gate).
@@ -245,6 +245,17 @@ labeled by `gemini-3.1-pro-preview` (D1 resolved: Gemini teacher, pinned id),
   (`sticky-element-behavior` → `sticky-buy-behavior`) until pass 2 showed that its values were all
   sticky buy boxes.
   Fixed on the way: debrand never marked seed axes `seeded`, so every axis read as emergent.
+- **Wave-1 vocabulary complete (2026-11-25, dataset v0.2.0).** With the cap raised, the value merge
+  finished all 24 seed axes, and the full replay from labels (debrand → merge-axes → merge) is
+  deterministic from cached verdicts. Result: **296 admitted values on 27 recognized axes**
+  (24 seeds + 3 emergent), 2,491 pending. Judge precision on the second half was lower (≈85%: 44 of
+  ≈290 blocked, vs 17 of 254 on the first half), and the error is almost always the same one: a
+  dropped or added qualifier (`hamburger-left` → `hamburger-menu`, `horizontal-swipe-with-progress-bar`
+  → `horizontal-swipe-gallery`). Blocking a pair frees the value to merge elsewhere, so review is
+  iterative (two more rounds, 8 more blocks) until no blocked value re-routes badly. 69 blocks total.
+  The 6,594 value verdicts (880 same) and the axis verdicts ship with the dataset.
+  **Next for the judge:** a deterministic qualifier guard, or a judge prompt that lists each name's
+  qualifiers before deciding, so review stops being the main precision control.
 - **Process loss: wave-1 pixels.** The captures lived in a session temp dir that was cleaned on 2026-11-24.
   Labels, vocabulary and verdicts are safe in git, but P3 needs (screenshot, facets) pairs, so the
   Black Friday pixels are gone for training. Captures now go to the package's gitignored `.captures/`.

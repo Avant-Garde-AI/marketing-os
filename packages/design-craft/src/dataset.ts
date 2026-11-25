@@ -92,9 +92,13 @@ function mergeState(v: Vocabulary): string[] {
   const merged = recognized.filter((a) => Object.values(v.axes[a]!.values).some((e) => e.merges?.some((m) => m.method === "semantic")));
   const n = Object.values(v.axes).reduce((t, ax) => t + Object.values(ax.values).reduce((u, e) => u + (e.merges?.filter((m) => m.method === "semantic").length ?? 0), 0), 0);
   if (!n) return ["- Semantic merge: not run. Synonym variants are separate values."];
-  const pending = recognized.filter((a) => !merged.includes(a));
+  const none = recognized.filter((a) => !merged.includes(a));
+  const folded = Object.entries(v.axes).filter(([, ax]) => ax.aliases?.length);
   return [
     `- Semantic merge: ${n} judged merges across ${merged.length} of ${recognized.length} recognized axes.`,
-    ...(pending.length ? [`- Not yet merged (synonym variants still separate): ${pending.join(", ")}`] : []),
+    ...(none.length ? [`- No judged value merges (not run, or none accepted): ${none.join(", ")}`] : []),
+    ...(folded.length
+      ? [`- Axis merge: ${folded.map(([a, ax]) => `${a} ← ${ax.aliases!.join(", ")}`).join("; ")}`]
+      : []),
   ];
 }

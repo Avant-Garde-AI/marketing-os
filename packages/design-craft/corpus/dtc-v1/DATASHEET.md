@@ -1,4 +1,4 @@
-# Datasheet: dtc-craft-labels v0.1.0
+# Datasheet: dtc-craft-labels v0.2.0
 
 Design-craft labels for DTC storefront pages (Marketing OS spec 35).
 
@@ -32,10 +32,11 @@ Design-craft labels for DTC storefront pages (Marketing OS spec 35).
 
 ## Vocabulary at export
 
-- Recognized axes: 24 · axes with admitted values: 23
-- Admitted values: 266 · pending: 2774
-- Semantic merge: 238 judged merges across 12 of 24 recognized axes.
-- Not yet merged (synonym variants still separate): motion-language, nav-architecture, offer-framing, pdp-gallery-behavior, photography-register, product-card-anatomy, product-detail-disclosure, section-seam, social-proof-density, trust-signal-placement, type-voice, variant-selection-style
+- Recognized axes: 27 · axes with admitted values: 23
+- Admitted values: 296 · pending: 2491
+- Semantic merge: 491 judged merges across 25 of 27 recognized axes.
+- No judged value merges (not run, or none accepted): promotional-overlay, sub-category-navigation
+- Axis merge: sticky-buy-behavior ← sticky-cta-behavior, secondary-buy-action, sticky-element-behavior; sub-category-navigation ← subcategory-navigation, category-navigation; promotional-overlay ← promotional-drawer-treatment; secondary-nav-treatment ← sub-navigation-treatment
 
 ## What is NOT included
 

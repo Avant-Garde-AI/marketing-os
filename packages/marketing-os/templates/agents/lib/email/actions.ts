@@ -652,15 +652,25 @@ function createCampaignDraft(deps: EmailActionDeps): Action<CreateDraftParams> {
         campaign.klaviyo = { ...campaign.klaviyo, campaignId: createdCampaign.campaignId, messageId: createdCampaign.messageId };
         await saveCampaign(deps.repo, campaign);
         steps.push(`campaign:${createdCampaign.campaignId}`);
-      } else if (campaign.klaviyo.messageId) {
-        // A RE-draft. The template PATCH above carries the body, but subject and
-        // preview text live on the campaign message — skip this and an approved
-        // subject change never reaches Klaviyo, while the card says it did.
-        await deps.klaviyo.updateCampaignMessage(campaign.klaviyo.messageId, {
-          subject: campaign.subject!,
-          previewText: campaign.previewText,
+      } else {
+        // A RE-draft. The template PATCH above carries the body; the audience lives
+        // on the campaign and the subject/preview on its message, and neither is
+        // touched by the template. Skip them and an approved change never reaches
+        // Klaviyo while the card says it did. (2026-11-26: a re-draft moved a BF
+        // campaign from the newsletter list to a 90-day segment in the artifact,
+        // and Klaviyo kept sending to the newsletter list.)
+        await deps.klaviyo.updateCampaignAudiences(campaign.klaviyo.campaignId, {
+          included: campaign.audience.included.map((r) => r.id),
+          excluded: (campaign.audience.excluded ?? []).map((r) => r.id),
         });
-        steps.push("message:synced");
+        steps.push("audience:synced");
+        if (campaign.klaviyo.messageId) {
+          await deps.klaviyo.updateCampaignMessage(campaign.klaviyo.messageId, {
+            subject: campaign.subject!,
+            previewText: campaign.previewText,
+          });
+          steps.push("message:synced");
+        }
       }
 
       // Step 5 — assign the template to the message.

@@ -856,6 +856,27 @@ export function createKlaviyoClient(options: KlaviyoClientOptions = {}): Klaviyo
       });
     },
 
+    async updateCampaignAudiences(
+      campaignId: string,
+      audiences: { included: string[]; excluded?: string[] }
+    ): Promise<void> {
+      // PATCH replaces both arrays, so send excluded explicitly: omitting it
+      // would keep a stale exclusion from the first draft.
+      await request({
+        method: "PATCH",
+        path: EP.campaign(campaignId),
+        body: {
+          data: {
+            type: "campaign",
+            id: campaignId,
+            attributes: {
+              audiences: { included: audiences.included, excluded: audiences.excluded ?? [] },
+            },
+          },
+        },
+      });
+    },
+
     async updateCampaignSendStrategy(
       campaignId: string,
       strategy: { datetime: string }

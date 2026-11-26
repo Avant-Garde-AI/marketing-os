@@ -474,6 +474,8 @@ export interface KlaviyoClient {
   assignTemplate(messageId: string, templateId: string): Promise<void>;
   /** Sync subject/preview text onto an EXISTING campaign message (a re-draft). */
   updateCampaignMessage(messageId: string, input: { subject: string; previewText?: string }): Promise<void>;
+  /** Sync the included/excluded audiences onto an EXISTING campaign (a re-draft). */
+  updateCampaignAudiences(campaignId: string, audiences: { included: string[]; excluded?: string[] }): Promise<void>;
   updateCampaignSendStrategy(campaignId: string, strategy: { datetime: string }): Promise<void>;
   createSendJob(campaignId: string): Promise<{ status: string }>;
   cancelSendJob(campaignId: string, opts?: { revertToDraft?: boolean }): Promise<void>;

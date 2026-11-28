@@ -35,5 +35,23 @@
     "tsup": "^8.0.2",
     "typescript": "^5.7.0",
     "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "design",
+    "conversion",
+    "cro",
+    "shopify",
+    "storefront"
+  ],
+  "homepage": "https://github.com/Avant-Garde-AI/marketing-os/tree/main/packages/design-conversion-mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avant-Garde-AI/marketing-os.git",
+    "directory": "packages/design-conversion-mcp"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

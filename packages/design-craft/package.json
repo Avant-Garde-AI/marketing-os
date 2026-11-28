@@ -40,5 +40,23 @@
     "tsup": "^8.0.2",
     "typescript": "^5.7.0",
     "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "design",
+    "dtc",
+    "shopify",
+    "storefront",
+    "dataset",
+    "vlm",
+    "conversion"
+  ],
+  "homepage": "https://github.com/Avant-Garde-AI/marketing-os/tree/main/packages/design-craft#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avant-Garde-AI/marketing-os.git",
+    "directory": "packages/design-craft"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

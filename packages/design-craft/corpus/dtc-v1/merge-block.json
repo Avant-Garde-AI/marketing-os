@@ -1,0 +1,416 @@
+[
+  {
+    "axis": "accent-economy",
+    "a": "sparse-accent-color",
+    "b": "brand-color-badges",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "accent-economy",
+    "a": "sparing-accent-color",
+    "b": "sparing-sale-badges",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "accent-economy",
+    "a": "promotional-accent-color",
+    "b": "sale-driven-red-accents",
+    "why": "broad into narrow (adds a hue)"
+  },
+  {
+    "axis": "accent-economy",
+    "a": "sparse-promotional-highlight",
+    "b": "header-restricted-accent",
+    "why": "adds a location"
+  },
+  {
+    "axis": "ground-tone",
+    "a": "white-with-dark-sections",
+    "b": "white-with-image-breaks",
+    "why": "tonal sections are not image breaks"
+  },
+  {
+    "axis": "ground-tone",
+    "a": "white-with-full-bleed-media",
+    "b": "white-with-color-blocking",
+    "why": "media is not color blocking"
+  },
+  {
+    "axis": "ground-tone",
+    "a": "tinted-off-white-ground",
+    "b": "light-gray-base",
+    "why": "off-white vs gray: when unsure, different"
+  },
+  {
+    "axis": "buy-box-structure",
+    "a": "sticky-add-to-cart",
+    "b": "sticky-bottom-bar-cta",
+    "why": "broad into narrow (adds placement)"
+  },
+  {
+    "axis": "collection-grid-density",
+    "a": "three-column-grid",
+    "b": "three-column-interrupted-grid",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "collection-grid-density",
+    "a": "four-column-grid",
+    "b": "uniform-four-column-grid",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "hero-message-mode",
+    "a": "sale-promotion",
+    "b": "promotional-takeover",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "hero-message-mode",
+    "a": "standalone-text-block",
+    "b": "oversized-inline-text",
+    "why": "adds scale"
+  },
+  {
+    "axis": "brand-story-placement",
+    "a": "lower-funnel-sustainability-module",
+    "b": "pre-footer-lifestyle-block",
+    "why": "different content"
+  },
+  {
+    "axis": "brand-story-placement",
+    "a": "pre-footer-block",
+    "b": "pre-footer-lifestyle-block",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "brand-story-placement",
+    "a": "interspersed-community-blocks",
+    "b": "interspersed-mission-blocks",
+    "why": "different content"
+  },
+  {
+    "axis": "cart-surface",
+    "a": "header-icon-only",
+    "b": "header-icon-badge",
+    "why": "no count vs count badge"
+  },
+  {
+    "axis": "filter-presentation",
+    "a": "persistent-left-sidebar",
+    "b": "left-sidebar-accordions",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "motion-language",
+    "a": "pausable-hero-video",
+    "b": "hero-video-background",
+    "why": "drops pause control"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "hamburger-left",
+    "b": "hamburger-menu",
+    "why": "drops position"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "hamburger-menu-left",
+    "b": "hamburger-menu",
+    "why": "drops position"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "split-inline-navigation",
+    "b": "split-utility-header",
+    "why": "different content"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "centered-inline-text-links",
+    "b": "inline-horizontal-text-links",
+    "why": "drops alignment"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "center-text-links",
+    "b": "inline-horizontal-text-links",
+    "why": "drops alignment"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "secondary-horizontal-scroll-bar",
+    "b": "hamburger-and-horizontal-scroll",
+    "why": "adds hamburger"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "two-tier-header-with-scrollable-links",
+    "b": "hamburger-and-scrollable-links",
+    "why": "two-tier vs hamburger"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "hamburger-and-cart",
+    "b": "hamburger-left-logo-center-cart-right",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "centered-logo-dropdown-links",
+    "b": "top-bar-with-dropdowns",
+    "why": "drops centered logo"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "hamburger-and-utilities",
+    "b": "text-trigger-split-header",
+    "why": "different mechanism"
+  },
+  {
+    "axis": "offer-framing",
+    "a": "sitewide-percentage-hero",
+    "b": "hero-takeover",
+    "why": "different specificity"
+  },
+  {
+    "axis": "offer-framing",
+    "a": "cta-integrated-pricing",
+    "b": "strikethrough-in-cta",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "offer-framing",
+    "a": "strikethrough-red-price-percentage-badge",
+    "b": "strikethrough-and-red-text",
+    "why": "drops badge"
+  },
+  {
+    "axis": "offer-framing",
+    "a": "strikethrough-price-and-member-prompt",
+    "b": "strikethrough-and-red-promo-text",
+    "why": "different element"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "horizontal-swipe-with-progress-bar",
+    "b": "horizontal-swipe-gallery",
+    "why": "drops progress bar"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "swipe-carousel-with-progress-bar",
+    "b": "horizontal-swipe-gallery",
+    "why": "drops progress bar"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "horizontal-swipe-carousel",
+    "b": "paginated-swipe-carousel",
+    "why": "adds pagination"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "arrow-navigated-inline-carousel",
+    "b": "single-image-carousel",
+    "why": "different mechanism"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "stacked-grid",
+    "b": "two-column-image-grid",
+    "why": "adds column count"
+  },
+  {
+    "axis": "photography-register",
+    "a": "studio-model-light-background",
+    "b": "studio-on-grey",
+    "why": "light vs grey ground"
+  },
+  {
+    "axis": "photography-register",
+    "a": "lifestyle-hero-studio-cards",
+    "b": "isolated-studio-products",
+    "why": "drops lifestyle"
+  },
+  {
+    "axis": "photography-register",
+    "a": "mixed-photography-register",
+    "b": "studio-hero-lifestyle-details",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "product-card-anatomy",
+    "a": "image-with-inline-metadata",
+    "b": "image-title-price-split",
+    "why": "broad into narrow"
+  },
+  {
+    "axis": "product-detail-disclosure",
+    "a": "expandable-accordion-section",
+    "b": "in-column-accordion-stack",
+    "why": "adds location"
+  },
+  {
+    "axis": "product-detail-disclosure",
+    "a": "stacked-accordions-below-cta",
+    "b": "stacked-accordions",
+    "why": "drops location"
+  },
+  {
+    "axis": "section-seam",
+    "a": "flush-straight-edges",
+    "b": "hard-color-edge",
+    "why": "flush vs color edge"
+  },
+  {
+    "axis": "section-seam",
+    "a": "edge-to-edge-media-blocks",
+    "b": "whitespace-and-flush-images",
+    "why": "adds whitespace"
+  },
+  {
+    "axis": "section-seam",
+    "a": "flush-image-or-whitespace",
+    "b": "whitespace-and-image-bleed",
+    "why": "either/or"
+  },
+  {
+    "axis": "section-seam",
+    "a": "full-bleed-stacked-blocks",
+    "b": "full-bleed-image-breaks",
+    "why": "blocks vs image breaks"
+  },
+  {
+    "axis": "section-seam",
+    "a": "gapped-masonry-grid",
+    "b": "visible-grid-gaps",
+    "why": "drops masonry"
+  },
+  {
+    "axis": "social-proof-density",
+    "a": "hero-stars-and-bottom-list",
+    "b": "filterable-review-list",
+    "why": "different element"
+  },
+  {
+    "axis": "social-proof-density",
+    "a": "dedicated-ugc-section",
+    "b": "bottom-ugc-gallery",
+    "why": "adds position"
+  },
+  {
+    "axis": "social-proof-density",
+    "a": "card-ratings-and-pull-quote-section",
+    "b": "card-ratings-and-review-section",
+    "why": "quote vs reviews"
+  },
+  {
+    "axis": "social-proof-density",
+    "a": "star-rating-and-ugc-gallery",
+    "b": "stars-ugc-and-reviews",
+    "why": "adds reviews"
+  },
+  {
+    "axis": "social-proof-density",
+    "a": "sparse-badge-only",
+    "b": "sparse-bestseller-badges",
+    "why": "adds badge type"
+  },
+  {
+    "axis": "trust-signal-placement",
+    "a": "post-description-text-blocks",
+    "b": "inline-policy-paragraphs",
+    "why": "adds content type"
+  },
+  {
+    "axis": "type-voice",
+    "a": "heavy-condensed-sans",
+    "b": "heavy-display-sans",
+    "why": "drops condensed"
+  },
+  {
+    "axis": "type-voice",
+    "a": "stylized-serif-display-sans-body",
+    "b": "chunky-serif-display-sans-body",
+    "why": "stylized vs chunky"
+  },
+  {
+    "axis": "type-voice",
+    "a": "geometric-sans-system",
+    "b": "all-sans-serif-system",
+    "why": "drops geometric"
+  },
+  {
+    "axis": "variant-selection-style",
+    "a": "pill-button-selector",
+    "b": "outlined-pill-buttons",
+    "why": "adds outlined"
+  },
+  {
+    "axis": "variant-selection-style",
+    "a": "image-swatches",
+    "b": "square-image-swatches",
+    "why": "adds shape"
+  },
+  {
+    "axis": "variant-selection-style",
+    "a": "image-swatches-with-strikethrough",
+    "b": "image-thumbnail-buttons",
+    "why": "drops strikethrough"
+  },
+  {
+    "axis": "variant-selection-style",
+    "a": "circular-color-swatch-grid",
+    "b": "color-swatch-grid",
+    "why": "drops shape"
+  },
+  {
+    "axis": "cart-surface",
+    "a": "header-icon-with-count",
+    "b": "header-icon-only",
+    "why": "count vs no count"
+  },
+  {
+    "axis": "type-voice",
+    "a": "all-sans-serif-system",
+    "b": "geometric-sans-serif",
+    "why": "adds geometric"
+  },
+  {
+    "axis": "type-voice",
+    "a": "heavy-display-neutral-body",
+    "b": "heavy-condensed-sans",
+    "why": "adds condensed"
+  },
+  {
+    "axis": "type-voice",
+    "a": "stylized-serif-display-sans-body",
+    "b": "heavy-serif-display-sans-body",
+    "why": "stylized vs heavy"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "horizontal-swipe-carousel",
+    "b": "horizontal-swipe-with-dots",
+    "why": "adds dots"
+  },
+  {
+    "axis": "pdp-gallery-behavior",
+    "a": "horizontal-scroll-gallery",
+    "b": "horizontal-swipe-with-progress-bar",
+    "why": "adds progress bar"
+  },
+  {
+    "axis": "nav-architecture",
+    "a": "hamburger-and-utilities",
+    "b": "text-menu-and-icons",
+    "why": "hamburger vs text menu"
+  },
+  {
+    "axis": "type-voice",
+    "a": "stylized-serif-display-sans-body",
+    "b": "expressive-display-sans-body",
+    "why": "drops serif"
+  }
+]

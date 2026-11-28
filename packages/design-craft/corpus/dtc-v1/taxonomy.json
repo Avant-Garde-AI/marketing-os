@@ -1,0 +1,1004 @@
+{
+  "schema": "design-craft/taxonomy@1",
+  "vocabularyRef": "axes:23/values:296/brands:77",
+  "grouper": "gemini-3.1-pro-preview+families@1",
+  "axes": {
+    "accent-economy": {
+      "families": [
+        {
+          "key": "strict-monochrome",
+          "label": "Strict Monochrome",
+          "description": "The interface relies entirely on black, white, and greys, with no distinct accent color for interactive elements, letting product imagery provide all color.",
+          "values": [
+            "monochrome-ui",
+            "monochrome-ui-elements",
+            "strict-monochrome-ui",
+            "minimal-accent-color",
+            "monochrome-with-product-color",
+            "strict-monochrome",
+            "zero-accent-color"
+          ]
+        },
+        {
+          "key": "sparse-functional-accents",
+          "label": "Sparse Functional Accents",
+          "description": "Accent color is used sparingly, primarily to highlight interactive elements like primary buttons, links, and widgets.",
+          "values": [
+            "sparse-functional-accents",
+            "low-accent-usage",
+            "high-contrast-action-color",
+            "sparse-brand-color"
+          ]
+        },
+        {
+          "key": "promotional-accents",
+          "label": "Promotional Accents",
+          "description": "Accent color is reserved almost exclusively to draw attention to sales, discounts, and promotional badges.",
+          "values": [
+            "heavy-promotional-red",
+            "promotional-color-coding",
+            "red-for-promotions",
+            "red-sale-accents",
+            "semantic-color-accents",
+            "sparse-promotional-color",
+            "sparse-red-accents"
+          ]
+        },
+        {
+          "key": "liberal-color-usage",
+          "label": "Liberal Color Usage",
+          "description": "Brand or bright colors are used liberally across the interface for backgrounds, badges, highlights, and buttons.",
+          "values": [
+            "high-contrast-accents",
+            "structural-color-floods"
+          ]
+        }
+      ]
+    },
+    "announcement-bar-treatment": {
+      "families": [
+        {
+          "key": "static-message",
+          "label": "Static Message",
+          "description": "The bar displays a single, persistent message without any animation or rotation.",
+          "values": [
+            "static-text-bar",
+            "static-text-strip",
+            "static-text-banner",
+            "static-text-with-link",
+            "solid-color-text-strip",
+            "solid-color-static-bar",
+            "solid-color-text-banner",
+            "static-promotional-bar",
+            "static-text-only"
+          ]
+        },
+        {
+          "key": "message-carousel",
+          "label": "Message Carousel",
+          "description": "The bar cycles through multiple messages, typically providing arrows for manual navigation.",
+          "values": [
+            "interactive-text-carousel",
+            "carousel-with-arrows",
+            "carousel-text-bar",
+            "text-carousel-with-arrows",
+            "rotating-text-carousel",
+            "arrow-navigated-text-carousel",
+            "carousel-announcement-bar",
+            "text-carousel",
+            "interactive-carousel",
+            "navigable-text-strip"
+          ]
+        },
+        {
+          "key": "carousel-with-controls",
+          "label": "Carousel with Playback Controls",
+          "description": "The rotating message carousel includes explicit pause or play buttons to control the animation.",
+          "values": [
+            "carousel-with-playback-controls",
+            "rotating-text-with-pause",
+            "text-with-pause-control"
+          ]
+        },
+        {
+          "key": "dismissible-bar",
+          "label": "Dismissible Bar",
+          "description": "The announcement bar includes a close button, allowing the shopper to remove it from their view.",
+          "values": [
+            "dismissible-carousel",
+            "dismissible-text-banner"
+          ]
+        },
+        {
+          "key": "scrolling-marquee",
+          "label": "Scrolling Marquee",
+          "description": "The text continuously scrolls horizontally across the screen in a marquee effect.",
+          "values": [
+            "scrolling-text-marquee"
+          ]
+        }
+      ]
+    },
+    "brand-story-placement": {
+      "families": [
+        {
+          "key": "mid-page-split-feature",
+          "label": "mid-page-split-feature",
+          "description": "The brand's value propositions are presented mid-page in a split layout with text on one side and a lifestyle image on the other.",
+          "values": [
+            "mid-page-split-feature"
+          ]
+        },
+        {
+          "key": "interleaved-with-merchandising",
+          "label": "interleaved-with-merchandising",
+          "description": "Sections explaining brand value propositions and ingredients are placed between product shopping blocks.",
+          "values": [
+            "interleaved-with-merchandising"
+          ]
+        },
+        {
+          "key": "mid-page-text-block",
+          "label": "mid-page-text-block",
+          "description": "The brand's value proposition appears halfway down the page in a dedicated, solid-color text block, following product merchandising and social proof.",
+          "values": [
+            "mid-page-text-block"
+          ]
+        }
+      ]
+    },
+    "buy-box-structure": {
+      "families": [
+        {
+          "key": "standard-vertical-column",
+          "label": "Standard Vertical Column",
+          "description": "The purchase interface is grouped into a single, static vertical column, typically on the right side of the page.",
+          "values": [
+            "right-column-stacked-details",
+            "standard-right-column",
+            "right-column-buy-box",
+            "stacked-title-variants-cta"
+          ]
+        },
+        {
+          "key": "sticky-scroll-column",
+          "label": "Sticky Scroll Column",
+          "description": "The purchase column remains fixed in place on the screen while the user scrolls through the product images.",
+          "values": [
+            "sticky-scroll"
+          ]
+        },
+        {
+          "key": "split-buy-box",
+          "label": "Split Buy Box",
+          "description": "The purchase elements are divided, placing the title and price above the images and the selection and checkout buttons below.",
+          "values": [
+            "split-buy-box"
+          ]
+        }
+      ]
+    },
+    "cart-surface": {
+      "families": [
+        {
+          "key": "slide-out-cart-drawer",
+          "label": "slide-out-cart-drawer",
+          "description": "The cart interface slides in from the right edge of the screen, overlaying the page content.",
+          "values": [
+            "slide-out-cart-drawer"
+          ]
+        },
+        {
+          "key": "icon-with-badge",
+          "label": "icon-with-badge",
+          "description": "The cart is represented by a bag icon in the header, featuring a numerical badge for item count.",
+          "values": [
+            "icon-with-badge"
+          ]
+        }
+      ]
+    },
+    "collection-grid-density": {
+      "families": [
+        {
+          "key": "single-column",
+          "label": "Single Column Stack",
+          "description": "Products are displayed in a single vertical column, typically spanning the full width of the viewport.",
+          "values": [
+            "single-column-stack"
+          ]
+        },
+        {
+          "key": "strict-two-column",
+          "label": "Strict Two-Column Grid",
+          "description": "Products are arranged in a continuous, unbroken two-column layout without promotional interruptions.",
+          "values": [
+            "two-column-grid",
+            "strict-two-column-grid",
+            "two-column-uniform-grid",
+            "strict-two-column"
+          ]
+        },
+        {
+          "key": "interrupted-two-column",
+          "label": "Interrupted Two-Column Grid",
+          "description": "A two-column product grid that is periodically broken by promotional tiles or full-width editorial sections.",
+          "values": [
+            "two-column-interrupted",
+            "two-column-with-promo-tiles",
+            "interrupted-two-column-grid",
+            "two-column-with-inline-promo"
+          ]
+        },
+        {
+          "key": "strict-multi-column",
+          "label": "Strict Multi-Column Grid",
+          "description": "Products are arranged in a rigid, uninterrupted three- or four-column layout.",
+          "values": [
+            "strict-three-column-grid",
+            "uniform-four-column-grid",
+            "four-column-grid",
+            "uniform-four-column"
+          ]
+        },
+        {
+          "key": "interrupted-multi-column",
+          "label": "Interrupted Multi-Column Grid",
+          "description": "A three- or four-column product grid that is occasionally broken by promotional graphics occupying grid cells.",
+          "values": [
+            "four-column-interrupted-grid",
+            "three-column-interrupted-grid",
+            "four-column-with-promo-tiles"
+          ]
+        }
+      ]
+    },
+    "cross-sell-pattern": {
+      "families": [
+        {
+          "key": "standard-horizontal-carousel",
+          "label": "Standard Horizontal Carousel",
+          "description": "Additional products are displayed in a standard, horizontally scrolling row or carousel.",
+          "values": [
+            "horizontal-scroll-cards",
+            "horizontal-card-carousel",
+            "horizontal-carousel",
+            "horizontal-scroll-carousel"
+          ]
+        },
+        {
+          "key": "multiple-thematic-carousels",
+          "label": "Multiple Thematic Carousels",
+          "description": "Recommendations are separated into multiple distinct horizontal carousels based on specific themes or recommendation types.",
+          "values": [
+            "horizontal-product-carousels",
+            "multiple-thematic-carousels"
+          ]
+        }
+      ]
+    },
+    "filter-presentation": {
+      "families": [
+        {
+          "key": "horizontal-bar",
+          "label": "Horizontal Bar",
+          "description": "Filtering options are displayed directly above the product grid in a horizontal layout.",
+          "values": [
+            "horizontal-dropdown-bar",
+            "horizontal-text-links"
+          ]
+        },
+        {
+          "key": "sidebar-menu",
+          "label": "Sidebar Menu",
+          "description": "Filtering options are housed in a persistent vertical sidebar next to the product grid.",
+          "values": [
+            "left-sidebar-accordions"
+          ]
+        },
+        {
+          "key": "button-trigger",
+          "label": "Button Trigger",
+          "description": "Filtering and sorting are hidden behind a button that must be clicked to access the options.",
+          "values": [
+            "full-width-button-trigger"
+          ]
+        },
+        {
+          "key": "sort-only",
+          "label": "Sort Only",
+          "description": "The page provides a sorting mechanism but lacks visible filtering options.",
+          "values": [
+            "sort-only-dropdown"
+          ]
+        }
+      ]
+    },
+    "ground-tone": {
+      "families": [
+        {
+          "key": "solid-white",
+          "label": "Solid White",
+          "description": "The page uses a consistent, uninterrupted white background from top to bottom.",
+          "values": [
+            "solid-white",
+            "solid-white-ground",
+            "pure-white",
+            "pure-white-ground",
+            "uniform-white",
+            "white-base"
+          ]
+        },
+        {
+          "key": "solid-tint",
+          "label": "Solid Tint or Color",
+          "description": "The page uses a consistent, uninterrupted non-white background color, such as light gray, off-white, or beige.",
+          "values": [
+            "consistent-warm-off-white",
+            "warm-off-white",
+            "off-white-ground",
+            "solid-light-gray",
+            "solid-light-grey",
+            "uniform-light-gray",
+            "continuous-warm-beige",
+            "light-gray-ground",
+            "solid-color-fill",
+            "tinted-page-ground",
+            "warm-off-white-solid"
+          ]
+        },
+        {
+          "key": "white-with-blocks",
+          "label": "White with Contrasting Sections",
+          "description": "The primary background is white, but specific sections use tinted colors, gray bands, or full-bleed images to separate content.",
+          "values": [
+            "white-and-light-grey-blocking",
+            "white-with-tinted-sections",
+            "white-with-color-blocks",
+            "white-and-light-grey",
+            "white-with-grey-gallery",
+            "alternating-light-neutrals",
+            "white-with-grey-blocks",
+            "white-with-tinted-blocks",
+            "white-base-with-image-blocks",
+            "white-with-color-blocking",
+            "white-with-gray-band"
+          ]
+        },
+        {
+          "key": "color-blocked",
+          "label": "Color Blocked Sections",
+          "description": "The page background shifts entirely between different solid colors, gradients, or tints for each section, rather than relying on a single base color.",
+          "values": [
+            "color-blocked-sections",
+            "vibrant-color-blocking",
+            "alternating-color-blocks",
+            "warm-tinted-ground"
+          ]
+        }
+      ]
+    },
+    "hero-composition": {
+      "families": [
+        {
+          "key": "left-aligned-overlay",
+          "label": "Left-Aligned Overlay",
+          "description": "A static, full-bleed background image with text and calls-to-action overlaid on the left side.",
+          "values": [
+            "full-bleed-image-overlay",
+            "full-bleed-text-overlay",
+            "full-bleed-bottom-left-content",
+            "full-bleed-image-left-text"
+          ]
+        },
+        {
+          "key": "centered-overlay",
+          "label": "Centered Overlay",
+          "description": "A static, full-bleed background image with text and calls-to-action centered directly over the image.",
+          "values": [
+            "full-bleed-background-image",
+            "full-bleed-image-centered-overlay",
+            "full-bleed-centered-overlay"
+          ]
+        },
+        {
+          "key": "carousel-overlay",
+          "label": "Carousel Overlay",
+          "description": "A full-bleed image carousel or slider with overlaid text and calls-to-action.",
+          "values": [
+            "full-bleed-carousel-overlay",
+            "full-bleed-image-carousel"
+          ]
+        }
+      ]
+    },
+    "hero-message-mode": {
+      "families": [
+        {
+          "key": "promotional-sale-message",
+          "label": "Promotional Sale Message",
+          "description": "The hero section leads with a direct discount, sale event, or promotional offer to drive immediate conversion.",
+          "values": [
+            "promotional-sale-announcement",
+            "promotional-announcement",
+            "promotional-campaign-announcement",
+            "promotional-sale-headline",
+            "direct-promotional-offer",
+            "typographic-sale-announcement",
+            "promotional-text-overlay",
+            "direct-sale-announcement"
+          ]
+        },
+        {
+          "key": "campaign-or-collection",
+          "label": "Campaign or Collection",
+          "description": "The primary text introduces a new product line, season, or thematic concept rather than a hard promotional discount.",
+          "values": [
+            "new-collection-announcement",
+            "thematic-campaign-headline"
+          ]
+        },
+        {
+          "key": "purely-visual",
+          "label": "Purely Visual",
+          "description": "The hero section relies entirely on imagery without overlaid text, deferring messaging to subsequent sections.",
+          "values": [
+            "purely-visual-hero"
+          ]
+        }
+      ]
+    },
+    "merchandising-entry": {
+      "families": [
+        {
+          "key": "standard-carousel",
+          "label": "Standard Carousel",
+          "description": "Shoppers browse products by swiping horizontally through one or more standard product carousels.",
+          "values": [
+            "horizontal-product-carousel",
+            "horizontal-product-carousels"
+          ]
+        },
+        {
+          "key": "tabbed-carousel",
+          "label": "Tabbed Carousel",
+          "description": "Shoppers can filter the initial product carousel using built-in tabs for categories or genders.",
+          "values": [
+            "tabbed-product-carousel"
+          ]
+        },
+        {
+          "key": "product-grid",
+          "label": "Product Grid",
+          "description": "Shoppers are presented with a static, multi-column grid of products immediately following the hero section.",
+          "values": [
+            "immediate-product-grid"
+          ]
+        }
+      ]
+    },
+    "nav-architecture": {
+      "families": [
+        {
+          "key": "hamburger-menu",
+          "label": "Hamburger Menu",
+          "description": "Primary navigation is hidden behind a hamburger icon to keep the header compact, often accompanied by utility icons.",
+          "values": [
+            "hamburger-left-icons-right",
+            "hamburger-and-icons",
+            "hamburger-menu",
+            "hamburger-left-actions-right",
+            "hamburger-and-utility-icons",
+            "hamburger-left-logo-center",
+            "hamburger-with-exposed-search",
+            "hamburger-and-icon-row",
+            "hamburger-left-logo-center-cart-right",
+            "hamburger-menu-right",
+            "right-aligned-hamburger"
+          ]
+        },
+        {
+          "key": "horizontal-inline-links",
+          "label": "Horizontal Inline Links",
+          "description": "Primary navigation is fully exposed as a horizontal list of links in the same row as the logo and utilities.",
+          "values": [
+            "horizontal-text-links",
+            "centered-horizontal-links",
+            "inline-center-links",
+            "inline-horizontal-links",
+            "centered-inline-links",
+            "horizontal-dropdown",
+            "horizontal-links",
+            "horizontal-top-nav",
+            "inline-horizontal-text-links"
+          ]
+        },
+        {
+          "key": "split-navigation",
+          "label": "Split Navigation",
+          "description": "The header is split, typically with a centered logo and navigation links on one side balanced by utilities on the other.",
+          "values": [
+            "split-nav-center-logo",
+            "centered-logo-split-navigation",
+            "split-inline-navigation",
+            "split-utility-header",
+            "split-left-links-center-logo"
+          ]
+        },
+        {
+          "key": "two-tier-stacked",
+          "label": "Two-Tier Stacked",
+          "description": "Navigation links are placed in a dedicated second row below the main header containing the logo and utilities.",
+          "values": [
+            "two-tier-header",
+            "centered-logo-stacked-links",
+            "horizontal-text-row",
+            "two-tier-centered-logo"
+          ]
+        },
+        {
+          "key": "scrollable-navigation",
+          "label": "Scrollable Navigation",
+          "description": "Categories or subcategories are presented in a horizontally scrollable list, often supplementing a hamburger menu.",
+          "values": [
+            "hamburger-and-scrollable-links",
+            "hamburger-and-pill-scroll",
+            "horizontal-scroll-subnav",
+            "horizontal-scroll-text-links"
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "description": "Navigation architectures that do not fit the primary structural patterns.",
+          "values": [
+            "transparent-header-over-hero"
+          ]
+        }
+      ]
+    },
+    "offer-framing": {
+      "families": [
+        {
+          "key": "standard-plain-price",
+          "label": "Standard Plain Price",
+          "description": "The price is displayed plainly without any promotional styling, comparative framing, or badges.",
+          "values": [
+            "standard-price-display",
+            "unadorned-price-display"
+          ]
+        },
+        {
+          "key": "price-with-installments",
+          "label": "Price with Installments",
+          "description": "The primary price is shown alongside options to pay in installments via third-party services.",
+          "values": [
+            "standard-price-with-installments",
+            "price-with-installments"
+          ]
+        },
+        {
+          "key": "strikethrough-pricing",
+          "label": "Strikethrough Pricing",
+          "description": "The original price is crossed out next to the new sale price, which may be highlighted in a contrasting color.",
+          "values": [
+            "strikethrough-red-sale-price",
+            "strikethrough-original-red-sale",
+            "strikethrough-sale-pricing"
+          ]
+        },
+        {
+          "key": "strikethrough-with-badge",
+          "label": "Strikethrough with Badge",
+          "description": "The original price is crossed out and accompanied by a badge highlighting the savings or percentage off.",
+          "values": [
+            "strikethrough-with-percentage-badge",
+            "strikethrough-with-badge",
+            "strikethrough-and-savings-badge"
+          ]
+        },
+        {
+          "key": "price-in-cta",
+          "label": "Price in CTA",
+          "description": "The price, whether standard or discounted, is displayed directly inside the primary add-to-cart button.",
+          "values": [
+            "price-integrated-in-cta",
+            "price-inside-cta",
+            "strikethrough-in-cta"
+          ]
+        }
+      ]
+    },
+    "pdp-gallery-behavior": {
+      "families": [
+        {
+          "key": "horizontal-swipe",
+          "label": "Horizontal Swipe Carousel",
+          "description": "Shoppers browse images by swiping horizontally through a carousel, often indicated by dots or a progress bar.",
+          "values": [
+            "horizontal-swipe-carousel",
+            "horizontal-swipe-with-dots",
+            "horizontal-swipe-gallery",
+            "horizontal-swipe-with-progress-bar",
+            "paginated-swipe-carousel",
+            "peek-carousel"
+          ]
+        },
+        {
+          "key": "bottom-thumbnails",
+          "label": "Bottom Thumbnails",
+          "description": "A large main image is displayed with a row of clickable thumbnails positioned below it.",
+          "values": [
+            "hero-with-thumbnail-row",
+            "carousel-with-thumbnails"
+          ]
+        },
+        {
+          "key": "left-thumbnails",
+          "label": "Left Thumbnails",
+          "description": "A large main image is displayed with a vertical column of clickable thumbnails positioned to its left.",
+          "values": [
+            "left-vertical-thumbnails",
+            "left-thumbnail-gallery",
+            "left-thumbnail-carousel"
+          ]
+        },
+        {
+          "key": "vertical-scroll-grid",
+          "label": "Vertical Scroll Grid",
+          "description": "Product images are arranged in a grid layout that the shopper scrolls through vertically.",
+          "values": [
+            "two-column-scroll-grid",
+            "asymmetric-image-grid"
+          ]
+        },
+        {
+          "key": "static-image",
+          "label": "Static Image",
+          "description": "A single, static product image is displayed without any carousel or thumbnails.",
+          "values": [
+            "static-hero-image"
+          ]
+        }
+      ]
+    },
+    "photography-register": {
+      "families": [
+        {
+          "key": "isolated-studio-product",
+          "label": "Isolated Studio Product",
+          "description": "Products are shown exclusively as clean, isolated studio shots on neutral backgrounds.",
+          "values": [
+            "isolated-studio-shots",
+            "isolated-on-light-grey",
+            "studio-isolation-on-grey",
+            "studio-product-on-grey",
+            "studio-product-shots"
+          ]
+        },
+        {
+          "key": "studio-model-only",
+          "label": "Studio Model Only",
+          "description": "Products are presented exclusively on models against a consistent studio backdrop.",
+          "values": [
+            "studio-model-shots",
+            "studio-on-grey"
+          ]
+        },
+        {
+          "key": "mixed-gallery",
+          "label": "Mixed Gallery",
+          "description": "The same gallery or grid alternates between clean studio shots and contextual lifestyle or model photography.",
+          "values": [
+            "mixed-studio-and-lifestyle",
+            "studio-product-and-lifestyle-mix",
+            "studio-product-and-lifestyle",
+            "mixed-model-and-product-shots"
+          ]
+        },
+        {
+          "key": "contextual-shift",
+          "label": "Contextual Shift",
+          "description": "The photographic style changes based on the page section, such as using lifestyle images for heroes and studio shots for product cards.",
+          "values": [
+            "studio-lifestyle-mix",
+            "lifestyle-hero-studio-products",
+            "studio-hero-lifestyle-details",
+            "studio-product-lifestyle-ugc",
+            "studio-products-and-lifestyle-context"
+          ]
+        },
+        {
+          "key": "stylized-still-life",
+          "label": "Stylized Still Life",
+          "description": "Product imagery relies on highly stylized, brightly colored studio shots with props and floating elements rather than simple isolation.",
+          "values": [
+            "studio-and-stylized-still-life"
+          ]
+        }
+      ]
+    },
+    "product-card-anatomy": {
+      "families": [
+        {
+          "key": "basic-static-info",
+          "label": "Basic Static Info",
+          "description": "Cards display only essential, non-interactive product details like the image, title, price, and subtitle.",
+          "values": [
+            "image-title-price",
+            "image-title-price-subtitle"
+          ]
+        },
+        {
+          "key": "info-with-swatches",
+          "label": "Info with Swatches",
+          "description": "Cards include color swatches alongside the basic image, title, and price, allowing shoppers to see available variants.",
+          "values": [
+            "image-title-price-swatches",
+            "image-swatches-subtitle-title-price",
+            "image-swatches-badge-title-price"
+          ]
+        },
+        {
+          "key": "swatches-and-ratings",
+          "label": "Swatches and Ratings",
+          "description": "Cards display social proof via star ratings or reviews in addition to swatches and basic product details.",
+          "values": [
+            "image-swatches-title-price-rating",
+            "image-swatches-title-reviews-price"
+          ]
+        },
+        {
+          "key": "quick-add-actions",
+          "label": "Quick Add Actions",
+          "description": "Cards include a prominent call-to-action button or quick-add icon directly on the card for immediate purchasing.",
+          "values": [
+            "image-details-swatches-quick-add",
+            "image-title-rating-button-with-price"
+          ]
+        }
+      ]
+    },
+    "product-detail-disclosure": {
+      "families": [
+        {
+          "key": "vertical-accordions",
+          "label": "Vertical Accordions",
+          "description": "Long-form details are hidden within vertically stacked, collapsible accordion panels.",
+          "values": [
+            "stacked-accordions",
+            "expandable-accordion-list",
+            "stacked-accordion-panels",
+            "vertical-accordion-list",
+            "buy-box-accordions",
+            "vertical-accordion-group",
+            "vertical-accordions"
+          ]
+        },
+        {
+          "key": "horizontal-tabs",
+          "label": "Horizontal Tabs",
+          "description": "Long-form details are organized into horizontal tabs that reveal different sections of text when clicked.",
+          "values": [
+            "horizontal-tab-group"
+          ]
+        }
+      ]
+    },
+    "section-seam": {
+      "families": [
+        {
+          "key": "pure-whitespace",
+          "label": "Pure Whitespace",
+          "description": "Sections are separated entirely by generous vertical whitespace without any visible lines or background color changes.",
+          "values": [
+            "whitespace-divider",
+            "whitespace-seam",
+            "generous-whitespace-dividers"
+          ]
+        },
+        {
+          "key": "hard-edge-transitions",
+          "label": "Hard Edge Transitions",
+          "description": "Sections transition abruptly into one another with straight horizontal cuts, often using contrasting full-bleed colors or images.",
+          "values": [
+            "flush-edge-to-edge",
+            "flush-color-transitions",
+            "hard-color-edge",
+            "straight-cut",
+            "hard-edge-color-breaks",
+            "straight-cut-color-blocks",
+            "hard-edge-color-contrast",
+            "straight-cut-edges"
+          ]
+        },
+        {
+          "key": "whitespace-and-blocks",
+          "label": "Whitespace and Blocks",
+          "description": "Sections transition using a combination of generous whitespace and abrupt changes to full-width colored backgrounds or images.",
+          "values": [
+            "whitespace-and-color-blocks",
+            "whitespace-and-bleed-images",
+            "whitespace-and-flush-images",
+            "hard-edge-to-whitespace",
+            "whitespace-and-image-bleed"
+          ]
+        },
+        {
+          "key": "whitespace-and-lines",
+          "label": "Whitespace and Lines",
+          "description": "Sections are divided by generous vertical whitespace punctuated by thin horizontal lines.",
+          "values": [
+            "whitespace-and-rules"
+          ]
+        }
+      ]
+    },
+    "social-proof-density": {
+      "families": [
+        {
+          "key": "no-social-proof",
+          "label": "No Social Proof",
+          "description": "The design intentionally omits any form of social proof, such as ratings, reviews, or user-generated content.",
+          "values": [
+            "no-visible-social-proof",
+            "zero-social-proof"
+          ]
+        },
+        {
+          "key": "card-star-ratings",
+          "label": "Card-Level Star Ratings",
+          "description": "Social proof is primarily displayed as aggregate star ratings and review counts directly on product cards in grids or carousels.",
+          "values": [
+            "card-level-star-ratings",
+            "persistent-star-ratings",
+            "product-card-star-ratings",
+            "star-ratings-on-cards",
+            "occasional-card-star-ratings",
+            "ratings-on-all-cards"
+          ]
+        },
+        {
+          "key": "badges-only",
+          "label": "Badges Only",
+          "description": "Social proof relies solely on text or graphical badges like 'Best Seller' or awards rather than user ratings or reviews.",
+          "values": [
+            "product-badges-only",
+            "product-card-badges",
+            "sparse-badge-only"
+          ]
+        },
+        {
+          "key": "multi-format-high-density",
+          "label": "High-Density Multi-Format",
+          "description": "The page features a rich mix of social proof formats, including user-generated content, press logos, videos, or AI summaries.",
+          "values": [
+            "high-density-mixed-media",
+            "high-with-ai-summary",
+            "multi-format-high-density",
+            "multi-format-social-proof"
+          ]
+        },
+        {
+          "key": "pdp-review-sections",
+          "label": "Standard PDP Reviews",
+          "description": "Social proof is structured with summary star ratings near the product title and a detailed review section further down the page.",
+          "values": [
+            "comprehensive-review-section",
+            "hero-star-rating",
+            "top-stars-bottom-reviews",
+            "title-adjacent-star-rating",
+            "title-stars-and-bottom-reviews"
+          ]
+        },
+        {
+          "key": "other",
+          "label": "Other",
+          "description": "Other specific social proof decisions that do not fit the main patterns.",
+          "values": [
+            "empty-review-prompt"
+          ]
+        }
+      ]
+    },
+    "trust-signal-placement": {
+      "families": [
+        {
+          "key": "text-below-cta",
+          "label": "Text Below CTA",
+          "description": "Trust signals, policies, and guarantees are presented as text or general information blocks immediately below the call to action.",
+          "values": [
+            "below-add-to-cart",
+            "text-below-cta",
+            "below-primary-cta"
+          ]
+        },
+        {
+          "key": "icons-below-cta",
+          "label": "Icons Below CTA",
+          "description": "Trust signals and guarantees are presented visually as a list of icons immediately below the call to action.",
+          "values": [
+            "below-cta-icon-list"
+          ]
+        }
+      ]
+    },
+    "type-voice": {
+      "families": [
+        {
+          "key": "serif-display-sans-body",
+          "label": "Serif Display, Sans Body",
+          "description": "A serif typeface is used for headings and titles, paired with a sans-serif for body copy and UI elements.",
+          "values": [
+            "serif-display-sans-body",
+            "sans-serif-with-serif-headers",
+            "serif-heading-sans-body",
+            "heavy-serif-display-sans-body"
+          ]
+        },
+        {
+          "key": "all-sans-serif",
+          "label": "All Sans-Serif",
+          "description": "Sans-serif typefaces are used consistently across all headings, body copy, and UI elements.",
+          "values": [
+            "geometric-sans-serif",
+            "all-sans-serif",
+            "uniform-sans-serif",
+            "sans-serif-utilitarian",
+            "all-sans-serif-system",
+            "geometric-sans-serif-system"
+          ]
+        },
+        {
+          "key": "condensed-sans-display",
+          "label": "Condensed Sans Display",
+          "description": "A bold or heavy condensed sans-serif is used for headings, contrasting with a standard sans-serif for body copy.",
+          "values": [
+            "condensed-display-sans-body",
+            "condensed-sans-display"
+          ]
+        },
+        {
+          "key": "sans-display-serif-accents",
+          "label": "Sans Display, Serif Accents",
+          "description": "A sans-serif is used for primary headings, while a serif is used for secondary text or accents.",
+          "values": [
+            "sans-serif-with-serif-accents"
+          ]
+        }
+      ]
+    },
+    "variant-selection-style": {
+      "families": [
+        {
+          "key": "swatches-only",
+          "label": "Swatches Only",
+          "description": "Variant selection relies entirely on visual swatches, such as colors or image thumbnails, without text buttons or dropdowns.",
+          "values": [
+            "circular-color-swatches",
+            "circular-image-swatches"
+          ]
+        },
+        {
+          "key": "swatches-and-buttons",
+          "label": "Swatches and Buttons",
+          "description": "Variant selection combines visual swatches for attributes like color with text-based buttons or pills for attributes like size.",
+          "values": [
+            "swatches-and-pills",
+            "mixed-swatches-and-pills",
+            "swatches-and-buttons",
+            "swatches-and-pill-buttons"
+          ]
+        },
+        {
+          "key": "tiles-and-dropdown",
+          "label": "Tiles and Dropdown",
+          "description": "Variant selection uses a combination of visual image tiles and standard dropdown menus.",
+          "values": [
+            "image-tiles-and-dropdown"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,53 @@
+name: design-craft release
+
+# Publishes the open design-craft dataset/library and the Design Conversion MCP
+# (spec 35). Cut a release by pushing a design-craft-v* tag after bumping both
+# package versions. design-craft goes first: the MCP depends on it, and
+# `pnpm publish` rewrites the MCP's `workspace:^` range to the real version.
+
+on:
+  push:
+    tags:
+      - 'design-craft-v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm --filter @avant-garde/design-craft --filter @avant-garde/design-conversion-mcp build
+
+      - name: Test
+        run: pnpm --filter @avant-garde/design-craft --filter @avant-garde/design-conversion-mcp test
+
+      - name: Publish design-craft
+        working-directory: packages/design-craft
+        run: pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
+
+      - name: Publish design-conversion-mcp
+        working-directory: packages/design-conversion-mcp
+        run: pnpm publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

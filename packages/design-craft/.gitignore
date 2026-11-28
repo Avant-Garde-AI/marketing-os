@@ -1,0 +1,5 @@
+.captures/
+release/
+*.png
+.embeddings-cache.json
+.verdicts-cache.json

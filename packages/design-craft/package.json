@@ -1,0 +1,62 @@
+{
+  "name": "@avant-garde/design-craft",
+  "version": "0.1.0",
+  "description": "The DTC design-craft vocabulary, perception labeling pipeline, and open label dataset behind Marketing OS's stroke-level design models (spec 35)",
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./capture": {
+      "types": "./dist/adapters/playwright-capture.d.ts",
+      "default": "./dist/adapters/playwright-capture.js"
+    },
+    "./corpus/*": "./corpus/*",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "design-craft": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "corpus"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "zod": "^3.25.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.7.0",
+    "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "design",
+    "dtc",
+    "shopify",
+    "storefront",
+    "dataset",
+    "vlm",
+    "conversion"
+  ],
+  "homepage": "https://github.com/Avant-Garde-AI/marketing-os/tree/main/packages/design-craft#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avant-Garde-AI/marketing-os.git",
+    "directory": "packages/design-craft"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
